@@ -30,7 +30,7 @@ The chart can be installed directly with Helm or any other common Kubernetes dep
 If installing with Helm directly, the following command will install the chart:
 ```console
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
-    --set secretName=<NAME_OF_SECRET> \
+    --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
     --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
 ```
@@ -47,6 +47,13 @@ If using a Secret external to this chart for the API key, ensure the Secret is c
 data:
   value: <API_KEY>
 ```
+
+For example, the Secret could be created with:
+```bash
+kubectl create secret -n example-namespace generic example-secret-name --from-literal=value=<example-api-key-value>
+```
+The Secret can then be used by the agent by giving `example-secret-name` as the Secret name for the `existingSecretName` argument.
+
 ### Metric Exporters
 This chart uses metrics from the [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node-exporter](https://github.com/prometheus/node_exporter) projects as chart dependencies. By default, these subcharts are disabled so that the agent can scrape metrics from existing instances of `kube-state-metrics` and `node-exporter`. They can optionally be enabled with the settings:
 ```yaml
@@ -76,14 +83,13 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 
 ## Values
 
-| Key               | Type   | Default               | Description                                                                                        |
-|-------------------|--------|-----------------------|----------------------------------------------------------------------------------------------------|
-| cloudAccountId    | string | `nil`                 | Account ID of the account the cluster is running in.                                               |
-| clusterName       | string | `nil`                 | Name of the clusters.                                                                              |
-| host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                 |
-| useExistingSecret | bool   | `true`                | If false, a secret containing the CloudZero API key will be created using the `apiKey` value.      |
-| apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `useExistingSecret` is false          |
-| secretName        | string | `""`                  | The name of the secret that contains the CloudZero API key. Required if useExistingSecret is true. |
+| Key               | Type   | Default               | Description                                                                                                             |
+|-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
+| cloudAccountId    | string | `nil`                 | Account ID of the account the cluster is running in.                                                                    |
+| clusterName       | string | `nil`                 | Name of the clusters.                                                                                                   |
+| host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                      |
+| apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `existingSecretName` is not set.                           |
+| existingSecretName| string | `nil`                  | The name of the secret that contains the CloudZero API key. Required if not providing the API key via the apiKey value.|
 
 ## Requirements
 

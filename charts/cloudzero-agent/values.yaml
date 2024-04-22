@@ -6,10 +6,8 @@ cloudAccountId: null
 clusterName: null
 # -- CloudZero API key. Required if useExistingSecret is false.
 apiKey: null
-# -- If true, a secret containing the CloudZero API key will be created using the `apiKey` value.
-useExistingSecret: true
-# -- The name of the secret that contains the CloudZero API key. Required if useExistingSecret is false.
-secretName: null
+# -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
+existingSecretName: null
 
 
 promethuesConfig:
