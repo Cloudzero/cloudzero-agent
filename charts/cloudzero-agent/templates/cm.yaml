@@ -136,7 +136,7 @@ data:
           follow_redirects: true
           enable_http2: true
     remote_write:
-      - url: 'https://{{ .Values.host }}/v1/container-metrics?cluster_name={{.Values.clusterName}}&cloud_account_id={{.Values.cloudAccountId}}'
+      - url: 'https://{{ .Values.host }}/v1/container-metrics?cluster_name={{.Values.clusterName}}&cloud_account_id={{.Values.cloudAccountId | toString}}'
         authorization:
           credentials_file: /etc/config/prometheus/secrets/value
         write_relabel_configs:

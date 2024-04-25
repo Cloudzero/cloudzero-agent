@@ -8,4 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1] - 2024-03-27
+## [0.0.2]
+
+### Fixed
+- `existingSecretName` is used in the `secretName` named template so that the deployment uses the correct Secret
+- `cloudAccountId` is coerced to a string to prevent malformed `cloud_account_id` query params
+
+## [0.0.1]
+
+### Added
+- Initial release
