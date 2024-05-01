@@ -32,7 +32,7 @@ If installing with Helm directly, the following command will install the chart:
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set cloudAccountId=<CLOUD_ACCOUNT_ID>
 ```
 
 ### Secret Management
