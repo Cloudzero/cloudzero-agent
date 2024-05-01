@@ -28,7 +28,8 @@ jobs:
 
     - name: Update Chart Version
       run: |
-        sed -i 's/version: .*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
+        VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
+        sed -i ''$VERSION_LINE's/.*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
         echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
 
     - name: Package Chart
