@@ -25,7 +25,7 @@ _See [`helm repo`](https://helm.sh/docs/helm/helm_repo/) for command documentati
 
 ### Install Helm Chart
 
-The chart can be installed directly with Helm or any other common Kubernetes deployment tool.
+The chart can be installed directly with Helm or any other common Kubernetes deployment tools.
 
 If installing with Helm directly, the following command will install the chart:
 ```console
@@ -73,7 +73,7 @@ kube-state-metrics:
   extraArgs:
     - --metric-labels-allowlist=pods=[*]
 ```
-A subset of relevant pod labels can be included; as an example, exporting only pod labels with start with `foobar_` could be achieved with the following:
+A subset of relevant pod labels can be included; as an example, exporting only pod labels that start with `foobar_` could be achieved with the following:
 ```yaml
 kube-state-metrics:
   extraArgs:
