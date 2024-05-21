@@ -9,15 +9,9 @@ apiKey: null
 # -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
 existingSecretName: null
 
-
-promethuesConfig:
-  configMapNameOverride: ''
-  configOverride: ''
-  metrics:
-  - container_cpu_usage_seconds_total
-  - container_memory_working_set_bytes
-  - container_network_receive_bytes_total
-  - container_network_transmit_bytes_total
+# -- The following lists of metrics are required for CloudZero to function.
+# -- Modifications made to these lists may cause issues with the processing of cluster data
+kubeMetrics:
   - kube_node_info
   - kube_node_status_capacity
   - kube_pod_container_resource_limits
@@ -26,6 +20,15 @@ promethuesConfig:
   - kube_pod_info
   - node_cpu_seconds_total
   - node_dmi_info
+containerMetrics:
+  - container_cpu_usage_seconds_total
+  - container_memory_working_set_bytes
+  - container_network_receive_bytes_total
+  - container_network_transmit_bytes_total
+
+prometheusConfig:
+  configMapNameOverride: ''
+  configOverride: ''
 
 kube-state-metrics:
   enabled: false
@@ -43,7 +46,12 @@ server:
     # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
     digest: ""
     pullPolicy: IfNotPresent
-  resources: {}
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory:  1024Mi
   deploymentAnnotations: {}
   podAnnotations: {}
   configMapOverrideName: configuration
@@ -58,9 +66,11 @@ server:
     enabled: false
     mountPath: /data
     subPath: ""
+    storageClass: ""
     size: 8Gi
     accessModes:
     - ReadWriteOnce
+  # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
 

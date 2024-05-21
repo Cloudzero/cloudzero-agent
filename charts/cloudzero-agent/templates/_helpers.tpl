@@ -18,7 +18,7 @@ Create chart name and version as used by the chart label.
 {{- end}}
 
 {{ define "cloudzero-agent.configMapName" -}}
-{{ .Values.promethuesConfig.configMapNameOverride | default (printf "%s-configuration" .Release.Name) }}
+{{ .Values.prometheusConfig.configMapNameOverride | default (printf "%s-configuration" .Release.Name) }}
 {{- end}}
 
 {{/*
@@ -109,4 +109,13 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- else -}}
 {{ include "cloudzero-agent.server.fullname" . }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Combine metric lists
+*/}}
+{{- define "chartname.combineMetrics" -}}
+{{- $total := append .Values.kubeMetrics .Values.containerMetrics -}}
+{{- $result := join "|" $total -}}
+{{- $result -}}
 {{- end -}}

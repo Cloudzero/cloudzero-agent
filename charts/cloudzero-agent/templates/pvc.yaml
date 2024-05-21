@@ -13,16 +13,12 @@ metadata:
        {{- toYaml . | nindent 4 }}
     {{- end }}
   name: {{ template "cloudzero-agent.server.fullname" . }}
-  namespace: {{ include "clouzero-agent.namespace" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
 spec:
   accessModes:
 {{ toYaml .Values.server.persistentVolume.accessModes | indent 4 }}
-{{- if .Values.server.persistentVolume.storageClass }}
-{{- if (eq "-" .Values.server.persistentVolume.storageClass) }}
-  storageClassName: ""
-{{- else }}
-  storageClassName: "{{ .Values.server.persistentVolume.storageClass }}"
-{{- end }}
+{{- with .Values.server.persistentVolume.storageClass }}
+  storageClassName: {{ . | default "" }}
 {{- end }}
 {{- if .Values.server.persistentVolume.volumeBindingMode }}
   volumeBindingMode: "{{ .Values.server.persistentVolume.volumeBindingMode }}"
