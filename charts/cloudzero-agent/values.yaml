@@ -28,6 +28,7 @@ containerMetrics:
 
 prometheusConfig:
   configMapNameOverride: ''
+  configMapAnnotations: {}
   configOverride: ''
 
 kube-state-metrics:
@@ -35,8 +36,10 @@ kube-state-metrics:
 prometheus-node-exporter:
   enabled: false
 
+# -- Annotations to be added to the Secret, if the chart is configured to create one
+secretAnnotations: {}
+
 imagePullSecrets: []
-nodeSelector: {}
 server:
   name: server
   image:
@@ -46,6 +49,7 @@ server:
     # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
     digest: ""
     pullPolicy: IfNotPresent
+  nodeSelector: {}
   resources:
     requests:
       memory: 512Mi

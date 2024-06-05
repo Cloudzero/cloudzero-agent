@@ -5,17 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7]
+
+### Added
+- Arbitrary annotations can be added to the configmap and secret.
+
+### Fixed
+- Removed duplicate `resources` in deployment
+- Moved `nodeSelector` to `server` block in values.yaml
+- Updated scrape configs to properly drop unused metrics
+
 ## [0.0.6]
+
 ### Fixed
 - Failure to scrape for container metrics due to improper joining of kubeMetrics and containerMetrics.
 
-
 ## [0.0.4]
+
 ### Added
 - updated scrape configs to only scrape metrics that are needed
 - added CPU and memory requests and limits to `deploy.yaml` and updated `values.yaml` with suggested values
 - refactored `PVC.yaml` and updated `values.yaml` to match
-
 
 ### Fixed
 - Updated `Exporting Pod Labels` README.md for clarity
