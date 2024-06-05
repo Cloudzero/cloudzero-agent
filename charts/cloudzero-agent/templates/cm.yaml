@@ -5,6 +5,10 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.configMapName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
+  {{- with .Values.prometheusConfig.configMapAnnotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
 data:
   prometheus.yml: |-
   {{- if .Values.prometheusConfig.configOverride }}
@@ -109,9 +113,6 @@ data:
         follow_redirects: true
         enable_http2: true
         relabel_configs:
-        - source_labels: [__name__]
-          regex: "^({{ join "|" .Values.containerMetrics }})$"
-          action: keep
         - separator: ;
           regex: __meta_kubernetes_node_label_(.+)
           replacement: $1
@@ -133,6 +134,9 @@ data:
         metric_relabel_configs:
         - action: labeldrop
           regex: instance
+        - source_labels: [__name__]
+          regex: "^({{ join "|" .Values.containerMetrics }})$"
+          action: keep
         kubernetes_sd_configs:
         - role: node
           kubeconfig_file: ""
