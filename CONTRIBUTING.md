@@ -1,146 +1,60 @@
-[#](#) Contributing to CloudZero Charts
+# Contributing to CloudZero projects
 
-If you are looking to contribute to this project and want to open a GitHub pull request ("PR"), there are a few guidelines of what we are looking for in patches. Make sure you go through this document and ensure that your code proposal is aligned.
+A big welcome and thank you for considering contributing to CloudZero open source projects! It’s people like you that make it a reality for users in our community.
 
-## Setting up your environment
+Reading and following these guidelines will help us make the contribution process easy and effective for everyone involved. It also communicates that you agree to respect the time of the developers managing and developing these open source projects. In return, we will reciprocate that respect by addressing your issue, assessing changes, and helping you finalize your pull requests.
 
-Before you can contribute to CloudZero Charts, you need to configure your development environment.
+## Quicklinks
 
-### Development Environment Setup
+* [Code of Conduct](#code-of-conduct)
+* [Getting Started](#getting-started)
+    * [Issues](#issues)
+    * [Pull Requests](#pull-requests)
+* [Getting Help](#getting-help)
 
-You will need to install a number of tools for successful development:
-1. [Python 3.12](https://www.python.org/downloads/) or greater
-2. [Docker](https://docs.docker.com/engine/install/)
-3. Kubernetes ([Rancher Desktop](https://docs.rancherdesktop.io/getting-started/installation/) is really nice)
-4. [Helm](https://helm.sh/docs/helm/helm_install/) for deploying the charts
-5. [Act](https://github.com/nektos/act) for verifying github action changes
+## Code of Conduct
 
-## Configuring Git
+We take our open source community seriously and hold ourselves and other contributors to high standards of communication.
+By participating and contributing to this project, you agree to uphold our 
+[Code of Conduct](https://github.com/cloudzero/template-cloudzero-open-source/blob/master/CODE-OF-CONDUCT.md).
 
-You will need to configure your git client with your name and email address. This is easily done from the command line.
+## Getting Started
 
-```text
-$ git config --global user.name "John Doe"
-$ git config --global user.email "john.doe@example.com"
-```
+Contributions are made to this repo via Issues and Pull Requests (PRs). A few general guidelines that cover both:
 
-This username and email address will matter later in this guide.
+- To report security vulnerabilities, please send a message to security@cloudzero.com which is monitored by our security team.
+- Search for existing Issues and PRs before creating your own.
+- We work hard to makes sure issues are handled in a timely manner but, depending on the impact, it could take a while to investigate the root cause. A friendly ping in the comment thread to the submitter or a contributor can help draw attention if your issue is blocking.
+- Be kind and professional. Avoid assumptions; oversights happen.
 
-## Fork the repo
+### Issues
 
-You should fork the CloudZero Charts repo using the "Fork" button at the top right of the CloudZero Charts GitHub [site](https://github.com/Cloudzero/cloudzero-charts/). You will be doing your development in your fork, then submit a pull request to CloudZero Charts. There are many resources how to use GitHub effectively, we will not cover those here.
+Issues should be used to report problems with the library, request a new feature, or to discuss potential changes before a PR is created. When you create a new Issue, a template will be loaded that will guide you through collecting and providing the information we need to investigate.
 
-## Adding a feature or fix
+If you find an Issue that addresses the problem you're having, please add your own reproduction information to the existing issue rather than creating a new one. Adding a [reaction](https://github.blog/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/) can also help be indicating to our maintainers that a particular problem is affecting more than just the reporter.
 
-If you look at the CloudZero Charts [Issue](https://github.com/Cloudzero/cloudzero-charts/issues) there are plenty of bugs and feature requests. Maybe look at the [good first issue](https://github.com/Cloudzero/cloudzero-charts/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) list if you're not sure where to start.
+### Pull Requests
 
-## Commit guidelines
+PRs to our libraries are always welcome and can be a quick way to get your fix or improvement slated for the next release. In general, PRs should:
 
-In the CloudZero Charts project we like commits and pull requests (PR) to be easy to understand and review. Open source thrives best when everything happening is over documented and small enough to be understood.
+- Only fix/add the functionality in question **OR** address wide-spread whitespace/style issues, not both.
+- Add unit or integration tests for fixed or changed functionality (if a test suite already exists).
+- Address a single concern in the least number of changed lines as possible.
+- Include documentation in the repo or on our [docs site](https://docs.cloudzero.com/).
+- Be accompanied by a complete Pull Request template (loaded automatically when a PR is created).
 
-### Granular commits
+For changes that address core functionality or would require breaking changes (e.g. a major release), it's best to open an Issue to discuss your proposal first. This is not required but can save time creating and reviewing changes.
 
-Please try to make every commit as simple as possible, but no simpler. The idea is that each commit should be a logical unit of code. Try not to commit too many tiny changes, for example every line changed in a file as a separate commit. And also try not to make a commit enormous, for example committing all your work at the end of the day.
+In general, we follow the ["fork-and-pull" Git workflow](https://github.com/susam/gitpr)
 
-Rather than try to follow a strict guide on what is or is not best, we try to be flexible and simple in this space. Do what makes the most sense for the changes you are trying to include.
+1. Fork the repository to your own Github account
+2. Clone the project to your machine
+3. Create a branch locally with a succinct but descriptive name
+4. Commit changes to the branch
+5. Following any formatting and testing guidelines specific to this repo
+6. Push changes to your fork
+7. Open a PR in our repository and follow the PR template so that we can efficiently review the changes.
 
-### Commit title and description
+## Getting Help
 
-Remember that the message you leave for a commit is for the reviewer in the present, and for someone (maybe you) changing something in the future. Please make sure the title and description used is easy to understand and explains what was done. Jokes and clever comments generally don't age well in commit messages. Just the facts please.
-
-## Sign off your work
-
-The `sign-off` is an added line at the end of the explanation for the commit, certifying that you wrote it or otherwise have the right to submit it as an open-source patch. By submitting a contribution, you agree to be bound by the terms of the DCO Version 1.1 and Apache License Version 2.0.
-
-Signing off a commit certifies the below Developer's Certificate of Origin (DCO):
-
-```text
-Developer's Certificate of Origin 1.1
-
-By making a contribution to this project, I certify that:
-
-   (a) The contribution was created in whole or in part by me and I
-       have the right to submit it under the open source license
-       indicated in the file; or
-
-   (b) The contribution is based upon previous work that, to the best
-       of my knowledge, is covered under an appropriate open source
-       license and I have the right under that license to submit that
-       work with modifications, whether created in whole or in part
-       by me, under the same open source license (unless I am
-       permitted to submit under a different license), as indicated
-       in the file; or
-
-   (c) The contribution was provided directly to me by some other
-       person who certified (a), (b) or (c) and I have not modified
-       it.
-
-   (d) I understand and agree that this project and the contribution
-       are public and that a record of the contribution (including all
-       personal information I submit with it, including my sign-off) is
-       maintained indefinitely and may be redistributed consistent with
-       this project or the open source license(s) involved.
-```
-
-All contributions to this project are licensed under the [Apache License Version 2.0, January 2004](http://www.apache.org/licenses/).
-
-When committing your change, you can add the required line manually so that it looks like this:
-
-```text
-Signed-off-by: John Doe <john.doe@example.com>
-```
-
-Creating a signed-off commit is then possible with `-s` or `--signoff`:
-
-```text
-$ git commit -s -m "this is a commit message"
-```
-
-To double-check that the commit was signed-off, look at the log output:
-
-```text
-$ git log -1
-commit 37ceh170e4hb283bb73d958f2036ee5k07e7fde7 (HEAD -> issue-35, origin/main, main)
-Author: John Doe <john.doe@example.com>
-Date:   Mon Aug 1 11:27:13 2020 -0400
-
-    this is a commit message
-
-    Signed-off-by: John Doe <john.doe@example.com>
-```
-
-## Test your changes
-
-This project has a `Makefile` which includes many helpers running both unit and integration tests. You can run `make help` to see all the options. Although PRs will have automatic checks for these, it is useful to run them locally, ensuring they pass before submitting changes:
-
-```text
-$ make check
-```
-
-You can also run `make all` to run a more extensive test suite, but there is additional configuration that will be needed for those tests to run correctly. We will not cover the extra steps here.
-
-## Pull Request
-
-If you made it this far and all the tests are passing, it's time to submit a Pull Request (PR) for CloudZero Charts. Submitting a PR is always a scary moment as what happens next can be an unknown. The CloudZero Charts project strives to be easy to work with, we appreciate all contributions. Nobody is going to yell at you or try to make you feel bad. We love contributions and know how scary that first PR can be.
-
-## Feature Pull Request
-
-When a PR is _accepted_ and _merged to develop_, a workflow will version a new release of the charts. _Sometimes a feature change will require multiple commits._ To ensure we are not releasing half completed work, it is advised to use branching and open multiple PRs on your forked repository, have them reviewed, then finally open a PR of the main repository. 
-
-### PR Title and Description
-
-Just like the commit title and description mentioned above, the PR title and description is very important for letting others know what's happening. Please include any details you think a reviewer will need to more properly review your PR.
-
-A PR that is very large or poorly described has a higher likelihood of being pushed to the end of the list. Reviewers like PRs they can understand and quickly review.
-
-### What to expect next
-
-Please be patient with the project. We try to review PRs in a timely manner, but this is highly dependent on all the other tasks we have going on. It's OK to ask for a status update every week or two, it's not OK to ask for a status update every day.
-
-It's very likely the reviewer will have questions and suggestions for changes to your PR. If your changes don't match the current style and flow of the other code, expect a request to change what you've done.
-
-## Document your changes
-
-And lastly, when proposed changes are modifying user-facing functionality or output, it is expected the PR will include updates to the documentation as well. CloudZero Charts is not a project that is heavy on documentation. This will mostly be updating the README and help for the tool.
-
-If nobody knows new features exist, they can't use them!
+When in doubt, just ask! Send your questions to support@cloudzero.com, and we'll do our best to help you out.
