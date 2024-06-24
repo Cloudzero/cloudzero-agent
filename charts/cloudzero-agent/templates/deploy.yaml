@@ -69,10 +69,6 @@ spec:
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion}}"
           {{- end }}
           imagePullPolicy: "{{ .Values.server.image.pullPolicy }}"
-          resources:
-            {{- toYaml .Values.server.resources.requests | nindent 12 }}
-            limits:
-          {{- toYaml .Values.server.resources.limits | nindent 12 }}
           {{- if .Values.server.env }}
           env:
 {{ toYaml .Values.server.env | indent 12}}
