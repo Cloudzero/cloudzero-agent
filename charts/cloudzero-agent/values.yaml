@@ -38,8 +38,17 @@ prometheus-node-exporter:
 
 # -- Annotations to be added to the Secret, if the chart is configured to create one
 secretAnnotations: {}
-
 imagePullSecrets: []
+
+# environment validator image allows for CI to use a different image in testing
+validator:
+  name: env-validator
+  image:
+    repository: ghcr.io/cloudzero/cloudzero-charts/cloudzero-agent-validator
+    tag: latest
+    digest:
+    pullPolicy: Always
+
 server:
   name: server
   image:
@@ -55,7 +64,7 @@ server:
       memory: 512Mi
       cpu: 250m
     limits:
-      memory:  1024Mi
+      memory: 1024Mi
   deploymentAnnotations: {}
   podAnnotations: {}
   configMapOverrideName: configuration
@@ -102,4 +111,3 @@ configmapReload:
 
     containerSecurityContext: {}
     resources: {}
-

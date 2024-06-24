@@ -54,6 +54,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache
 
 # Translations
 *.mo
@@ -144,3 +145,6 @@ dmypy.json
 # Helm
 /charts/*/charts
 *.tgz
+
+# Developer notes
+cheat_sheet.md
