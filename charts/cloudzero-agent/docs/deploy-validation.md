@@ -1,69 +1,49 @@
 # How to Validate Deployment
 
-This guide provides instructions on how to validate the deployment of the Helm chart. As part of the deployment, a container is started to execute environmental validations. This guide outlines how to use these to gather insight into if everything is ready post deployment.
+This guide provides instructions on how to validate the deployment of the Helm chart and identify common problems. As part of the deployment, an environment validation container is started to execute environmental checks. This guide outlines how to use these to gather insight into issues post deployment.
 
-## Steps to Validate the Deployment
+## Step by Step
 
-1. **Get the Pod Name**: After deploying the Helm chart, you need to identify the pod running the `env-validator`. Use the following command to list all pods in the namespace where you have deployed the chart:
+![](./assets/env-validate-1.png)
 
-    ```sh
-    kubectl -n cloudzero-agent get pods
-    ```
+### 1. Get the pod names for the deployment
+To retrieve the pod names for the deployment, use the following command:
 
-The output of this should be similar to as follows, with your specific helm release name (r1):
-```bash
-NAME                                          READY   STATUS        RESTARTS   AGE
-r1-cloudzero-agent-server-6dc588f9cb-zfvr7   0/2     Terminating   0          31s
-r1-prometheus-node-exporter-69kg8            1/1     Running       0          5s
-r1-kube-state-metrics-79894f6c55-q5rq4       0/1     Running       0          5s
-r1-cloudzero-agent-server-6dc588f9cb-qqqm9   0/2     Init:0/1      0          5s
-``` 
-
-
-2. **Check Validation Results**: Once you have the pod name, you can check the validation results by viewing the logs of the `env-validator` container. Replace `<pod-name>` with the actual pod name obtained from the previous step:
-
-    ```sh
-    kubectl -n cloudzero-agent logs -f -c env-validator <pod-name>
-    ```
-
-### Example Output
-
-The expected output of the `env-validator` will look something like the following. 
-
-```plaintext
-$ kubectl -n cloudzero-agent logs -f -c env-validator r1-cloudzero-agent-server-6dc588f9cb-zfvr7
-Validation starting...
-Collecting requests==2.32.3 (from -r requirements.txt (line 1))
-Downloading requests-2.32.3-py3-none-any.whl.metadata (4.6 kB)
-Collecting charset-normalizer<4,>=2 (from requests==2.32.3->-r requirements.txt (line 1))
-Downloading charset_normalizer-3.3.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (33 kB)
-Collecting idna<4,>=2.5 (from requests==2.32.3->-r requirements.txt (line 1))
-Downloading idna-3.7-py3-none-any.whl.metadata (9.9 kB)
-Collecting urllib3<3,>=1.21.1 (from requests==2.32.3->-r requirements.txt (line 1))
-Downloading urllib3-2.2.1-py3-none-any.whl.metadata (6.4 kB)
-Collecting certifi>=2017.4.17 (from requests==2.32.3->-r requirements.txt (line 1))
-Downloading certifi-2024.6.2-py3-none-any.whl.metadata (2.2 kB)
-Downloading requests-2.32.3-py3-none-any.whl (64 kB)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 64.9/64.9 kB 4.9 MB/s eta 0:00:00
-Downloading certifi-2024.6.2-py3-none-any.whl (164 kB)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 164.4/164.4 kB 4.7 MB/s eta 0:00:00
-Downloading charset_normalizer-3.3.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (137 kB)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.3/137.3 kB 13.3 MB/s eta 0:00:00
-Downloading idna-3.7-py3-none-any.whl (66 kB)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.8/66.8 kB 9.1 MB/s eta 0:00:00
-Downloading urllib3-2.2.1-py3-none-any.whl (121 kB)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 121.1/121.1 kB 12.0 MB/s eta 0:00:00
-Installing collected packages: urllib3, idna, charset-normalizer, certifi, requests
-Successfully installed certifi-2024.6.2 charset-normalizer-3.3.2 idna-3.7 requests-2.32.3 urllib3-2.2.1
-Running validations...
-http://r1-kube-state-metrics:8080/ not ready yet
-------------------------------------------------------------
-CHECK                                              RESULT
-external_connectivity_available                    success
-kube_state_metrics_available                       success
-prometheus_node_exporter_available                 success
-------------------------------------------------------------
-Validator finished.
+```sh
+kubectl -n cloudzero-agent get pods
 ```
+> Note: Replace `cloudzero-agent` with the correct namespace for your deployment.
 
-If all checks show `success`, the deployment is validated successfully.
+### 2. Identify the correct pod name
+To inspect the logs of the `env-validator` container, you need to identify the pod name for the `cloudzero-agent-server` pod.
+
+### 3. Read the logs for the `env-validator` container
+Using the pod name obtained in step 2, run the following command:
+
+```sh
+kubectl -n cloudzero-agent logs -f -c env-validator <pod_name>
+```
+> Note: The `-f` flag is used to follow the logs, and the `-c env-validator` flag is used to read the logs of the specific container.
+
+### 4. Interpret the Results
+
+In the diagram above, you will see a table output with the results of each environmental check. If all checks show `success`, the deployment is successful and data should be flowing to cloudzero.
+
+---
+
+# Troubleshooting
+
+The Cloudlock Agent must be able to contact both the `kubernetes metrics server` and the `prometheus node exporter`. The following diagram illustrates what you might see if communication is not possible between the `cloudzero-agent` and one of these services.
+
+![](./assets/env-validate-2-missing-node-exporter.png)
+
+When inspecting the logs, pay attention to the readiness state of the target (in this case, the node-exporter). Additionally, note the resulting `failure` status for the check.
+
+In this case, it is important to identify why the `cloudzero-agent` is unable to communicate with the failing container check.
+
+1. Is the missing service deployed? Use `kubectl get pods` to check if the service is deployed. If not, deploy the necessary chart. The `cloudzero-agent` helm chart can deploy the `kubernetes metrics server` and the `prometheus node exporter` by setting the `enable` flags to `true` as shown in the first image above.
+
+2. Is the `cloudzero-agent` deployed to the same network namespace? Linux cgroup namespaces isolate process(es) network, memory, and CPU. If the containers (pods) are in different namespaces, there is no direct way to communicate between them. Make sure to use the correct `--namespace` flag when deploying the chart.
+
+If all else fails, reach out to support@cloudzero.com and provide the output, along with the output of `kubectl -n <namespace> describe all` for the deployment.
+

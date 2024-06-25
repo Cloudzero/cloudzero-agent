@@ -21,3 +21,8 @@
 .idea/
 *.tmproj
 .vscode/
+docs
+src
+tests
+*.png
+*.drawio
