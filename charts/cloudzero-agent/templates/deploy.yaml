@@ -30,6 +30,17 @@ spec:
       priorityClassName: "{{ .Values.server.priorityClassName }}"
 {{- end }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName.server" . }}
+      initContainers:
+        - name: {{ .Values.validator.name }}
+          image: "{{ .Values.validator.image.repository }}:{{ .Values.validator.image.tag }}"
+          imagePullPolicy: "{{ .Values.validator.image.pullPolicy }}"
+          env:
+            - name: CZ_HOST
+              value: {{ .Values.host }}
+            - name: KMS_EP_URL
+              value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
+            - name: NODE_EXPORTER_EP_URL
+              value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload

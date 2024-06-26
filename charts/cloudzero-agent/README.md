@@ -85,11 +85,12 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 
 | Key               | Type   | Default               | Description                                                                                                             |
 |-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
-| cloudAccountId    | string | `nil`                 | Account ID of the account the cluster is running in.                                                                    |
+| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in.                                                                    |
 | clusterName       | string | `nil`                 | Name of the cluster. Required to be RFC 1123 compliant.                                                                 |
 | host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                      |
 | apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `existingSecretName` is not set.                           |
 | existingSecretName| string | `nil`                  | The name of the secret that contains the CloudZero API key. Required if not providing the API key via the apiKey value.|
+
 
 ## Requirements
 
@@ -97,3 +98,8 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 |----------------------------------------------------|--------------------------|---------|
 | https://prometheus-community.github.io/helm-charts | kube-state-metrics       | 5.15.*  |
 | https://prometheus-community.github.io/helm-charts | prometheus-node-exporter | 4.24.*  |
+
+
+## Useful References
+
+* [Deployment Validation Guide](./docs/deploy-validation.md)

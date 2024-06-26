@@ -1,0 +1,32 @@
+name: detection_rules
+
+on:
+  workflow_call:
+    outputs:
+      any_changed: 
+        description: "boolean set to true if any changes are detected"
+        value: ${{ jobs.scanner.outputs.any_changed }}
+
+jobs:
+  scanner:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      any_changed: ${{ steps.detect.outputs.any_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect if any files have changed
+        id: detect
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **
+            **.md
+            charts/**/docs/**
+            charts/**/tests/**
+            charts/**/src/**
+            charts/**/**.yaml
+
