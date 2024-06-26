@@ -53,7 +53,7 @@ This is in addition to integration and load tests not managed in this repository
 
 We appreciate feedback and contribution to this repo! Before you get started, please see the following:
 
-- [This repo's contribution guide](GENERAL-CONTRIBUTING.md)
+- [This repo's contribution guide](CONTRIBUTING.md)
 
 ## Support + Feedback
 
