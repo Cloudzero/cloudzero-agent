@@ -17,6 +17,7 @@ data:
     global:
       scrape_interval: 60s
     scrape_configs:
+      {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
       - job_name: cloudzero-service-endpoints # kube_*, node_* metrics
         honor_labels: true
         honor_timestamps: true
@@ -92,6 +93,8 @@ data:
           kubeconfig_file: ""
           follow_redirects: true
           enable_http2: true
+      {{- end }}
+      {{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
         honor_timestamps: true
         track_timestamps_staleness: false
@@ -142,6 +145,11 @@ data:
           kubeconfig_file: ""
           follow_redirects: true
           enable_http2: true
+    {{- end }}
+    {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
+    {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
+    {{- end}}
+    {{- end}}
     remote_write:
       - url: 'https://{{ .Values.host }}/v1/container-metrics?cluster_name={{.Values.clusterName}}&cloud_account_id={{.Values.cloudAccountId | toString}}'
         authorization:
@@ -152,4 +160,3 @@ data:
             action: keep
         metadata_config:
           send: false
-    {{- end}}

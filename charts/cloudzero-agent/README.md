@@ -64,6 +64,61 @@ prometheus-node-exporter:
 ```
 This will deploy the required resources for metric scraping.
 
+### Custom Scrape Configs
+If the chart is running *without* the `kube-state-metrics` and `prometheus-node-exporter` exporters enabled (meaning, those two exporters are deployed from some other source outside of this chart), then the scrape configs used by the underlying Prometheus agent may need to be adjusted.
+
+As an example, the out-of-the-box scrape config in this chart attempts to find the `kube-state-metrics` and `node-exporter` exporters via an annotation on k8s Services deployed by the KSM ande node-exporter subcharts. If those subcharts were instead deployed without any annotations, and were only available via Services with the addresses `my-kube-state-metrics-service.default.svc.cluster.local:8080` and `my-node-exporter.default.svc.cluster.local:9100`, we could add the following:
+
+custom-scrape-config.yaml
+```yaml
+prometheusConfig:
+  scrapeJobs:
+    kubeStateMetrics: # this disables the default kube-state-metrics scrape job, which will be replaced by an entry in additionalScrapeJobs
+      enabled: false
+    additionalScrapeJobs:
+    - job_name: custom-kube-state-metrics
+      honor_labels: true
+      honor_timestamps: true
+      scrape_interval: 1m
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+          - 'my-kube-state-metrics-service.default.svc.cluster.local:8080'
+          - 'my-node-exporter.default.svc.cluster.local:9100'
+      relabel_configs:
+      - separator: ;
+        regex: __meta_kubernetes_service_label_(.+)
+        replacement: $1
+        action: labelmap
+      - source_labels: [__meta_kubernetes_namespace]
+        separator: ;
+        regex: (.*)
+        target_label: namespace
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_service_name]
+        separator: ;
+        regex: (.*)
+        target_label: service
+        replacement: $1
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        separator: ;
+        regex: (.*)
+        target_label: node
+        replacement: $1
+        action: replace
+      kubernetes_sd_configs:
+        - role: endpoints
+          kubeconfig_file: ""
+          follow_redirects: true
+          enable_http2: true
+
+```
+
+This file can then be included with the helm install with the `-f custom-scrape-config.yaml` flag.
+
 ### Exporting Pod Labels
 Pod labels can be exported as metrics for use in the CloudZero platform by using the `metric-labels-allowlist` CLI argument to the `kube-state-metrics` container. This is disabled by default due to the increase in cardinality that exporting all pod labels introduces.
 
