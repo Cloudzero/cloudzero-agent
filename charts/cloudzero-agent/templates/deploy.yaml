@@ -41,6 +41,11 @@ spec:
               value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
             - name: NODE_EXPORTER_EP_URL
               value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/prometheus/secrets/
+              subPath: ""
+              readOnly: true
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload

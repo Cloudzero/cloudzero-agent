@@ -54,14 +54,15 @@ jobs:
           PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
           CLUSTER_NAME: cz-node-agent-ci
           CLOUD_ACCOUNT_ID: 00000000
-          CZ_API_TOKEN: 'undefined'
+          CZ_API_TOKEN: 'fake-api-token'
+          REGION: 'us-east-1'
         run: |
           cd charts/cloudzero-agent
           helm dependency update
           ct lint --debug --charts . \
             --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
             --chart-repos=prometheus-node-exporter=$PROM_CHART_REPO \
-            --helm-lint-extra-args "--set=existingSecretName=api-token,clusterName=$CLUSTER_NAME,cloudAccountId=$CLOUD_ACCOUNT_ID"
+            --helm-lint-extra-args "--set=existingSecretName=api-token,clusterName=$CLUSTER_NAME,cloudAccountId=$CLOUD_ACCOUNT_ID,region=$REGION"
 
   # This job tests the chart on a KinD cluster
   # and if we are in the develop or tag branch, it will 
@@ -185,7 +186,8 @@ jobs:
           PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
           CLUSTER_NAME: cz-node-agent-ci
           CLOUD_ACCOUNT_ID: 00000000
-          CZ_API_TOKEN: ${{ secrets.CZ_API_TOKEN || 'undefined' }}
+          CZ_API_TOKEN: ${{ secrets.CZ_API_TOKEN || 'fake-api-token' }}
+          REGION: 'us-east-1'
         run: |
           # use the test address for the image (k8s accesses via network alias)
           image_name="${{ env.REGISTRY_TEST_ADDR }}/${{ env.IMAGE_NAME }}"
@@ -210,6 +212,7 @@ jobs:
               --set=existingSecretName=api-token \
               --set=clusterName=$CLUSTER_NAME \
               --set=cloudAccountId=$CLOUD_ACCOUNT_ID \
+              --set=region=$REGION \
               --set=kube-state-metrics.enabled=true \
               --set=prometheus-node-exporter.enabled=true"
       

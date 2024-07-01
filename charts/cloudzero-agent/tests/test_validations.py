@@ -3,6 +3,9 @@ import sys
 import pytest
 from unittest.mock import patch, MagicMock, Mock
 
+FAKE_API_KEY = "test_api_key"
+HOST_DEV = "dev-api.cloudzero.com"
+
 # disable lint E402
 # E402: module level import not at top of file
 # Reason: The selected code is importing modules after some statements,
@@ -14,6 +17,7 @@ from src.validate import (  # noqa: E402
     check_external_connectivity,
     check_kube_state_metrics,
     check_prometheus_node_exporter,
+    check_external_validation_endpoint,
     run_validations,
 )
 
@@ -26,6 +30,17 @@ def mock_requests_get(monkeypatch):
     monkeypatch.setattr("src.validate.MAX_RETRY", 1)
     monkeypatch.setattr("src.validate.RETRY_INTERVAL", 0.1)
     return mock_get
+
+
+@pytest.fixture
+def mock_env(monkeypatch):
+    monkeypatch.setenv("CZ_HOST", HOST_DEV)
+
+
+@pytest.fixture
+def mock_api_key():
+    with patch("src.validate.get_api_key", return_value=FAKE_API_KEY) as _mock:
+        yield _mock
 
 
 def test_check_service_availability_success(mock_requests_get, capfd):
@@ -53,6 +68,25 @@ def test_check_external_connectivity(mock_check_service_availability):
     )
     result = check_external_connectivity()
     assert result == ("external_connectivity_available", "success")
+
+
+@patch("src.validate.check_service_availability")
+def test_check_external_validation_endpoint(
+    mock_check_service_availability, mock_env, mock_api_key
+):
+    expected_key = "check_external_validation_endpoint"
+    mock_check_service_availability.return_value = (
+        expected_key,
+        "success",
+    )
+    result = check_external_validation_endpoint()
+    assert result == (expected_key, "success")
+
+    expected_url = f"https://{HOST_DEV}/v2/insights"
+    expected_headers = {"Authorization": f"Bearer {FAKE_API_KEY}"}
+    mock_check_service_availability.assert_called_with(
+        expected_url, expected_key, expected_headers
+    )
 
 
 @patch("src.validate.check_service_availability")

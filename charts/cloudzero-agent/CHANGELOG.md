@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `prometheusConfig.scrapeJobs` is added to allow more granular control of scrape jobs.
+- Now `region` is a required input parameter
+- Added environment validation check to ensure request authorization / API key is set up
 
 ### Fixed
 - `prometheusConfig.configOverride` only replaces the scrape_configs in the Prometheus configuration.

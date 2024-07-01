@@ -31,7 +31,7 @@ Stage  Job ID                                        Job name                   
 To verify a specific workflow in DRY-RUN mode, use the following command:
 
 ```bash
-act --dry-run -j build_test_chart_install_maybe_publish_image -s CLOUDZERO_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
+act --dry-run -j build_test_chart_install_maybe_publish_image -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
 ```
 
 Please note that adding the `-n` or `--dry-run` flag only validates that the jobs are syntactically correct.
@@ -41,7 +41,7 @@ Please note that adding the `-n` or `--dry-run` flag only validates that the job
 To run a specific workflow, use the following command:
 
 ```bash
-act --dry-run -j build_test_chart_install_maybe_publish_image -s CLOUDZERO_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
+act --dry-run -j build_test_chart_install_maybe_publish_image -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
 ```
 
 ---

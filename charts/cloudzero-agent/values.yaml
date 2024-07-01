@@ -4,6 +4,8 @@ host: api.cloudzero.com
 cloudAccountId: null
 # -- Name of the clusters.
 clusterName: null
+# -- Region the cluster is running in.
+region: null
 # -- CloudZero API key. Required if useExistingSecret is false.
 apiKey: null
 # -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.

@@ -32,12 +32,13 @@ If installing with Helm directly, the following command will install the chart:
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID>
+    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set region=<REGION>
 ```
 
 ### Secret Management
 
-The chart requires an CloudZero API key in order to send metric data to the CloudZero platform. Admins can retrieve API keys [here](https://app.cloudzero.com/organization/api-keys).
+The chart requires a CloudZero API key in order to send metric data to the CloudZero platform. Admins can retrieve API keys [here](https://app.cloudzero.com/organization/api-keys).
 
 The Deployment running Prometheus ingests the API key via a Secret; this Secret can be supplied as an existing secret (default), or created by the chart. Both methods will require the API key retrieved from the CloudZero platform.
 
@@ -140,11 +141,12 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 
 | Key               | Type   | Default               | Description                                                                                                             |
 |-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
-| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in.                                                                    |
+| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in.                                 |
 | clusterName       | string | `nil`                 | Name of the cluster. Required to be RFC 1123 compliant.                                                                 |
 | host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                      |
 | apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `existingSecretName` is not set.                           |
-| existingSecretName| string | `nil`                  | The name of the secret that contains the CloudZero API key. Required if not providing the API key via the apiKey value.|
+| existingSecretName| string | `nil`                 | The name of the secret that contains the CloudZero API key. Required if not providing the API key via the apiKey value. |
+| region            | string | `nil`                 | Region the cluster is running in.                                                                                       |
 
 
 ## Requirements
