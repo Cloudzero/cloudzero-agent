@@ -45,6 +45,7 @@ prometheusConfig:
 
 kube-state-metrics:
   enabled: false
+
 prometheus-node-exporter:
   enabled: false
 
@@ -54,6 +55,11 @@ imagePullSecrets: []
 
 # environment validator image allows for CI to use a different image in testing
 validator:
+  serviceEndpoints:
+    kubeStateMetrics:
+    prometheusNodeExporter:
+  # -- Flag to skip validator failure if unable to connect to the CloudZero API.
+  skipValidations: false
   name: env-validator
   image:
     repository: ghcr.io/cloudzero/cloudzero-charts/cloudzero-agent-validator

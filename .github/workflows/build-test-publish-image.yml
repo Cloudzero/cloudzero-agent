@@ -20,7 +20,8 @@ env:
   REGISTRY_PROD_ADDR: ghcr.io
   # image name should be prefixed with the repository name
   IMAGE_NAME: ${{ github.repository }}/cloudzero-agent-validator
-  
+  SKIP_VALIDATIONS: false
+
 jobs:
   # This job detects if there are any changes to allow condition testing in other jobs
   has_changes:
@@ -176,6 +177,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # PRs from a fork don't have access to the secrets
+      # don't fail in this case, skip validate
+      - name: INPUT PREP - Skip validation
+        if: needs.has_changes.outputs.any_changed == 'true'
+        id: skip_validation
+        run: |
+          # Skip if secret is not defined
+          if [[ -z "${{ secrets.CZ_API_TOKEN }}" ]]; then
+            echo "SKIP_VALIDATIONS=true" >>${GITHUB_ENV}
+          fi
+
       # Install the chart using our temporary image
       - name: TEST - Install the chart
         if: needs.has_changes.outputs.any_changed == 'true'
@@ -196,6 +208,7 @@ jobs:
           echo "using image_name=${image_name}"
           echo "using image_tag=${image_tag}"
           echo "using image_digest=${image_digest}"
+          echo "skip_validation=${{ env.SKIP_VALIDATIONS }}"
   
           kubectl create namespace $NAMESPACE
           kubectl create secret -n $NAMESPACE generic api-token --from-literal=value=$CZ_API_TOKEN
@@ -206,6 +219,7 @@ jobs:
             --chart-repos=prometheus-node-exporter=$PROM_CHART_REPO \
             --namespace $NAMESPACE \
             --helm-extra-set-args "\
+              --set=validator.skipValidations=${{ env.SKIP_VALIDATIONS }} \
               --set=validator.image.repository=${image_name} \
               --set=validator.image.tag=${image_tag} \
               --set=validator.image.digest=${image_digest} \

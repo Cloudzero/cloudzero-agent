@@ -37,10 +37,22 @@ spec:
           env:
             - name: CZ_HOST
               value: {{ .Values.host }}
+            - name: SKIP_VALIDATIONS
+              value: "{{ .Values.validator.skipValidations }}"
             - name: KMS_EP_URL
+              {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
+              value: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
+              {{- else }}
               value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
+              {{- end }}
             - name: NODE_EXPORTER_EP_URL
+              {{- if .Values.validator.serviceEndpoints.prometheusNodeExporter }}
+              value: http://{{ .Values.validator.serviceEndpoints.prometheusNodeExporter }}/
+              {{- else }}
               value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
+              {{- end }}
+            - name: REGION
+              value: {{ .Values.region }}
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/prometheus/secrets/

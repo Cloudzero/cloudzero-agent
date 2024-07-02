@@ -56,17 +56,33 @@ kubectl create secret -n example-namespace generic example-secret-name --from-li
 The Secret can then be used by the agent by giving `example-secret-name` as the Secret name for the `existingSecretName` argument.
 
 ### Metric Exporters
-This chart uses metrics from the [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node-exporter](https://github.com/prometheus/node_exporter) projects as chart dependencies. By default, these subcharts are disabled so that the agent can scrape metrics from existing instances of `kube-state-metrics` and `node-exporter`. They can optionally be enabled with the settings:
+
+This chart relies on metrics from the [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node-exporter](https://github.com/prometheus/node_exporter) projects as chart dependencies.
+
+By default, these subcharts are disabled to allow the agent to scrape metrics from existing instances of `kube-state-metrics` and `node-exporter`. If you have an existing deployment, you need to configure the cloudzero-agent to use the existing service endpoint addresses. You can set these addresses in the `values.yaml` file as follows by defining the relative `serviceEndpoint`:
+
 ```yaml
-kube-state-metrics:
+validator:
+  serviceEndpoints:
+     kubeStateMetrics: <kube-state-metrics>.<example-namespace>.svc.cluster.local:8080
+     prometheusNodeExporter: <node-exporter>.<example-namespace>.svc.cluster.local:9100
+```
+
+> **Note:** Replace `<example-namespace>` and the service names with the ones used in your deployments.
+
+Alternatively, if you do not have an existing kube-state-metrics and node-exporter, you can deploy them automatically by enabling the following settings. In this case you do not need to set the `validator.serviceEndpoints.*` values:
+
+```yaml
+kubeStateMetrics:
   enabled: true
-prometheus-node-exporter:
+prometheusNodeExporter:
   enabled: true
 ```
-This will deploy the required resources for metric scraping.
+
+This will deploy the necessary resources for metric scraping.
 
 ### Custom Scrape Configs
-If the chart is running *without* the `kube-state-metrics` and `prometheus-node-exporter` exporters enabled (meaning, those two exporters are deployed from some other source outside of this chart), then the scrape configs used by the underlying Prometheus agent may need to be adjusted.
+If the chart is running **_without_** the `kube-state-metrics` and `prometheus-node-exporter` exporters enabled (meaning, those two exporters are deployed from some other source outside of this chart), then the scrape configs used by the underlying Prometheus agent may need to be adjusted.
 
 As an example, the out-of-the-box scrape config in this chart attempts to find the `kube-state-metrics` and `node-exporter` exporters via an annotation on k8s Services deployed by the KSM ande node-exporter subcharts. If those subcharts were instead deployed without any annotations, and were only available via Services with the addresses `my-kube-state-metrics-service.default.svc.cluster.local:8080` and `my-node-exporter.default.svc.cluster.local:9100`, we could add the following:
 
@@ -139,6 +155,7 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 
 ## Values
 
+**Manditory Values**
 | Key               | Type   | Default               | Description                                                                                                             |
 |-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
 | cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in.                                 |
@@ -147,6 +164,7 @@ See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-
 | apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `existingSecretName` is not set.                           |
 | existingSecretName| string | `nil`                 | The name of the secret that contains the CloudZero API key. Required if not providing the API key via the apiKey value. |
 | region            | string | `nil`                 | Region the cluster is running in.                                                                                       |
+
 
 
 ## Requirements

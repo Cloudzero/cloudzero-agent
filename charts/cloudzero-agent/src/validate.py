@@ -94,8 +94,10 @@ def run_validations() -> Dict[str, str]:
 
 
 def must_pass(results: Dict[str, str]):
+    skip = os.getenv("SKIP_VALIDATIONS", "false")
     if any(result != "success" for result in results.values()):
-        exit(1)
+        if skip != "true":
+            exit(1)
 
 
 def print_results(results: Dict[str, str]) -> None:
