@@ -165,13 +165,13 @@ kube-state-metrics:
   extraArgs:
     - --metric-labels-allowlist=pods=[*]
 ```
-A subset of relevant pod labels can be included; as an example, exporting only pod labels that start with `foobar_` could be achieved with the following:
+A subset of relevant pod labels can be included; as an example, exporting only the pod labels named `foo` and `bar` could be achieved with the following:
 ```yaml
 kube-state-metrics:
   extraArgs:
-    - --metric-labels-allowlist=pods=[foobar_*]
+    - --metric-labels-allowlist=pods=[foo,bar]
 ```
-See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-state-metrics/tree/main/docs#cli-arguments) for more details.
+This is preferable to including all labels with `*` because the performance impact is lessened. Regular expression matching is not currently supported. See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/developer/cli-arguments.md) for more details.
 
 ## Values
 
