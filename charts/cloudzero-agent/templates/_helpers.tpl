@@ -114,8 +114,19 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{/*
 Combine metric lists
 */}}
-{{- define "chartname.combineMetrics" -}}
+{{- define "cloudzero-agent.combineMetrics" -}}
 {{- $total := concat .Values.kubeMetrics .Values.containerMetrics -}}
+{{- $result := join "|" $total -}}
+{{- $result -}}
+{{- end -}}
+
+{{/*
+Required metric labels
+*/}}
+{{- define "cloudzero-agent.requiredMetricLabels" -}}
+{{- $requiredSpecialMetricLabels := tuple "_.*" "label_.*" }}
+{{- $requiredCZMetricLabels := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
+{{- $total := concat .Values.additionalMetricLabels $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
 {{- $result := join "|" $total -}}
 {{- $result -}}
 {{- end -}}

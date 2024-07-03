@@ -88,6 +88,12 @@ data:
           target_label: node
           replacement: $1
           action: replace
+        metric_relabel_configs:
+        - source_labels: [__name__]
+          regex: "^({{ join "|" .Values.kubeMetrics }})$"
+          action: keep
+        - action: labelkeep
+          regex: "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
         kubernetes_sd_configs:
         - role: endpoints
           kubeconfig_file: ""
@@ -135,8 +141,8 @@ data:
           target_label: node
           action: replace
         metric_relabel_configs:
-        - action: labeldrop
-          regex: instance
+        - action: labelkeep
+          regex: "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
         - source_labels: [__name__]
           regex: "^({{ join "|" .Values.containerMetrics }})$"
           action: keep
@@ -156,7 +162,7 @@ data:
           credentials_file: /etc/config/prometheus/secrets/value
         write_relabel_configs:
           - source_labels: [__name__]
-            regex: "^({{ include "chartname.combineMetrics" . }})$"
+            regex: "^({{ include "cloudzero-agent.combineMetrics" . }})$"
             action: keep
         metadata_config:
           send: false

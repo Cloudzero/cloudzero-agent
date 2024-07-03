@@ -20,13 +20,15 @@ kubeMetrics:
   - kube_pod_container_resource_requests
   - kube_pod_labels
   - kube_pod_info
-  - node_cpu_seconds_total
   - node_dmi_info
 containerMetrics:
   - container_cpu_usage_seconds_total
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
+
+# -- Any items added to this array will be added to the metrics that are sent to CloudZero, in addition to the minimal labels that CloudZero requires.
+additionalMetricLabels: []
 
 prometheusConfig:
   configMapNameOverride: ''
