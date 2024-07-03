@@ -73,13 +73,33 @@ validator:
 Alternatively, if you do not have an existing kube-state-metrics and node-exporter, you can deploy them automatically by enabling the following settings. In this case you do not need to set the `validator.serviceEndpoints.*` values:
 
 ```yaml
-kubeStateMetrics:
+kube-state-metrics:
   enabled: true
-prometheusNodeExporter:
+prometheus-node-exporter:
   enabled: true
 ```
 
 This will deploy the necessary resources for metric scraping.
+
+#### Passing values to subcharts
+
+Values can be be passed to the metrics exporter subcharts by adding values according to the values specification for [kube-state-metrics](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-state-metrics/values.yaml) and [prometheus-node-exporter](https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-node-exporter/values.yaml) in the `kube-state-metrics` and `prometheus-node-exporter` sections respectively.
+
+A common addition may be to pull the container images from custom image registries/repositories:
+
+```yaml
+kube-state-metrics:
+  enabled: true
+  image:
+    registry: my-custom-registry.io
+    repository: my-custom-kube-state-metrics/kube-state-metrics
+
+prometheus-node-exporter:
+  enabled: true
+  image:
+    registry: my-custom-registry.io
+    repository: my-custom-prometheus/node-exporter
+```
 
 ### Custom Scrape Configs
 If the chart is running **_without_** the `kube-state-metrics` and `prometheus-node-exporter` exporters enabled (meaning, those two exporters are deployed from some other source outside of this chart), then the scrape configs used by the underlying Prometheus agent may need to be adjusted.
