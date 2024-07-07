@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package status;
+option go_package  = "../status";
+
+message StatusCheck {
+    string name = 1;
+    bool passing = 2;
+    string error = 3;
+}
+
+enum StatusType {
+    STATUS_TYPE_UNSPECIFIED = 0;
+    STATUS_TYPE_INIT_STARTED = 1;
+    STATUS_TYPE_INIT_OK = 2;
+    STATUS_TYPE_INIT_FAILED = 3;
+    STATUS_TYPE_POD_STARTED = 4;
+    STATUS_TYPE_POD_STOPPING = 5;
+}
+
+message ClusterStatus {
+    string account = 1;
+    string region = 2;
+    string name = 3;
+
+    StatusType state = 4;
+    string chart_version = 5;
+    string agent_version = 6;
+    string scrape_config = 7;
+    string validator_version = 8;
+    string k8s_version = 9;
+
+    repeated StatusCheck checks = 10;
+}
+

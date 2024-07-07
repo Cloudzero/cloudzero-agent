@@ -1,0 +1,137 @@
+global:
+  scrape_interval: 60s
+scrape_configs:
+  - job_name: cloudzero-service-endpoints # kube_*, node_* metrics
+    honor_labels: true
+    honor_timestamps: true
+    track_timestamps_staleness: false
+    scrape_interval: 1m
+    scrape_timeout: 10s
+    scrape_protocols:
+    - OpenMetricsText1.0.0
+    - OpenMetricsText0.0.1
+    - PrometheusText0.0.4
+    metrics_path: /metrics
+    scheme: http
+    enable_compression: true
+    follow_redirects: true
+    enable_http2: true
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+      separator: ;
+      regex: "true"
+      replacement: $1
+      action: keep
+    - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape_slow]
+      separator: ;
+      regex: "true"
+      replacement: $1
+      action: drop
+    - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+      separator: ;
+      regex: (https?)
+      target_label: __scheme__
+      replacement: $1
+      action: replace
+    - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+      separator: ;
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: $1
+      action: replace
+    - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+      separator: ;
+      regex: (.+?)(?::\d+)?;(\d+)
+      target_label: __address__
+      replacement: $1:$2
+      action: replace
+    - separator: ;
+      regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+      replacement: __param_$1
+      action: labelmap
+    - separator: ;
+      regex: __meta_kubernetes_service_label_(.+)
+      replacement: $1
+      action: labelmap
+    - source_labels: [__meta_kubernetes_namespace]
+      separator: ;
+      regex: (.*)
+      target_label: namespace
+      replacement: $1
+      action: replace
+    - source_labels: [__meta_kubernetes_service_name]
+      separator: ;
+      regex: (.*)
+      target_label: service
+      replacement: $1
+      action: replace
+    - source_labels: [__meta_kubernetes_pod_node_name]
+      separator: ;
+      regex: (.*)
+      target_label: node
+      replacement: $1
+      action: replace
+    kubernetes_sd_configs:
+    - role: endpoints
+      kubeconfig_file: ""
+      follow_redirects: true
+      enable_http2: true
+  - job_name: cloudzero-nodes-cadvisor # container_* metrics
+    honor_timestamps: true
+    track_timestamps_staleness: false
+    scrape_interval: 1m
+    scrape_timeout: 10s
+    scrape_protocols:
+    - OpenMetricsText1.0.0
+    - OpenMetricsText0.0.1
+    - PrometheusText0.0.4
+    metrics_path: /metrics
+    scheme: https
+    enable_compression: true
+    authorization:
+      type: Bearer
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    follow_redirects: true
+    enable_http2: true
+    relabel_configs:
+    - separator: ;
+      regex: __meta_kubernetes_node_label_(.+)
+      replacement: $1
+      action: labelmap
+    - separator: ;
+      regex: (.*)
+      target_label: __address__
+      replacement: kubernetes.default.svc:443
+      action: replace
+    - source_labels: [__meta_kubernetes_node_name]
+      separator: ;
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+      action: replace
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: node
+      action: replace
+    metric_relabel_configs:
+    - action: labeldrop
+      regex: instance
+    - source_labels: [__name__]
+      regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$"
+      action: keep
+    kubernetes_sd_configs:
+    - role: node
+      kubeconfig_file: ""
+      follow_redirects: true
+      enable_http2: true
+remote_write:
+  - url: 'https://api.cloudzero.com/v1/container-metrics?cluster_name=jb-test-cluster&cloud_account_id=00000000&region=us-east-1'
+    authorization:
+      credentials_file: /etc/config/prometheus/secrets/value
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|node_cpu_seconds_total|node_dmi_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$"
+        action: keep
+    metadata_config:
