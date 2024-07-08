@@ -132,7 +132,7 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 
 // this function returns a function which will set an error code if necessary
 func processFailures(ctx context.Context, recorder status.Accessor, r *runner) func() {
-	var handleFailure func() = func() {}
+	var handleFailure = func() {}
 	recorder.ReadFromReport(func(cs *status.ClusterStatus) {
 		if r.stage != config.ContextStageInit {
 			return
