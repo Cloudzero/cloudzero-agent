@@ -3,8 +3,6 @@
 package telemetry_test
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	_ "embed"
 	"io"
@@ -103,8 +101,7 @@ func TestPostStatus(t *testing.T) {
 			}
 
 			// Create a test message
-			builder := pb.NewAccessor(createTestClusterStatus(t))
-			accessor := builder.(pb.Accessor)
+			accessor := pb.NewAccessor(createTestClusterStatus(t))
 
 			// Create a test context
 			ctx := context.Background()
@@ -167,30 +164,15 @@ func (ts *testHandler) Handler(w net.ResponseWriter, r *net.Request) {
 
 	// Verify the request body
 	// Read the compressed request body
-	compressedData, err := io.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		net.Error(w, "Failed to read request body", net.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
-	// Decompress the gzip data
-	gzipReader, err := gzip.NewReader(bytes.NewBuffer(compressedData))
-	if err != nil {
-		net.Error(w, "Failed to create gzip reader", net.StatusInternalServerError)
-		return
-	}
-	defer gzipReader.Close()
-
-	// Read the decompressed data
-	decompressedData, err := io.ReadAll(gzipReader)
-	if err != nil {
-		net.Error(w, "Failed to read decompressed data", net.StatusInternalServerError)
-		return
-	}
-
 	// Unmarshal the Protobuf message
-	err = proto.Unmarshal(decompressedData, &serverDecodedStatus)
+	err = proto.Unmarshal(data, &serverDecodedStatus)
 	if err != nil {
 		net.Error(w, "Failed to unmarshal protobuf message", net.StatusBadRequest)
 		return

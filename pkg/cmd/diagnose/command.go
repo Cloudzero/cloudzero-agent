@@ -49,6 +49,7 @@ func NewCommand() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{Name: "check", Usage: "comma seperated or multi-value list of check(s) to run", Required: true},
 					&cli.StringSliceFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: configFileDesc, Required: true},
+					&cli.BoolFlag{Name: "post", Usage: "if set to true, telemetry will be pushed", Required: false},
 				},
 				Action: func(c *cli.Context) error {
 					requestedChecks := c.StringSlice("check")
@@ -91,6 +92,13 @@ func NewCommand() *cli.Command {
 							fmt.Println(string(b))
 						}
 					})
+
+					if c.Bool("post") {
+						client := http.DefaultClient
+						if err := telemetry.Post(ctx, client, cfg, report); err != nil {
+							logrus.WithError(err).Warn("failed to post status")
+						}
+					}
 					return nil
 				},
 			},

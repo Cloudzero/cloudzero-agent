@@ -4,7 +4,6 @@ package telemetry
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	net "net/http"
@@ -16,6 +15,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/http"
 	pb "github.com/cloudzero/cloudzero-agent-validator/pkg/status"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -63,6 +63,7 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	)
 	accessor.ReadFromReport(func(cs *pb.ClusterStatus) {
 		data, err = proto.Marshal(cs)
+		logrus.Infof("marshalled cluster status: %d bytes", len(data))
 	})
 	if err != nil {
 		return err
@@ -74,6 +75,8 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	if err != nil {
 		return err
 	}
+
+	logrus.Infof("compressed size is: %d bytes", buf.Len())
 
 	endpoint := fmt.Sprintf("%s%s", cfg.Cloudzero.Host, URLPath)
 	_, err = http.Do(ctx, client, net.MethodPost,
@@ -96,11 +99,20 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 
 func compress(data []byte) (bytes.Buffer, error) {
 	var buf bytes.Buffer
-	gzipWriter := gzip.NewWriter(&buf)
-	_, err := gzipWriter.Write(data)
-	if err != nil {
-		return bytes.Buffer{}, errors.Wrap(err, "data compress")
+	if _, err := buf.Write(data); err != nil {
+		return bytes.Buffer{}, errors.Wrap(err, "write data to buffer")
 	}
-	gzipWriter.Close()
+
+	// XXX: Compression is taking more space than the buffer alone! We gain nothing!
+	// snappyWriter := snappy.NewBufferedWriter(&buf)
+	// _, err := snappyWriter.Write(data)
+	// if err != nil {
+	// 	return bytes.Buffer{}, errors.Wrap(err, "data compress")
+	// }
+
+	// if err = snappyWriter.Close(); err != nil {
+	// 	return bytes.Buffer{}, errors.Wrap(err, "close writer failed")
+	// }
+
 	return buf, nil
 }
