@@ -81,9 +81,8 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	endpoint := fmt.Sprintf("%s%s", cfg.Cloudzero.Host, URLPath)
 	_, err = http.Do(ctx, client, net.MethodPost,
 		map[string]string{
-			http.HeaderAuthorization:   fmt.Sprintf("Bearer %s", cfg.Cloudzero.Credential),
-			http.HeaderContentEncoding: http.ContentTypeGzip,
-			http.HeaderContentType:     http.ContentTypeProtobuf,
+			http.HeaderAuthorization: fmt.Sprintf("Bearer %s", cfg.Cloudzero.Credential),
+			http.HeaderContentType:   http.ContentTypeProtobuf,
 		},
 		map[string]string{
 			http.QueryParamAccountID:   cfg.Deployment.AccountID,
