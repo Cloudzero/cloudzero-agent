@@ -50,7 +50,11 @@ func (c *checker) Check(_ context.Context, _ *net.Client, accessor status.Access
 			continue
 		}
 		accessor.WriteToReport(func(s *status.ClusterStatus) {
-			s.ScrapeConfig = string(data)
+			if s.ScrapeConfig != "" {
+				s.ScrapeConfig = fmt.Sprintf("%s\n%s", s.ScrapeConfig, string(data))
+			} else {
+				s.ScrapeConfig = string(data)
+			}
 			s.Checks = append(s.Checks, &status.StatusCheck{Name: DiagnosticScrapeConfig, Passing: true})
 		})
 	}
