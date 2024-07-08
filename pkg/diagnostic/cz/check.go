@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	net "net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -38,14 +39,17 @@ func (c *checker) Check(ctx context.Context, client *net.Client, accessor status
 	_, err := http.Do(
 		ctx, client, net.MethodGet,
 		map[string]string{
-			http.HeaderAuthorization:  fmt.Sprintf("Bearer %s", c.cfg.Cloudzero.Credential),
+			http.HeaderAuthorization:  strings.TrimSpace(c.cfg.Cloudzero.Credential),
 			http.HeaderAcceptEncoding: http.ContentTypeJSON,
 		},
-		map[string]string{
-			http.QueryParamAccountID:   c.cfg.Deployment.AccountID,
-			http.QueryParamRegion:      c.cfg.Deployment.Region,
-			http.QueryParamClusterName: c.cfg.Deployment.ClusterName,
-		}, url, nil,
+		nil,
+		// TODO: Add HEAD endpoint for container-metrics/status and pass these to check the API key
+		// map[string]string{
+		// 	http.QueryParamAccountID:   c.cfg.Deployment.AccountID,
+		// 	http.QueryParamRegion:      c.cfg.Deployment.Region,
+		// 	http.QueryParamClusterName: c.cfg.Deployment.ClusterName,
+		// },
+		url, nil,
 	)
 	if err == nil {
 		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAPIKey, Passing: true})

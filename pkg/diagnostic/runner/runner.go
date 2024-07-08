@@ -125,6 +125,14 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 	}
 
 	// check the results (and set correct end code)
+	processFailures(ctx, recorder, r)()
+
+	return recorder, nil
+}
+
+// this function returns a function which will set an error code if necessary
+func processFailures(ctx context.Context, recorder status.Accessor, r *runner) func() {
+	var handleFailure func() = func() {}
 	recorder.ReadFromReport(func(cs *status.ClusterStatus) {
 		if r.stage != config.ContextStageInit {
 			return
@@ -132,12 +140,14 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 		for _, c := range cs.Checks {
 			if !c.Passing {
 				if chkr := r.reg.Get(config.DiagnosticInternalInitFailed); len(chkr) > 0 {
-					_ = chkr[0].Check(ctx, r.client, recorder)
+					// set to read handler since we already hold the lock
+					handleFailure = func() {
+						_ = chkr[0].Check(ctx, r.client, recorder)
+					}
 				}
 				break
 			}
 		}
 	})
-
-	return recorder, nil
+	return handleFailure
 }

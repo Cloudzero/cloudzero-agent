@@ -60,7 +60,7 @@ func Do(
 			return http.StatusInternalServerError, errors.Wrap(err, fmt.Sprintf("network error: %s", req.URL.String()))
 		}
 		logrus.WithError(err).Error("Failed to make request")
-		return http.StatusInternalServerError, ErrStatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 	return resp.StatusCode, ToError(resp.StatusCode)
 }
