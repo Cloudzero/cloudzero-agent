@@ -1,4 +1,4 @@
-# export IMAGE_NAME=ghcr.io/josephbarnett/cloudzero-charts/cloudzero-agent-validator
+# export IMAGE_NAME=ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
 # export TAG=golang
 # docker buildx build --builder=container --platform linux/amd64,linux/arm64 --push -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile .
 #

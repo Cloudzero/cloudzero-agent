@@ -1,6 +1,6 @@
 REPO_NAME ?= $(shell basename `git rev-parse --show-toplevel`)
-IMAGE_NAME ?= ghcr.io/josephbarnett/cloudzero-charts/cloudzero-agent-validator
-TAG ?= golang
+IMAGE_NAME ?= ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
+TAG ?= dev-$(git rev-parse --short HEAD)
 
 # Docker is the default container tool (and buildx buildkit)
 CONTAINER_TOOL ?= docker
@@ -8,7 +8,6 @@ BUILDX_CONTAINER_EXISTS := $(shell $(CONTAINER_TOOL) buildx ls --format "{{.Name
 
 BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 REVISION ?= $(shell git rev-parse HEAD)
-TAG ?= $(shell git describe --tags 2>/dev/null || true)
 
 # Directories
 # Colors
