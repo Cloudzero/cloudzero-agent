@@ -63,16 +63,16 @@ func TestPostStatus(t *testing.T) {
 		{
 			name: "good",
 		},
-		// {
-		// 	name:       "bad request error",
-		// 	badRequest: true,
-		// 	wantErr:    true,
-		// },
-		// {
-		// 	name:      "timeout error",
-		// 	doTimeout: true,
-		// 	wantErr:   true,
-		// },
+		{
+			name:       "bad request error",
+			badRequest: true,
+			wantErr:    true,
+		},
+		{
+			name:      "timeout error",
+			doTimeout: true,
+			wantErr:   true,
+		},
 	}
 
 	// Create a mock HTTP server
@@ -151,12 +151,7 @@ func NewTestServerHandler(t *testing.T) *testHandler {
 func (ts *testHandler) Handler(w net.ResponseWriter, r *net.Request) {
 	ts.t.Helper()
 	// Verify the request headers
-	contentEncoding := r.Header.Get(http.HeaderContentEncoding)
 	contentType := r.Header.Get(http.HeaderContentType)
-	if contentEncoding != http.ContentTypeGzip {
-		net.Error(w, "unexpected content encoding", net.StatusBadRequest)
-		return
-	}
 	if contentType != http.ContentTypeProtobuf {
 		net.Error(w, "unexpected content type", net.StatusBadRequest)
 		return
