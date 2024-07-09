@@ -72,7 +72,6 @@ jobs:
         author_email: ops@cloudzero.com
         message: 'Commit for ${{ env.NEW_VERSION }}'
         add: '*'
-        pull: '--rebase'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
