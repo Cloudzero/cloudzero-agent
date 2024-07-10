@@ -41,7 +41,7 @@ jobs:
         run: git pull --rebase origin main
 
       - name: Merge develop into main
-        run: git merge --ff-only develop
+        run: git merge develop
 
       - name: Install Helm
         uses: azure/setup-helm@v3
