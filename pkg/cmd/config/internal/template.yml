@@ -1,0 +1,40 @@
+versions:
+  chart_version: {{ .ChartVerson }}
+  agent_version: {{ .AgentVersion }}
+
+logging:
+  level: info
+  location: ./cloudzero-agent-validator.log
+
+deployment:
+  account_id:  {{ .AccountID }}
+  cluster_name:  {{ .ClusterName }}
+  region:  {{ .Region }}
+
+cloudzero:
+  host:  {{ .CloudzeroHost }}
+  credentials_file: /etc/config/prometheus/secrets/value
+
+prometheus:
+  kube_state_metrics_service_endpoint:  {{ .KubeStateMetricsURL }}
+  prometheus_node_exporter_service_endpoint:  {{ .PromNodeExporterURL }}
+  configurations:
+    - /etc/config/prometheus/configmaps/prometheus.yml
+
+diagnostics:
+  stages:
+    - name: pre-start
+      enforce: true
+      checks:
+        - egress_reachable
+        - api_key_valid
+    - name: post-start
+      enforce: false
+      checks:
+        - k8s_version
+        - kube_state_metrics_reachable
+        - node_exporter_reachable
+        - scrape_cfg
+    - name: pre-stop
+      enforce: false
+      checks:

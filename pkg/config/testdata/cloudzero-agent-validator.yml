@@ -1,0 +1,43 @@
+# Sample checker configuration file
+versions:
+  chart_version: 0.1.0
+  agent_version: 0.2.0
+
+logging:
+  level: debug
+  location: ./cloudzero-agent-validator.log
+
+deployment:
+  account_id: 000000000000
+  cluster_name: test-cluster
+  region: us-west-2
+
+cloudzero:
+  host: https://api.cloudzero.com
+  credentials_file: ./api_key_file
+
+prometheus:
+  kube_state_metrics_service_endpoint: http://kube-state-metrics:8080
+  prometheus_node_exporter_service_endpoint: http://node-exporter:8080
+  configurations: 
+    - prometheus.yml
+
+diagnostics:
+  stages:
+    - name: pre-start
+      enforce: true
+      checks:
+        - egress_reachable
+        - api_key_valid
+    - name: post-start
+      enforce: false
+      checks:
+        - k8s_version
+        - egress_reachable
+        - kube_state_metrics_reachable
+        - node_exporter_reachable
+        - scrape_cfg
+    - name: pre-stop
+      enforce: false
+      checks:
+        - egress_reachable

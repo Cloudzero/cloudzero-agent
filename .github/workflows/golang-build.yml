@@ -1,0 +1,21 @@
+name: GoTest
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache-dependency-path: go.sum
+      - name: Install dependencies
+        run: |
+          go mod download     
+      - name: Run go tests
+        run: |
+            go test -timeout 30s -race -cover ./...
