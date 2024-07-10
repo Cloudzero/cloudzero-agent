@@ -20,7 +20,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}/cloudzero-agent-validator
 
 jobs:
-  # This job lints the chart
   docker:
     runs-on: ubuntu-latest
     permissions:
