@@ -34,30 +34,19 @@ spec:
         - name: {{ .Values.validator.name }}
           image: "{{ .Values.validator.image.repository }}:{{ .Values.validator.image.tag }}"
           imagePullPolicy: "{{ .Values.validator.image.pullPolicy }}"
-          env:
-            - name: CZ_HOST
-              value: {{ .Values.host }}
-            - name: SKIP_VALIDATIONS
-              value: "{{ .Values.validator.skipValidations }}"
-            - name: KMS_EP_URL
-              {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
-              value: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
-              {{- else }}
-              value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
-              {{- end }}
-            - name: NODE_EXPORTER_EP_URL
-              {{- if .Values.validator.serviceEndpoints.prometheusNodeExporter }}
-              value: http://{{ .Values.validator.serviceEndpoints.prometheusNodeExporter }}/
-              {{- else }}
-              value: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
-              {{- end }}
-            - name: REGION
-              value: {{ .Values.region }}
+          command:
+            - /bin/sh
+            - -c
+            - cp -r /app /checks/bin/ && cloudzero-agent-validator d pre-start -f /checks/config/validator.yml
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/prometheus/secrets/
               subPath: ""
               readOnly: true
+            - name: lifecycle-volume
+              mountPath: /checks/bin/
+            - name: validator-config-volume
+              mountPath: /checks/config/
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
@@ -90,10 +79,24 @@ spec:
           env:
 {{ toYaml .Values.server.env | indent 12}}
           {{- end }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - /check/app/cloudzero-agent-validator d post-start -f /check/app/config/validator.yml
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - /check/app/cloudzero-agent-validator d pre-stop -f /check/app/config/validator.yml
           args:
         {{ toYaml .Values.server.args | nindent 12}}
           ports:
             - containerPort: 9090
+
           readinessProbe:
             httpGet:
               path: /-/ready
@@ -128,6 +131,11 @@ spec:
               mountPath: /etc/config/prometheus/secrets/
               subPath: ""
               readOnly: true
+            - name: lifecycle-volume
+              mountPath: /check/
+            - name: validator-config-volume
+              mountPath: /check/app/config/
+
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
@@ -159,6 +167,11 @@ spec:
         - name: config-volume
           configMap:
             name: {{ template "cloudzero-agent.configMapName" . }}
+        - name: validator-config-volume
+          configMap:
+            name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
+        - name: lifecycle-volume
+          emptyDir: {}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}

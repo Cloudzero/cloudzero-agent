@@ -61,10 +61,9 @@ validator:
     kubeStateMetrics:
     prometheusNodeExporter:
   # -- Flag to skip validator failure if unable to connect to the CloudZero API.
-  skipValidations: false
   name: env-validator
   image:
-    repository: ghcr.io/cloudzero/cloudzero-charts/cloudzero-agent-validator
+    repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
     tag: latest
     digest:
     pullPolicy: Always

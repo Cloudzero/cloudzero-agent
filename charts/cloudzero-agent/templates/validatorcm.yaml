@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  name: {{ include "cloudzero-agent.validatorConfigMapName" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+  {{- with .Values.prometheusConfig.configMapAnnotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  validator.yml: |-
+    versions:
+      chart_version: {{ .Chart.Version }}
+      agent_version: {{ .Values.server.image.tag }}
+
+    logging:
+      level: info
+      location: ./cloudzero-agent-validator.log
+
+    deployment:
+      account_id: {{ .Values.cloudAccountId }}
+      cluster_name: {{ .Values.clusterName }}
+      region: {{ .Values.region }}
+
+    cloudzero:
+      host:  https://{{ .Values.host }}
+      credentials_file: /etc/config/prometheus/secrets/value
+      disable_telemetry: false
+
+    prometheus:
+      {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
+      kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
+      {{- else }}
+      kube_state_metrics_service_endpoint: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
+      {{- end }}
+      {{- if .Values.validator.serviceEndpoints.prometheusNodeExporter }}
+      prometheus_node_exporter_service_endpoint: http://{{ .Values.validator.serviceEndpoints.prometheusNodeExporter }}/
+      {{- else }}
+      prometheus_node_exporter_service_endpoint: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
+      {{- end }}
+      configurations:
+        - /etc/prometheus/prometheus.yml
+        - /etc/config/prometheus/configmaps/prometheus.yml
+
+    diagnostics:
+      stages:
+        - name: pre-start
+          enforce: true
+          checks:
+            - egress_reachable
+            - api_key_valid
+        - name: post-start
+          enforce: false
+          checks:
+            - k8s_version
+            - kube_state_metrics_reachable
+            - node_exporter_reachable
+            - scrape_cfg
+        - name: pre-stop
+          enforce: false
+          checks:
