@@ -1,86 +1,111 @@
-name: build-and-publish-chart
+name: Manual Release Chart
 
+# manual trigger only
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build-and-publish-chart:
+    permissions:
+      contents: 'write'
+      packages: 'write'
+      id-token: write
+      actions: 'read'
     runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+    steps: 
 
-    - name: Install Helm
-      uses: azure/setup-helm@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0                # fetch the whole repo history
 
-    - name: Build Dependencies
-      run: |
-        helm dependency update charts/cloudzero-agent/
+      - name: Set up Git
+        run: |
+          git config --local user.email "ops@cloudzero.com"
+          git config --local user.name "Automated CZ Release"
 
-    - name: Update Version
-      id: version
-      uses: flatherskevin/semver-action@v1
-      with:
-        incrementLevel: patch
-        source: tags
+      - name: Fetch all branches
+        run: git fetch --all
 
-    - name: Update Chart Version
-      run: |
-        VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
-        sed -i ''$VERSION_LINE's/.*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
-        echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
+      - name: Checkout develop branch
+        run: git checkout develop
 
-    - name: Package Chart
-      run: |
-        helm package charts/cloudzero-agent/ --destination .deploy
+      - name: Rebase develop branch
+        run: git pull --rebase origin develop
 
-    - name: Commit updated Chart.yaml
-      uses: EndBug/add-and-commit@v9
-      with:
-        author_name: "GitHub Actions Bot"
-        author_email: "actions@github.com"
-        message: "Update Chart.yaml to version ${{ env.NEW_VERSION }}"
-        pull: '--rebase'
+      - name: Checkout main branch
+        run: git checkout main
 
-    - name: Upload Chart as Artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: agent-chart
-        path: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+      - name: Rebase main branch
+        run: git pull --rebase origin main
 
-    - name: Checkout GH Pages
-      uses: actions/checkout@v2
-      with:
-        ref: gh-pages
+      - name: Merge develop into main
+        run: git merge --ff-only develop
 
-    - name: Download Chart Artifact
-      uses: actions/download-artifact@v2
-      with:
-        name: agent-chart
-        path: .
+      - name: Install Helm
+        uses: azure/setup-helm@v3
 
-    - name: Update Index
-      run: |
-        helm repo index --url https://cloudzero.github.io/cloudzero-charts .
+      - name: Build Dependencies
+        run: |
+          helm dependency update charts/cloudzero-agent/
 
-    - name: Commit and Push changes
-      uses: EndBug/add-and-commit@v9
-      with:
-        author_name: Clouzero Bot
-        author_email: ops@cloudzero.com
-        message: 'Commit for ${{ env.NEW_VERSION }}'
-        add: '*'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update Version
+        id: version
+        uses: flatherskevin/semver-action@v1
+        with:
+          incrementLevel: patch
+          source: tags
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        name: ${{ steps.version.outputs.nextVersion }}
-        tag_name: ${{ steps.version.outputs.nextVersion }}
-        files: cloudzero-agent-${{ env.NEW_VERSION }}.tgz
-        make_latest: true
+      - name: Update Chart Version
+        run: |
+          VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
+          sed -i ''$VERSION_LINE's/.*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
+          echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
+
+      - name: Package Chart
+        run: |
+          helm package charts/cloudzero-agent/ --destination .deploy
+
+      - name: Commit updated Chart.yaml
+        run: |
+          git add .
+          git commit -m "Update Chart.yaml to version ${{ env.NEW_VERSION }}"
+          git push origin main
+
+      - name: Upload Chart as Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: agent-chart
+          path: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+
+      - name: Checkout GH Pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0                # fetch the whole repo history
+
+      - name: Download Chart Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: agent-chart
+          path: .
+
+      - name: Update Index
+        run: |
+          helm repo index --url https://cloudzero.github.io/cloudzero-charts .
 
 
+      - name: Commit and Push gh-pages changes
+        run: |
+          git add .
+          git commit -m "Commit for ${{ env.NEW_VERSION }}"
+          git push origin gh-pages
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.nextVersion }}
+          tag_name: ${{ steps.version.outputs.nextVersion }}
+          files: cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+          make_latest: true
