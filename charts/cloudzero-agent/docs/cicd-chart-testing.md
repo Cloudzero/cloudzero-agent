@@ -1,5 +1,4 @@
-CICD Test Automation
-========================
+# CICD Test Automation
 
 This repository contains several GitHub Action workflows that enable functional verification of the Cloudzero Charts.
 
@@ -18,12 +17,10 @@ act -l
 Here is an example output:
 
 ```bash
-Stage  Job ID                                        Job name                                      Workflow name             Workflow file                 Events           
-0      build-and-publish-chart                       build-and-publish-chart                       build-and-publish-chart   build-and-publish-chart.yml   push             
-0      has_changes                                   has_changes                                   build_test_publish_image  build-test-publish-image.yml  push,pull_request
-0      scanner                                       scanner                                       detection_rules           change-detector.yml           workflow_call    
-1      test_chart_lint                               test_chart_lint                               build_test_publish_image  build-test-publish-image.yml  pull_request,push
-1      build_test_chart_install_maybe_publish_image  build_test_chart_install_maybe_publish_image  build_test_publish_image  build-test-publish-image.yml  push,pull_request
+Stage  Job ID                   Job name                 Workflow name            Workflow file                Events
+0      build-and-publish-chart  build-and-publish-chart  build-and-publish-chart  build-and-publish-chart.yml  push
+0      install                  install                  Test Chart               test-chart.yml               pull_request,push
+0      lint                     lint                     Test Chart               test-chart.yml               push,pull_request
 ```
 
 ## Verify a Specific Workflow (DRY-RUN mode):
@@ -31,7 +28,7 @@ Stage  Job ID                                        Job name                   
 To verify a specific workflow in DRY-RUN mode, use the following command:
 
 ```bash
-act --dry-run -j build_test_chart_install_maybe_publish_image -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
+act --dry-run -j install -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
 ```
 
 Please note that adding the `-n` or `--dry-run` flag only validates that the jobs are syntactically correct.
@@ -41,13 +38,13 @@ Please note that adding the `-n` or `--dry-run` flag only validates that the job
 To run a specific workflow, use the following command:
 
 ```bash
-act --dry-run -j build_test_chart_install_maybe_publish_image -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
+act --dry-run -j install -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret GITHUB_TOKEN=$GITHUB_TOKEN
 ```
 
 ---
 
 Special Topics
-=================
+==============
 
 ### Repository Secrets & Permissions
 
@@ -66,24 +63,3 @@ However, GitHub Actions does not allow `write` permissions for the automatic `GI
 4. Merge to Develop/Main: When the code merges to the `develop` or `main` branch, the pipeline will run. It will build and test the chart, and if successful, it will publish the image to GHCR (GitHub Container Registry).
 
 This flow enables development using repository forks while ensuring publishing safety based on the repository context.
-
----
-
-### Building Images & Chart Testing
-
-<img src="./assets/build-image-workflow.png" alt=" Building Images & Chart Testing" width="900" height="500">
-
-
-The image builder workflow outlined above provides the following functionality:
-
-1. Each push triggers a code scan to determine if any changes have been made that would impact the validator image or the helm chart.
-
-2. If a change is detected, two parallel workflows are started:
-    1. **Chart Linting**: The helm chart linter workflow ensures that the chart conforms to development best practices.
-    2. **Image Build, Test, Publish**: The image-build-test-publish workflow performs the following steps:
-       - Builds the image and stores it in a local registry deployed into a KinD Kubernetes cluster.
-       - Runs the chart installation to validate that the chart and the image are working as expected.
-       - **_Conditionally_** publishes the image by copying it to GHCR if either of the following conditions are met:
-         - The current branch is either `develop` or `main`.
-         - The branch is a `release tag`.
-

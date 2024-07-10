@@ -21,6 +21,10 @@ Create chart name and version as used by the chart label.
 {{ .Values.prometheusConfig.configMapNameOverride | default (printf "%s-configuration" .Release.Name) }}
 {{- end}}
 
+{{ define "cloudzero-agent.validatorConfigMapName" -}}
+{{- printf "%s-validator-configuration" .Release.Name -}}
+{{- end}}
+
 {{/*
 Create labels for prometheus
 */}}

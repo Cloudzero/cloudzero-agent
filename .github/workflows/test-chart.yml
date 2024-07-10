@@ -1,0 +1,130 @@
+name: Test Chart
+on:
+  push:
+    # Only create "develop" branch tagged image
+    branches:
+      - develop
+    # Only create "version tag" tagged image
+    tags:
+      - "v*.*.*"
+  # create any PR image (tag is pr-<number>)
+  # these should be cleaned once merged using the docker-clean.yml
+  pull_request:
+
+env:
+  SKIP_VALIDATIONS: false
+
+jobs:  
+  # This job lints the chart
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: SETUP - Checkout
+        uses: actions/checkout@v4
+
+      - name: SETUP - Set up Helm
+        uses: azure/setup-helm@v4.2.0
+        with:
+          version: v3.14.4
+
+      - name: SETUP - Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: TEST - Lint the chart
+        env:
+          # Agent Chart settings (prom repo is to work around issue with chart-testing tool)
+          PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
+          CLUSTER_NAME: cz-node-agent-ci
+          CLOUD_ACCOUNT_ID: 00000000
+          CZ_API_TOKEN: 'fake-api-token'
+          REGION: 'us-east-1'
+        run: |
+          cd charts/cloudzero-agent
+          helm dependency update
+          ct lint --debug --charts . \
+            --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
+            --chart-repos=prometheus-node-exporter=$PROM_CHART_REPO \
+            --helm-lint-extra-args "--set=existingSecretName=api-token,clusterName=$CLUSTER_NAME,cloudAccountId=$CLOUD_ACCOUNT_ID,region=$REGION"
+
+  # This job tests the chart on a KinD cluster
+  # and if we are in the develop or tag branch, it will 
+  # publish the image to the production registry
+  install:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # required to push the image to the registry
+      packages: write
+      # required for image signing
+      id-token: write
+    steps:
+      # Checkout the repository code
+      - name: SETUP - Checkout
+        id: checkout_code
+        uses: actions/checkout@v4
+
+      # Install helm on the host
+      - name: SETUP - Helm
+        id: install_helm
+        uses: azure/setup-helm@v4.2.0
+        with:
+          version: v3.14.4
+
+      # Install chart-testing tool to make chart validation easier
+      - name: SETUP - chart-testing
+        id: install_ct
+        uses: helm/chart-testing-action@v2.6.1
+
+      # Create a KinD cluster with a registry pod for testing (kind-registry:5000)
+      - name: SETUP - Kubernetes KinD Cluster
+        id: install_kind
+        uses: helm/kind-action@v1
+
+      # Sanity Check: Validate the k8s and Registry is Running
+      - name: SANITY CHECK - KinD
+        id: validate_kind_install
+        run: |
+          kubectl version
+          kubectl cluster-info
+          kubectl describe nodes
+
+      # PRs from a fork don't have access to the secrets
+      # don't fail in this case, skip validate
+      - name: INPUT PREP - Skip validation
+        id: skip_validation
+        run: |
+          # Skip if secret is not defined
+          if [[ -z "${{ secrets.CZ_API_TOKEN }}" ]]; then
+            echo "SKIP_VALIDATIONS=true" >>${GITHUB_ENV}
+          fi
+
+      # Install the chart using our temporary image
+      - name: TEST - Install the chart
+        id: test_chart_installation
+        if: ${{ env.SKIP_VALIDATIONS == 'false' }}
+        env:
+          NAMESPACE: monitoring
+          # Agent Chart settings (prom repo is to work around issue with chart-testing tool)
+          PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
+          CLUSTER_NAME: cz-node-agent-ci
+          CLOUD_ACCOUNT_ID: 00000000
+          CZ_API_TOKEN: ${{ secrets.CZ_API_TOKEN || 'fake-api-token' }}
+          REGION: 'us-east-1'
+        run: |  
+          kubectl create namespace $NAMESPACE
+          kubectl create secret -n $NAMESPACE generic api-token --from-literal=value=$CZ_API_TOKEN
+          cd charts/cloudzero-agent
+          helm dependency update
+          ct install --charts . \
+            --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
+            --chart-repos=prometheus-node-exporter=$PROM_CHART_REPO \
+            --namespace $NAMESPACE \
+            --helm-extra-set-args "\
+              --set=existingSecretName=api-token \
+              --set=clusterName=$CLUSTER_NAME \
+              --set=cloudAccountId=$CLOUD_ACCOUNT_ID \
+              --set=region=$REGION \
+              --set=kube-state-metrics.enabled=true \
+              --set=prometheus-node-exporter.enabled=true"
