@@ -6,6 +6,7 @@ labels: ''
 assignees: ''
 
 ---
+
 **Please do not report security vulnerabilities here**. Please disclose all security issues to [security@cloudzero.com](mailto:security@cloudzero.com).
 
 **Thank you in advance for helping us to improve this project!** Please read through the template below and answer all relevant questions. Your additional work here is greatly appreciated and will help us respond as quickly as possible. For general support or usage questions, use [CloudZero Support](mailto:support@cloudzero.com). Finally, to avoid duplicates, please search existing Issues before submitting one here.
