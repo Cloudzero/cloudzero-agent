@@ -50,18 +50,24 @@ jobs:
         run: |
           helm dependency update charts/cloudzero-agent/
 
-      - name: Update Version
-        id: version
-        uses: flatherskevin/semver-action@v1
-        with:
-          incrementLevel: patch
-          source: tags
+      - name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: 'Get next minor version'
+        id: nexttag
+        uses: "WyriHaximus/github-action-next-semvers@v1"
+        with:
+          version: ${{ steps.previoustag.outputs.tag }}
+
+      
       - name: Update Chart Version
         run: |
           VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
-          sed -i ''$VERSION_LINE's/.*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
-          echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
+          sed -i ''$VERSION_LINE's/.*/version: ${{ steps.nexttag.outputs.patch }}/' charts/cloudzero-agent/Chart.yaml
+          echo "NEW_VERSION=${{ steps.nexttag.outputs.patch }}" >> $GITHUB_ENV
 
       - name: Package Chart
         run: |
@@ -72,6 +78,14 @@ jobs:
           git add .
           git commit -m "Update Chart.yaml to version ${{ env.NEW_VERSION }}"
           git push origin main
+
+      # This must happen after changes to the main branch
+      - name: Create the Github Tag Version
+        id: version
+        uses: flatherskevin/semver-action@v1
+        with:
+          incrementLevel: patch
+          source: tags
 
       - name: Upload Chart as Artifact
         uses: actions/upload-artifact@v2
@@ -94,7 +108,6 @@ jobs:
       - name: Update Index
         run: |
           helm repo index --url https://cloudzero.github.io/cloudzero-charts .
-
 
       - name: Commit and Push gh-pages changes
         run: |
