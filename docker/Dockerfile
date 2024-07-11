@@ -52,7 +52,8 @@ LABEL org.opencontainers.image.title="cloudzero-agent-validator"
 LABEL org.opencontainers.image.description="cloudzero-agent execution environment validation utility"
 LABEL org.opencontainers.image.vendor="Cloudzero, Inc."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL io.artifacthub.package.readme-url="https://raw.githubusercontent.com/cloudzero/cloudzero-agent-validator/main/README.md"
+LABEL org.opencontainers.image.source = "https://github.com/Cloudzero/cloudzero-agent-validator"
+LABEL io.artifacthub.package.readme-url="https://raw.githubusercontent.com/Cloudzero/cloudzero-agent-validator/main/README.md"
 LABEL io.artifacthub.package.license="Apache-2.0"
 
 VOLUME [ "/app/config" ]
