@@ -10,10 +10,7 @@
         "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,253}[a-zA-Z0-9])?$"
     },
     "cloudAccountId": {
-        "type": [
-            "string",
-            "integer"
-        ]
+        "type": "string"
     },
     "region": {
         "type": "string"

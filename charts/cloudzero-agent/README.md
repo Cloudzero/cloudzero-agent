@@ -178,7 +178,7 @@ This is preferable to including all labels with `*` because the performance impa
 **Manditory Values**
 | Key               | Type   | Default               | Description                                                                                                             |
 |-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
-| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in.                                 |
+| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure of the account the cluster is running in. Note: this must be a string, despite it being an integer in platforms such as AWS, due to limitations with helm.                                |
 | clusterName       | string | `nil`                 | Name of the cluster. Required to be RFC 1123 compliant.                                                                 |
 | host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                      |
 | apiKey            | string | `nil`                 | The CloudZero API key to use to export metrics. Only used if `existingSecretName` is not set.                           |

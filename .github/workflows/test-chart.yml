@@ -37,7 +37,7 @@ jobs:
           # Agent Chart settings (prom repo is to work around issue with chart-testing tool)
           PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
           CLUSTER_NAME: cz-node-agent-ci
-          CLOUD_ACCOUNT_ID: 00000000
+          CLOUD_ACCOUNT_ID: '00000000'
           CZ_API_TOKEN: 'fake-api-token'
           REGION: 'us-east-1'
         run: |
@@ -109,7 +109,7 @@ jobs:
           # Agent Chart settings (prom repo is to work around issue with chart-testing tool)
           PROM_CHART_REPO: https://prometheus-community.github.io/helm-charts
           CLUSTER_NAME: cz-node-agent-ci
-          CLOUD_ACCOUNT_ID: 00000000
+          CLOUD_ACCOUNT_ID: '00000000'
           CZ_API_TOKEN: ${{ secrets.CZ_API_TOKEN || 'fake-api-token' }}
           REGION: 'us-east-1'
         run: |  

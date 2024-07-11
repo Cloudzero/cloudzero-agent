@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.13]
+
+### Fixed
+- `cloudAccountId` must be a string, it cannot be an integer, due to issues with helm converting large integers to scientific notation.
+
+## [0.0.12]
+
+### Added
+- Capture cluster status and perform validation on chart deployment
+- Added release automation workflow
+
 ## [0.0.11]
+
+### Added
 - Moved validator to [dedicated repository](https://github.com/Cloudzero/cloudzero-agent-validator)
 - Added validator as pod lifecycle hook (PostStart, PreStop) to track pod up/down transitions used to monitor data loss
 

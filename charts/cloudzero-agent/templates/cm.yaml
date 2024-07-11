@@ -157,7 +157,7 @@ data:
     {{- end}}
     {{- end}}
     remote_write:
-      - url: 'https://{{ .Values.host }}/v1/container-metrics?cluster_name={{.Values.clusterName}}&cloud_account_id={{.Values.cloudAccountId | toString}}&region={{.Values.region}}'
+      - url: 'https://{{ .Values.host }}/v1/container-metrics?cluster_name={{.Values.clusterName | urlquery}}&cloud_account_id={{.Values.cloudAccountId | urlquery}}&region={{.Values.region | urlquery}}'
         authorization:
           credentials_file: /etc/config/prometheus/secrets/value
         write_relabel_configs:
