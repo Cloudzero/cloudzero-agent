@@ -30,7 +30,7 @@ docker run -it --rm ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-
 mkdir config
 docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config generate -f /config/myconfig.yml --account 123456789 --cluster my-cluster-name --region us-east-1
 ```
-> You can not open `./config/myconfig.yml` and edit values as necessary for your cluster.
+> You can now open `./config/myconfig.yml` and edit values as necessary for your cluster.
 
 
 ### Run a command locally (not in-pod)
