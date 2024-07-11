@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `cloudAccountId` must be a string, it cannot be an integer, due to issues with helm converting large integers to scientific notation.
+- `clusterName` validation fixed to be consistent with container-metrics endpoint
 
 ## [0.0.12]
 
