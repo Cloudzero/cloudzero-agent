@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/cloudzero/template-cloudzero-open-source.svg)
 
-The `Cloud Agent Validator` is a simple CLI utility which performs various validation checks and send the results as telemetry to the CloudZero API.
+The `Cloud Agent Validator` is a simple CLI utility that performs various validation checks and send the results as telemetry to the CloudZero API.
 
 The `Cloud Agent Validator` is a CLI utility designed to perform various validation checks and send the results as telemetry to the CloudZero API. It is intended to be used as part of the [pod lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) in the [cloudzero-agent helm chart](https://github.com/Cloudzero/cloudzero-charts). During deployment, the validator runs checks and reports the lifecycle stage and test results to the API.
 
