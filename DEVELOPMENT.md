@@ -122,7 +122,7 @@ Remember to refer to the available targets in the Makefile for other development
 
 Publishing a new release can be accomplished by running the `Manual Prepare Release` workflow.
 
-![](./assets/release-1.png)
+![](./docs/assets/release-1.png)
 
 **Once run the following occurs:**
 
@@ -131,15 +131,14 @@ Publishing a new release can be accomplished by running the `Manual Prepare Rele
 3. A new `pre-release` is created, with the `change log` for changes since the last release.
 
 Next we can visit the release page, and locate the `pre-release` and `click the edit icon`:
-![](./assets/release-2.png)
+![](./docs/assets/release-2.png)
 
 Finally - we will publish the `draft-release`. Make sure you:
 1. Remove the `draft` checkbox
 2. Update _`Set as pre-release`_ to **`Set as the latest release`**
 
-![](./assets/release-3.png)
+![](./docs/assets/release-3.png)
 
 When this is done, it will cause an automated release of teh `docker image` for the release value, and `latest` to be created in GHCR. 
 
 That's it, Happy coding!
-
