@@ -5,17 +5,56 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/cloudzero/template-cloudzero-open-source.svg)
 
-This repository contains a utility application designed to run verification checks as part of the deployment of the [cloudzero-agent helm chart](https://github.com/Cloudzero/cloudzero-charts).
+The `Cloud Agent Validator` is a simple CLI utility that performs various validation checks and send the results as telemetry to the CloudZero API.
 
-## Table of Contents
-- [Testing](./TESTING.md)
-- [Contributing](#contributing)
-- [Support + Feedback](#support--feedback)
-- [Vulnerability Reporting](#vulnerability-reporting)
-- [What is CloudZero?](#what-is-cloudzero)
-- [License](#license)
+The `Cloud Agent Validator` is a CLI utility designed to perform various validation checks and send the results as telemetry to the CloudZero API. It is intended to be used as part of the [pod lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) in the [cloudzero-agent helm chart](https://github.com/Cloudzero/cloudzero-charts). During deployment, the validator runs checks and reports the lifecycle stage and test results to the API.
 
-## Contributing
+<img src="./docs/assets/deployment.png" alt="deployment" width="700">
+
+This utility provides valuable information such as the `lifecycle stage`, enabling CloudZero to proactively engage with customers if an agent is experiencing issues reporting metrics. It also captures the versions of the chart and Prometheus agent, facilitating issue reproduction. Additionally, it reports check status results and error messages for failing checks, allowing Customer Success teams to quickly identify the root cause of any problems.
+
+## ⚡ Getting Started
+
+The easiest way to get started it by using the [cloudzero-agent helm chart](https://github.com/Cloudzero/cloudzero-charts). However if you'd like run the validator locally - this is also possible!
+
+### Installation
+
+If you are using docker, the easiest way to get started by running the following command:
+```sh
+docker run -it --rm ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config generate
+```
+
+### Generate a configuration file
+
+```sh
+mkdir config
+docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config generate -f /config/myconfig.yml --account 123456789 --cluster my-cluster-name --region us-east-1
+```
+> You can now open `./config/myconfig.yml` and edit values as necessary for your cluster.
+
+
+### Run a command locally (not in-pod)
+
+In this example we are setting the conifguration value `credentials_file` to include our production CloudZero API Key. Run the following to create the file:
+
+```sh
+echo $CZ_API_KEY > config/credentials_file
+```
+
+Replace the value `credentials_file: /etc/config/prometheus/secrets/value` with `credentials_file: /config/credentials_file` in `config/myconfig.yml`
+
+Now validate the configuration file:
+```
+docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config validate -f /config/myconfig.yml
+```
+
+Then run a test to validate the API Token:
+
+```sh
+docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator diagnose run -f /config/myconfig.yml -check api_key_valid
+```
+
+## 🤝 How to Contribute
 
 We appreciate feedback and contribution to this repo! Before you get started, please see the following:
 
@@ -25,11 +64,11 @@ We appreciate feedback and contribution to this repo! Before you get started, pl
 
 Contact support@cloudzero.com for usage, questions, specific cases. See the [CloudZero Docs](https://docs.cloudzero.com/) for general information on CloudZero.
 
-## Vulnerability Reporting
+## 🛡️ Vulnerability Reporting
 
 Please do not report security vulnerabilities on the public GitHub issue tracker. Email [security@cloudzero.com](mailto:security@cloudzero.com) instead.
 
-## What is CloudZero?
+## ☁️ What is CloudZero?
 
 CloudZero is the only cloud cost intelligence platform that puts engineering in control by connecting technical decisions to business results.:
 
@@ -41,6 +80,6 @@ CloudZero is the only cloud cost intelligence platform that puts engineering in 
 
 Learn more about [CloudZero](https://www.cloudzero.com/) on our website [www.cloudzero.com](https://www.cloudzero.com/)
 
-## License
+## 📜 License
 
 This project is licenced under the Apache 2.0 [LICENSE](LICENSE).

@@ -1,18 +1,18 @@
 <mxfile host="65bd71144e">
     <diagram id="JNdCl-VXCiV7JA7d3v7s" name="k8s design">
-        <mxGraphModel dx="2046" dy="827" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1358" dy="827" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="2" value="" style="rounded=1;arcSize=10;dashed=1;fillColor=none;gradientColor=none;dashPattern=8 3 1 3;strokeWidth=2;fontColor=#007FFF;" parent="1" vertex="1">
-                    <mxGeometry x="-306" y="112" width="650" height="662" as="geometry"/>
+                    <mxGeometry x="-306" y="112" width="650" height="635" as="geometry"/>
                 </mxCell>
                 <mxCell id="3" style="edgeStyle=none;html=1;" parent="1" source="5" target="7" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="4" value="&lt;font color=&quot;#000000&quot;&gt;COPY Binary to share&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#FFFFFF;" parent="3" vertex="1" connectable="0">
+                <mxCell id="4" value="&lt;font color=&quot;#000000&quot;&gt;COPY TO&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#FFFFFF;" parent="3" vertex="1" connectable="0">
                     <mxGeometry x="-0.2993" y="2" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
+                        <mxPoint x="-48" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="5" value="cloudzero-agent-validator&lt;br&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
@@ -23,14 +23,16 @@
                         <mxPoint x="66.05263157894728" y="551" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="7" value="Shared Volume" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.concepts.folder;fillColor=#2072B8;" parent="1" vertex="1">
-                    <mxGeometry x="18" y="393.25" width="109" height="87" as="geometry"/>
+                <mxCell id="35" value="RUN FROM" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;" vertex="1" connectable="0" parent="6">
+                    <mxGeometry x="0.0447" relative="1" as="geometry">
+                        <mxPoint x="-43" y="11" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="7" value="" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.concepts.folder;" parent="1" vertex="1">
+                    <mxGeometry x="-27" y="368" width="205" height="131.25" as="geometry"/>
                 </mxCell>
                 <mxCell id="8" value="cloudzero-agent" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=bottom;fontStyle=1" parent="1" vertex="1">
                     <mxGeometry x="-88.5" y="545" width="322" height="165" as="geometry"/>
-                </mxCell>
-                <mxCell id="9" value="bin" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="37" y="432" width="71" height="29" as="geometry"/>
                 </mxCell>
                 <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;" parent="1" source="12" target="13" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -46,13 +48,13 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="12" value="&lt;span style=&quot;font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;&lt;b&gt;configMap&lt;/b&gt;&lt;br&gt;validator.yml&lt;/span&gt;" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.document;fillColor=#007FFF;fontColor=#FFFFFF;labelBackgroundColor=none;" parent="1" vertex="1">
+                <mxCell id="12" value="&lt;span style=&quot;font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;&lt;b&gt;configMap&lt;/b&gt;&lt;br&gt;validator.yml&lt;/span&gt;" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.document;labelBackgroundColor=none;" parent="1" vertex="1">
                     <mxGeometry x="-262" y="393" width="100" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="13" value="validator.yml" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;strokeWidth=1;align=center;outlineConnect=0;dashed=0;outlineConnect=0;shape=mxgraph.aws3d.file;aspect=fixed;strokeColor=#292929;fillColor=#007FFF;" parent="1" vertex="1">
+                <mxCell id="13" value="validator.yml" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;strokeWidth=1;align=center;outlineConnect=0;dashed=0;outlineConnect=0;shape=mxgraph.aws3d.file;aspect=fixed;strokeColor=#6c8ebf;fillColor=#dae8fc;" parent="1" vertex="1">
                     <mxGeometry x="-62" y="225" width="30.8" height="70.6" as="geometry"/>
                 </mxCell>
-                <mxCell id="14" value="validator.yml" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;strokeWidth=1;align=center;outlineConnect=0;dashed=0;outlineConnect=0;shape=mxgraph.aws3d.file;aspect=fixed;strokeColor=#292929;fillColor=#007FFF;" parent="1" vertex="1">
+                <mxCell id="14" value="validator.yml" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;strokeWidth=1;align=center;outlineConnect=0;dashed=0;outlineConnect=0;shape=mxgraph.aws3d.file;aspect=fixed;strokeColor=#6c8ebf;fillColor=#dae8fc;" parent="1" vertex="1">
                     <mxGeometry x="-64" y="580" width="30.8" height="70.6" as="geometry"/>
                 </mxCell>
                 <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="17" target="13" edge="1">
@@ -61,7 +63,12 @@
                 <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#007FFF;" parent="1" source="17" target="27" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="17" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#2272b8;fontColor=#FFFFFF;" parent="1" vertex="1">
+                <mxCell id="34" value="Signal Initializing" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;" vertex="1" connectable="0" parent="16">
+                    <mxGeometry x="-0.1885" y="3" relative="1" as="geometry">
+                        <mxPoint x="29" y="-8" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="17" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#76608a;fontColor=#ffffff;strokeColor=#432D57;" parent="1" vertex="1">
                     <mxGeometry x="15.5" y="245.8" width="178" height="29" as="geometry"/>
                 </mxCell>
                 <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="20" target="14" edge="1">
@@ -70,7 +77,7 @@
                 <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#007FFF;" parent="1" source="20" target="27" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="20" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#2272b8;fontColor=#FFFFFF;" parent="1" vertex="1">
+                <mxCell id="20" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#76608a;fontColor=#ffffff;strokeColor=#432D57;" parent="1" vertex="1">
                     <mxGeometry x="15.5" y="573" width="178" height="29" as="geometry"/>
                 </mxCell>
                 <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="23" target="14" edge="1">
@@ -79,19 +86,24 @@
                 <mxCell id="22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#007FFF;" parent="1" source="23" target="27" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#2272b8;fontColor=#FFFFFF;" parent="1" vertex="1">
+                <mxCell id="32" value="Signal Stop" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;" vertex="1" connectable="0" parent="22">
+                    <mxGeometry x="-0.2141" y="-1" relative="1" as="geometry">
+                        <mxPoint x="-4" y="-15" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="23" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#76608a;fontColor=#ffffff;strokeColor=#432D57;" parent="1" vertex="1">
                     <mxGeometry x="15.5" y="635" width="178" height="29" as="geometry"/>
                 </mxCell>
-                <mxCell id="24" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;span style=&quot;font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;initContainer&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;" parent="1" vertex="1">
-                    <mxGeometry x="15.504649832589223" y="220.00323957170752" width="102" height="36" as="geometry"/>
+                <mxCell id="24" value="&lt;span style=&quot;text-align: center;&quot;&gt;lifecycle hook: initContainer&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;" parent="1" vertex="1">
+                    <mxGeometry x="15.5" y="220" width="165.5" height="36" as="geometry"/>
                 </mxCell>
-                <mxCell id="25" value="&lt;div style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;b&gt;postStart&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;" parent="1" vertex="1">
-                    <mxGeometry x="14.004649832589223" y="550.0032395717076" width="102" height="36" as="geometry"/>
+                <mxCell id="25" value="&lt;div style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;span&gt;lifecycle hook: postStart&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;fontStyle=0" parent="1" vertex="1">
+                    <mxGeometry x="14" y="550" width="180" height="36" as="geometry"/>
                 </mxCell>
-                <mxCell id="26" value="&lt;span style=&quot;font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;preStop&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;" parent="1" vertex="1">
-                    <mxGeometry x="14.004649832589223" y="614.6032395717076" width="102" height="36" as="geometry"/>
+                <mxCell id="26" value="&lt;span style=&quot;text-align: center;&quot;&gt;lifecycle hook: preStop&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;fontColor=#007FFF;fontStyle=0" parent="1" vertex="1">
+                    <mxGeometry x="14" y="614.6" width="169" height="36" as="geometry"/>
                 </mxCell>
-                <mxCell id="27" value="CloudZero API" style="sketch=0;outlineConnect=0;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#36393d;fillColor=#cce5ff;verticalAlign=top;align=left;spacingLeft=30;dashed=0;" parent="1" vertex="1">
+                <mxCell id="27" value="CloudZero API" style="sketch=0;outlineConnect=0;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;verticalAlign=top;align=left;spacingLeft=30;dashed=0;" parent="1" vertex="1">
                     <mxGeometry x="443" y="357" width="222" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="28" value="" style="sketch=0;aspect=fixed;html=1;points=[];align=center;image;fontSize=12;image=img/lib/mscae/Kubernetes.svg;fontColor=#007FFF;" parent="1" vertex="1">
@@ -99,6 +111,18 @@
                 </mxCell>
                 <mxCell id="29" value="status API" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="481" y="393.25" width="153" height="57.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="CloudZero Agent Deployment" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=19;fontStyle=1" vertex="1" parent="1">
+                    <mxGeometry x="-227" y="140.5" width="285" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="31" value="shared volume" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="24" y="457" width="103" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="Signal Started" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="354" y="565" width="100" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="&lt;span style=&quot;font-weight: 700;&quot;&gt;cloudzero-agent-validator&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-13.5" y="419.13" width="178" height="29" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
