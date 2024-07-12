@@ -3,7 +3,7 @@
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-![GitHub release](https://img.shields.io/github/release/cloudzero/template-cloudzero-open-source.svg)
+![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-agent-validator.svg)
 
 The `Cloud Agent Validator` is a simple CLI utility that performs various validation checks and send the results as telemetry to the CloudZero API.
 
