@@ -3,6 +3,11 @@ name: Manual Release Chart
 # manual trigger only
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to use for the release'
+        required: false
+        default: ''
 
 jobs:
   build-and-publish-chart:
@@ -57,12 +62,19 @@ jobs:
         with:
           incrementLevel: patch
           source: tags
-      
+
+      - name: Determine Chart Version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "NEW_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
+          fi
+
       - name: Update Chart Version
         run: |
           VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
-          sed -i ''$VERSION_LINE's/.*/version: ${{ steps.version.outputs.nextVersion }}/' charts/cloudzero-agent/Chart.yaml
-          echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
+          sed -i ''$VERSION_LINE's/.*/version: ${{ env.NEW_VERSION }}/' charts/cloudzero-agent/Chart.yaml
 
       - name: Package Chart
         run: |
@@ -79,7 +91,7 @@ jobs:
       - name: Generate Change Log
         id: get_changes
         run: |
-          FROM=$(git show-ref --abbrev=7 --tags | grep "${{steps.version.outputs.currentVersion }}" | cut -f1 -d' ')
+          FROM=$(git show-ref --abbrev=7 --tags | grep "${{ steps.version.outputs.currentVersion }}" | cut -f1 -d' ')
           TO=$(git rev-parse --short HEAD)
           CHANGES=$(git log ${FROM}..${TO} --oneline)
           echo "::set-output name=changes::${CHANGES}"
@@ -111,18 +123,17 @@ jobs:
           git add .
           git commit -m "Commit for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
-          # Get the latest commit hash
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ steps.version.outputs.nextVersion }}
-          tag_name: ${{ steps.version.outputs.nextVersion }}
+          name: ${{ env.NEW_VERSION }}
+          tag_name: ${{ env.NEW_VERSION }}
           files: cloudzero-agent-${{ env.NEW_VERSION }}.tgz
           make_latest: true
           target_commitish: ${{ env.COMMIT_HASH }}
           body: |
-            # Release ${{ steps.version.outputs.nextVersion }} Changes
+            # Release ${{ env.NEW_VERSION }} Changes
 
             ${{ steps.get_changes.outputs.changes }}
 
@@ -199,5 +210,3 @@ jobs:
             prometheus-node-exporter:
               enabled: true
             ```
-
-
