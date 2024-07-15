@@ -1,4 +1,4 @@
-package prom_test
+package config_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom"
+	promcfg "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/config"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
 )
 
@@ -26,7 +26,7 @@ func TestChecker_CheckOK(t *testing.T) {
 			Configurations: []string{scrapeConfigFile},
 		},
 	}
-	provider := prom.NewProvider(context.Background(), cfg)
+	provider := promcfg.NewProvider(context.Background(), cfg)
 
 	accessor := makeReport()
 
@@ -65,7 +65,7 @@ func TestChecker_NotSet(t *testing.T) {
 
 	for _, tc := range tcase {
 		t.Run(tc.name, func(t *testing.T) {
-			provider := prom.NewProvider(context.Background(), tc.cfg)
+			provider := promcfg.NewProvider(context.Background(), tc.cfg)
 			accessor := makeReport()
 			err := provider.Check(context.Background(), nil, accessor)
 			assert.NoError(t, err)

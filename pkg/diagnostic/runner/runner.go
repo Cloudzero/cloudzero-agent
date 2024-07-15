@@ -86,6 +86,7 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 		cs.Region = r.cfg.Deployment.Region
 		cs.Name = r.cfg.Deployment.ClusterName
 		cs.ValidatorVersion = build.GetVersion()
+		cs.ChartVersion = r.cfg.Versions.ChartVersion
 	})
 
 	// Pre steps sequentially

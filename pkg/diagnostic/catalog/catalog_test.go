@@ -48,5 +48,5 @@ func TestRegistry_List(t *testing.T) {
 
 	// Test listing providers
 	providers := r.List()
-	assert.Len(t, providers, 6)
+	assert.Len(t, providers, 7)
 }

@@ -6,12 +6,13 @@ import (
 )
 
 const (
-	DiagnosticAPIKey       string = "api_key_valid" //nolint:gosec
-	DiagnosticK8sVersion   string = "k8s_version"
-	DiagnosticEgressAccess string = "egress_reachable"
-	DiagnosticKMS          string = "kube_state_metrics_reachable"
-	DiagnosticNodeExporter string = "node_exporter_reachable"
-	DiagnosticScrapeConfig string = "scrape_cfg"
+	DiagnosticAPIKey            string = "api_key_valid" //nolint:gosec
+	DiagnosticK8sVersion        string = "k8s_version"
+	DiagnosticEgressAccess      string = "egress_reachable"
+	DiagnosticKMS               string = "kube_state_metrics_reachable"
+	DiagnosticNodeExporter      string = "node_exporter_reachable"
+	DiagnosticPrometheusVersion string = "promethues_version"
+	DiagnosticScrapeConfig      string = "scrape_cfg"
 )
 
 const (
