@@ -27,7 +27,8 @@ func IsValidDiagnostic(d string) bool {
 	d = strings.ToLower(strings.TrimSpace(d))
 	switch d {
 	case DiagnosticAPIKey, DiagnosticK8sVersion, DiagnosticEgressAccess,
-		DiagnosticKMS, DiagnosticNodeExporter, DiagnosticScrapeConfig:
+		DiagnosticKMS, DiagnosticNodeExporter, DiagnosticScrapeConfig,
+		DiagnosticPrometheusVersion:
 		return true
 	}
 	return false
