@@ -11,7 +11,7 @@ const (
 	DiagnosticEgressAccess      string = "egress_reachable"
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
 	DiagnosticNodeExporter      string = "node_exporter_reachable"
-	DiagnosticPrometheusVersion string = "promethues_version"
+	DiagnosticPrometheusVersion string = "prometheus_version"
 	DiagnosticScrapeConfig      string = "scrape_cfg"
 )
 
