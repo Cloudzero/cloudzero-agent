@@ -33,7 +33,7 @@ If installing with Helm directly, the following command will install the chart:
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
     --set region=<REGION>
 ```
 
@@ -43,7 +43,7 @@ Alternatively if you are updating an existing installation, you can upgrade the 
 helm upgrade <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
     --set region=<REGION>
 ```
 
@@ -72,7 +72,7 @@ You can use the `--values` (or short form `-f`) flag in your Helm commands to ov
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
     --set region=<REGION> \
     -f values-override.yaml
 ```
@@ -89,7 +89,7 @@ You can use the `--set` flag in Helm commands to directly set or override specif
 helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
-    --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
+    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
     --set region=<REGION> \
     --set server.resources.limits.memory=2048Mi \
     -f values-override.yaml

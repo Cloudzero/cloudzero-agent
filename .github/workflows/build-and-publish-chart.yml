@@ -17,7 +17,7 @@ jobs:
       id-token: write
       actions: 'read'
     runs-on: ubuntu-latest
-    steps: 
+    steps:
 
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -137,9 +137,7 @@ jobs:
 
             ${{ steps.get_changes.outputs.changes }}
 
-            
+
             # Installation Instructions
 
             [Please follow the Installation Instructions provided in this releases README](https://github.com/Cloudzero/cloudzero-charts/blob/${{ env.NEW_VERSION }}/charts/cloudzero-agent/README.md).
-            
-            
