@@ -137,76 +137,9 @@ jobs:
 
             ${{ steps.get_changes.outputs.changes }}
 
-            # Installation 
             
-            ## 1. Add the Helm Repository
+            # Installation Instructions
 
-            ```console
-            helm repo add cloudzero https://cloudzero.github.io/cloudzero-charts
-            helm repo update
-            ```
-
-            ## 2. Install Helm Chart
-
-            The chart can be installed directly with Helm or any other common Kubernetes deployment tools.
-
-            If installing with Helm directly, the following command will install the chart:
-            ```console
-            helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
-                --set existingSecretName=<NAME_OF_SECRET> \
-                --set clusterName=<CLUSTER_NAME> \
-                --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
-                --set region=<REGION>
-            ```
-
-            Alternatively if you are updating an existing installation, you can upgrade the chart with:
-            ```console
-            helm upgrade <RELEASE_NAME> cloudzero/cloudzero-agent \
-                --set existingSecretName=<NAME_OF_SECRET> \
-                --set clusterName=<CLUSTER_NAME> \
-                --set cloudAccountId=<CLOUD_ACCOUNT_ID> \
-                --set region=<REGION>
-            ```
-
-            ### Secret Management
-
-            The chart requires a CloudZero API key in order to send metric data to the CloudZero platform. Admins can retrieve API keys [here](https://app.cloudzero.com/organization/api-keys).
-
-            The Deployment running Prometheus ingests the API key via a Secret; this Secret can be supplied as an existing secret (default), or created by the chart. Both methods will require the API key retrieved from the CloudZero platform.
-
-            If using a Secret external to this chart for the API key, ensure the Secret is created in the same namespace as the chart and that the Secret data follows the format:
-
-            ```yaml
-            data:
-              value: <API_KEY>
-            ```
-
-            For example, the Secret could be created with:
-            ```bash
-            kubectl create secret -n example-namespace generic example-secret-name --from-literal=value=<example-api-key-value>
-            ```
-            The Secret can then be used by the agent by giving `example-secret-name` as the Secret name for the `existingSecretName` argument.
-
-            ### Metric Exporters
-
-            This chart relies on metrics from the [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node-exporter](https://github.com/prometheus/node_exporter) projects as chart dependencies.
-
-            By default, these subcharts are disabled to allow the agent to scrape metrics from existing instances of `kube-state-metrics` and `node-exporter`. If you have an existing deployment, you need to configure the cloudzero-agent to use the existing service endpoint addresses. You can set these addresses in the `values.yaml` file as follows by defining the relative `serviceEndpoint`:
-
-            ```yaml
-            validator:
-              serviceEndpoints:
-                kubeStateMetrics: <kube-state-metrics>.<example-namespace>.svc.cluster.local:8080
-                prometheusNodeExporter: <node-exporter>.<example-namespace>.svc.cluster.local:9100
-            ```
-
-            > **Note:** Replace `<example-namespace>` and the service names with the ones used in your deployments.
-
-            Alternatively, if you do not have an existing kube-state-metrics and node-exporter, you can deploy them automatically by enabling the following settings. In this case you do not need to set the `validator.serviceEndpoints.*` values:
-
-            ```yaml
-            kube-state-metrics:
-              enabled: true
-            prometheus-node-exporter:
-              enabled: true
-            ```
+            [Please follow the Installation Instructions provided in this releases README](https://github.com/Cloudzero/cloudzero-charts/blob/${{ env.NEW_VERSION }}/charts/cloudzero-agent/README.md).
+            
+            
