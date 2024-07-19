@@ -44,7 +44,6 @@ prometheusConfig:
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 
-
 kube-state-metrics:
   enabled: false
 
@@ -93,6 +92,10 @@ server:
   - --web.console.libraries=/etc/prometheus/console_libraries
   - --web.console.templates=/etc/prometheus/consoles
   - --enable-feature=agent
+  # -- The agent will use this file path on the container filesystem to get the CZ API key.
+  containerSecretFilePath: /etc/config/prometheus/secrets/
+  # -- The agent will look for a file with this name to get the CZ API key.
+  containerSecretFileName: value
   persistentVolume:
     existingClaim: ""
     enabled: false

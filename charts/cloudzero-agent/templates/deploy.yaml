@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
 {{- if .Values.server.deploymentAnnotations }}
   annotations:
-    {{ toYaml .Values.server.deploymentAnnotations | nindent 4 }}
+    {{- toYaml .Values.server.deploymentAnnotations | nindent 4 }}
 {{- end }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
@@ -39,10 +39,12 @@ spec:
             - -c
             - cp -r /app /checks/bin/ && cloudzero-agent-validator d pre-start -f /checks/config/validator.yml
           volumeMounts:
+          {{- if or .Values.existingSecretName .Values.apiKey }}
             - name: cloudzero-api-key
-              mountPath: /etc/config/prometheus/secrets/
+              mountPath: {{ .Values.server.containerSecretFilePath }}
               subPath: ""
               readOnly: true
+          {{- end }}
             - name: lifecycle-volume
               mountPath: /checks/bin/
             - name: validator-config-volume
@@ -96,7 +98,6 @@ spec:
         {{ toYaml .Values.server.args | nindent 12}}
           ports:
             - containerPort: 9090
-
           readinessProbe:
             httpGet:
               path: /-/ready
@@ -127,15 +128,16 @@ spec:
             - name: cloudzero-agent-storage-volume
               mountPath: {{ .Values.server.persistentVolume.mountPath }}
               subPath: "{{ .Values.server.persistentVolume.subPath }}"
-            - name: cloudzero-api-key
-              mountPath: /etc/config/prometheus/secrets/
-              subPath: ""
-              readOnly: true
             - name: lifecycle-volume
               mountPath: /check/
             - name: validator-config-volume
               mountPath: /check/app/config/
-
+          {{- if or .Values.existingSecretName .Values.apiKey }}
+            - name: cloudzero-api-key
+              mountPath: {{ .Values.server.containerSecretFilePath }}
+              subPath: ""
+              readOnly: true
+          {{- end }}
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
@@ -172,9 +174,11 @@ spec:
             name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
         - name: lifecycle-volume
           emptyDir: {}
+        {{- if or .Values.existingSecretName .Values.apiKey }}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
+        {{- end }}
         - name: cloudzero-agent-storage-volume
         {{- if .Values.server.persistentVolume.enabled }}
           persistentVolumeClaim:
