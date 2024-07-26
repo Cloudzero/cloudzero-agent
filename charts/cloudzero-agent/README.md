@@ -213,18 +213,21 @@ prometheusConfig:
 
 ### Exporting Pod Labels
 
-Pod labels can be exported as metrics using `kube-state-metrics`. Customize the labels to export in `values-override.yaml`:
+Pod labels can be exported as metrics using kube-state-metrics. To customize the labels for export, modify the values-override.yaml file as shown below:
 
-Note a subset of relevant pod labels can be included -- for example only exporting the pod labels named `foo` and `bar` -- can be achieved with the following:
+**Example: Exporting only the pod labels named foo and bar:**
 
 ```yaml
 kube-state-metrics:
   extraArgs:
-    - --metric-labels-allowlist=pods=[foo,bar]
+     - --metric-labels-allowlist=pods=[foo,bar]
 ```
 
 > This is preferable to including all labels with `*` because the performance and memory impact is reduced. Regular expression matching is not currently supported. See the `kube-state-metrics` [documentation](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/developer/cli-arguments.md) for more details.
 
+⚠️ Important: If you are running an existing `kube-state-metrics` instance, ensure that the labels you want to use are whitelisted. kube-state-metrics version 2.x and above will **_not_** export the `kube_pod_labels` metrics unless they are explicitly allowed. This prevents the use of those labels for cost allocation and other purposes. Make sure you have configured the labels at the appropriate level using the --metric-labels-allowlist parameter:
+
+> eg:  `- --metric-labels-allowlist=namespaces=[*],pods=[*],deployments=[app.kubernetes.io/*,k8s.*]`
 
 ## Dependencies
 

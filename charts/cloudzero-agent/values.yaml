@@ -46,7 +46,8 @@ prometheusConfig:
 
 kube-state-metrics:
   enabled: false
-
+  extraArgs:
+    - --metric-labels-allowlist=namespaces=[*],pods=[*],deployments=[app.kubernetes.io/*,k8s.*]
 prometheus-node-exporter:
   enabled: false
 
