@@ -31,6 +31,16 @@ Create chart name and version as used by the chart label.
 {{- end}}
 
 {{/*
+  This helper function trims whitespace and newlines from a given string.
+*/}}
+{{- define "cloudzero-agent.cleanString" -}}
+  {{- $input := . -}}
+  {{- $cleaned := trimAll "\n" $input -}}
+  {{- $cleaned := trim $cleaned -}}
+  {{- $cleaned -}}
+{{- end -}}
+
+{{/*
 Create labels for prometheus
 */}}
 {{- define "cloudzero-agent.common.matchLabels" -}}

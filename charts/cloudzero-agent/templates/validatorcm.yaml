@@ -20,12 +20,12 @@ data:
       location: ./cloudzero-agent-validator.log
 
     deployment:
-      account_id: {{ .Values.cloudAccountId }}
-      cluster_name: {{ .Values.clusterName }}
-      region: {{ .Values.region }}
+      account_id: "{{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}"
+      cluster_name: {{ include "cloudzero-agent.cleanString" .Values.clusterName }}
+      region: {{ include "cloudzero-agent.cleanString" .Values.region }}
 
     cloudzero:
-      host:  https://{{ .Values.host }}
+      host:  https://{{ include "cloudzero-agent.cleanString" .Values.host }}
       credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
       disable_telemetry: false
 
