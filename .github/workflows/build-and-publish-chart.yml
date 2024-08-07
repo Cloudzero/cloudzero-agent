@@ -80,6 +80,11 @@ jobs:
         run: |
           helm package charts/cloudzero-agent/ --destination .deploy
 
+      - name: Get Main Changelog Beginning Hash
+        run: |
+          MAIN_PREV_COMMIT_HASH=$(git rev-parse HEAD)
+          echo "MAIN_PREV_COMMIT_HASH=${MAIN_PREV_COMMIT_HASH}" >> $GITHUB_ENV
+
       - name: Commit updated Chart.yaml
         run: |
           git add .
@@ -91,7 +96,7 @@ jobs:
       - name: Generate Change Log
         id: get_changes
         run: |
-          FROM=$(git show-ref --abbrev=7 --tags | grep "${{ steps.version.outputs.currentVersion }}" | cut -f1 -d' ')
+          FROM=${{ env.MAIN_PREV_COMMIT_HASH }}
           TO=$(git rev-parse --short HEAD)
           CHANGES=$(git log ${FROM}..${TO} --oneline)
           echo "::set-output name=changes::${CHANGES}"
@@ -116,10 +121,14 @@ jobs:
 
       - name: Update Index
         run: |
-          helm repo index --url https://cloudzero.github.io/cloudzero-charts .
+          helm repo index --url https://cloudzero.github.io/cloudzero-charts .        
 
       - name: Commit and Push gh-pages changes
+        # copy mains version of README and docs for all charts
         run: |
+          git checkout main -- charts/cloudzero-agent/docs
+          git checkout main -- charts/cloudzero-agent/README.md
+          git checkout main -- README.md
           git add .
           git commit -m "Commit for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
