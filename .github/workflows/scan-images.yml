@@ -1,0 +1,49 @@
+# Run local: act --container-architecture linux/amd64 workflow_dispatch -j list-tags -j scan-job
+# Guideance on dynamic-matrics code: https://www.kenmuse.com/blog/dynamic-build-matrices-in-github-actions/
+name: Scan Docker Image Tags
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *' # Runs at midnight UTC on the first day of every month
+
+env:
+  CRANE_VERSION: v0.6.0
+  REGISTRY: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
+
+jobs:
+  list-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tags_matrix: ${{ steps.list-tags.outputs.tags_matrix }}
+    steps:
+      - name: Install crane
+        run: |
+          curl -sSL https://github.com/google/go-containerregistry/releases/download/${{ env.CRANE_VERSION }}/go-containerregistry_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin
+
+      - name: List and filter image tags
+        id: list-tags
+        run: |
+          # Fetch and filter tags
+          tags=$(crane ls ${{ env.REGISTRY }})
+          filtered_tags=$(echo "$tags" | grep -E '^(develop|main|latest|[0-9]+\.[0-9]+\.[0-9]+)$')
+          # Convert to a JSON array of strings
+          tags_array=$(echo "$filtered_tags" | jq -R -s -c 'split("\n")[:-1]')
+          # Set the output for the matrix job
+          echo "tags_matrix=$(jq -cn --argjson environments "$tags_array" '{tag: $environments}')" >> $GITHUB_OUTPUT 
+
+  scan-job:
+    needs: list-tags
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.list-tags.outputs.tags_matrix) }}
+    steps:
+      - name: Display Image Tag
+        run: |
+          echo "Processing tag: ${{ env.REGISTRY }}:${{ matrix.tag }}"
+
+      - name: Grype Image Scan
+        uses: anchore/scan-action@v4
+        with:
+          image: ${{ env.REGISTRY }}:${{ matrix.tag }}
+          fail-build: true
+          severity-cutoff: high
