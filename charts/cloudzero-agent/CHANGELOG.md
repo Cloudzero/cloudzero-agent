@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21]
+
+### Fixed
+-  sanitize parameters for whitespace before use
+
+## [0.0.20]
+
+### Fixed
+-  enable default labels when using kube-state-metrics sub-chart
+
+## [0.0.19]
+
+unpublished release, do not use.
+
+## [0.0.18]
+
+### Fixed
+- update docs to help the user pass cloudAccountId as a strin
+- allow users to set secret filepath and filename for agent server container
+
+## [0.0.17]
+
+### Fixed
+- add memory sizing guide
+
+## [0.0.16]
+
+### Fixed
+- ensure we have an easy to ID version on develop
+- allow version to be passed in during release
+- add prometheus version check
+
+## [0.0.15]
+
+### Fixed
+-  fix chart release workflow to use correct version in packaging
+
+## [0.0.14]
+
+### Fixed
+- Consistent Cluster Name Validation
+
 ## [0.0.13]
 
 ### Fixed

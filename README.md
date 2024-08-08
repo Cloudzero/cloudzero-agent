@@ -2,7 +2,7 @@
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-![GitHub release](https://img.shields.io/github/release/cloudzero/template-cloudzero-open-source.svg)
+![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-charts.svg)
 
 This repository contains helm charts for use by CloudZero users, which can be installed into any cloud-hosted Kubernetes cluster.
 
