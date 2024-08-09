@@ -1,6 +1,6 @@
 name: Manual Release Chart
 
-# manual trigger only
+# Manual trigger only
 on:
   workflow_dispatch:
     inputs:
@@ -19,43 +19,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # Step 1: Checkout and Setup
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0                # fetch the whole repo history
+          fetch-depth: 0
 
       - name: Set up Git
         run: |
           git config --local user.email "ops@cloudzero.com"
           git config --local user.name "Automated CZ Release"
-
-      - name: Fetch all branches
+      
+      - name: Fetch All Branches
         run: git fetch --all
 
-      - name: Checkout develop branch
-        run: git checkout develop
+      # Step 2: Prepare Branches
+      - name: Prepare Branches
+        run: |
+          git checkout develop
+          git pull --rebase origin develop
+          git checkout main
+          git pull --rebase origin main
+          git merge develop
 
-      - name: Rebase develop branch
-        run: git pull --rebase origin develop
-
-      - name: Checkout main branch
-        run: git checkout main
-
-      - name: Rebase main branch
-        run: git pull --rebase origin main
-
-      - name: Merge develop into main
-        run: git merge develop
-
+      # Step 3: Helm Setup
       - name: Install Helm
         uses: azure/setup-helm@v3
 
       - name: Build Dependencies
-        run: |
-          helm dependency update charts/cloudzero-agent/
+        run: helm dependency update charts/cloudzero-agent/
 
-      # This only gets versions - no actual changes are made to github
+
+      # Step 4: Determine Version
       - name: Get Github Tag Version
         id: version
         uses: flatherskevin/semver-action@v1
@@ -65,20 +61,17 @@ jobs:
 
       - name: Determine Chart Version
         run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "NEW_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          else
-            echo "NEW_VERSION=${{ steps.version.outputs.nextVersion }}" >> $GITHUB_ENV
-          fi
+          NEW_VERSION=${{ github.event.inputs.version || steps.version.outputs.nextVersion }}
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Update Chart Version
         run: |
           VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
           sed -i ''$VERSION_LINE's/.*/version: ${{ env.NEW_VERSION }}/' charts/cloudzero-agent/Chart.yaml
 
+      # Step 5: Package and Commit Chart
       - name: Package Chart
-        run: |
-          helm package charts/cloudzero-agent/ --destination .deploy
+        run: helm package charts/cloudzero-agent/ --destination .deploy
 
       - name: Get Main Changelog Beginning Hash
         run: |
@@ -92,7 +85,9 @@ jobs:
           git push origin main
           COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
+        continue-on-error: true
 
+      # Step 6: Generate Change Log
       - name: Generate Change Log
         id: get_changes
         run: |
@@ -101,38 +96,26 @@ jobs:
           CHANGES=$(git log ${FROM}..${TO} --oneline)
           echo "::set-output name=changes::${CHANGES}"
 
+      # Step 7: Handle Artifacts and Update Pages
       - name: Upload Chart as Artifact
         uses: actions/upload-artifact@v2
         with:
           name: agent-chart
           path: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
 
-      - name: Checkout GH Pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          fetch-depth: 0                # fetch the whole repo history
-
-      - name: Download Chart Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: agent-chart
-          path: .
-
       - name: Update Index
-        run: |
-          helm repo index --url https://cloudzero.github.io/cloudzero-charts .        
+        run: helm repo index --url https://cloudzero.github.io/cloudzero-charts .
 
-      - name: Commit and Push gh-pages changes
-        # copy mains version of README and docs for all charts
+      - name: Update GH Pages
         run: |
-          git checkout main -- charts/cloudzero-agent/docs
-          git checkout main -- charts/cloudzero-agent/README.md
-          git checkout main -- README.md
-          git add .
+          git checkout gh-pages
+          git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
+          git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
           git commit -m "Commit for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
+        continue-on-error: true
 
+      # Step 8: Create GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -145,7 +128,6 @@ jobs:
             # Release ${{ env.NEW_VERSION }} Changes
 
             ${{ steps.get_changes.outputs.changes }}
-
 
             # Installation Instructions
 
