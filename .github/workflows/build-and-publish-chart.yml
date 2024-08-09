@@ -108,9 +108,11 @@ jobs:
 
       - name: Update GH Pages
         run: |
-          git checkout gh-pages
+          cp .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz ./
+          git checkout -f gh-pages
           git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
           git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
+          git add cloudzero-agent-${{ env.NEW_VERSION }}.tgz
           git commit -m "Commit for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
         continue-on-error: true
