@@ -106,7 +106,6 @@ jobs:
       - name: Checkout GH Pages
         run: |
           git checkout -f gh-pages
-          cp .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz .
 
       - name: Update Index
         run: helm repo index --url https://cloudzero.github.io/cloudzero-charts .
@@ -114,7 +113,8 @@ jobs:
       - name: Save Index in GH Pages
         run: |
           # copy the new chart and index.yaml
-          git add cloudzero-agent-${{ env.NEW_VERSION }}.tgz index.yaml
+          cp .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz ./
+          git add .deploy cloudzero-agent-${{ env.NEW_VERSION }}.tgz index.yaml 
           git commit -m "Updating ${{ env.NEW_VERSION }} Index"
           git push origin gh-pages
         continue-on-error: true
