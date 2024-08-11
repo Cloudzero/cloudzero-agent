@@ -121,6 +121,9 @@ jobs:
 
       - name: Update Docs for GH Pages
         run: |
+          # cleanup garbage files
+          rm -fr .deploy charts/cloudzero-agent/charts
+          git reset --hard
           # now checkout docs from main
           git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
           git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
