@@ -112,7 +112,7 @@ jobs:
           git checkout -f gh-pages
           git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
           git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
-          git add cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+          git add cloudzero-agent-${{ env.NEW_VERSION }}.tgz index.yaml
           git commit -m "Commit for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
         continue-on-error: true
