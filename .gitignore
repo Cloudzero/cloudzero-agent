@@ -18,6 +18,7 @@ bin/
 /.task
 /.config
 log.json
+certs
 
 # changelog generation
 CHANGELOG.md

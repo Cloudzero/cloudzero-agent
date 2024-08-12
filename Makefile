@@ -43,19 +43,15 @@ build: ## Build the binary
 		-trimpath \
 		-ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}" \
 		-o bin/cloudzero-insights-controller \
-		cmd/cloudzero-insights-controller/main.go
+		cmd/cloudzero-insights-controller/*.go
 
 .PHONY: clean
 clean: ## Clean the binary
-	@rm -rf bin log.json
+	@rm -rf bin log.json certs
 
 .PHONY: test
 test: ## Run the unit tests
 	@go test -timeout 60s ./... -race -cover
-
-.PHONY: login
-login: ## Docker login to GHCR
-	@echo $(GHCR_PAT) | $(CONTAINER_TOOL) login ghcr.io -u $(GHCR_USER) --password-stdin
 
 .PHONY: package
 package:  ## Builds the Docker image
@@ -70,6 +66,19 @@ endif
 		--build-arg BUILD_TIME=$(BUILD_TIME) \
 		--push -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
 
-.PHONY: generate
-generate: ## Generate the status protobuf definition package
-	$(MAKE) -C $(CURDIR)/pkg/status generate
+.PHONY: deploy-admission-controller
+deploy-admission-controller: ## Deploy the admission controller
+	@bash scripts/deploy-admission-controller.sh
+
+.PHONY: undeploy-admission-controller
+undeploy-admission-controller: ## Undeploy the admission controller
+	@bash scripts/undeploy-admission-controller.sh
+
+
+.PHONY: deploy-test-app
+deploy-test-app: ## Deploy the test app
+	@bash scripts/deploy-test-app.sh
+
+.PHONY: undeploy-test-app
+undeploy-test-app: ## Undeploy the test app
+	@bash scripts/undeploy-test-app.sh

@@ -22,7 +22,37 @@ See the [Configuration Guide](./CONFIGURATION.md) for details.
 
 ### Developer Quick Start
 
-...
+1. Build the image
+
+    ```sh
+    TAG=poc-simple make package      
+    ```
+
+2. Deploy the admission controller
+
+    ```sh
+    make deploy-admission-controller
+    ```
+
+3. Monitor the logs in one console
+
+    ```sh
+    ./scripts/monitor-admission-contoller.sh
+    ```
+
+4. In another console, deploy a test app.
+
+    ```sh
+    make deploy-test-app
+    ```
+    > NOW - check out the logs in 3
+
+###### Cleanup
+
+```sh
+make undeploy-admission-controller
+make undeploy-test-app
+```
 
 
 ## 🤝 How to Contribute
