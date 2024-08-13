@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 */}}
 {{- define "cloudzero-agent.cleanString" -}}
   {{- $input := . -}}
-  {{- $cleaned := trimAll "\n" $input -}}
+  {{- $cleaned := trimAll "\n\t\r\f\v ~`!@#$%^&*()[]{}_-+=|\\:;\"'<,>.?/" $input -}}
   {{- $cleaned := trim $cleaned -}}
   {{- $cleaned -}}
 {{- end -}}
