@@ -53,7 +53,7 @@ There are several mandatory values that must be specified for the chart to insta
 
 | Key               | Type   | Default               | Description                                                                                                             |
 |-------------------|--------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
-| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure where the cluster is running. Must be a string due to Helm limitations.  |
+| cloudAccountId    | string | `nil`                 | Account ID in AWS or Subscription ID in Azure or Project Number in GCP where the cluster is running. Must be a string due to Helm limitations.  |
 | clusterName       | string | `nil`                 | Name of the cluster. Must be RFC 1123 compliant.                                                                         |
 | host              | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                      |
 | apiKey            | string | `nil`                 | The CloudZero API key to use for exporting metrics. Only used if `existingSecretName` is not set.                       |
