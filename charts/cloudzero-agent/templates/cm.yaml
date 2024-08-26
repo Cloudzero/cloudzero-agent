@@ -15,14 +15,14 @@ data:
   {{ .Values.prometheusConfig.configOverride | nindent 4 }}
   {{- else }}
     global:
-      scrape_interval: 60s
+      scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
     scrape_configs:
       {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
       - job_name: cloudzero-service-endpoints # kube_*, node_* metrics
         honor_labels: true
         honor_timestamps: true
         track_timestamps_staleness: false
-        scrape_interval: 1m
+        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
         scrape_timeout: 10s
         scrape_protocols:
         - OpenMetricsText1.0.0
@@ -104,7 +104,7 @@ data:
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
         honor_timestamps: true
         track_timestamps_staleness: false
-        scrape_interval: 1m
+        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
         scrape_timeout: 10s
         scrape_protocols:
         - OpenMetricsText1.0.0
