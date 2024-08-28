@@ -17,10 +17,14 @@ spec:
     spec:
       containers:
         - name: webhook-server
-          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:poc-simple
+          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:poc-jb
           imagePullPolicy: Always
           ports:
             - containerPort: 8443
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "512Mi"
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs

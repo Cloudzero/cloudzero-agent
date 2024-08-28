@@ -47,6 +47,8 @@ FROM scratch
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
+# TODO: Add default configuration file
+
 # Copy the /etc/passwd file with the nobody user
 COPY --from=builder /etc/passwd_nobody /etc/passwd
 

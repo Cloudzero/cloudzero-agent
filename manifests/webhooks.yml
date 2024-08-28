@@ -4,7 +4,7 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: deployment-validation
 webhooks:
-  - name: "deployment-validation.production.svc"
+  - name: "deployment-validation.default.svc"
     # Remove or modify namespaceSelector
     namespaceSelector: {}  # This denotes no specific selection, applies to all namespaces
     rules:
@@ -37,18 +37,41 @@ webhooks:
       #      "*" means that there are no scope restrictions.
       #
       # If an incoming request matches one of the specified operations, groups, versions, resources, and scope for any of a webhook's rules, the request is sent to the webhook.
-      - operations: [ "CREATE" ]
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
         apiGroups: [ "apps" ]
-        apiVersions: [ "v1" ]
+        apiVersions: ["v1"]
         resources: [ "deployments" ]
-        
         scope: "*" # Use "*" to ensure we don't miss anything
     clientConfig:
       service:
         namespace: production
         name: webhook-server
-        path: "/validate"
+        path: "/validate/deployments"
       caBundle: ${ENCODED_CA}
     admissionReviewVersions: ["v1"]
     sideEffects: None
     timeoutSeconds: 5
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: pod-validation
+webhooks:
+  - name: "pod-validation.default.svc"
+    namespaceSelector: {}
+    rules:
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
+        apiGroups: [ "" ]
+        apiVersions: ["v1"]
+        resources: [ "pods" ]
+        scope: "*"
+    clientConfig:
+      service:
+        namespace: production
+        name: webhook-server
+        path: "/validate/deployments"
+      caBundle: ${ENCODED_CA}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+---
