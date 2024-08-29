@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package handler
 
 import (
@@ -10,6 +12,7 @@ import (
 
 type DeploymentHandler struct {
 	hook.Handler
+	settings *config.Settings
 } // &v1.Deployment{}
 
 // NewValidationHook creates a new instance of deployment validation hook
@@ -18,7 +21,7 @@ func NewDeploymentHandler(settings *config.Settings) hook.Handler {
 	// for saving records to the database
 
 	// Need little trick to protect internal data
-	d := &DeploymentHandler{}
+	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
 	d.Handler.Delete = d.Delete()
 	return d.Handler

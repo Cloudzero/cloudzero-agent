@@ -12,9 +12,9 @@ import (
 
 // Settings represents the configuration settings for the application.
 type Settings struct {
-	CloudAccountId string      `yaml:"cloudAccountID" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
+	CloudAccountId string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
 	Region         string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
-	ClusterName    string      `yaml:"clusterName" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
+	ClusterName    string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
 	Server         Server      `yaml:"server"`
 	Certificate    Certificate `yaml:"certificate"`
 	Logging        Logging     `yaml:"logging"`

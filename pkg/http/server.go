@@ -23,7 +23,7 @@ func NewServer(cfg *config.Settings, routes ...RouteSegment) *http.Server {
 		mux.Handle(route.Route, ah.Serve(route.Hook))
 	}
 	// Internal routes
-	mux.Handle("/healthz", healthz.NewHealthz().Handler())
+	mux.Handle("/healthz", healthz.NewHealthz().EndpointHandler())
 
 	return &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),

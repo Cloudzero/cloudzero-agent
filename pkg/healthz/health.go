@@ -7,29 +7,56 @@ import (
 
 type HealthCheck func() error
 
+type HealthChecker interface {
+	EndpointHandler() http.HandlerFunc
+}
+
+// Register a health check function
+// can be used to add specific health checks
+func Register(name string, fn HealthCheck) {
+	// get the interface and cast to internal type
+	NewHealthz().(*checker).add(name, fn)
+}
+
 var (
-	h    *healthz // global variable to allow registration of new health checks
+	// global protected access to health checker
+	// once to ensure singleton
+	h    *checker
 	once sync.Once
 )
 
-type healthz struct{}
+type checker struct {
+	mu     sync.Mutex
+	checks map[string]HealthCheck
+}
 
-func NewHealthz() *healthz {
+func NewHealthz() HealthChecker {
 	once.Do(func() {
-		h = &healthz{}
+		h = &checker{}
 	})
 	return h
 }
 
-func (x *healthz) Register(fn healthz) {
-	// TODO: implement
+func (x *checker) add(name string, fn HealthCheck) {
+	// lock and unlock on return
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.checks == nil {
+		x.checks = make(map[string]HealthCheck)
+	}
+	x.checks[name] = fn
 }
 
-func (x *healthz) Handler() http.HandlerFunc {
+func (x *checker) EndpointHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Default for now, later we can add more health checks
-		// as we built this out
+		for name, check := range x.checks {
+			if err := check(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(name + " failed: " + err.Error()))
+				return
+			}
+		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok")) // ignore return values
 	}
 }
