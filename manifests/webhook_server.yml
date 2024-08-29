@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: cloudzero-insights-server
-          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:poc-jb
+          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:develop
           imagePullPolicy: Always
           ports:
             - containerPort: 8443
