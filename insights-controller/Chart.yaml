@@ -4,3 +4,9 @@ description: Provides telemetry to the CloudZero platform to enabling complex co
 type: application
 version: 0.0.1
 appVersion: "0.0.1"
+dependencies:
+  - name: cert-manager
+    version: v1.15.3
+    repository: https://charts.jetstack.io
+    alias: cert-manager
+    condition: cert-manager.enabled

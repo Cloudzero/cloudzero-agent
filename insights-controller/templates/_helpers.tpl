@@ -34,6 +34,7 @@ tls.crt: {{ $cert.Cert | b64enc }}
 tls.key: {{ $cert.Key | b64enc }}
 {{- end -}}
 
+
 {{/*
 Create chart name and version as used by the chart label.
 */}}
@@ -62,6 +63,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Selector labels
+*/}}
+{{- define "insights-controller.annotations" -}}
+{{- if .Values.webhook.annotations }}
+{{ toYaml .Values.webhook.annotations}}
+{{- else }}
+cert-manager.io/inject-ca-from: {{ .Values.webhook.caInjection | default (printf "%s/%s" .Release.Namespace (include "insights-controller.certificateName" .)) }}
+{{- end }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "insights-controller.serviceAccountName" -}}
@@ -71,3 +83,39 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Name for the webhook server deployment
+*/}}
+{{- define "insights-controller.deploymentName" -}}
+{{- printf "%s-server" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the webhook server service
+*/}}
+{{- define "insights-controller.serviceName" -}}
+{{- printf "%s-svc" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the validating webhook configuration resource
+*/}}
+{{- define "insights-controller.validatingWebhookConfigName" -}}
+{{- printf "%s-webhook" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the validating webhook
+*/}}
+{{- define "insights-controller.validatingWebhookName" -}}
+{{- printf "%s.%s.svc" (include "insights-controller.validatingWebhookConfigName" .) .Release.Namespace }}
+{{- end }}
+
+{{/*
+Name for the certificate resource
+*/}}
+{{- define "insights-controller.certificateName" -}}
+{{- printf "%s-certificate" (include "insights-controller.fullname" .) }}
+{{- end }}
+

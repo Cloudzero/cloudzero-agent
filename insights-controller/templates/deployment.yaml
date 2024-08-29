@@ -1,13 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "insights-controller.fullname" . }}
+  name: {{ include "insights-controller.deploymentName" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "insights-controller.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "insights-controller.selectorLabels" . | nindent 6 }}
@@ -28,26 +27,25 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "insights-controller.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- if .Values.securityContext }}
+          {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- else}}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            runAsUser: 65534
+            runAsNonRoot: true
+            runAsGroup: 65534
+            fsGroup: 65534
+          {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+            - containerPort: 8443
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
