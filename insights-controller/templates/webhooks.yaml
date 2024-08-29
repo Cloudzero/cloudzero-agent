@@ -8,7 +8,7 @@ metadata:
     {{- include "insights-controller.annotations" . | nindent 4 }}
 webhooks:
   - name: {{ include "insights-controller.validatingWebhookName" . }}
-    namespaceSelector: {{ .Values.webhook.namespaceSelector }}
+    namespaceSelector: {{ toYaml .Values.webhook.namespaceSelector }}
     rules:
       - operations: [ "CREATE" ]
         apiGroups: [ "apps" ]

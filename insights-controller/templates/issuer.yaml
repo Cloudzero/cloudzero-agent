@@ -1,7 +1,12 @@
+{{- if (get (get .Values "cert-manager") "enabled")}}
+---
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: selfsigned
+  name: {{ include "insights-controller.issuerName" . }}
   namespace: {{ .Release.Namespace }}
 spec:
-  selfSigned: {}
+  ca:
+    secretName: {{ include "insights-controller.secretName" . }}
+  # selfSigned: {}
+{{- end }}

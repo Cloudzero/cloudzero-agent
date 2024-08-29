@@ -119,3 +119,17 @@ Name for the certificate resource
 {{- printf "%s-certificate" (include "insights-controller.fullname" .) }}
 {{- end }}
 
+{{/*
+Name for the certificate secret
+*/}}
+{{- define "insights-controller.secretName" -}}
+{{- printf "%s-tls" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the issuer resource
+*/}}
+{{- define "insights-controller.issuerName" -}}
+{{- printf "%s-issuer" (include "insights-controller.fullname" .) }}
+{{- end }}
+
