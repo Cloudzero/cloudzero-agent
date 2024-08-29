@@ -52,7 +52,7 @@ func (x *checker) EndpointHandler() http.HandlerFunc {
 		for name, check := range x.checks {
 			if err := check(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(name + " failed: " + err.Error()))
+				_, _ = w.Write([]byte(name + " failed: " + err.Error()))
 				return
 			}
 		}
