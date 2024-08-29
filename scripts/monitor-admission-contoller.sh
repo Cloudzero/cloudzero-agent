@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Define the namespace
-NAMESPACE="production"
+NAMESPACE="cloudzero-insights"
 
 # Define a label selector to find the right pods, adjust this based on your deployment specifics
 LABEL_SELECTOR="app=webhook-server"

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Allow the namespace to be overridden by an environment variable
-NAMESPACE="${NAMESPACE:-production}"
+NAMESPACE="${NAMESPACE:-cloudzero-insights}"
 
 root_dir=$(git rev-parse --show-toplevel)
 
