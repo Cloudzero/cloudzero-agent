@@ -2,52 +2,46 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: deployment-validation
+  name: cloudzero-insights-deployment-validation
 webhooks:
-  - name: "deployment-validation.production.svc"
+  - name: "deployment-validation.default.svc"
     # Remove or modify namespaceSelector
     namespaceSelector: {}  # This denotes no specific selection, applies to all namespaces
     rules:
-      # Matching requests: rules
-      # Each webhook must specify a list of rules used to determine if
-      # a request to the API server should be sent to the webhook.
-      # Each rule specifies one or more operations, apiGroups, 
-      # apiVersions, and resources, and a resource scope:
-      # 
-      #    - "operations" lists one or more operations to match. 
-      #      Can be "CREATE", "UPDATE", "DELETE", "CONNECT", or "*" to match all.
-      # 
-      #    - "apiGroups" lists one or more API groups to match. 
-      #       "" is the core API group. "*" matches all API groups.
-      # 
-      #    - "apiVersions" lists one or more API versions to match.
-      #      "*" matches all API versions.
-      # 
-      #    - "resources" lists one or more resources to match.
-      #      "*" matches all resources, but not subresources.
-      #      "*/*" matches all resources and subresources.
-      #      "pods/*" matches all subresources of pods.
-      #      "*/status" matches all status subresources.
-      #
-      #    - "scope" specifies a scope to match. 
-      #      "Cluster" means that only cluster-scoped resources 
-      #        will match this rule (Namespace API objects are cluster-scoped).
-      #      "Namespaced" means that only namespaced resources will
-      #        match this rule.
-      #      "*" means that there are no scope restrictions.
-      #
-      # If an incoming request matches one of the specified operations, groups, versions, resources, and scope for any of a webhook's rules, the request is sent to the webhook.
-      - operations: [ "CREATE" ]
+      # https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#webhook-request-and-response
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
         apiGroups: [ "apps" ]
-        apiVersions: [ "v1" ]
+        apiVersions: ["v1"]
         resources: [ "deployments" ]
-        
         scope: "*" # Use "*" to ensure we don't miss anything
     clientConfig:
       service:
-        namespace: production
-        name: webhook-server
-        path: "/validate"
+        namespace: cloudzero-insights
+        name: cloudzero-insights-server
+        path: "/validate/deployments"
+      caBundle: ${ENCODED_CA}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cloudzero-insights-pod-validation
+webhooks:
+  - name: "pod-validation.default.svc"
+    namespaceSelector: {}
+    rules:
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
+        apiGroups: [ "" ]
+        apiVersions: ["v1"]
+        resources: [ "pods" ]
+        scope: "*"
+    clientConfig:
+      service:
+        namespace: cloudzero-insights
+        name: cloudzero-insights-server
+        path: "/validate/deployments"
       caBundle: ${ENCODED_CA}
     admissionReviewVersions: ["v1"]
     sideEffects: None

@@ -1,26 +1,35 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudzero-insights
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhook-server
-  namespace: production
+  name: cloudzero-insights-server
+  namespace: cloudzero-insights
   labels:
-    app: webhook-server
+    app: cloudzero-insights-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webhook-server
+      app: cloudzero-insights-server
   template:
     metadata:
       labels:
-        app: webhook-server
+        app: cloudzero-insights-server
     spec:
       containers:
-        - name: webhook-server
-          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:poc-simple
+        - name: cloudzero-insights-server
+          image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:develop
           imagePullPolicy: Always
           ports:
             - containerPort: 8443
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "512Mi"
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs
@@ -33,11 +42,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhook-server
-  namespace: production
+  name: cloudzero-insights-server
+  namespace: cloudzero-insights
 spec:
   selector:
-    app: webhook-server
+    app: cloudzero-insights-server
   ports:
     - port: 443
       targetPort: 8443
+---
