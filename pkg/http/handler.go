@@ -82,6 +82,6 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 
 		log.Infof("Webhook [%s - %s] - Allowed: %t", r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)
-		w.Write(res)
+		_, _ = w.Write(res) // ignore return values
 	}
 }
