@@ -1,0 +1,34 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+server:
+  image:
+    repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "poc-simple"
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  imagePullSecrets: []
+  podAnnotations: {}
+  podLabels: {}
+  tlsMount:
+    useManagedSecret: true
+    mountPath: /etc/certs
+  volumeMounts: []
+  volumes: []
+
+webhook:
+  annotations: {}
+  namespaceSelector: {} # This denotes no specific selection, applies to all namespaces
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+cert-manager:
+  enabled: true
