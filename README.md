@@ -84,3 +84,14 @@ Learn more about [CloudZero](https://www.cloudzero.com/) on our website [www.clo
 ## 📜 License
 
 This project is licenced under the Apache 2.0 [LICENSE](LICENSE).
+
+
+## dumb helm readme for now
+helm repo add jetstack https://charts.jetstack.io --force-update
+helm repo update
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.15.3 \
+  --set crds.enabled=true
