@@ -6,65 +6,71 @@ metadata:
   labels:
     {{- include "insights-controller.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.server.replicaCount }}
   selector:
     matchLabels:
       {{- include "insights-controller.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.server.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "insights-controller.labels" . | nindent 8 }}
-	{{- with .Values.podLabels }}
+	{{- with .Values.server.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.server.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "insights-controller.serviceAccountName" . }}
-      {{- with .Values.podSecurityContext }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- end }}
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
       containers:
         - name: {{ .Chart.Name }}
-          {{- if .Values.securityContext }}
-          {{- toYaml .Values.securityContext | nindent 12 }}
-          {{- else}}
-          securityContext:
-            runAsUser: 65534
-            runAsNonRoot: true
-            runAsGroup: 65534
-            fsGroup: 65534
-          {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           ports:
             - containerPort: 8443
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          {{- if or .Values.server.volumeMounts .Values.server.tlsMount.useManagedSecret }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
+            {{- if .Values.server.tlsMount.useManagedSecret }}
+            - name: tls-certs
+              mountPath: {{ .Values.server.tlsMount.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.server.volumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- if or .Values.server.volumes .Values.server.tlsMount.useManagedSecret }}
       volumes:
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.server.tlsMount.useManagedSecret }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "insights-controller.secretName" . }}
+        {{- end }}
+        {{- with .Values.server.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.server.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.server.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.server.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

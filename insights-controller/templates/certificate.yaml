@@ -6,7 +6,7 @@ metadata:
   name: {{ include "insights-controller.certificateName" . }}
   namespace: {{ .Release.Namespace }}
 spec:
-  secretName: {{ include "insights-controller.fullname" .}}
+  secretName: {{ include "insights-controller.secretName" .}}
   secretTemplate:
     {{- with .Values.secretAnnotations }}
     annotations:
@@ -20,14 +20,9 @@ spec:
     size: 2048
   duration: 2160h # 90d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - {{ include "insights-controller.fullname" . }}
-  commonName: {{ include "insights-controller.serviceName" . }}
   dnsNames:
-    - {{ include "insights-controller.validatingWebhookName" . }}
+    - {{ include "insights-controller.serviceName" . }}.{{ .Release.Namespace }}.svc
   issuerRef:
     name: {{ include "insights-controller.issuerName" . }}
     kind: Issuer
-    group: certmanager.io
 {{ end }}

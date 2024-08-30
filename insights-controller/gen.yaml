@@ -911,6 +911,8 @@ spec:
   ports:
     - port: 80
       targetPort: 8443
+    - port: 443
+      targetPort: 8443
   selector:
     app.kubernetes.io/name: insights-controller
     app.kubernetes.io/instance: cz-insights
@@ -1165,7 +1167,7 @@ metadata:
     app.kubernetes.io/version: "0.0.1"
     app.kubernetes.io/managed-by: Helm
 spec:
-  replicas: 1
+  replicas: 
   selector:
     matchLabels:
       app.kubernetes.io/name: insights-controller
@@ -1180,19 +1182,27 @@ spec:
         app.kubernetes.io/managed-by: Helm
     spec:
       serviceAccountName: cz-insights-insights-controller
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
       containers:
         - name: insights-controller
-          securityContext:
-            runAsUser: 65534
-            runAsNonRoot: true
-            runAsGroup: 65534
-            fsGroup: 65534
           image: "ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:poc-simple"
           imagePullPolicy: Always
           ports:
             - containerPort: 8443
           resources:
             {}
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: cz-insights-insights-controller-tls
 ---
 # Source: insights-controller/charts/cert-manager/templates/crds.yaml
 #
@@ -1220,7 +1230,7 @@ metadata:
   name: cz-insights-insights-controller-certificate
   namespace: default
 spec:
-  secretName: cz-insights-insights-controller
+  secretName: cz-insights-insights-controller-tls
   secretTemplate:
     labels:
       helm.sh/chart: insights-controller-0.0.1
@@ -1234,12 +1244,8 @@ spec:
     size: 2048
   duration: 2160h # 90d
   renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - cz-insights-insights-controller
-  commonName: cz-insights-insights-controller-svc
   dnsNames:
-    - cz-insights-insights-controller-webhook.default.svc
+    - cz-insights-insights-controller-svc.default.svc
   issuerRef:
     name: cz-insights-insights-controller-issuer
     kind: Issuer
@@ -1252,9 +1258,9 @@ metadata:
   name: cz-insights-insights-controller-issuer
   namespace: default
 spec:
-  ca:
-    secretName: cz-insights-insights-controller-tls
-  # selfSigned: {}
+  # ca:
+  #   secretName: cz-insights-insights-controller-tls
+  selfSigned: {}
 ---
 # Source: insights-controller/charts/cert-manager/templates/webhook-mutating-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1

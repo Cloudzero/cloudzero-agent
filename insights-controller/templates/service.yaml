@@ -10,5 +10,9 @@ spec:
   ports:
     - port: 80
       targetPort: 8443
+      name: http
+    - port: 443
+      targetPort: 8443
+      name: https
   selector:
     {{- include "insights-controller.selectorLabels" . | nindent 4 }}

@@ -10,26 +10,27 @@ server:
     # Overrides the image tag whose default is the chart appVersion.
     tag: "poc-simple"
   resources: {}
-  nodeSelector: {}\
+  nodeSelector: {}
   tolerations: []
   affinity: {}
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  podSecurityContext: {}
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-
-
+  tlsMount:
+    useManagedSecret: true
+    mountPath: /etc/certs
+  volumeMounts: []
+  volumes: []
 
 webhook:
   annotations: {}
   namespaceSelector: {} # This denotes no specific selection, applies to all namespaces
 
-
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
 
 cert-manager:
   enabled: true

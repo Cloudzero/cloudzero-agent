@@ -6,7 +6,7 @@ metadata:
   name: {{ include "insights-controller.issuerName" . }}
   namespace: {{ .Release.Namespace }}
 spec:
-  ca:
-    secretName: {{ include "insights-controller.secretName" . }}
-  # selfSigned: {}
+  # ca:
+  #   secretName: {{ include "insights-controller.secretName" . }}
+  selfSigned: {}
 {{- end }}
