@@ -20,7 +20,10 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         name: {{ include "insights-controller.serviceName" . }}
         path: "/validate"
-      caBundle: ''
+        port: {{ .Values.server.service.port }}
+      {{- if and .Values.webhook.certificate.enabled .Values.webhook.issuer.enabled }}
+      caBundle: {{ .Values.webhook.caBundle }}
+      {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None
     timeoutSeconds: 5

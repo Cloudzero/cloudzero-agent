@@ -1,4 +1,4 @@
-{{- if (get (get .Values "cert-manager") "enabled")}}
+{{ if .Values.webhook.issuer.enabled }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -6,5 +6,5 @@ metadata:
   name: {{ include "insights-controller.issuerName" . }}
   namespace: {{ .Release.Namespace }}
 spec:
-  selfSigned: {}
+  {{- toYaml .Values.webhook.issuer.spec | nindent 2 }}
 {{- end }}
