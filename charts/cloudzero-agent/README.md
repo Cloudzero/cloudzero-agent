@@ -204,11 +204,6 @@ prometheusConfig:
         target_label: node
         replacement: $1
         action: replace
-      kubernetes_sd_configs:
-        - role: endpoints
-          kubeconfig_file: ""
-          follow_redirects: true
-          enable_http2: true
 ```
 
 ### Exporting Pod Labels
