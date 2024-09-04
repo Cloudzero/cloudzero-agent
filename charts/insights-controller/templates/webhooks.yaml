@@ -1,0 +1,29 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "insights-controller.validatingWebhookConfigName" . }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- include "insights-controller.annotations" . | nindent 4 }}
+webhooks:
+  - name: {{ include "insights-controller.validatingWebhookName" . }}
+    namespaceSelector: {{ toYaml .Values.webhook.namespaceSelector }}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [ "apps" ]
+        apiVersions: [ "v1" ]
+        resources: [ "deployments" ]
+        scope: "*"
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: {{ include "insights-controller.serviceName" . }}
+        path: "/validate"
+        port: {{ .Values.server.service.port }}
+      {{- if and .Values.webhook.certificate.enabled .Values.webhook.issuer.enabled }}
+      caBundle: {{ .Values.webhook.caBundle }}
+      {{- end }}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
