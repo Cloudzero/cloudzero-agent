@@ -50,8 +50,18 @@ func main() {
 		}
 	}()
 
-	if err := server.ListenAndServeTLS(settings.Certificate.Cert, settings.Certificate.Key); err != nil {
-		log.Fatal().Err(err).Msg("Failed to listen and serve")
+	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {
+		log.Info().Msg("Starting server without TLS")
+		err := server.ListenAndServe()
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Failed to listen and serve: %v", err)
+		}
+	} else {
+		log.Info().Msg("Starting server with TLS")
+		err := server.ListenAndServeTLS(settings.Certificate.Cert, settings.Certificate.Key)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Failed to listen and serve: %v", err)
+		}
 	}
 	// Print a message when the server is stopped.
 	log.Info().Msg("Server stopped")

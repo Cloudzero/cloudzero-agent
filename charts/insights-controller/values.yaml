@@ -1,3 +1,17 @@
+# -- CloudZero host to send metrics to.
+host: api.cloudzero.com
+# -- Account ID of the account the cluster is running in. This must be a string - even if it is a number in your system.
+cloudAccountId: null
+# -- Name of the clusters.
+clusterName: null
+# -- Region the cluster is running in.
+region: null
+# -- CloudZero API key. Required if useExistingSecret is false.
+apiKey: null
+# -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
+existingSecretName: null
+
+
 replicaCount: 1
 
 nameOverride: ""
@@ -10,7 +24,7 @@ server:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
     pullPolicy: Always
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "poc-simple"
+    tag: "develop"
   resources: {}
   nodeSelector: {}
   tolerations: []
@@ -18,7 +32,14 @@ server:
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  tlsMount:
+  config:
+    annotations: {}
+    port: 8443
+    read_timeout: 10
+    write_timeout: 10
+    idle_timeout: 120
+  tls:
+    enabled: true
     useManagedSecret: true
     mountPath: /etc/certs
   volumeMounts: []

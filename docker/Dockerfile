@@ -58,7 +58,7 @@ USER nobody
 WORKDIR /app
 
 LABEL org.opencontainers.image.title="cloudzero-insights-controller"
-LABEL org.opencontainers.image.description="cloudzero insights kubernetes validation adminsion controller"
+LABEL org.opencontainers.image.description="cloudzero insights kubernetes validation admission controller"
 LABEL org.opencontainers.image.vendor="Cloudzero, Inc."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/Cloudzero/cloudzero-insights-controller"

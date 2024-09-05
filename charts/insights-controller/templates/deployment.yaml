@@ -33,27 +33,35 @@ spec:
         runAsGroup: 65534
         fsGroup: 65534
       containers:
-        - name: {{ .Chart.Name }}
+        - name: webhook-server
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          command:
+            - /app/controller
+          args: ["-config", "{{ include "insights-controller.configurationMountPath" . }}/server-config.yaml"]
           ports:
             - containerPort: 8443
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
-          {{- if or .Values.server.volumeMounts .Values.server.tlsMount.useManagedSecret }}
+          {{- if or .Values.server.volumeMounts .Values.server.tls.useManagedSecret }}
           volumeMounts:
-            {{- if .Values.server.tlsMount.useManagedSecret }}
+            - name: server-config
+              mountPath: {{ include "insights-controller.configurationMountPath" . }}
+            {{- if .Values.server.tls.useManagedSecret }}
             - name: tls-certs
-              mountPath: {{ .Values.server.tlsMount.mountPath }}
+              mountPath: {{ .Values.server.tls.mountPath }}
               readOnly: true
             {{- end }}
             {{- with .Values.server.volumeMounts }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- end }}
-      {{- if or .Values.server.volumes .Values.server.tlsMount.useManagedSecret }}
+      {{- if or .Values.server.volumes .Values.server.tls.useManagedSecret }}
       volumes:
-        {{- if .Values.server.tlsMount.useManagedSecret }}
+        - name: server-config
+          configMap:
+            name: {{ include "insights-controller.configMapName" . }}
+        {{- if .Values.server.tls.useManagedSecret }}
         - name: tls-certs
           secret:
             secretName: {{ include "insights-controller.secretName" . }}

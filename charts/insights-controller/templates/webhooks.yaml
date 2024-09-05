@@ -19,7 +19,7 @@ webhooks:
       service:
         namespace: {{ .Release.Namespace }}
         name: {{ include "insights-controller.serviceName" . }}
-        path: "/validate"
+        path: "/validate/deployment"
         port: {{ .Values.server.service.port }}
       {{- if and .Values.webhook.certificate.enabled .Values.webhook.issuer.enabled }}
       caBundle: {{ .Values.webhook.caBundle }}

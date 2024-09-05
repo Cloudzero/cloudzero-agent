@@ -65,6 +65,7 @@ endif
 		--build-arg TAG=$(TAG) \
 		--build-arg BUILD_TIME=$(BUILD_TIME) \
 		--push -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
+	echo -e "$(INFO_COLOR)Image $(IMAGE_NAME):$(TAG) built and pushed successfully$(NO_COLOR)"
 
 .PHONY: deploy-admission-controller
 deploy-admission-controller: ## Deploy the admission controller

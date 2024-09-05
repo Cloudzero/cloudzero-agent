@@ -128,9 +128,22 @@ Name for the certificate secret
 {{- end }}
 
 {{/*
+Name for the webhook server configuration file
+*/}}
+{{- define "insights-controller.configMapName" -}}
+{{- printf "%s-config" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Mount path for the configuration file
+*/}}
+{{- define "insights-controller.configurationMountPath" -}}
+{{- printf "/etc/%s" .Chart.Name  }}
+{{- end }}
+
+{{/*
 Name for the issuer resource
 */}}
 {{- define "insights-controller.issuerName" -}}
 {{- printf "%s-issuer" (include "insights-controller.fullname" .) }}
 {{- end }}
-

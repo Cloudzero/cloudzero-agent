@@ -25,7 +25,7 @@ See the [Configuration Guide](./CONFIGURATION.md) for details.
 1. Build the image
 
     ```sh
-    TAG=poc-simple make package      
+    TAG=poc-simple make package
     ```
 
 2. Deploy the admission controller

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "insights-controller.labels" . | nindent 4 }}
+  name: {{ include "insights-controller.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- with .Values.server.config.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  server-config.yaml: |-
+    cloud_account_id: {{ .Values.cloudAccountId }}
+    region: {{ .Values.region }}
+    cluster_name: {{ .Values.clusterName }}
+    {{- with .Values.tls }}
+    certificate:
+      key: {{ .mountPath }}/tls.key
+      cert: {{ .mountPath }}/tls.crt
+    {{- end }}
+    server:
+      port: {{ .Values.server.config.port }}
+      read_timeout: {{ .Values.server.config.read_timeout }}
+      write_timeout: {{ .Values.server.config.write_timeout }}
+      idle_timeout: {{ .Values.server.config.idle_timeout }}

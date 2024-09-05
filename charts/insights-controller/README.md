@@ -70,7 +70,7 @@ helm install <RELEASE_NAME> cloudzero/insights-controller \
     --set webhook.certificate.enabeld=false \
     --set cert-manager.enabled=false \
     --set server.service.port=80 \
-    --set server.tlsMount.useManagedSecret=false \
+    --set server.tls.useManagedSecret=false \
 ```
 
 3. The third option is to bring your own certificate. In this case, the tls information must be mounted to the server Deployment at the `/etc/certs/` path in the format:
@@ -86,7 +86,7 @@ helm install <RELEASE_NAME> cloudzero/insights-controller -f config.yaml
 where `config.yaml` is:
 ```
 server:
-  tlsMount:
+  tls:
     useManagedSecret: false
   volumeMounts:
     - name: your-tls-volume
