@@ -51,7 +51,7 @@ In the screenshot above, notice the `checks` section. This section allows you to
 
 ## Troubleshooting
 
-The Cloudlock Agent has the following requirements:
+The CloudZero Agent has the following requirements:
 
 1. It must be able to communicate with the `Kubernetes metrics server`.
 2. It must be able to communicate with the `Prometheus node exporter`.
