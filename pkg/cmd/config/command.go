@@ -1,16 +1,22 @@
 package config
 
 import (
-	_ "embed"
-	"html/template"
-	"os"
+    "context"
+    _ "embed"
+    "fmt"
+    "html/template"
+    "os"
+    "path/filepath"
 
-	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
+    "github.com/pkg/errors"
+    "github.com/urfave/cli/v2"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/tools/clientcmd"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
+    "github.com/cloudzero/cloudzero-agent-validator/pkg/build"
+    "github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+    "github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 )
 
 //go:embed internal/template.yml
@@ -73,6 +79,17 @@ func NewCommand() *cli.Command {
 					return nil
 				},
 			},
+      {
+          Name:  "list-services",
+          Usage: "lists Kubernetes services in all namespaces",
+          Flags: []cli.Flag{
+              &cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
+          },
+          Action: func(c *cli.Context) error {
+              // List all services in all namespaces
+              return ListServices(c.String("kubeconfig"))
+          },
+      },
 		},
 	}
 	return cmd
@@ -100,11 +117,52 @@ func Generate(values map[string]interface{}, outputFile string) error { //nolint
 	return t.Execute(out, values)
 }
 
+// ListServices lists all Kubernetes services in all namespaces
+func ListServices(kubeconfigPath string) error {
+    if kubeconfigPath == "" {
+        kubeconfigPath = filepath.Join(homeDir(), ".kube", "config")
+    }
+
+    // Build the Kubernetes client configuration
+    config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+    if err != nil {
+        return errors.Wrap(err, "building kubeconfig")
+    }
+
+    // Create a new Kubernetes clientset
+    clientset, err := kubernetes.NewForConfig(config)
+    if err != nil {
+        return errors.Wrap(err, "creating clientset")
+    }
+
+    // List all services in all namespaces
+    services, err := clientset.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{})
+    if err != nil {
+        return errors.Wrap(err, "listing services")
+    }
+
+    // Print the names and namespaces of the services
+    fmt.Println("Services in all namespaces:")
+    for _, service := range services.Items {
+        fmt.Printf(" - %s (Namespace: %s)\n", service.Name, service.Namespace)
+    }
+
+    return nil
+}
+
 func getCurrentChartVersion() string {
 	if v, err := gh.GetLatestRelease("", build.AuthorName, build.ChartsRepo); err == nil {
 		return v
 	}
 	return "¯\\_(ツ)_/¯"
+}
+
+// homeDir returns the home directory for the current user
+func homeDir() string {
+    if h := os.Getenv("HOME"); h != "" {
+        return h
+    }
+    return os.Getenv("USERPROFILE") // windows
 }
 
 func getCurrentAgentVersion() string {
