@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-  corev1 "k8s.io/api/core/v1"
-  metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/cmd/config"
 )
@@ -47,23 +47,23 @@ func TestGenerate(t *testing.T) {
 
 // TestListServices tests the ListServices function
 func TestListServices(t *testing.T) {
-    // Create a fake clientset with some services
-    clientset := fake.NewSimpleClientset(
-        &corev1.Service{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      "service1",
-                Namespace: "default",
-            },
-        },
-        &corev1.Service{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      "service2",
-                Namespace: "kube-system",
-            },
-        },
-    )
+	// Create a fake clientset with some services
+	clientset := fake.NewSimpleClientset(
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service1",
+				Namespace: "default",
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service2",
+				Namespace: "kube-system",
+			},
+		},
+	)
 
-    // Test listing services
-    err := config.ListServices(clientset)
-    assert.NoError(t, err)
+	// Test listing services
+	err := config.ListServices(clientset)
+	assert.NoError(t, err)
 }
