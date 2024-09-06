@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	_ "embed"
 	"html/template"
 	"os"
@@ -23,7 +24,7 @@ var (
 	configAlias = []string{"f"}
 )
 
-func NewCommand() *cli.Command {
+func NewCommand(ctx context.Context) *cli.Command {
 	cmd := &cli.Command{
 		Name:  "config",
 		Usage: "configuration utility commands",
@@ -94,7 +95,7 @@ func NewCommand() *cli.Command {
 						return errors.Wrap(err, "creating clientset")
 					}
 
-					return k8s.ListServices(clientset)
+					return k8s.ListServices(ctx, clientset)
 				},
 			},
 		},

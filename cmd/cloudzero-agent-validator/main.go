@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,7 +18,7 @@ import (
 )
 
 func main() {
-	ctrlCHandler()
+	ctx := ctrlCHandler()
 
 	app := &cli.App{
 		Name:     build.AppName,
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	app.Commands = append(app.Commands,
-		configcmd.NewCommand(),
+		configcmd.NewCommand(ctx),
 		diagcmd.NewCommand(),
 	)
 
@@ -46,11 +47,14 @@ func main() {
 	}
 }
 
-func ctrlCHandler() {
+func ctrlCHandler() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
 	stopCh := make(chan os.Signal, 1)
 	signal.Notify(stopCh, os.Interrupt)
 	go func() {
 		<-stopCh
+		cancel()
 		os.Exit(0)
 	}()
+	return ctx
 }

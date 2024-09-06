@@ -1,6 +1,7 @@
 package k8s_test
 
 import (
+		"context"
     "testing"
 
     "github.com/stretchr/testify/assert"
@@ -29,7 +30,9 @@ func TestListServices(t *testing.T) {
 		},
 	)
 
+	ctx, _ := context.WithCancel(context.Background())
+
 	// Test listing services
-	err := k8s.ListServices(clientset)
+	err := k8s.ListServices(ctx, clientset)
 	assert.NoError(t, err)
 }

@@ -10,9 +10,9 @@ import (
 )
 
 // ListServices lists all Kubernetes services in all namespaces
-func ListServices(clientset kubernetes.Interface) error {
+func ListServices(ctx context.Context, clientset kubernetes.Interface) error {
     // List all services in all namespaces
-    services, err := clientset.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{})
+		services, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
     if err != nil {
         return errors.Wrap(err, "listing services")
     }
