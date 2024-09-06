@@ -1,15 +1,12 @@
 package config
 
 import (
-	"context"
 	_ "embed"
-	"fmt"
 	"html/template"
 	"os"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
