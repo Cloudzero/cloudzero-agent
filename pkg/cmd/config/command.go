@@ -16,6 +16,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 )
 
 //go:embed internal/template.yml
@@ -96,7 +97,7 @@ func NewCommand() *cli.Command {
 						return errors.Wrap(err, "creating clientset")
 					}
 
-					return ListServices(clientset)
+					return k8s.ListServices(clientset)
 				},
 			},
 		},
