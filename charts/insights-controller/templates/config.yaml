@@ -14,7 +14,7 @@ data:
     cloud_account_id: {{ .Values.cloudAccountId }}
     region: {{ .Values.region }}
     cluster_name: {{ .Values.clusterName }}
-    {{- with .Values.tls }}
+    {{- with .Values.server.tls }}
     certificate:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt

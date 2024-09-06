@@ -68,6 +68,10 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 		}
 
 		admissionResponse := admission.AdmissionReview{
+			TypeMeta: meta.TypeMeta{
+				Kind:       "AdmissionReview",
+				APIVersion: "admission.k8s.io/v1",
+			},
 			Response: &admission.AdmissionResponse{
 				UID:     review.Request.UID,
 				Allowed: result.Allowed,

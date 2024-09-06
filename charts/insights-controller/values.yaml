@@ -35,9 +35,9 @@ server:
   config:
     annotations: {}
     port: 8443
-    read_timeout: 10
-    write_timeout: 10
-    idle_timeout: 120
+    read_timeout: 10s
+    write_timeout: 10s
+    idle_timeout: 120s
   tls:
     enabled: true
     useManagedSecret: true
