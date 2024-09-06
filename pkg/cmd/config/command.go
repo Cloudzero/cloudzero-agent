@@ -127,23 +127,6 @@ func Generate(values map[string]interface{}, outputFile string) error { //nolint
 	return t.Execute(out, values)
 }
 
-// ListServices lists all Kubernetes services in all namespaces
-func ListServices(clientset kubernetes.Interface) error {
-	// List all services in all namespaces
-	services, err := clientset.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return errors.Wrap(err, "listing services")
-	}
-
-	// Print the names and namespaces of the services
-	fmt.Println("Services in all namespaces:")
-	for _, service := range services.Items {
-		fmt.Printf(" - %s (Namespace: %s)\n", service.Name, service.Namespace)
-	}
-
-	return nil
-}
-
 func getCurrentChartVersion() string {
 	if v, err := gh.GetLatestRelease("", build.AuthorName, build.ChartsRepo); err == nil {
 		return v
