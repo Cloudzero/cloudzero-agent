@@ -8,13 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 )
 
 //go:embed internal/template.yml
@@ -85,16 +83,10 @@ func NewCommand(ctx context.Context) *cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					kubeconfigPath := c.String("kubeconfig")
-					config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
 					if err != nil {
-						return errors.Wrap(err, "building kubeconfig")
+						return err
 					}
-
-					clientset, err := kubernetes.NewForConfig(config)
-					if err != nil {
-						return errors.Wrap(err, "creating clientset")
-					}
-
 					return k8s.ListServices(ctx, clientset)
 				},
 			},

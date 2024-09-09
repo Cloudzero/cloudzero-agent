@@ -1,15 +1,15 @@
 package k8s_test
 
 import (
-		"context"
-    "testing"
+	"context"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
-    corev1 "k8s.io/api/core/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/client-go/kubernetes/fake"
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
-    "github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 )
 
 // TestListServices tests the ListServices function
