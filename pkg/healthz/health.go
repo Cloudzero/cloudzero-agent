@@ -50,7 +50,7 @@ func (x *checker) add(name string, fn HealthCheck) {
 }
 
 func (x *checker) EndpointHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		for name, check := range x.checks {
 			if err := check(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)

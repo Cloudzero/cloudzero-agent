@@ -15,6 +15,8 @@ type Settings struct {
 	CloudAccountID string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
 	Region         string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
 	ClusterName    string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
+	Host           string      `yaml:"host" env:"HOST" env-description:"host to send metrics to"`
+	APIKeyPath     string      `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
 	Server         Server      `yaml:"server"`
 	Certificate    Certificate `yaml:"certificate"`
 	Logging        Logging     `yaml:"logging"`

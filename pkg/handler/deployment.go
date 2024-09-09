@@ -5,10 +5,9 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	v1 "k8s.io/api/apps/v1"
 )
 
@@ -32,7 +31,9 @@ func NewDeploymentHandler(settings *config.Settings) hook.Handler {
 func (d *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
-		log.Info().Msgf("DeploymentHandler.Create: %#v", &dp.ObjectMeta)
+
+		go remoteWrite.PushLabels(*dp, d.settings)
+
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
