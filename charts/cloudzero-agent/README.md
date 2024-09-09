@@ -11,7 +11,8 @@ A Helm chart for deploying Prometheus in agent mode to send cluster metrics to t
 - Kubernetes 1.23+
 - Helm 3+
 - A CloudZero API key
-
+- Each Kubernetes cluster must have a route to the internet and a rule that allows egress from the agent to the CloudZero collector endpoint at https://api.cloudzero.com on port 443
+  
 ## Installation
 
 ### Get Helm Repository Info
