@@ -34,6 +34,8 @@ server:
   podLabels: {}
   config:
     annotations: {}
+    containerSecretFilePath: /etc/config/cloudzero/secrets
+    containerSecretFileName: value
     port: 8443
     read_timeout: 10s
     write_timeout: 10s

@@ -52,6 +52,12 @@ spec:
               mountPath: {{ .Values.server.tls.mountPath }}
               readOnly: true
             {{- end }}
+            {{- if .Values.existingSecretName }}
+            - name: cloudzero-api-key
+              mountPath: {{ .Values.server.config.containerSecretFilePath }}
+              subPath: ""
+              readOnly: true
+            {{- end }}
             {{- with .Values.server.volumeMounts }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -65,6 +71,11 @@ spec:
         - name: tls-certs
           secret:
             secretName: {{ include "insights-controller.secretName" . }}
+        {{- if .Values.existingSecretName }}
+        - name: cloudzero-api-key
+          secret:
+            secretName: {{ .Values.existingSecretName }}
+        {{- end }}
         {{- end }}
         {{- with .Values.server.volumes }}
           {{- toYaml . | nindent 8 }}

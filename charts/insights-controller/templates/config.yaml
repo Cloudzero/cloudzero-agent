@@ -19,6 +19,7 @@ data:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt
     {{- end }}
+    api_key_path: {{ .Values.server.config.containerSecretFilePath }}/{{ .Values.server.config.containerSecretFileName }}
     server:
       port: {{ .Values.server.config.port }}
       read_timeout: {{ .Values.server.config.read_timeout }}
