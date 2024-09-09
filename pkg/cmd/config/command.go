@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	_ "embed"
 	"html/template"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 )
 
@@ -20,7 +22,7 @@ var (
 	configAlias = []string{"f"}
 )
 
-func NewCommand() *cli.Command {
+func NewCommand(ctx context.Context) *cli.Command {
 	cmd := &cli.Command{
 		Name:  "config",
 		Usage: "configuration utility commands",
@@ -73,6 +75,21 @@ func NewCommand() *cli.Command {
 					return nil
 				},
 			},
+			{
+				Name:  "list-services",
+				Usage: "lists Kubernetes services in all namespaces",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
+				},
+				Action: func(c *cli.Context) error {
+					kubeconfigPath := c.String("kubeconfig")
+					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
+					if err != nil {
+						return err
+					}
+					return k8s.ListServices(ctx, clientset)
+				},
+			},
 		},
 	}
 	return cmd
@@ -105,6 +122,14 @@ func getCurrentChartVersion() string {
 		return v
 	}
 	return "¯\\_(ツ)_/¯"
+}
+
+// homeDir returns the home directory for the current user
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
 }
 
 func getCurrentAgentVersion() string {

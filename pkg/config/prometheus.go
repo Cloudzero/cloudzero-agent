@@ -23,7 +23,7 @@ func (s *Prometheus) Validate() error {
 	}
 
 	if s.PrometheusNodeExporterServiceEndpoint == "" {
-		return fmt.Errorf(ErrNoPrometheusNodeExporterServiceEndpointMsg)
+		return errors.New(ErrNoPrometheusNodeExporterServiceEndpointMsg)
 	}
 	if !isValidURL(s.PrometheusNodeExporterServiceEndpoint) {
 		return fmt.Errorf("URL format invalid: %s", s.PrometheusNodeExporterServiceEndpoint)
