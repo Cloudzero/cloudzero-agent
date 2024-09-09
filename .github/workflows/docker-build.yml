@@ -140,7 +140,7 @@ jobs:
       - name: PRODUCTION STEP - Install Regctl for registry management
         if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: install_regctl
-        uses: iarekylew00t/regctl-installer@v1
+        uses: iarekylew00t/regctl-installer@v3
 
       # Login to product docker registry
       - name: PRODUCTION STEP - login to container registry
