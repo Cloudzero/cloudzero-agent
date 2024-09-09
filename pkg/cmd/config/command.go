@@ -27,28 +27,40 @@ func NewCommand(ctx context.Context) *cli.Command {
 		Name:  "config",
 		Usage: "configuration utility commands",
 		Subcommands: []*cli.Command{
-			{
-				Name:  "generate",
-				Usage: "generates a generic config file",
-				Flags: []cli.Flag{
-					&cli.StringFlag{Name: config.FlagAccountID, Aliases: []string{"a"}, Usage: config.FlagDescAccountID, Required: true},
-					&cli.StringFlag{Name: config.FlagClusterName, Aliases: []string{"c"}, Usage: config.FlagDescClusterName, Required: true},
-					&cli.StringFlag{Name: config.FlagRegion, Aliases: []string{"r"}, Usage: config.FlagDescRegion, Required: true},
-					&cli.StringFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: "output configuration file. if omitted output will print to standard out", Required: false},
-				},
-				Action: func(c *cli.Context) error {
-					return Generate(map[string]interface{}{ //nolint: gofmt
-						"ChartVerson":         getCurrentChartVersion(),
-						"AgentVersion":        getCurrentAgentVersion(),
-						"AccountID":           c.String(config.FlagAccountID),
-						"ClusterName":         c.String(config.FlagClusterName),
-						"Region":              c.String(config.FlagRegion),
-						"CloudzeroHost":       build.PlatformEndpoint,
-						"KubeStateMetricsURL": "http://kube-state-metrics.your-namespace.svc.cluster.local:8080",
-						"PromNodeExporterURL": "http://node-exporter.your-namespace.svc.cluster.local:9100",
-					}, c.String(config.FlagConfigFile))
-				},
-			},
+      {
+          Name:  "generate",
+          Usage: "generates a generic config file",
+          Flags: []cli.Flag{
+              &cli.StringFlag{Name: config.FlagAccountID, Aliases: []string{"a"}, Usage: config.FlagDescAccountID, Required: true},
+              &cli.StringFlag{Name: config.FlagClusterName, Aliases: []string{"c"}, Usage: config.FlagDescClusterName, Required: true},
+              &cli.StringFlag{Name: config.FlagRegion, Aliases: []string{"r"}, Usage: config.FlagDescRegion, Required: true},
+              &cli.StringFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: "output configuration file. if omitted output will print to standard out", Required: false},
+              &cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
+          },
+          Action: func(c *cli.Context) error {
+              kubeconfigPath := c.String("kubeconfig")
+              clientset, err := k8s.BuildKubeClient(kubeconfigPath)
+              if err != nil {
+                  return err
+              }
+
+              kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
+              if err != nil {
+                  return err
+              }
+
+              return Generate(map[string]interface{}{ //nolint: gofmt
+                  "ChartVerson":         getCurrentChartVersion(),
+                  "AgentVersion":        getCurrentAgentVersion(),
+                  "AccountID":           c.String(config.FlagAccountID),
+                  "ClusterName":         c.String(config.FlagClusterName),
+                  "Region":              c.String(config.FlagRegion),
+                  "CloudzeroHost":       build.PlatformEndpoint,
+                  "KubeStateMetricsURL": kubeStateMetricsURL,
+                  "PromNodeExporterURL": nodeExporterURL,
+              }, c.String(config.FlagConfigFile))
+          },
+      },
 			{
 				Name:  "validate",
 				Usage: "validates the config file",
@@ -75,21 +87,21 @@ func NewCommand(ctx context.Context) *cli.Command {
 					return nil
 				},
 			},
-			{
-				Name:  "list-services",
-				Usage: "lists Kubernetes services in all namespaces",
-				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
-				},
-				Action: func(c *cli.Context) error {
-					kubeconfigPath := c.String("kubeconfig")
-					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
-					if err != nil {
-						return err
-					}
-					return k8s.ListServices(ctx, clientset)
-				},
-			},
+			//{
+			//	Name:  "list-services",
+			//	Usage: "lists Kubernetes services in all namespaces",
+			//	Flags: []cli.Flag{
+			//		&cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
+			//	},
+			//	Action: func(c *cli.Context) error {
+			//		kubeconfigPath := c.String("kubeconfig")
+			//		clientset, err := k8s.BuildKubeClient(kubeconfigPath)
+			//		if err != nil {
+			//			return err
+			//		}
+			//		return k8s.ListServices(ctx, clientset)
+			//	},
+			//},
 		},
 	}
 	return cmd

@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,19 +26,36 @@ func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	return clientset, nil
 }
 
-// ListServices lists all Kubernetes services in all namespaces
-func ListServices(ctx context.Context, clientset kubernetes.Interface) error {
-	// List all services in all namespaces
-	services, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return errors.Wrap(err, "listing services")
-	}
+// GetServiceURLs retrieves the URLs for services containing 'kube-state-metrics' and 'node-exporter' substrings
+func GetServiceURLs(ctx context.Context, clientset kubernetes.Interface) (string, string, error) {
+    // List all services in all namespaces
+    services, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+    if err != nil {
+        return "", "", errors.Wrap(err, "listing services")
+    }
 
-	// Print the names and namespaces of the services
-	fmt.Println("Services in all namespaces:")
-	for _, service := range services.Items {
-		fmt.Printf(" - %s (Namespace: %s)\n", service.Name, service.Namespace)
-	}
+    var kubeStateMetricsURL, nodeExporterURL string
 
-	return nil
+    // Filter services for substrings 'kube-state-metrics' and 'node-exporter' and generate URLs
+    for _, service := range services.Items {
+        if strings.Contains(service.Name, "kube-state-metrics") {
+            if len(service.Spec.Ports) > 0 {
+                kubeStateMetricsURL = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
+            }
+        } else if strings.Contains(service.Name, "node-exporter") {
+            if len(service.Spec.Ports) > 0 {
+                nodeExporterURL = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
+            }
+        }
+    }
+
+    if kubeStateMetricsURL == "" {
+        return "", "", fmt.Errorf("kube-state-metrics service not found. Please install kube-state-metrics.")
+    }
+
+    if nodeExporterURL == "" {
+        return "", "", fmt.Errorf("node-exporter service not found. Please install node-exporter.")
+    }
+
+    return kubeStateMetricsURL, nodeExporterURL, nil
 }
