@@ -58,6 +58,16 @@ webhook:
   certificate:
     enabled: true
   caBundle: '' # by default, this is empty, and the value is populated by cert-manager's ca-injector if cert-manager is used
+  configurations:
+    deployments:
+      path: /validate/deployment
+      apiGroups: [ "apps" ]
+    pods:
+      path: /validate/pod
+      apiGroups: [ '""' ]
+    namespaces:
+      path: /validate/namespace
+      apiGroups: [ '""' ]
 
 serviceAccount:
   create: true

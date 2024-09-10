@@ -34,7 +34,9 @@ func main() {
 
 	server := http.NewServer(settings,
 		[]http.RouteSegment{
+			{Route: "/validate/pod", Hook: handler.NewPodHandler(settings)},
 			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(settings)},
+			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(settings)},
 			// TODO: Add others
 		}..., // variadic arguments expansion
 	)

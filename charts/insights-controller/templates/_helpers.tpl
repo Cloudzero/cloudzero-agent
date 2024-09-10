@@ -67,7 +67,7 @@ Selector labels
 */}}
 {{- define "insights-controller.annotations" -}}
 {{- if .Values.webhook.annotations }}
-{{ toYaml .Values.webhook.annotations}}
+{{ toYaml .Values.webhook.annotations }}
 {{- end }}
 {{- if and .Values.webhook.certificate.enabled .Values.webhook.issuer.enabled }}
 cert-manager.io/inject-ca-from: {{ .Values.webhook.caInjection | default (printf "%s/%s" .Release.Namespace (include "insights-controller.certificateName" .)) }}

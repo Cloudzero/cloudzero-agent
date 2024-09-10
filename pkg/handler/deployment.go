@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/prometheus/prometheus/prompb"
+
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
 	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	v1 "k8s.io/api/apps/v1"
@@ -24,6 +26,7 @@ func NewDeploymentHandler(settings *config.Settings) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
+	d.Handler.Update = d.Update()
 	d.Handler.Delete = d.Delete()
 	return d.Handler
 }
@@ -32,33 +35,31 @@ func (d *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
 
-		go remoteWrite.PushLabels(*dp, d.settings)
-
+		go remoteWrite.PushLabels(d.collectMetrics(*dp), d.settings)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
+		return &hook.Result{Allowed: true}, nil
+	}
+}
 
-		if dp.Namespace == "special" {
-			// log? You cannot create a deployment in `special` namespace
-			return &hook.Result{Allowed: true}, nil
+func (d *DeploymentHandler) Update() hook.AdmitFunc {
+	return func(r *hook.Request) (*hook.Result, error) {
+		dp, err := d.parseV1(r.Object.Raw)
+		go remoteWrite.PushLabels(d.collectMetrics(*dp), d.settings)
+		if err != nil {
+			return &hook.Result{Msg: err.Error()}, nil
 		}
-
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
 func (d *DeploymentHandler) Delete() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		dp, err := d.parseV1(r.OldObject.Raw)
+		_, err := d.parseV1(r.OldObject.Raw)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
-
-		if dp.Namespace == "special-system" && dp.Annotations["skip"] == "false" {
-			// log? You cannot remove a deployment from `special-system` namespace.
-			return &hook.Result{Allowed: true}, nil
-		}
-
 		return &hook.Result{Allowed: true}, nil
 	}
 }
@@ -69,4 +70,17 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 		return nil, err
 	}
 	return &dp, nil
+}
+
+func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries {
+	timeSeries := []prompb.TimeSeries{}
+	metrics := map[string]map[string]string{
+		"kube_deployment_labels":      dp.GetLabels(),
+		"kube_deployment_annotations": dp.GetAnnotations(),
+		"kube_pod_labels":             dp.Spec.Template.GetLabels(),
+	}
+	for metricName, metricLabel := range metrics {
+		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabel))
+	}
+	return timeSeries
 }
