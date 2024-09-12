@@ -9,8 +9,8 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.4
 	google.golang.org/protobuf v1.34.2
-	k8s.io/api v0.31.0
-	k8s.io/apimachinery v0.31.0
+	k8s.io/api v0.31.1
+	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.0
 )
 
