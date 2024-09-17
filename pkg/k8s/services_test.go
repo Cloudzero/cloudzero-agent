@@ -108,3 +108,55 @@ func TestGetServiceURLs(t *testing.T) {
 		})
 	}
 }
+
+// TestGetConfigMap tests the GetConfigMap function
+func TestGetConfigMap(t *testing.T) {
+	tests := []struct {
+		name          string
+		configMaps    []corev1.ConfigMap
+		namespace     string
+		configMapName string
+		expectError   bool
+	}{
+		{
+			name: "ConfigMap found",
+			configMaps: []corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-configmap",
+						Namespace: "default",
+					},
+					Data: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+			namespace:     "default",
+			configMapName: "test-configmap",
+			expectError:   false,
+		},
+		{
+			name:          "ConfigMap not found",
+			configMaps:    []corev1.ConfigMap{},
+			namespace:     "default",
+			configMapName: "nonexistent-configmap",
+			expectError:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientset := fake.NewSimpleClientset(&corev1.ConfigMapList{Items: tt.configMaps})
+
+			configMap, err := k8s.GetConfigMap(context.Background(), clientset, tt.namespace, tt.configMapName)
+			if (err != nil) != tt.expectError {
+				t.Errorf("GetConfigMap() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+			if !tt.expectError && configMap.Name != tt.configMapName {
+				t.Errorf("GetConfigMap() configMap.Name = %v, expected %v", configMap.Name, tt.configMapName)
+			}
+		})
+	}
+}

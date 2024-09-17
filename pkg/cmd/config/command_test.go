@@ -15,7 +15,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	// Create a fake clientset with some services
+	// Create a fake clientset with some services and a ConfigMap
 	clientset := fake.NewSimpleClientset(
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -39,6 +39,16 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-configmap",
+				Namespace: "default",
+			},
+			Data: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
 	)
 
 	ctx, _ := context.WithCancel(context.Background())
@@ -46,6 +56,13 @@ func TestGenerate(t *testing.T) {
 	// Fetch service URLs
 	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
 	assert.NoError(t, err)
+
+	// Fetch ConfigMap
+	configMap, err := k8s.GetConfigMap(ctx, clientset, "default", "test-configmap")
+	assert.NoError(t, err)
+
+	// Print ConfigMap
+	config.PrintConfigMap(configMap)
 
 	values := map[string]interface{}{
 		"ChartVerson":         "1.0.0",
