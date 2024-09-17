@@ -69,3 +69,12 @@ func GetConfigMap(ctx context.Context, clientset kubernetes.Interface, namespace
 	}
 	return configMap, nil
 }
+
+// UpdateConfigMap updates the ConfigMap in the specified namespace
+func UpdateConfigMap(ctx context.Context, clientset kubernetes.Interface, namespace string, configMap *corev1.ConfigMap) error {
+	_, err := clientset.CoreV1().ConfigMaps(namespace).Update(ctx, configMap, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrap(err, "updating configmap")
+	}
+	return nil
+}

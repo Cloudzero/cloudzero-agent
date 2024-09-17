@@ -160,3 +160,59 @@ func TestGetConfigMap(t *testing.T) {
 		})
 	}
 }
+
+// TestUpdateConfigMap tests the UpdateConfigMap function
+func TestUpdateConfigMap(t *testing.T) {
+	tests := []struct {
+		name             string
+		initialConfigMap *corev1.ConfigMap
+		updatedData      map[string]string
+		expectError      bool
+	}{
+		{
+			name: "Update ConfigMap successfully",
+			initialConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"key1": "value1",
+				},
+			},
+			updatedData: map[string]string{
+				"key1": "new-value1",
+				"key2": "value2",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientset := fake.NewSimpleClientset(tt.initialConfigMap)
+
+			// Update the ConfigMap data
+			tt.initialConfigMap.Data = tt.updatedData
+
+			err := k8s.UpdateConfigMap(context.Background(), clientset, tt.initialConfigMap.Namespace, tt.initialConfigMap)
+			if (err != nil) != tt.expectError {
+				t.Errorf("UpdateConfigMap() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+
+			// Verify the ConfigMap was updated
+			updatedConfigMap, err := k8s.GetConfigMap(context.Background(), clientset, tt.initialConfigMap.Namespace, tt.initialConfigMap.Name)
+			if err != nil {
+				t.Errorf("GetConfigMap() error = %v", err)
+				return
+			}
+
+			for key, expectedValue := range tt.updatedData {
+				if updatedConfigMap.Data[key] != expectedValue {
+					t.Errorf("ConfigMap data mismatch for key %s: got %v, expected %v", key, updatedConfigMap.Data[key], expectedValue)
+				}
+			}
+		})
+	}
+}

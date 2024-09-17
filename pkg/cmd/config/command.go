@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"html/template"
 	"os"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
-	corev1 "k8s.io/api/core/v1"
 )
 
 //go:embed internal/template.yml
@@ -40,6 +38,7 @@ func NewCommand(ctx context.Context) *cli.Command {
 					&cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
 					&cli.StringFlag{Name: "namespace", Usage: "namespace of the cloudzero-agent pod", Required: true},
 					&cli.StringFlag{Name: "configmap", Usage: "name of the ConfigMap", Required: true},
+					&cli.StringFlag{Name: "pod", Usage: "name of the cloudzero-agent pod", Required: true},
 				},
 				Action: func(c *cli.Context) error {
 					kubeconfigPath := c.String("kubeconfig")
@@ -56,9 +55,16 @@ func NewCommand(ctx context.Context) *cli.Command {
 						return err
 					}
 
-					PrintConfigMap(configMap)
-
 					kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
+					if err != nil {
+						return err
+					}
+
+					// Update the ConfigMap data
+					configMap.Data["prometheus.kube_state_metrics_service_endpoint"] = kubeStateMetricsURL
+					configMap.Data["prometheus.prometheus_node_exporter_service_endpoint"] = nodeExporterURL
+
+					err = k8s.UpdateConfigMap(ctx, clientset, namespace, configMap)
 					if err != nil {
 						return err
 					}
@@ -104,22 +110,6 @@ func NewCommand(ctx context.Context) *cli.Command {
 		},
 	}
 	return cmd
-}
-
-func PrintConfigMap(configMap *corev1.ConfigMap) {
-	fmt.Printf("ConfigMap %s in namespace %s:\n", configMap.Name, configMap.Namespace)
-	for key, value := range configMap.Data {
-		fmt.Printf("%s: %s\n", key, value)
-	}
-}
-
-func ExtractConfigMapData(configMap *corev1.ConfigMap) string {
-	// Assuming you want to extract all data as a single string
-	var data string
-	for key, value := range configMap.Data {
-		data += fmt.Sprintf("%s: %s\n", key, value)
-	}
-	return data
 }
 
 func Generate(values map[string]interface{}, outputFile string) error { //nolint: gofmt

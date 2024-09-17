@@ -45,8 +45,8 @@ func TestGenerate(t *testing.T) {
 				Namespace: "default",
 			},
 			Data: map[string]string{
-				"key1": "value1",
-				"key2": "value2",
+				"prometheus.kube_state_metrics_service_endpoint":       "old-url",
+				"prometheus.prometheus_node_exporter_service_endpoint": "old-url",
 			},
 		},
 	)
@@ -61,8 +61,18 @@ func TestGenerate(t *testing.T) {
 	configMap, err := k8s.GetConfigMap(ctx, clientset, "default", "test-configmap")
 	assert.NoError(t, err)
 
-	// Print ConfigMap
-	config.PrintConfigMap(configMap)
+	// Update the ConfigMap data
+	configMap.Data["prometheus.kube_state_metrics_service_endpoint"] = kubeStateMetricsURL
+	configMap.Data["prometheus.prometheus_node_exporter_service_endpoint"] = nodeExporterURL
+
+	err = k8s.UpdateConfigMap(ctx, clientset, "default", configMap)
+	assert.NoError(t, err)
+
+	// Verify the ConfigMap was updated
+	updatedConfigMap, err := k8s.GetConfigMap(ctx, clientset, "default", "test-configmap")
+	assert.NoError(t, err)
+	assert.Equal(t, kubeStateMetricsURL, updatedConfigMap.Data["prometheus.kube_state_metrics_service_endpoint"])
+	assert.Equal(t, nodeExporterURL, updatedConfigMap.Data["prometheus.prometheus_node_exporter_service_endpoint"])
 
 	values := map[string]interface{}{
 		"ChartVerson":         "1.0.0",
