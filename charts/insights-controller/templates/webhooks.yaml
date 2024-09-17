@@ -10,6 +10,7 @@ metadata:
 webhooks:
   - name: {{ include "insights-controller.validatingWebhookName" $ }}
     namespaceSelector: {{ toYaml $.Values.webhook.namespaceSelector }}
+    failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE" ]
         apiGroups: {{ $configs.apiGroups }}

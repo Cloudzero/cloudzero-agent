@@ -32,14 +32,24 @@ server:
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  config:
+  configMap:
     annotations: {}
+  serverConfig:
     containerSecretFilePath: /etc/config/cloudzero/secrets
     containerSecretFileName: value
     port: 8443
     read_timeout: 10s
     write_timeout: 10s
     idle_timeout: 120s
+    filters:
+      labels:
+        enabled: true
+        patterns:
+          - '.*'
+      annotations:
+        enabled: true
+        patterns:
+          - '.*'
   tls:
     enabled: true
     useManagedSecret: true

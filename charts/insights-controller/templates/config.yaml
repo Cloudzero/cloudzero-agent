@@ -5,7 +5,7 @@ metadata:
     {{- include "insights-controller.labels" . | nindent 4 }}
   name: {{ include "insights-controller.configMapName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- with .Values.server.config.annotations }}
+  {{- with .Values.server.configMap.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -20,9 +20,11 @@ data:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt
     {{- end }}
-    api_key_path: {{ .Values.server.config.containerSecretFilePath }}/{{ .Values.server.config.containerSecretFileName }}
+    api_key_path: {{ .Values.server.serverConfig.containerSecretFilePath }}/{{ .Values.server.serverConfig.containerSecretFileName }}
     server:
-      port: {{ .Values.server.config.port }}
-      read_timeout: {{ .Values.server.config.read_timeout }}
-      write_timeout: {{ .Values.server.config.write_timeout }}
-      idle_timeout: {{ .Values.server.config.idle_timeout }}
+      port: {{ .Values.server.serverConfig.port }}
+      read_timeout: {{ .Values.server.serverConfig.read_timeout }}
+      write_timeout: {{ .Values.server.serverConfig.write_timeout }}
+      idle_timeout: {{ .Values.server.serverConfig.idle_timeout }}
+    filters:
+      {{- .Values.server.serverConfig.filters | toYaml | nindent 6 }}

@@ -54,7 +54,7 @@ spec:
             {{- end }}
             {{- if .Values.existingSecretName }}
             - name: cloudzero-api-key
-              mountPath: {{ .Values.server.config.containerSecretFilePath }}
+              mountPath: {{ .Values.server.serverConfig.containerSecretFilePath }}
               subPath: ""
               readOnly: true
             {{- end }}

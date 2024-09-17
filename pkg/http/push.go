@@ -7,7 +7,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
@@ -17,8 +16,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 )
 
-func FormatMetrics(metricName string, metricLabels map[string]string) prompb.TimeSeries {
-	// var timeSeries []prompb.TimeSeries
+func FormatMetrics(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels) prompb.TimeSeries {
 	ts := prompb.TimeSeries{
 		Labels: []prompb.Label{
 			{
@@ -33,8 +31,13 @@ func FormatMetrics(metricName string, metricLabels map[string]string) prompb.Tim
 			},
 		},
 	}
-
-	for labelKey, labelValue := range metricLabels {
+	for labelKey, labelValue := range additionalMetricLabels {
+		ts.Labels = append(ts.Labels, prompb.Label{
+			Name:  labelKey,
+			Value: labelValue,
+		})
+	}
+	for labelKey, labelValue := range metricTags {
 		ts.Labels = append(ts.Labels, prompb.Label{
 			Name:  fmt.Sprintf("label_%s", labelKey),
 			Value: labelValue,
@@ -81,15 +84,8 @@ func pushMetrics(remoteWriteURL string, apiKey string, timeSeries []prompb.TimeS
 }
 
 func PushLabels(ts []prompb.TimeSeries, settings *config.Settings) {
-	apiKey, err := os.ReadFile(settings.APIKeyPath)
-
-	if err != nil {
-		log.Err(err).Msg("Failed to read API key")
-	}
-	remoteWriteURL := fmt.Sprintf("%s/v1/container-metrics?cluster_name=%s&cloud_account_id=%s&region=%s", settings.Host, settings.ClusterName, settings.CloudAccountID, settings.Region)
-	err = pushMetrics(remoteWriteURL, string(apiKey), ts)
+	err := pushMetrics(settings.CloudZero.Host, string(settings.CloudZero.APIKey), ts)
 	if err != nil {
 		log.Err(err).Msg("Failed to push metrics")
 	}
-
 }

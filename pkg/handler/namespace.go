@@ -57,11 +57,14 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 
 func (nh *NamespaceHandler) collectMetrics(ns corev1.Namespace) []prompb.TimeSeries {
 	timeSeries := []prompb.TimeSeries{}
-	metrics := map[string]map[string]string{
-		"kube_namespace_labels": ns.GetLabels(),
+	additionalMetricLabels := config.MetricLabels{
+		"namespace": ns.GetName(), // standard metric labels to attach to metric
 	}
-	for metricName, metricLabel := range metrics {
-		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabel))
+	metrics := map[string]map[string]string{
+		"kube_namespace_labels": config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled),
+	}
+	for metricName, metricLabelTags := range metrics {
+		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabelTags, additionalMetricLabels))
 	}
 	return timeSeries
 }
