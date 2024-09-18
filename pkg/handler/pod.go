@@ -67,15 +67,11 @@ func (ph *PodHandler) parseV1(object []byte) (*corev1.Pod, error) {
 }
 
 func (ph *PodHandler) collectMetrics(po corev1.Pod) []prompb.TimeSeries {
-	timeSeries := []prompb.TimeSeries{}
 	additionalMetricLabels := config.MetricLabels{
 		"pod": po.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
 		"kube_pod_labels": config.Filter(po.GetLabels(), ph.settings.LabelMatches, ph.settings.Filters.Labels.Enabled),
 	}
-	for metricName, metricLabelTags := range metrics {
-		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabelTags, additionalMetricLabels))
-	}
-	return timeSeries
+	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }

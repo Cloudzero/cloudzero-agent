@@ -36,7 +36,9 @@ func main() {
 		[]http.RouteSegment{
 			{Route: "/validate/pod", Hook: handler.NewPodHandler(settings)},
 			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(settings)},
+			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(settings)},
 			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(settings)},
+			{Route: "/validate/node", Hook: handler.NewNodeHandler(settings)},
 			// TODO: Add others
 		}..., // variadic arguments expansion
 	)

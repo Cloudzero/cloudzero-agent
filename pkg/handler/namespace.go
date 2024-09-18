@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+// nolint
 package handler
 
 import (
@@ -55,16 +56,14 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 	return &ns, nil
 }
 
+// nolint
 func (nh *NamespaceHandler) collectMetrics(ns corev1.Namespace) []prompb.TimeSeries {
-	timeSeries := []prompb.TimeSeries{}
 	additionalMetricLabels := config.MetricLabels{
 		"namespace": ns.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
 		"kube_namespace_labels": config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled),
 	}
-	for metricName, metricLabelTags := range metrics {
-		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabelTags, additionalMetricLabels))
-	}
-	return timeSeries
+	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
+
 }

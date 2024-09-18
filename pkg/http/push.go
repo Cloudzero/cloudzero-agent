@@ -16,7 +16,16 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 )
 
-func FormatMetrics(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels) prompb.TimeSeries {
+func FormatMetrics(metrics map[string]map[string]string, additionalMetricLabels config.MetricLabels) []prompb.TimeSeries {
+	timeSeries := []prompb.TimeSeries{}
+
+	for metricName, metricLabelTags := range metrics {
+		timeSeries = append(timeSeries, createTimeseries(metricName, metricLabelTags, additionalMetricLabels))
+	}
+	return timeSeries
+}
+
+func createTimeseries(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels) prompb.TimeSeries {
 	ts := prompb.TimeSeries{
 		Labels: []prompb.Label{
 			{

@@ -73,7 +73,6 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 }
 
 func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries {
-	timeSeries := []prompb.TimeSeries{}
 	additionalMetricLabels := config.MetricLabels{
 		"workload": dp.GetName(), // standard metric labels to attach to metric
 	}
@@ -81,8 +80,5 @@ func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries
 		"kube_deployment_labels":      config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled),
 		"kube_deployment_annotations": config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled),
 	}
-	for metricName, metricLabelTags := range metrics {
-		timeSeries = append(timeSeries, remoteWrite.FormatMetrics(metricName, metricLabelTags, additionalMetricLabels))
-	}
-	return timeSeries
+	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }

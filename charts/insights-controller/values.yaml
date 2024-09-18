@@ -72,11 +72,17 @@ webhook:
     deployments:
       path: /validate/deployment
       apiGroups: [ "apps" ]
+    statefulsets:
+      path: /validate/statefulset
+      apiGroups: [ "apps" ]
     pods:
       path: /validate/pod
       apiGroups: [ '""' ]
     namespaces:
       path: /validate/namespace
+      apiGroups: [ '""' ]
+    nodes:
+      path: /validate/node
       apiGroups: [ '""' ]
 
 serviceAccount:
