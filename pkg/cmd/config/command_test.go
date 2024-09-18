@@ -15,7 +15,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	// Create a fake clientset with some services and a ConfigMap
+	// Create a fake clientset with some services
 	clientset := fake.NewSimpleClientset(
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -39,16 +39,6 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-configmap",
-				Namespace: "default",
-			},
-			Data: map[string]string{
-				"prometheus.kube_state_metrics_service_endpoint":       "old-url",
-				"prometheus.prometheus_node_exporter_service_endpoint": "old-url",
-			},
-		},
 	)
 
 	ctx, _ := context.WithCancel(context.Background())
@@ -57,51 +47,34 @@ func TestGenerate(t *testing.T) {
 	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
 	assert.NoError(t, err)
 
-	// Fetch ConfigMap
-	configMap, err := k8s.GetConfigMap(ctx, clientset, "default", "test-configmap")
+	// Define the scrape config data
+	scrapeConfigData := config.ScrapeConfigData{
+		Targets: []string{kubeStateMetricsURL, nodeExporterURL},
+	}
+
+	// Generate the configuration content
+	configContent, err := config.Generate(scrapeConfigData)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, configContent)
 
-	// Update the ConfigMap data
-	configMap.Data["prometheus.kube_state_metrics_service_endpoint"] = kubeStateMetricsURL
-	configMap.Data["prometheus.prometheus_node_exporter_service_endpoint"] = nodeExporterURL
+	// Define the ConfigMap data
+	configMapData := map[string]string{
+		"prometheus.yml": configContent,
+	}
 
-	err = k8s.UpdateConfigMap(ctx, clientset, "default", configMap)
+	// Update the ConfigMap
+	err = k8s.UpdateConfigMap(ctx, clientset, "default", "test-configmap", configMapData)
 	assert.NoError(t, err)
 
 	// Verify the ConfigMap was updated
-	updatedConfigMap, err := k8s.GetConfigMap(ctx, clientset, "default", "test-configmap")
+	updatedConfigMap, err := clientset.CoreV1().ConfigMaps("default").Get(ctx, "test-configmap", metav1.GetOptions{})
 	assert.NoError(t, err)
-	assert.Equal(t, kubeStateMetricsURL, updatedConfigMap.Data["prometheus.kube_state_metrics_service_endpoint"])
-	assert.Equal(t, nodeExporterURL, updatedConfigMap.Data["prometheus.prometheus_node_exporter_service_endpoint"])
+	assert.Equal(t, configContent, updatedConfigMap.Data["prometheus.yml"])
 
-	values := map[string]interface{}{
-		"ChartVerson":         "1.0.0",
-		"AgentVersion":        "1.0.0",
-		"AccountID":           "123456789",
-		"ClusterName":         "test-cluster",
-		"Region":              "us-west-2",
-		"CloudzeroHost":       "https://cloudzero.com",
-		"KubeStateMetricsURL": kubeStateMetricsURL,
-		"PromNodeExporterURL": nodeExporterURL,
-	}
-
+	// Clean up the output file if it exists
 	outputFile := "test_output.yml"
-
-	err = config.Generate(values, outputFile)
-	assert.NoError(t, err)
-
-	// Verify that the output file exists
-	_, err = os.Stat(outputFile)
-	assert.NoError(t, err)
-
-	// Read the contents of the output file
-	content, err := os.ReadFile(outputFile)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, content)
-
-	// TODO: Add assertions to validate the content of the output file
-
-	// Clean up the output file
-	err = os.Remove(outputFile)
-	assert.NoError(t, err)
+	if _, err := os.Stat(outputFile); err == nil {
+		err = os.Remove(outputFile)
+		assert.NoError(t, err)
+	}
 }

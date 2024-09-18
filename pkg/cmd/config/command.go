@@ -3,8 +3,9 @@ package config
 import (
 	"context"
 	_ "embed"
-	"html/template"
 	"os"
+	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -15,12 +16,16 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 )
 
-//go:embed internal/template.yml
-var templateString string
+//go:embed internal/scrape_config.tmpl
+var scrapeConfigTemplate string
 
 var (
 	configAlias = []string{"f"}
 )
+
+type ScrapeConfigData struct {
+	Targets []string
+}
 
 func NewCommand(ctx context.Context) *cli.Command {
 	cmd := &cli.Command{
@@ -34,7 +39,6 @@ func NewCommand(ctx context.Context) *cli.Command {
 					&cli.StringFlag{Name: config.FlagAccountID, Aliases: []string{"a"}, Usage: config.FlagDescAccountID, Required: true},
 					&cli.StringFlag{Name: config.FlagClusterName, Aliases: []string{"c"}, Usage: config.FlagDescClusterName, Required: true},
 					&cli.StringFlag{Name: config.FlagRegion, Aliases: []string{"r"}, Usage: config.FlagDescRegion, Required: true},
-					&cli.StringFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: "output configuration file. if omitted output will print to standard out", Required: false},
 					&cli.StringFlag{Name: "kubeconfig", Usage: "absolute path to the kubeconfig file", Required: false},
 					&cli.StringFlag{Name: "namespace", Usage: "namespace of the cloudzero-agent pod", Required: true},
 					&cli.StringFlag{Name: "configmap", Usage: "name of the ConfigMap", Required: true},
@@ -50,35 +54,29 @@ func NewCommand(ctx context.Context) *cli.Command {
 						return err
 					}
 
-					configMap, err := k8s.GetConfigMap(ctx, clientset, namespace, configMapName)
-					if err != nil {
-						return err
-					}
-
 					kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
 					if err != nil {
 						return err
 					}
 
-					// Update the ConfigMap data
-					configMap.Data["prometheus.kube_state_metrics_service_endpoint"] = kubeStateMetricsURL
-					configMap.Data["prometheus.prometheus_node_exporter_service_endpoint"] = nodeExporterURL
+					targets := []string{kubeStateMetricsURL, nodeExporterURL}
+					scrapeConfigData := ScrapeConfigData{Targets: targets}
 
-					err = k8s.UpdateConfigMap(ctx, clientset, namespace, configMap)
+					configContent, err := Generate(scrapeConfigData)
 					if err != nil {
 						return err
 					}
 
-					return Generate(map[string]interface{}{ //nolint: gofmt
-						"ChartVerson":         getCurrentChartVersion(),
-						"AgentVersion":        getCurrentAgentVersion(),
-						"AccountID":           c.String(config.FlagAccountID),
-						"ClusterName":         c.String(config.FlagClusterName),
-						"Region":              c.String(config.FlagRegion),
-						"CloudzeroHost":       build.PlatformEndpoint,
-						"KubeStateMetricsURL": kubeStateMetricsURL,
-						"PromNodeExporterURL": nodeExporterURL,
-					}, c.String(config.FlagConfigFile))
+					configMapData := map[string]string{
+						"prometheus.yml": configContent,
+					}
+
+					err = k8s.UpdateConfigMap(ctx, clientset, namespace, configMapName, configMapData)
+					if err != nil {
+						return err
+					}
+
+					return nil
 				},
 			},
 			{
@@ -112,26 +110,19 @@ func NewCommand(ctx context.Context) *cli.Command {
 	return cmd
 }
 
-func Generate(values map[string]interface{}, outputFile string) error { //nolint: gofmt
-	t := template.New("template")
-	t, err := t.Parse(templateString)
+func Generate(data ScrapeConfigData) (string, error) {
+	t, err := template.New("scrape_config").Parse(scrapeConfigTemplate)
 	if err != nil {
-		return errors.Wrap(err, "template parser")
+		return "", errors.Wrap(err, "template parser")
 	}
-	var cleanup = func() {}
-	out := os.Stdout
-	if outputFile != "" {
-		output, err := os.Create(outputFile)
-		if err != nil {
-			return errors.Wrap(err, "creating output file")
-		}
-		cleanup = func() {
-			output.Close()
-		}
-		out = output
+
+	var result strings.Builder
+	err = t.Execute(&result, data)
+	if err != nil {
+		return "", errors.Wrap(err, "executing template")
 	}
-	defer cleanup()
-	return t.Execute(out, values)
+
+	return result.String(), nil
 }
 
 func getCurrentChartVersion() string {
