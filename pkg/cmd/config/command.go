@@ -24,7 +24,10 @@ var (
 )
 
 type ScrapeConfigData struct {
-	Targets []string
+	Targets        []string
+	ClusterName    string
+	CloudAccountID string
+	Region         string
 }
 
 func NewCommand(ctx context.Context) *cli.Command {
@@ -60,7 +63,12 @@ func NewCommand(ctx context.Context) *cli.Command {
 					}
 
 					targets := []string{kubeStateMetricsURL, nodeExporterURL}
-					scrapeConfigData := ScrapeConfigData{Targets: targets}
+					scrapeConfigData := ScrapeConfigData{
+						Targets:        targets,
+						ClusterName:    c.String(config.FlagClusterName),
+						CloudAccountID: c.String(config.FlagAccountID),
+						Region:         c.String(config.FlagRegion),
+					}
 
 					configContent, err := Generate(scrapeConfigData)
 					if err != nil {

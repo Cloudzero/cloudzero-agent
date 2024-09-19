@@ -49,13 +49,23 @@ func TestGenerate(t *testing.T) {
 
 	// Define the scrape config data
 	scrapeConfigData := config.ScrapeConfigData{
-		Targets: []string{kubeStateMetricsURL, nodeExporterURL},
+		Targets:        []string{kubeStateMetricsURL, nodeExporterURL},
+		ClusterName:    "test-cluster",
+		CloudAccountID: "123456789",
+		Region:         "us-west-2",
 	}
 
 	// Generate the configuration content
 	configContent, err := config.Generate(scrapeConfigData)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, configContent)
+
+	// Validate the dynamically populated values
+	assert.Contains(t, configContent, kubeStateMetricsURL)
+	assert.Contains(t, configContent, nodeExporterURL)
+	assert.Contains(t, configContent, "cluster_name=test-cluster")
+	assert.Contains(t, configContent, "cloud_account_id=123456789")
+	assert.Contains(t, configContent, "region=us-west-2")
 
 	// Define the ConfigMap data
 	configMapData := map[string]string{
