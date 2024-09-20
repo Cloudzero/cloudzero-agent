@@ -71,7 +71,7 @@ func (ph *PodHandler) collectMetrics(po corev1.Pod) []prompb.TimeSeries {
 		"pod": po.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
-		"kube_pod_labels": config.Filter(po.GetLabels(), ph.settings.LabelMatches, ph.settings.Filters.Labels.Enabled),
+		"kube_pod_labels": config.Filter(po.GetLabels(), ph.settings.LabelMatches, ph.settings.Filters.Labels.Enabled, *ph.settings),
 	}
 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }

@@ -62,7 +62,7 @@ func (nh *NamespaceHandler) collectMetrics(ns corev1.Namespace) []prompb.TimeSer
 		"namespace": ns.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
-		"kube_namespace_labels": config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled),
+		"kube_namespace_labels": config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings),
 	}
 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 

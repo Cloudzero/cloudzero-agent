@@ -81,11 +81,23 @@ func TestFilter(t *testing.T) {
 			enabled:  false,
 			expected: config.MetricLabels{},
 		},
+		{
+			name: "filter enabled with matching patterns and sanitized tags",
+			tags: map[string]string{
+				"app": `Hello<script>alert('You have been hacked!');</script> <b>World</b> <img src="http://malicious-site.com" onerror="alert('Malicious Image!')"/>`,
+				`Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World`: "default",
+			},
+			patterns: []regexp.Regexp{
+				*regexp.MustCompile(`.*`),
+			},
+			enabled:  true,
+			expected: config.MetricLabels{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := config.Filter(tt.tags, tt.patterns, tt.enabled)
+			actual := config.Filter(tt.tags, tt.patterns, tt.enabled, config.Settings{})
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

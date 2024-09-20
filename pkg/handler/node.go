@@ -61,7 +61,7 @@ func (nh *NodeHandler) collectMetrics(n corev1.Node) []prompb.TimeSeries {
 		"node": n.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
-		"kube_node_labels": config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled),
+		"kube_node_labels": config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings),
 	}
 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -57,6 +58,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	cfg.setCompiledFilters()
 	cfg.getAPIKey()
 	cfg.setRemoteWriteURL()
+	cfg.setPolicy()
 	return &cfg, nil
 }
 
@@ -85,6 +87,10 @@ func (s *Settings) setRemoteWriteURL() {
 	if !isValidURL(s.CloudZero.Host) {
 		log.Fatal().Msgf("URL format invalid: %s", s.Host)
 	}
+}
+
+func (s *Settings) setPolicy() {
+	s.Filters.Policy = *bluemonday.StrictPolicy()
 }
 
 func (s *Settings) setCompiledFilters() {

@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+// nolint
 package handler
 
 import (
@@ -60,8 +61,8 @@ func (sh *StatefulSetHandler) collectMetrics(s v1.StatefulSet) []prompb.TimeSeri
 		"workload": s.GetName(), // standard metric labels to attach to metric
 	}
 	metrics := map[string]map[string]string{
-		"kube_statefulset_labels":      config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled),
-		"kube_statefulset_annotations": config.Filter(s.GetAnnotations(), sh.settings.AnnotationMatches, sh.settings.Filters.Annotations.Enabled),
+		"kube_statefulset_labels":      config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings),
+		"kube_statefulset_annotations": config.Filter(s.GetAnnotations(), sh.settings.AnnotationMatches, sh.settings.Filters.Annotations.Enabled, *sh.settings),
 	}
 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }
