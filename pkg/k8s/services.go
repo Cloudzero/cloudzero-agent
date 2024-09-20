@@ -54,8 +54,8 @@ func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
 }
 
 // GetServiceURLs fetches the URLs for services containing the substrings "kube-state-metrics" and "node-exporter"
-func GetServiceURLs(ctx context.Context, clientset kubernetes.Interface) (string, string, error) {
-	services, err := clientset.CoreV1().Services("default").List(ctx, metav1.ListOptions{})
+func GetServiceURLs(ctx context.Context, clientset kubernetes.Interface, namespace string) (string, string, error) {
+	services, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", "", errors.Wrap(err, "listing services")
 	}

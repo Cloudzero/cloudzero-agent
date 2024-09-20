@@ -15,12 +15,15 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	// Define the namespace to be used in the test
+	namespace := "test-namespace"
+
 	// Create a fake clientset with some services
 	clientset := fake.NewSimpleClientset(
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-state-metrics",
-				Namespace: "default",
+				Namespace: namespace,
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -31,7 +34,7 @@ func TestGenerate(t *testing.T) {
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-exporter",
-				Namespace: "default",
+				Namespace: namespace,
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -44,7 +47,7 @@ func TestGenerate(t *testing.T) {
 	ctx, _ := context.WithCancel(context.Background())
 
 	// Fetch service URLs
-	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
+	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset, namespace)
 	assert.NoError(t, err)
 
 	// Define the scrape config data
@@ -73,11 +76,11 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Update the ConfigMap
-	err = k8s.UpdateConfigMap(ctx, clientset, "default", "test-configmap", configMapData)
+	err = k8s.UpdateConfigMap(ctx, clientset, namespace, "test-configmap", configMapData)
 	assert.NoError(t, err)
 
 	// Verify the ConfigMap was updated
-	updatedConfigMap, err := clientset.CoreV1().ConfigMaps("default").Get(ctx, "test-configmap", metav1.GetOptions{})
+	updatedConfigMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, "test-configmap", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, configContent, updatedConfigMap.Data["prometheus.yml"])
 
