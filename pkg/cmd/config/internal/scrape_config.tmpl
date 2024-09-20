@@ -1,0 +1,144 @@
+global:
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  scrape_protocols:
+  - OpenMetricsText1.0.0
+  - OpenMetricsText0.0.1
+  - PrometheusText0.0.4
+  evaluation_interval: 1m
+scrape_configs:
+- job_name: cloudzero-nodes-cadvisor
+  honor_timestamps: true
+  track_timestamps_staleness: false
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  scrape_protocols:
+  - OpenMetricsText1.0.0
+  - OpenMetricsText0.0.1
+  - PrometheusText0.0.4
+  metrics_path: /metrics
+  scheme: https
+  enable_compression: true
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: __meta_kubernetes_node_label_(.+)
+    replacement: $1
+    action: labelmap
+  - separator: ;
+    regex: (.*)
+    target_label: __address__
+    replacement: kubernetes.default.svc:443
+    action: replace
+  - source_labels: [__meta_kubernetes_node_name]
+    separator: ;
+    regex: (.+)
+    target_label: __metrics_path__
+    replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+    action: replace
+  - source_labels: [__meta_kubernetes_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - separator: ;
+    regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+    replacement: $1
+    action: labelkeep
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
+    replacement: $1
+    action: keep
+  kubernetes_sd_configs:
+  - role: node
+    kubeconfig_file: ""
+    follow_redirects: true
+    enable_http2: true
+- job_name: static-kube-state-metrics
+  honor_timestamps: true
+  track_timestamps_staleness: false
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  scrape_protocols:
+  - OpenMetricsText1.0.0
+  - OpenMetricsText0.0.1
+  - PrometheusText0.0.4
+  metrics_path: /metrics
+  scheme: http
+  enable_compression: true
+  follow_redirects: true
+  enable_http2: true
+  relabel_configs:
+  - separator: ;
+    regex: __meta_kubernetes_service_label_(.+)
+    replacement: $1
+    action: labelmap
+  - source_labels: [__meta_kubernetes_namespace]
+    separator: ;
+    regex: (.*)
+    target_label: namespace
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    separator: ;
+    regex: (.*)
+    target_label: service
+    replacement: $1
+    action: replace
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    separator: ;
+    regex: (.*)
+    target_label: node
+    replacement: $1
+    action: replace
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|node_dmi_info)$
+    replacement: $1
+    action: keep
+  - separator: ;
+    regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+    replacement: $1
+    action: labelkeep
+  static_configs:
+  - targets:
+{{- range .Targets }}
+      - {{ . }}
+{{- end }}
+remote_write:
+- url: https://api.cloudzero.com/v1/container-metrics?cluster_name={{ .ClusterName }}&cloud_account_id={{ .CloudAccountID }}&region={{ .Region }}
+  remote_timeout: 30s
+  write_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|node_dmi_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
+    replacement: $1
+    action: keep
+  authorization:
+    type: Bearer
+    credentials_file: /etc/config/prometheus/secrets/value
+  follow_redirects: true
+  enable_http2: true
+  queue_config:
+    capacity: 10000
+    max_shards: 50
+    min_shards: 1
+    max_samples_per_send: 2000
+    batch_send_deadline: 5s
+    min_backoff: 30ms
+    max_backoff: 5s
+  metadata_config:
+    send: false
+    send_interval: 1m
+    max_samples_per_send: 2000

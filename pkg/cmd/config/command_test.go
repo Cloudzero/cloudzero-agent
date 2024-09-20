@@ -47,34 +47,44 @@ func TestGenerate(t *testing.T) {
 	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset)
 	assert.NoError(t, err)
 
-	values := map[string]interface{}{
-		"ChartVerson":         "1.0.0",
-		"AgentVersion":        "1.0.0",
-		"AccountID":           "123456789",
-		"ClusterName":         "test-cluster",
-		"Region":              "us-west-2",
-		"CloudzeroHost":       "https://cloudzero.com",
-		"KubeStateMetricsURL": kubeStateMetricsURL,
-		"PromNodeExporterURL": nodeExporterURL,
+	// Define the scrape config data
+	scrapeConfigData := config.ScrapeConfigData{
+		Targets:        []string{kubeStateMetricsURL, nodeExporterURL},
+		ClusterName:    "test-cluster",
+		CloudAccountID: "123456789",
+		Region:         "us-west-2",
 	}
 
+	// Generate the configuration content
+	configContent, err := config.Generate(scrapeConfigData)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, configContent)
+
+	// Validate the dynamically populated values
+	assert.Contains(t, configContent, kubeStateMetricsURL)
+	assert.Contains(t, configContent, nodeExporterURL)
+	assert.Contains(t, configContent, "cluster_name=test-cluster")
+	assert.Contains(t, configContent, "cloud_account_id=123456789")
+	assert.Contains(t, configContent, "region=us-west-2")
+
+	// Define the ConfigMap data
+	configMapData := map[string]string{
+		"prometheus.yml": configContent,
+	}
+
+	// Update the ConfigMap
+	err = k8s.UpdateConfigMap(ctx, clientset, "default", "test-configmap", configMapData)
+	assert.NoError(t, err)
+
+	// Verify the ConfigMap was updated
+	updatedConfigMap, err := clientset.CoreV1().ConfigMaps("default").Get(ctx, "test-configmap", metav1.GetOptions{})
+	assert.NoError(t, err)
+	assert.Equal(t, configContent, updatedConfigMap.Data["prometheus.yml"])
+
+	// Clean up the output file if it exists
 	outputFile := "test_output.yml"
-
-	err = config.Generate(values, outputFile)
-	assert.NoError(t, err)
-
-	// Verify that the output file exists
-	_, err = os.Stat(outputFile)
-	assert.NoError(t, err)
-
-	// Read the contents of the output file
-	content, err := os.ReadFile(outputFile)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, content)
-
-	// TODO: Add assertions to validate the content of the output file
-
-	// Clean up the output file
-	err = os.Remove(outputFile)
-	assert.NoError(t, err)
+	if _, err := os.Stat(outputFile); err == nil {
+		err = os.Remove(outputFile)
+		assert.NoError(t, err)
+	}
 }
