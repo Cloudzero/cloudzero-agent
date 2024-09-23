@@ -13,5 +13,4 @@ const (
 	ErrNoChartVersionMsg                          = "missing Chart Version"
 	ErrNoScrapeConfigLocationMsg                  = "missing Scrape Config Location"
 	ErrNoKubeStateMetricsServiceEndpointMsg       = "missing Kube State Metrics Service Endpoint"
-	ErrNoPrometheusNodeExporterServiceEndpointMsg = "missing Prometheus Node Exporter Service Endpoint"
 )

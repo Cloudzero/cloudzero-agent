@@ -10,7 +10,6 @@ import (
 type Prometheus struct {
 	Executable                            string   `yaml:"executable" default:"/bin/prometheus" env:"PROMETHEUS_EXECUTABLE" env-description:"Prometheus Executable Path"`
 	KubeStateMetricsServiceEndpoint       string   `yaml:"kube_state_metrics_service_endpoint" env:"KMS_EP_URL" required:"true" env-description:"Kube State Metrics Service Endpoint"`
-	PrometheusNodeExporterServiceEndpoint string   `yaml:"prometheus_node_exporter_service_endpoint" env:"NODE_EXPORTER_EP_URL" required:"true" env-description:"Prometheus Node Exporter Service Endpoint"`
 	Configurations                        []string `yaml:"configurations"`
 }
 
@@ -20,13 +19,6 @@ func (s *Prometheus) Validate() error {
 	}
 	if !isValidURL(s.KubeStateMetricsServiceEndpoint) {
 		return fmt.Errorf("invalid %s", s.KubeStateMetricsServiceEndpoint)
-	}
-
-	if s.PrometheusNodeExporterServiceEndpoint == "" {
-		return errors.New(ErrNoPrometheusNodeExporterServiceEndpointMsg)
-	}
-	if !isValidURL(s.PrometheusNodeExporterServiceEndpoint) {
-		return fmt.Errorf("URL format invalid: %s", s.PrometheusNodeExporterServiceEndpoint)
 	}
 
 	if len(s.Configurations) == 0 {

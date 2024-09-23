@@ -49,7 +49,6 @@ The `prometheus` section configures Prometheus settings.
 | Key                                      | Description       | Required | Default Values |
 |------------------------------------------|-------------------|----------|----------------|
 | kube_state_metrics_service_endpoint      | The endpoint for kube-state-metrics service | Mandatory |          |
-| prometheus_node_exporter_service_endpoint| The endpoint for node-exporter service | Mandatory |                |
 | configurations                           | List of one or more configuration files locations for prometheus to validate | Mandatory |                |
 
 ## Diagnostics
@@ -76,7 +75,6 @@ The following table describes the available checkers:
 | `k8s_version`                    | Checks the Kubernetes compatability |
 | `egress_reachable`               | Checks pod can communicate with the Cloudzero API |
 | `kube_state_metrics_reachable`   | Checks the kubernetes state metrics service is reachable |
-| `node_exporter_reachable`        | Checks the prometheus node exporter service is reachable |
 | `scrape_cfg`                     |  Checks the prometheus configurations exist and contain the necessary scrape configuration |
 
 ## Example
