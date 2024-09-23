@@ -57,12 +57,12 @@ func NewCommand(ctx context.Context) *cli.Command {
 						return err
 					}
 
-					kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset, namespace)
+					kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
 					if err != nil {
 						return err
 					}
 
-					targets := []string{kubeStateMetricsURL, nodeExporterURL}
+					targets := []string{kubeStateMetricsURL}
 					scrapeConfigData := ScrapeConfigData{
 						Targets:        targets,
 						ClusterName:    c.String(config.FlagClusterName),

@@ -53,27 +53,25 @@ func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	return clientset, nil
 }
 
-// GetServiceURLs fetches the URLs for services containing the substrings "kube-state-metrics" and "node-exporter"
-func GetServiceURLs(ctx context.Context, clientset kubernetes.Interface, namespace string) (string, string, error) {
+// GetKubeStateMetricsURL fetches the URL for the Kube State Metrics service
+func GetKubeStateMetricsURL(ctx context.Context, clientset kubernetes.Interface, namespace string) (string, error) {
 	services, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return "", "", errors.Wrap(err, "listing services")
+		return "", errors.Wrap(err, "listing services")
 	}
 
-	var kubeStateMetricsURL, nodeExporterURL string
+	var kubeStateMetricsURL string
 
 	for _, service := range services.Items {
 		if strings.Contains(service.Name, "kube-state-metrics") {
 			kubeStateMetricsURL = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
-		}
-		if strings.Contains(service.Name, "node-exporter") {
-			nodeExporterURL = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
+			break
 		}
 	}
 
-	if kubeStateMetricsURL == "" || nodeExporterURL == "" {
-		return "", "", errors.New("required services not found")
+	if kubeStateMetricsURL == "" {
+		return "", errors.New("kube-state-metrics service not found")
 	}
 
-	return kubeStateMetricsURL, nodeExporterURL, nil
+	return kubeStateMetricsURL, nil
 }
