@@ -64,7 +64,7 @@ func GetKubeStateMetricsURL(ctx context.Context, clientset kubernetes.Interface,
 
 	for _, service := range services.Items {
 		if strings.Contains(service.Name, "kube-state-metrics") {
-			kubeStateMetricsURL = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
+			kubeStateMetricsURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
 			break
 		}
 	}
