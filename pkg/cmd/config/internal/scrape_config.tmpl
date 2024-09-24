@@ -117,7 +117,7 @@ scrape_configs:
       - {{ . }}
 {{- end }}
 remote_write:
-- url: https://api.cloudzero.com/v1/container-metrics?cluster_name={{ .ClusterName }}&cloud_account_id={{ .CloudAccountID }}&region={{ .Region }}
+- url: https://{{ .Host }}/v1/container-metrics?cluster_name={{ .ClusterName }}&cloud_account_id={{ .CloudAccountID }}&region={{ .Region }}
   remote_timeout: 30s
   write_relabel_configs:
   - source_labels: [__name__]
