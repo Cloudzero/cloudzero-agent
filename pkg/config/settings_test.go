@@ -16,7 +16,7 @@ const (
 	apiHost = "https://api.cloudzero.com"
 	apiKey  = "my-cloudzero-token"
 
-	kmsServiceEndpoint              = "http://kube-state-metrics:8080"
+	kmsServiceEndpoint = "http://kube-state-metrics:8080"
 )
 
 func TestSettings_NewSettings(t *testing.T) {
