@@ -45,6 +45,7 @@ func TestGenerate(t *testing.T) {
 		ClusterName:    "test-cluster",
 		CloudAccountID: "123456789",
 		Region:         "us-west-2",
+		Host:           "test-host",
 	}
 
 	// Generate the configuration content
@@ -57,6 +58,7 @@ func TestGenerate(t *testing.T) {
 	assert.Contains(t, configContent, "cluster_name=test-cluster")
 	assert.Contains(t, configContent, "cloud_account_id=123456789")
 	assert.Contains(t, configContent, "region=us-west-2")
+	assert.Contains(t, configContent, "test-host")
 
 	// Define the ConfigMap data
 	configMapData := map[string]string{
