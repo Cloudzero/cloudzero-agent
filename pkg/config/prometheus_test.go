@@ -21,33 +21,22 @@ func TestPrometheus_Validate(t *testing.T) {
 		{
 			name: "ValidPrometheus",
 			prom: config.Prometheus{
-				KubeStateMetricsServiceEndpoint:       kmsServiceEndpoint,
-				PrometheusNodeExporterServiceEndpoint: promNodeExporterServiceEndpoint,
-				Configurations:                        []string{scrapeConfigFile},
+				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
+				Configurations:                  []string{scrapeConfigFile},
 			},
 			expected: nil,
 		},
 		{
 			name: "MissingKubeStateMetricsServiceEndpoint",
 			prom: config.Prometheus{
-				PrometheusNodeExporterServiceEndpoint: promNodeExporterServiceEndpoint,
-				Configurations:                        []string{scrapeConfigFile},
+				Configurations: []string{scrapeConfigFile},
 			},
 			expected: errors.New(config.ErrNoKubeStateMetricsServiceEndpointMsg),
 		},
 		{
-			name: "MissingPrometheusNodeExporterServiceEndpoint",
-			prom: config.Prometheus{
-				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
-				Configurations:                  []string{scrapeConfigFile},
-			},
-			expected: errors.New(config.ErrNoPrometheusNodeExporterServiceEndpointMsg),
-		},
-		{
 			name: "MissingScrapeConfigLocation",
 			prom: config.Prometheus{
-				KubeStateMetricsServiceEndpoint:       kmsServiceEndpoint,
-				PrometheusNodeExporterServiceEndpoint: promNodeExporterServiceEndpoint,
+				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
 			},
 			expected: nil,
 		},

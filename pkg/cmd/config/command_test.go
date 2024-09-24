@@ -31,31 +31,21 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-exporter",
-				Namespace: namespace,
-			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{Port: 9100},
-				},
-			},
-		},
 	)
 
 	ctx, _ := context.WithCancel(context.Background())
 
-	// Fetch service URLs
-	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset, namespace)
+	// Fetch the Kube State Metrics URL
+	kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
 	assert.NoError(t, err)
 
 	// Define the scrape config data
 	scrapeConfigData := config.ScrapeConfigData{
-		Targets:        []string{kubeStateMetricsURL, nodeExporterURL},
+		Targets:        []string{kubeStateMetricsURL},
 		ClusterName:    "test-cluster",
 		CloudAccountID: "123456789",
 		Region:         "us-west-2",
+		Host:           "test-host",
 	}
 
 	// Generate the configuration content
@@ -65,10 +55,10 @@ func TestGenerate(t *testing.T) {
 
 	// Validate the dynamically populated values
 	assert.Contains(t, configContent, kubeStateMetricsURL)
-	assert.Contains(t, configContent, nodeExporterURL)
 	assert.Contains(t, configContent, "cluster_name=test-cluster")
 	assert.Contains(t, configContent, "cloud_account_id=123456789")
 	assert.Contains(t, configContent, "region=us-west-2")
+	assert.Contains(t, configContent, "test-host")
 
 	// Define the ConfigMap data
 	configMapData := map[string]string{

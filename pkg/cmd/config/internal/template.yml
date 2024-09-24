@@ -17,7 +17,6 @@ cloudzero:
 
 prometheus:
   kube_state_metrics_service_endpoint:  {{ .KubeStateMetricsURL }}
-  prometheus_node_exporter_service_endpoint:  {{ .PromNodeExporterURL }}
   configurations:
     - /etc/config/prometheus/configmaps/prometheus.yml
 
@@ -33,7 +32,6 @@ diagnostics:
       checks:
         - k8s_version
         - kube_state_metrics_reachable
-        - node_exporter_reachable
         - scrape_cfg
     - name: pre-stop
       enforce: false

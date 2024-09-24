@@ -28,6 +28,7 @@ type ScrapeConfigData struct {
 	ClusterName    string
 	CloudAccountID string
 	Region         string
+	Host           string
 }
 
 func NewCommand(ctx context.Context) *cli.Command {
@@ -46,28 +47,31 @@ func NewCommand(ctx context.Context) *cli.Command {
 					&cli.StringFlag{Name: "namespace", Usage: "namespace of the cloudzero-agent pod", Required: true},
 					&cli.StringFlag{Name: "configmap", Usage: "name of the ConfigMap", Required: true},
 					&cli.StringFlag{Name: "pod", Usage: "name of the cloudzero-agent pod", Required: true},
+					&cli.StringFlag{Name: "host", Usage: "host for the prometheus remote write endpoint", Required: true},
 				},
 				Action: func(c *cli.Context) error {
 					kubeconfigPath := c.String("kubeconfig")
 					namespace := c.String("namespace")
 					configMapName := c.String("configmap")
+					host := c.String("host")
 
 					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
 					if err != nil {
 						return err
 					}
 
-					kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset, namespace)
+					kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
 					if err != nil {
 						return err
 					}
 
-					targets := []string{kubeStateMetricsURL, nodeExporterURL}
+					targets := []string{kubeStateMetricsURL}
 					scrapeConfigData := ScrapeConfigData{
 						Targets:        targets,
 						ClusterName:    c.String(config.FlagClusterName),
 						CloudAccountID: c.String(config.FlagAccountID),
 						Region:         c.String(config.FlagRegion),
+						Host:           host,
 					}
 
 					configContent, err := Generate(scrapeConfigData)

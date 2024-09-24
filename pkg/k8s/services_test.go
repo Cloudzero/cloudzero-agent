@@ -13,12 +13,12 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 )
 
-func TestGetServiceURLs(t *testing.T) {
+func TestGetKubeStateMetricsURL(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	ctx := context.TODO()
 	namespace := "test-namespace"
 
-	// Create fake services in the test namespace
+	// Create a fake service in the test namespace
 	_, err := clientset.CoreV1().Services(namespace).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-state-metrics",
@@ -34,25 +34,9 @@ func TestGetServiceURLs(t *testing.T) {
 	}, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	_, err = clientset.CoreV1().Services(namespace).Create(ctx, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "node-exporter",
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port: 9100,
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	kubeStateMetricsURL, nodeExporterURL, err := k8s.GetServiceURLs(ctx, clientset, namespace)
+	kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
 	assert.NoError(t, err)
 	assert.Contains(t, kubeStateMetricsURL, "kube-state-metrics")
-	assert.Contains(t, nodeExporterURL, "node-exporter")
 }
 
 func TestUpdateConfigMap(t *testing.T) {

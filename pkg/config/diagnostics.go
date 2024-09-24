@@ -10,7 +10,6 @@ const (
 	DiagnosticK8sVersion        string = "k8s_version"
 	DiagnosticEgressAccess      string = "egress_reachable"
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
-	DiagnosticNodeExporter      string = "node_exporter_reachable"
 	DiagnosticPrometheusVersion string = "prometheus_version"
 	DiagnosticScrapeConfig      string = "scrape_cfg"
 )
@@ -27,7 +26,7 @@ func IsValidDiagnostic(d string) bool {
 	d = strings.ToLower(strings.TrimSpace(d))
 	switch d {
 	case DiagnosticAPIKey, DiagnosticK8sVersion, DiagnosticEgressAccess,
-		DiagnosticKMS, DiagnosticNodeExporter, DiagnosticScrapeConfig,
+		DiagnosticKMS, DiagnosticScrapeConfig,
 		DiagnosticPrometheusVersion:
 		return true
 	}

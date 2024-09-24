@@ -34,11 +34,6 @@ func TestDiagnostics_IsValidDiagnostics(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "DiagnosticNodeExporter",
-			diagnostic: config.DiagnosticNodeExporter,
-			expected:   true,
-		},
-		{
 			name:       "DiagnosticScrapeConfig",
 			diagnostic: config.DiagnosticScrapeConfig,
 			expected:   true,

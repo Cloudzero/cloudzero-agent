@@ -10,7 +10,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/egress"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/k8s"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/kms"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/pne"
 	promcfg "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/config"
 	promver "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/version"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/stage"
@@ -42,7 +41,6 @@ func NewCatalog(ctx context.Context, c *config.Settings) Registry {
 	r.add(config.DiagnosticEgressAccess, false, egress.NewProvider(ctx, c))
 	r.add(config.DiagnosticK8sVersion, false, k8s.NewProvider(ctx, c))
 	r.add(config.DiagnosticKMS, false, kms.NewProvider(ctx, c))
-	r.add(config.DiagnosticNodeExporter, false, pne.NewProvider(ctx, c))
 	r.add(config.DiagnosticScrapeConfig, false, promcfg.NewProvider(ctx, c))
 	r.add(config.DiagnosticPrometheusVersion, false, promver.NewProvider(ctx, c))
 

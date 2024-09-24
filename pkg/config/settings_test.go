@@ -16,8 +16,7 @@ const (
 	apiHost = "https://api.cloudzero.com"
 	apiKey  = "my-cloudzero-token"
 
-	kmsServiceEndpoint              = "http://kube-state-metrics:8080"
-	promNodeExporterServiceEndpoint = "http://node-exporter:8080"
+	kmsServiceEndpoint = "http://kube-state-metrics:8080"
 )
 
 func TestSettings_NewSettings(t *testing.T) {
@@ -50,7 +49,6 @@ func TestSettings_NewSettings(t *testing.T) {
 
 	// verify Prometheus
 	assert.Equal(t, kmsServiceEndpoint, settings.Prometheus.KubeStateMetricsServiceEndpoint)
-	assert.Equal(t, promNodeExporterServiceEndpoint, settings.Prometheus.PrometheusNodeExporterServiceEndpoint)
 	assert.Equal(t, []string{"prometheus.yml"}, settings.Prometheus.Configurations)
 
 	// verify Diagnostics

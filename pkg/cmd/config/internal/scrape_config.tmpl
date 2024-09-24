@@ -104,7 +104,7 @@ scrape_configs:
   metric_relabel_configs:
   - source_labels: [__name__]
     separator: ;
-    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|node_dmi_info)$
+    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$
     replacement: $1
     action: keep
   - separator: ;
@@ -117,12 +117,12 @@ scrape_configs:
       - {{ . }}
 {{- end }}
 remote_write:
-- url: https://api.cloudzero.com/v1/container-metrics?cluster_name={{ .ClusterName }}&cloud_account_id={{ .CloudAccountID }}&region={{ .Region }}
+- url: https://{{ .Host }}/v1/container-metrics?cluster_name={{ .ClusterName }}&cloud_account_id={{ .CloudAccountID }}&region={{ .Region }}
   remote_timeout: 30s
   write_relabel_configs:
   - source_labels: [__name__]
     separator: ;
-    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|node_dmi_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
+    regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
     replacement: $1
     action: keep
   authorization:

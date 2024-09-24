@@ -18,7 +18,6 @@ cloudzero:
 
 prometheus:
   kube_state_metrics_service_endpoint: http://kube-state-metrics:8080
-  prometheus_node_exporter_service_endpoint: http://node-exporter:8080
   configurations: 
     - prometheus.yml
 
@@ -35,7 +34,6 @@ diagnostics:
         - k8s_version
         - egress_reachable
         - kube_state_metrics_reachable
-        - node_exporter_reachable
         - scrape_cfg
     - name: pre-stop
       enforce: false
