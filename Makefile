@@ -38,7 +38,7 @@ vet: ## Run go vet against code
 .PHONY: build
 build: ## Build the binary
 	@mkdir -p bin
-	@CGO_ENABLED=0 go build \
+	@CGO_ENABLED=1 go build \
 		-mod=readonly \
 		-trimpath \
 		-ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}" \
