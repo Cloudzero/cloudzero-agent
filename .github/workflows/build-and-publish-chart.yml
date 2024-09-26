@@ -137,7 +137,7 @@ jobs:
 
       # Step 8: Create GitHub Release
       - name: Create Release
-        uses: softprops/action-gh-release@v4
+        uses: softprops/action-gh-release@v2
         with:
           name: ${{ env.NEW_VERSION }}
           tag_name: ${{ env.NEW_VERSION }}
