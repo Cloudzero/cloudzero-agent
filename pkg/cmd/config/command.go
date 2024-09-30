@@ -29,6 +29,7 @@ type ScrapeConfigData struct {
 	CloudAccountID string
 	Region         string
 	Host           string
+	SecretPath     string
 }
 
 func NewCommand(ctx context.Context) *cli.Command {
@@ -48,12 +49,14 @@ func NewCommand(ctx context.Context) *cli.Command {
 					&cli.StringFlag{Name: "configmap", Usage: "name of the ConfigMap", Required: true},
 					&cli.StringFlag{Name: "pod", Usage: "name of the cloudzero-agent pod", Required: true},
 					&cli.StringFlag{Name: "host", Usage: "host for the prometheus remote write endpoint", Required: true},
+					&cli.StringFlag{Name: "secret-path", Usage: "path to the secret file", Value: "/etc/config/prometheus/secrets/", Required: false},
 				},
 				Action: func(c *cli.Context) error {
 					kubeconfigPath := c.String("kubeconfig")
 					namespace := c.String("namespace")
 					configMapName := c.String("configmap")
 					host := c.String("host")
+					secretPath := c.String("secret-path")
 
 					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
 					if err != nil {
@@ -72,6 +75,7 @@ func NewCommand(ctx context.Context) *cli.Command {
 						CloudAccountID: c.String(config.FlagAccountID),
 						Region:         c.String(config.FlagRegion),
 						Host:           host,
+						SecretPath:     secretPath,
 					}
 
 					configContent, err := Generate(scrapeConfigData)

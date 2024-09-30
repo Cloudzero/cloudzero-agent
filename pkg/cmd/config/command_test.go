@@ -46,6 +46,7 @@ func TestGenerate(t *testing.T) {
 		CloudAccountID: "123456789",
 		Region:         "us-west-2",
 		Host:           "test-host",
+		SecretPath:     "/etc/config/prometheus/secrets/",
 	}
 
 	// Generate the configuration content
@@ -59,6 +60,7 @@ func TestGenerate(t *testing.T) {
 	assert.Contains(t, configContent, "cloud_account_id=123456789")
 	assert.Contains(t, configContent, "region=us-west-2")
 	assert.Contains(t, configContent, "test-host")
+	assert.Contains(t, configContent, "/etc/config/prometheus/secrets/")
 
 	// Define the ConfigMap data
 	configMapData := map[string]string{
