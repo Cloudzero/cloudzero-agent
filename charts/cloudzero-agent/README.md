@@ -1,4 +1,4 @@
-# Cloudzero Agent Helm Chart
+# CloudZero Agent Helm Chart
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -6,13 +6,15 @@
 
 A Helm chart for deploying Prometheus in agent mode to send cluster metrics to the CloudZero platform.
 
+For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-charts/releases). You can also [enable release notifications](#enabling-release-notifications).
+
 ## Prerequisites
 
 - Kubernetes 1.23+
 - Helm 3+
 - A CloudZero API key
 - Each Kubernetes cluster must have a route to the internet and a rule that allows egress from the agent to the CloudZero collector endpoint at https://api.cloudzero.com on port 443
-  
+
 ## Installation
 
 ### Get Helm Repository Info
@@ -38,7 +40,14 @@ helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set region=<REGION>
 ```
 
-Alternatively if you are updating an existing installation, you can upgrade the chart with:
+### Update Helm Chart
+Alternatively, if you are updating an existing installation, pull the latest chart information first:
+
+```console
+helm repo update
+```
+
+Next, upgrade the installation to the latest chart version:
 
 ```console
 helm upgrade <RELEASE_NAME> cloudzero/cloudzero-agent \
@@ -231,6 +240,15 @@ kube-state-metrics:
 |----------------------------------------------------|--------------------------|---------|
 | https://prometheus-community.github.io/helm-charts | kube-state-metrics       | 5.15.*  |
 | https://prometheus-community.github.io/helm-charts | prometheus-node-exporter | 4.24.*  |
+
+## Enabling Release Notifications
+
+To receive a notification when a new version of the chart is [released](https://github.com/Cloudzero/cloudzero-charts/releases), you can [watch the repository](https://docs.github.com/en/account-and-profile/managing-subscriptions-and-notifications-on-github/setting-up-notifications/configuring-notifications#configuring-your-watch-settings-for-an-individual-repository):
+
+1. Navigate to the [repository main page](https://github.com/Cloudzero/cloudzero-charts).
+2. Select **Watch > Custom**.
+3. Check the **Releases** box.
+4. Select **Apply**.
 
 ## Useful References
 
