@@ -40,7 +40,7 @@ jobs:
       - # Install buildx for multi-platform builds
         name: SETUP - Docker Buildx
         id: install_buildx
-        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
         with:
           driver-opts: network=host
 
