@@ -4,8 +4,9 @@
 #
 # Stage 1: Build the Go binary
 # FROM golang:1.22 AS builder
-FROM golang:1.23-alpine3.20 AS builder
-
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine3.20 AS builder
+ARG TARGETPLATFORM
+ARG TARGETOS TARGETARCH
 # Set the working directory inside the container
 WORKDIR /app
 
@@ -31,7 +32,15 @@ ARG BUILD_TIME=unknown
 # LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
-RUN CGO_ENABLED=1 CC="zig cc -target native-native-musl" CXX="zig cc -target native-native-musl" \
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        CCTARGET='zig cc -target x86_64-linux-musl' CXXTARGET='zig c++ -target x86_64-linux-musl'; \
+    else \
+        CCTARGET='zig cc -target aarch64-linux-musl' CXXTARGET='zig c++ -target aarch64-linux-musl'; \
+    fi \
+    && CGO_ENABLED=1 \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    CC=$CCTARGET \
+    CXX=$CXXTARGET \
     go build \
     -mod=readonly \
     -trimpath \
