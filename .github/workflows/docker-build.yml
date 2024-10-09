@@ -124,7 +124,7 @@ jobs:
           severity-cutoff: high
 
       - name: SECURITY - Trivy Docker Image Scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.26.0
         with:
           image-ref: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: 'table'
