@@ -116,7 +116,7 @@ jobs:
             REVISION=${{ env.REVISION }}
             TAG=${{ env.TAG }}
       - name: SECURITY - Grype Docker Image Scan
-        uses: anchore/scan-action@v4
+        uses: anchore/scan-action@v5
         with:
           image: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           fail-build: true
