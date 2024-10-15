@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -53,9 +53,10 @@ func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	return clientset, nil
 }
 
-// GetKubeStateMetricsURL fetches the URL for the Kube State Metrics service
-func GetKubeStateMetricsURL(ctx context.Context, clientset kubernetes.Interface, namespace string) (string, error) {
-	services, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
+// GetKubeStateMetricsURL fetches the URL for the Kube State Metrics service across all namespaces
+func GetKubeStateMetricsURL(ctx context.Context, clientset kubernetes.Interface) (string, error) {
+	// First, try to find the service by name
+	services, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", errors.Wrap(err, "listing services")
 	}
@@ -65,7 +66,17 @@ func GetKubeStateMetricsURL(ctx context.Context, clientset kubernetes.Interface,
 	for _, service := range services.Items {
 		if strings.Contains(service.Name, "kube-state-metrics") {
 			kubeStateMetricsURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
-			break
+			return kubeStateMetricsURL, nil
+		}
+	}
+
+	// If not found by name, check by labels
+	for _, service := range services.Items {
+		// Check for Helm-specific labels
+		if service.Labels["app.kubernetes.io/name"] == "kube-state-metrics" &&
+			service.Labels["helm.sh/chart"] != "" { // Ensure the service is managed by Helm
+			kubeStateMetricsURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, service.Spec.Ports[0].Port)
+			return kubeStateMetricsURL, nil
 		}
 	}
 

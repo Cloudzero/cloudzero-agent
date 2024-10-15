@@ -13,12 +13,12 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
 )
 
-func TestGetKubeStateMetricsURL(t *testing.T) {
+func TestGetKubeStateMetricsURLByName(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	ctx := context.TODO()
 	namespace := "test-namespace"
 
-	// Create a fake service in the test namespace
+	// Create a fake service in the test namespace with the name "kube-state-metrics"
 	_, err := clientset.CoreV1().Services(namespace).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-state-metrics",
@@ -34,9 +34,39 @@ func TestGetKubeStateMetricsURL(t *testing.T) {
 	}, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
+	kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset)
 	assert.NoError(t, err)
 	assert.Contains(t, kubeStateMetricsURL, "kube-state-metrics")
+}
+
+func TestGetKubeStateMetricsURLByLabel(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+	ctx := context.TODO()
+	namespace := "test-namespace"
+
+	// Create a fake service in the test namespace with Helm-specific labels
+	_, err := clientset.CoreV1().Services(namespace).Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "custom-service-name",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "kube-state-metrics",
+				"helm.sh/chart":          "kube-state-metrics-2.11.1",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port: 8080,
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset)
+	assert.NoError(t, err)
+	assert.Contains(t, kubeStateMetricsURL, "custom-service-name")
 }
 
 func TestUpdateConfigMap(t *testing.T) {

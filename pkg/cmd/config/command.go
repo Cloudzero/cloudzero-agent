@@ -63,7 +63,7 @@ func NewCommand(ctx context.Context) *cli.Command {
 						return err
 					}
 
-					kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset, namespace)
+					kubeStateMetricsURL, err := k8s.GetKubeStateMetricsURL(ctx, clientset)
 					if err != nil {
 						return err
 					}
