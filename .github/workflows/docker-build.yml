@@ -64,7 +64,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         env:
-          VALIDATOR_IMAGE_DESCRIPTION: "CloudZero Agent Validator"
+          IMAGE_DESCRIPTION: "CloudZero Insights Controller"
         with:
           # ONLY use the local registry address for the image until it is tested
           images: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}
@@ -79,7 +79,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
           labels: |
             maintainer=CloudZero
-            org.opencontainers.image.description=${{ env.VALIDATOR_IMAGE_DESCRIPTION }}
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
             org.opencontainers.image.vendor=CloudZero
             image.name=${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}
           # https://github.com/docker/metadata-action?tab=readme-ov-file#latest-tag
@@ -101,12 +101,12 @@ jobs:
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         env:
           PLATFORMS: "linux/amd64,linux/arm64"
-          VALIDATOR_DOCKERFILE: docker/Dockerfile
-          VALIDATOR_CONTEXT: .
+          CONTROLLER_DOCKERFILE: docker/Dockerfile
+          CONTOLLER_CONTEXT: .
         with:
           push: true
-          context: ${{ env.VALIDATOR_CONTEXT }}
-          file: ${{ env.VALIDATOR_DOCKERFILE }}
+          context: ${{ env.CONTOLLER_CONTEXT }}
+          file: ${{ env.CONTROLLER_DOCKERFILE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms:  ${{ env.PLATFORMS }}

@@ -5,6 +5,8 @@ package hook
 import (
 	"fmt"
 
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+
 	v1 "k8s.io/api/admission/v1"
 )
 
@@ -21,10 +23,12 @@ type AdmitFunc func(r *Request) (*Result, error)
 
 // Handler represents the set of functions for each operation in an admission webhook.
 type Handler struct {
-	Create  AdmitFunc
-	Delete  AdmitFunc
-	Update  AdmitFunc
-	Connect AdmitFunc
+	Create    AdmitFunc
+	Delete    AdmitFunc
+	Update    AdmitFunc
+	Connect   AdmitFunc
+	Writer    *storage.Writer
+	ErrorChan chan<- error
 }
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.

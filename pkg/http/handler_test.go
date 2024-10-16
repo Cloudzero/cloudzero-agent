@@ -8,9 +8,6 @@ import (
 	"testing"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"gotest.tools/v3/assert"
 	admission "k8s.io/api/admission/v1"
 )
@@ -33,11 +30,9 @@ func (m *MockHandler) Create() hook.AdmitFunc {
 
 func TestServe(t *testing.T) {
 	// Setup
-	handler := handler()
 	mockHandler := NewMockHandler()
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	db.AutoMigrate(&storage.ResourceTags{})
-	handler_func := handler.Serve(mockHandler, db)
+	handler := handler()
+	handler_func := handler.Serve(mockHandler)
 
 	// Test cases
 	tests := []struct {

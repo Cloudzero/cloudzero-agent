@@ -13,17 +13,15 @@ require (
 	github.com/stretchr/testify v1.9.0
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.12
-	gotest.tools/v3 v3.5.1
-	k8s.io/api v0.31.1
-	k8s.io/apimachinery v0.31.1
+	gotest.tools/v3 v3.0.3
+	k8s.io/api v0.30.2
+	k8s.io/apimachinery v0.30.2
 	k8s.io/klog/v2 v2.130.1
 )
 
 require (
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
 )
 
 require (

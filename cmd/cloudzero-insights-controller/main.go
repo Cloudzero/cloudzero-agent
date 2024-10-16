@@ -15,6 +15,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 )
 
 func main() {
@@ -31,11 +32,16 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
+	// error channel
+	errChan := make(chan error)
 
+	// setup database
+	db := storage.SetupDatabase()
+	writer := storage.NewWriter(db)
 	server := http.NewServer(settings,
 		[]http.RouteSegment{
 			{Route: "/validate/pod", Hook: handler.NewPodHandler(settings)},
-			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(settings)},
+			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(writer, settings, errChan)},
 			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(settings)},
 			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(settings)},
 			{Route: "/validate/node", Hook: handler.NewNodeHandler(settings)},

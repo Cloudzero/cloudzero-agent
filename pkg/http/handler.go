@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 
-	"gorm.io/gorm"
 	admission "k8s.io/api/admission/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,9 +30,10 @@ func handler() *admissionHandler {
 }
 
 // Serve returns a http.HandlerFunc for an admission webhook
-func (h *admissionHandler) Serve(handler hook.Handler, db *gorm.DB) http.HandlerFunc { // nolint:revive
+func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "invalid method only POST requests are allowed", http.StatusMethodNotAllowed)
 			return

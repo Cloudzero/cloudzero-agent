@@ -6,11 +6,13 @@ package handler
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/prometheus/prometheus/prompb"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+
 	v1 "k8s.io/api/apps/v1"
 )
 
@@ -20,23 +22,20 @@ type DeploymentHandler struct {
 } // &v1.Deployment{}
 
 // NewValidationHook creates a new instance of deployment validation hook
-func NewDeploymentHandler(settings *config.Settings) hook.Handler {
-	// TODO: Need to accept a Data object
-	// for saving records to the database
-
+func NewDeploymentHandler(writer *storage.Writer, settings *config.Settings, errChan chan<- error) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
 	d.Handler.Update = d.Update()
-	d.Handler.Delete = d.Delete()
+	d.Handler.Writer = writer
+	d.Handler.ErrorChan = errChan
 	return d.Handler
 }
 
 func (d *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
-
-		go remoteWrite.PushLabels(d.collectMetrics(*dp), d.settings)
+		d.writeDataToStorage(dp)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -47,17 +46,7 @@ func (d *DeploymentHandler) Create() hook.AdmitFunc {
 func (d *DeploymentHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
-		go remoteWrite.PushLabels(d.collectMetrics(*dp), d.settings)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
-		}
-		return &hook.Result{Allowed: true}, nil
-	}
-}
-
-func (d *DeploymentHandler) Delete() hook.AdmitFunc {
-	return func(r *hook.Request) (*hook.Result, error) {
-		_, err := d.parseV1(r.OldObject.Raw)
+		d.writeDataToStorage(dp)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -73,13 +62,30 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 	return &dp, nil
 }
 
-func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries {
-	additionalMetricLabels := config.MetricLabels{
-		"workload": dp.GetName(), // standard metric labels to attach to metric
+func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment) {
+	namespace := dp.GetNamespace()
+	labels := dp.GetLabels()
+	annotations := dp.GetAnnotations()
+	row := storage.ResourceTags{
+		Type:        config.Deployment,
+		Name:        dp.GetName(),
+		Namespace:   &namespace,
+		Labels:      &labels,
+		Annotations: &annotations,
 	}
-	metrics := map[string]map[string]string{
-		"kube_deployment_labels":      config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings),
-		"kube_deployment_annotations": config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings),
+	if err := d.Writer.WriteData(row); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
-	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
 }
+
+// TODO: Implement this function in CP-21966
+// func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries {
+// 	additionalMetricLabels := config.MetricLabels{
+// 		"workload": dp.GetName(), // standard metric labels to attach to metric
+// 	}
+// 	metrics := map[string]map[string]string{
+// 		"kube_deployment_labels":      config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings),
+// 		"kube_deployment_annotations": config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings),
+// 	}
+// 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
+// }
