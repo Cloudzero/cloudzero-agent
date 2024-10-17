@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Cloudzero Fast Remote Write API
+
+Globals:
+  Function:
+    MemorySize: 128
+    Architectures: ["arm64"]
+    Handler: bootstrap
+    Runtime: provided.al2
+    Timeout: 5
+    Tracing: Active
+    Environment:
+      Variables:
+        NAMESPACE: "test"
+        ENABLE_SNOWFLAKE: "false"
+        SERVER_MODE: "aws-gw-lambda"
+        SERVER_DOMAIN: "api.cloudzero.com"
+        SERVER_PORT: "4444"
+
+Resources:
+  PublicApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: "test"
+      Name: "fast-remote-write-api"
+      EndpointConfiguration:
+        Type: REGIONAL
+      BinaryMediaTypes:
+        - application/x-protobuf
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Content-Encoding,X-Amz-Date,Authorization,Identity'"
+      GatewayResponses:
+        UNAUTHORIZED:
+          StatusCode: 401
+          ResponseTemplates:
+            "application/json": '{ "message": $context.error.messageString }'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+        UNSUPPORTED_MEDIA_TYPE:
+          StatusCode: 415
+          ResponseTemplates:
+            "application/json": |
+              {
+                "error": "$context.error.messageString",
+                "contentType": "$context.request.headers.Content-Type"
+              }
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+        ACCESS_DENIED:
+          StatusCode: 403
+          ResponseTemplates:
+            "application/json": '{ "message": $context.error.messageString }'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+      TracingEnabled: false
+      MethodSettings:
+        - DataTraceEnabled: true
+          HttpMethod: "*"
+          LoggingLevel: INFO
+          ResourcePath: "/*"
+
+  FastRemoteWritePostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/remotewrite/
+      Events:
+        Http:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref PublicApi
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:*"
+              Resource: ["*"]
+    Metadata:
+      BuildMethod: makefile
+
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "cz-test-container-analysis-3e0e0d25-12345-12345-12345"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Ref AWS::StackName
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${PublicApi}.execute-api.us-east-1.amazonaws.com"

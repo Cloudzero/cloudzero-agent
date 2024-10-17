@@ -1,3 +1,0 @@
-[submodule "charts"]
-	path = charts
-	url = git@github.com:Cloudzero/cloudzero-charts.git
