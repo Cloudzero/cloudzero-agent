@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
-	"github.com/prometheus/prometheus/prompb"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,10 +18,12 @@ type NamespaceHandler struct {
 	settings *config.Settings
 } // &corev1.nsd{}
 
-func NewNamespaceHandler(settings *config.Settings) hook.Handler {
+func NewNamespaceHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &NamespaceHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
 	return h.Handler
 }
 
@@ -29,7 +31,7 @@ func (nh *NamespaceHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		ns, err := nh.parseV1(r.Object.Raw)
 
-		go remoteWrite.PushLabels(nh.collectMetrics(*ns), nh.settings)
+		nh.writeDataToStorage(ns)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -40,7 +42,7 @@ func (nh *NamespaceHandler) Create() hook.AdmitFunc {
 func (nh *NamespaceHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		ns, err := nh.parseV1(r.Object.Raw)
-		go remoteWrite.PushLabels(nh.collectMetrics(*ns), nh.settings)
+		nh.writeDataToStorage(ns)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -56,14 +58,18 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 	return &ns, nil
 }
 
-// nolint
-func (nh *NamespaceHandler) collectMetrics(ns corev1.Namespace) []prompb.TimeSeries {
-	additionalMetricLabels := config.MetricLabels{
+func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace) {
+	labels := config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
+	metricLabels := config.MetricLabels{
 		"namespace": ns.GetName(), // standard metric labels to attach to metric
 	}
-	metrics := map[string]map[string]string{
-		"kube_namespace_labels": config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings),
+	row := storage.ResourceTags{
+		Name:         ns.GetName(),
+		Type:         config.Namespace,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
 	}
-	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
-
+	if err := nh.Writer.WriteData(row); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
 }

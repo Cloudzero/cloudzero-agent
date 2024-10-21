@@ -131,7 +131,7 @@ Name for the certificate secret
 Name for the webhook server configuration file
 */}}
 {{- define "insights-controller.configMapName" -}}
-{{- printf "%s-config" (include "insights-controller.fullname" .) }}
+{{- printf "%s-configuration" (include "insights-controller.fullname" .) }}
 {{- end }}
 
 {{/*

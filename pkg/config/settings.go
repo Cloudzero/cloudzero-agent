@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
@@ -29,14 +30,16 @@ type Settings struct {
 	Logging           Logging     `yaml:"logging"`
 	Database          Database    `yaml:"database"`
 	Filters           Filters     `yaml:"filters"`
+	RemoteWrite       RemoteWrite `yaml:"remote_write"`
 	LabelMatches      []regexp.Regexp
 	AnnotationMatches []regexp.Regexp
-	CloudZero         CloudZero
 }
 
-type CloudZero struct {
-	APIKey string
-	Host   string
+type RemoteWrite struct {
+	APIKey          string
+	Host            string
+	MaxBytesPerSend int           `yaml:"max_bytes_per_send" default:"10000000" env:"MAX_BYTES_PER_SEND" env-description:"maximum bytes to send in a single request"`
+	SendInterval    time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
@@ -76,15 +79,15 @@ func (s *Settings) getAPIKey() {
 	if err != nil {
 		log.Err(err).Msg("Failed to read API key")
 	}
-	s.CloudZero.APIKey = string(apiKey)
+	s.RemoteWrite.APIKey = string(apiKey)
 }
 
 func (s *Settings) setRemoteWriteURL() {
-	s.CloudZero.Host = fmt.Sprintf("https://%s/v1/container-metrics?cluster_name=%s&cloud_account_id=%s&region=%s", s.Host, s.ClusterName, s.CloudAccountID, s.Region)
+	s.RemoteWrite.Host = fmt.Sprintf("https://%s/v1/container-metrics?cluster_name=%s&cloud_account_id=%s&region=%s", s.Host, s.ClusterName, s.CloudAccountID, s.Region)
 	if s.Host == "" {
 		log.Fatal().Msg("Host is required")
 	}
-	if !isValidURL(s.CloudZero.Host) {
+	if !isValidURL(s.RemoteWrite.Host) {
 		log.Fatal().Msgf("URL format invalid: %s", s.Host)
 	}
 }

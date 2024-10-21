@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -15,27 +17,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-func TestDeploymentHandler_Create(t *testing.T) {
-	settings := &config.Settings{}
-	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
-	errChan := make(chan error)
-	handler := NewDeploymentHandler(writer, settings, errChan)
+type TestRecord struct {
+	Name         string
+	Namespace    string
+	MetricLabels map[string]string
+	Labels       map[string]string
+	Annotations  map[string]string
+}
 
-	testDeploymentName := "test-deployment"
-	testNamespace := "default"
-	testLabels := map[string]string{
-		"label-key": "label-value",
-	}
-	testAnnotations := map[string]string{
-		"annotation-key": "annotation-value",
-	}
+func makeRequest(record TestRecord) *hook.Request {
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        testDeploymentName,
-			Namespace:   testNamespace,
-			Labels:      testLabels,
-			Annotations: testAnnotations,
+			Name:        record.Name,
+			Namespace:   record.Namespace,
+			Labels:      record.Labels,
+			Annotations: record.Annotations,
 		},
 	}
 
@@ -43,29 +39,61 @@ func TestDeploymentHandler_Create(t *testing.T) {
 	v1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
 	encoder := codecs.LegacyCodec(v1.SchemeGroupVersion)
-	raw, err := runtime.Encode(encoder, deployment)
-	assert.NoError(t, err)
+	raw, _ := runtime.Encode(encoder, deployment)
 
-	request := &hook.Request{
+	return &hook.Request{
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
 	}
+}
 
-	result, err := handler.Create(request)
-	time.Sleep(2 * time.Second)
+func NewTestSettings() *config.Settings {
+	filter := config.Filters{Labels: config.Labels{Enabled: true, Patterns: []string{"*"}}, Annotations: config.Annotations{Enabled: true, Patterns: []string{"*"}}}
+	compiledPatterns := []regexp.Regexp{}
+	testPattern, _ := regexp.Compile(".*")
+	compiledPatterns = append(compiledPatterns, *testPattern)
+	return &config.Settings{RemoteWrite: config.RemoteWrite{MaxBytesPerSend: 10000, SendInterval: 3}, Filters: filter, LabelMatches: compiledPatterns, AnnotationMatches: compiledPatterns}
+}
 
-	assert.NoError(t, err)
-	assert.True(t, result.Allowed)
+func TestDeploymentHandler_Create(t *testing.T) {
+	settings := NewTestSettings()
+	db := storage.SetupDatabase()
+	writer := storage.NewWriter(db)
+	errChan := make(chan error)
+	handler := NewDeploymentHandler(writer, settings, errChan)
+	var testRecords []TestRecord
+	for i := 1; i <= 20; i++ {
+		testRecord := TestRecord{
+			Name:         fmt.Sprintf("test-deployment-%d", i),
+			Namespace:    fmt.Sprintf("ns-%d", i),
+			MetricLabels: map[string]string{"workload": fmt.Sprintf("test-deployment-%d", i)},
+			Labels:       map[string]string{"label-key": fmt.Sprintf("label-value-%d", i)},
+			Annotations: map[string]string{
+				"annotation-key": fmt.Sprintf("annotation-value-%d", i),
+			},
+		}
+		request := makeRequest(testRecord)
+		result, err := handler.Create(request)
+		testRecords = append(testRecords, testRecord)
+		assert.NoError(t, err)
+		assert.True(t, result.Allowed)
+	}
 
-	var insertedRecord []storage.ResourceTags
-	db.Find(&insertedRecord)
-	// errs := <-errChan
+	reader := storage.NewReader(db, settings)
+	currentTime := time.Now().UTC()
+	insertedRecords, _ := reader.ReadData(currentTime)
 
-	// assert.Equal(t, errs, nil) // todo: potentially handle after re-implementing concurrency
-	assert.Len(t, insertedRecord, 1)
-	assert.Equal(t, testDeploymentName, insertedRecord[0].Name)
-	assert.Equal(t, &testNamespace, insertedRecord[0].Namespace)
-	assert.Equal(t, &testLabels, insertedRecord[0].Labels)
-	assert.Equal(t, &testAnnotations, insertedRecord[0].Annotations)
+	// rmw := http.NewRemoteWriter(writer, reader, settings)
+	// ticker := rmw.StartRemoteWriter()
+	// time.Sleep(10 * time.Second)
+	// ticker.Stop()
+
+	assert.Len(t, insertedRecords, 20)
+	for i, record := range insertedRecords {
+		assert.Equal(t, testRecords[i].Name, record.Name)
+		assert.Equal(t, testRecords[i].Namespace, *record.Namespace)
+		assert.Equal(t, testRecords[i].Labels, *record.Labels)
+		assert.Equal(t, testRecords[i].Annotations, *record.Annotations)
+	}
 }

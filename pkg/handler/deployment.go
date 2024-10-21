@@ -22,7 +22,7 @@ type DeploymentHandler struct {
 } // &v1.Deployment{}
 
 // NewValidationHook creates a new instance of deployment validation hook
-func NewDeploymentHandler(writer *storage.Writer, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewDeploymentHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
@@ -64,14 +64,18 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 
 func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment) {
 	namespace := dp.GetNamespace()
-	labels := dp.GetLabels()
-	annotations := dp.GetAnnotations()
+	labels := config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings)
+	annotations := config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings)
+	metricLabels := config.MetricLabels{
+		"workload": dp.GetName(), // standard metric labels to attach to metric
+	}
 	row := storage.ResourceTags{
-		Type:        config.Deployment,
-		Name:        dp.GetName(),
-		Namespace:   &namespace,
-		Labels:      &labels,
-		Annotations: &annotations,
+		Type:         config.Deployment,
+		Name:         dp.GetName(),
+		Namespace:    &namespace,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 	if err := d.Writer.WriteData(row); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)

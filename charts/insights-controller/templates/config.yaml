@@ -16,6 +16,9 @@ data:
     cluster_name: {{ .Values.clusterName }}
     host: {{ .Values.host }}
     {{- with .Values.server.tls }}
+    remote_write:
+      send_interval: 60s
+      max_bytes_per_send: 10000000
     certificate:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt

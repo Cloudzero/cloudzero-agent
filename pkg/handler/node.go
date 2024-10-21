@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
-	"github.com/prometheus/prometheus/prompb"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,10 +18,12 @@ type NodeHandler struct {
 	settings *config.Settings
 } // &corev1.Node{}
 
-func NewNodeHandler(settings *config.Settings) hook.Handler {
+func NewNodeHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	nh := &NodeHandler{settings: settings}
 	nh.Handler.Create = nh.Create()
 	nh.Handler.Update = nh.Update()
+	nh.Handler.Writer = writer
+	nh.Handler.ErrorChan = errChan
 	return nh.Handler
 }
 
@@ -29,7 +31,7 @@ func (nh *NodeHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		node, err := nh.parseV1(r.Object.Raw)
 
-		go remoteWrite.PushLabels(nh.collectMetrics(*node), nh.settings)
+		nh.writeDataToStorage(node)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -40,7 +42,7 @@ func (nh *NodeHandler) Create() hook.AdmitFunc {
 func (nh *NodeHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		node, err := nh.parseV1(r.Object.Raw)
-		go remoteWrite.PushLabels(nh.collectMetrics(*node), nh.settings)
+		nh.writeDataToStorage(node)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -56,12 +58,18 @@ func (nh *NodeHandler) parseV1(object []byte) (*corev1.Node, error) {
 	return &node, nil
 }
 
-func (nh *NodeHandler) collectMetrics(n corev1.Node) []prompb.TimeSeries {
-	additionalMetricLabels := config.MetricLabels{
+func (nh *NodeHandler) writeDataToStorage(n *corev1.Node) {
+	labels := config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
+	metricLabels := config.MetricLabels{
 		"node": n.GetName(), // standard metric labels to attach to metric
 	}
-	metrics := map[string]map[string]string{
-		"kube_node_labels": config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings),
+	row := storage.ResourceTags{
+		Name:         n.GetName(),
+		Type:         config.Node,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
 	}
-	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
+	if err := nh.Writer.WriteData(row); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
 }

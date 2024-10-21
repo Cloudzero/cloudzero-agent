@@ -16,6 +16,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 )
 
+// will be deprecated
 func FormatMetrics(metrics map[string]map[string]string, additionalMetricLabels config.MetricLabels) []prompb.TimeSeries {
 	timeSeries := []prompb.TimeSeries{}
 
@@ -25,6 +26,7 @@ func FormatMetrics(metrics map[string]map[string]string, additionalMetricLabels 
 	return timeSeries
 }
 
+// will be deprecated
 func createTimeseries(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels) prompb.TimeSeries {
 	ts := prompb.TimeSeries{
 		Labels: []prompb.Label{
@@ -93,7 +95,7 @@ func pushMetrics(remoteWriteURL string, apiKey string, timeSeries []prompb.TimeS
 }
 
 func PushLabels(ts []prompb.TimeSeries, settings *config.Settings) {
-	err := pushMetrics(settings.CloudZero.Host, string(settings.CloudZero.APIKey), ts)
+	err := pushMetrics(settings.RemoteWrite.Host, string(settings.RemoteWrite.APIKey), ts)
 	if err != nil {
 		log.Err(err).Msg("Failed to push metrics")
 	}

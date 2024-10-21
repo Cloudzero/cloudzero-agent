@@ -27,7 +27,7 @@ type Handler struct {
 	Delete    AdmitFunc
 	Update    AdmitFunc
 	Connect   AdmitFunc
-	Writer    *storage.Writer
+	Writer    storage.DatabaseWriter
 	ErrorChan chan<- error
 }
 

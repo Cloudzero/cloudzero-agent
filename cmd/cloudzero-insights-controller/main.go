@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,11 +41,11 @@ func main() {
 	writer := storage.NewWriter(db)
 	server := http.NewServer(settings,
 		[]http.RouteSegment{
-			{Route: "/validate/pod", Hook: handler.NewPodHandler(settings)},
+			{Route: "/validate/pod", Hook: handler.NewPodHandler(writer, settings, errChan)},
 			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(writer, settings, errChan)},
-			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(settings)},
-			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(settings)},
-			{Route: "/validate/node", Hook: handler.NewNodeHandler(settings)},
+			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(writer, settings, errChan)},
+			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(writer, settings, errChan)},
+			{Route: "/validate/node", Hook: handler.NewNodeHandler(writer, settings, errChan)},
 			// TODO: Add others
 		}..., // variadic arguments expansion
 	)
@@ -58,6 +59,17 @@ func main() {
 		if err := server.Shutdown(context.Background()); err != nil {
 			log.Error().Err(err).Msg("Error shutting down server")
 		}
+	}()
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered from panic in remote write:", r)
+			}
+		}()
+		reader := storage.NewReader(db, settings)
+		rmw := http.NewRemoteWriter(writer, reader, settings)
+		rmw.StartRemoteWriter()
 	}()
 
 	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {

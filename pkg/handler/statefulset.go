@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	remoteWrite "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
-	"github.com/prometheus/prometheus/prompb"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/apps/v1"
 )
 
@@ -18,10 +18,12 @@ type StatefulSetHandler struct {
 	settings *config.Settings
 }
 
-func NewStatefulsetHandler(settings *config.Settings) hook.Handler {
+func NewStatefulsetHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	s := &StatefulSetHandler{settings: settings}
 	s.Handler.Create = s.Create()
 	s.Handler.Update = s.Update()
+	s.Handler.Writer = writer
+	s.Handler.ErrorChan = errChan
 	return s.Handler
 }
 
@@ -29,7 +31,7 @@ func (sh *StatefulSetHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		s, err := sh.parseV1(r.Object.Raw)
 
-		go remoteWrite.PushLabels(sh.collectMetrics(*s), sh.settings)
+		sh.writeDataToStorage(s)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -40,7 +42,7 @@ func (sh *StatefulSetHandler) Create() hook.AdmitFunc {
 func (sh *StatefulSetHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		s, err := sh.parseV1(r.Object.Raw)
-		go remoteWrite.PushLabels(sh.collectMetrics(*s), sh.settings)
+		sh.writeDataToStorage(s)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -56,13 +58,20 @@ func (sh *StatefulSetHandler) parseV1(object []byte) (*v1.StatefulSet, error) {
 	return &s, nil
 }
 
-func (sh *StatefulSetHandler) collectMetrics(s v1.StatefulSet) []prompb.TimeSeries {
-	additionalMetricLabels := config.MetricLabels{
+func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet) {
+	namespace := s.GetNamespace()
+	labels := config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings)
+	metricLabels := config.MetricLabels{
 		"workload": s.GetName(), // standard metric labels to attach to metric
 	}
-	metrics := map[string]map[string]string{
-		"kube_statefulset_labels":      config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings),
-		"kube_statefulset_annotations": config.Filter(s.GetAnnotations(), sh.settings.AnnotationMatches, sh.settings.Filters.Annotations.Enabled, *sh.settings),
+	row := storage.ResourceTags{
+		Name:         s.GetName(),
+		Type:         config.StatefulSet,
+		Namespace:    &namespace,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
 	}
-	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
+	if err := sh.Writer.WriteData(row); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
 }

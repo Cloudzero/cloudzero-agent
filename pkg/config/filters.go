@@ -20,7 +20,7 @@ type MetricLabels = map[string]string
 // Represents metric labels attached to a metric that represent annotations or labels; value must be prefixed with "label_"
 type MetricLabelTags = map[string]string
 
-func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, settings Settings) MetricLabels {
+func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, settings Settings) MetricLabelTags {
 	filteredTags := make(MetricLabels)
 	if !enabled {
 		return filteredTags

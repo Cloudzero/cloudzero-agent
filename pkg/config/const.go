@@ -10,3 +10,12 @@ const (
 	Node        ResourceType = 4
 	Namespace   ResourceType = 5
 )
+
+var ResourceTypeToMetricName = map[ResourceType]string{
+	Unknown:     "unknown",
+	Deployment:  "deployment",
+	StatefulSet: "statefulset",
+	Pod:         "pod",
+	Node:        "node",
+	Namespace:   "namespace",
+}
