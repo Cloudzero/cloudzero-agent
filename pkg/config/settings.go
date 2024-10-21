@@ -83,15 +83,34 @@ func (s *Settings) getAPIKey() {
 }
 
 func (s *Settings) setRemoteWriteURL() {
-	s.RemoteWrite.Host = fmt.Sprintf("https://%s/v1/container-metrics?cluster_name=%s&cloud_account_id=%s&region=%s", s.Host, s.ClusterName, s.CloudAccountID, s.Region)
 	if s.Host == "" {
 		log.Fatal().Msg("Host is required")
 	}
-	if !isValidURL(s.RemoteWrite.Host) {
-		log.Fatal().Msgf("URL format invalid: %s", s.Host)
+	baseURL, err := url.Parse(fmt.Sprintf("https://%s", s.Host))
+	if err != nil {
+		fmt.Println("Malformed URL: ", err.Error())
+		return
 	}
+	baseURL.Path += "/v1/container-metrics"
+	params := url.Values{}
+	params.Add("cluster_name", s.ClusterName)
+	params.Add("cloud_account_id", s.CloudAccountID)
+	params.Add("region", s.Region)
+	baseURL.RawQuery = params.Encode()
+	url := baseURL.String()
+
+	if !isValidURL(url) {
+		log.Fatal().Msgf("URL format invalid: %s", url)
+	}
+	s.RemoteWrite.Host = url
 }
 
+func isValidURL(uri string) bool {
+	if _, err := url.ParseRequestURI(uri); err != nil {
+		return false
+	}
+	return true
+}
 func (s *Settings) setPolicy() {
 	s.Filters.Policy = *bluemonday.StrictPolicy()
 }
@@ -120,13 +139,6 @@ func (s *Settings) compilePatterns(patterns []string) []regexp.Regexp {
 		log.Fatal().Msg("Config file contains invalid regex patterns")
 	}
 	return compiledPatterns
-}
-
-func isValidURL(uri string) bool {
-	if _, err := url.ParseRequestURI(uri); err != nil {
-		return false
-	}
-	return true
 }
 
 func absFilePath(location string) (string, error) {
