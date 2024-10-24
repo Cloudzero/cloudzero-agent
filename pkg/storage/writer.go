@@ -49,7 +49,7 @@ func (w *Writer) UpdateSentAtForRecords(records []ResourceTags, ct time.Time) er
 		item := []interface{}{ //nolint:gofmt
 			strconv.Itoa(int(record.Type)),
 			record.Name,
-			*record.Namespace,
+			record.Namespace,
 		}
 		compositeKeys = append(compositeKeys, item)
 	}

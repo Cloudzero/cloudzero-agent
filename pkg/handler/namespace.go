@@ -65,6 +65,7 @@ func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace) {
 	}
 	row := storage.ResourceTags{
 		Name:         ns.GetName(),
+		Namespace:    nil,
 		Type:         config.Namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

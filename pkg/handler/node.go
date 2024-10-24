@@ -65,6 +65,7 @@ func (nh *NodeHandler) writeDataToStorage(n *corev1.Node) {
 	}
 	row := storage.ResourceTags{
 		Name:         n.GetName(),
+		Namespace:    nil,
 		Type:         config.Node,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

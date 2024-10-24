@@ -19,6 +19,7 @@ data:
     remote_write:
       send_interval: 60s
       max_bytes_per_send: 10000000
+      send_timeout: 10s
     certificate:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt

@@ -1,9 +1,14 @@
 package http
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
+	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
 
@@ -15,18 +20,43 @@ type RemoteWriter struct {
 	writer   storage.DatabaseWriter
 	reader   storage.DatabaseReader
 	settings *config.Settings
+	clock    remoteWriterClock
+}
+
+type remoteWriterClock interface {
+	GetCurrentTime() time.Time
+}
+
+type clock struct{}
+
+func (c *clock) GetCurrentTime() time.Time {
+	return time.Now().UTC()
 }
 
 func NewRemoteWriter(writer storage.DatabaseWriter, reader storage.DatabaseReader, settings *config.Settings) *RemoteWriter {
-	return &RemoteWriter{writer: writer, reader: reader, settings: settings}
+	return &RemoteWriter{writer: writer, reader: reader, settings: settings, clock: &clock{}}
 }
 
 func (rw *RemoteWriter) StartRemoteWriter() time.Ticker {
 	ticker := time.NewTicker(rw.settings.RemoteWrite.SendInterval)
 
 	for range ticker.C {
-		currentTime := time.Now().UTC()
-		for {
+		rw.Flush()
+	}
+	return *ticker
+}
+
+func (rw *RemoteWriter) Flush() {
+	ctx, cancel := context.WithTimeout(context.Background(), rw.settings.RemoteWrite.SendTimeout)
+	defer cancel()
+	currentTime := rw.clock.GetCurrentTime()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Flush operation timed out: %v", ctx.Err())
+			return
+		default:
 			log.Debug().Msgf("Starting data upload at %v", currentTime)
 			// get a chunk of data to process
 			recordsToProcess, err := rw.reader.ReadData(currentTime)
@@ -37,14 +67,14 @@ func (rw *RemoteWriter) StartRemoteWriter() time.Ticker {
 			// if there are no records to process, stop processing
 			if len(recordsToProcess) == 0 {
 				log.Debug().Msg("Done remote writing records")
-				break
+				return
 			}
 			// format metrics to prometheus format
 			ts := rw.formatMetrics(recordsToProcess)
 			log.Debug().Msgf("Pushing %d records to remote write", len(ts))
 
 			// push data to remote write - todo: make this part of this struct, add retry logic
-			err = pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
+			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
 			if err != nil {
 				log.Error().Msgf("failed to push metrics to remote write: %v", err)
 				break
@@ -57,7 +87,6 @@ func (rw *RemoteWriter) StartRemoteWriter() time.Ticker {
 			}
 		}
 	}
-	return *ticker
 }
 
 func (rw *RemoteWriter) formatMetrics(records []storage.ResourceTags) []prompb.TimeSeries {
@@ -108,6 +137,42 @@ func (rw *RemoteWriter) createTimeseries(metricName string, metricTags config.Me
 	}
 
 	return ts
+}
+
+func (rw *RemoteWriter) pushMetrics(remoteWriteURL string, apiKey string, timeSeries []prompb.TimeSeries) error {
+
+	writeRequest := &prompb.WriteRequest{
+		Timeseries: timeSeries,
+	}
+
+	data, err := proto.Marshal(writeRequest)
+	if err != nil {
+		return fmt.Errorf("error marshaling WriteRequest: %v", err)
+	}
+
+	compressed := snappy.Encode(nil, data)
+
+	req, err := http.NewRequest("POST", remoteWriteURL, bytes.NewBuffer(compressed))
+	if err != nil {
+		return fmt.Errorf("error creating HTTP request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Encoding", "snappy")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received non-200 response code: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func (rw *RemoteWriter) maxTime(t1, t2 time.Time) time.Time {

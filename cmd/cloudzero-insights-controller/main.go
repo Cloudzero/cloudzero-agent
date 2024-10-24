@@ -39,6 +39,8 @@ func main() {
 	// setup database
 	db := storage.SetupDatabase()
 	writer := storage.NewWriter(db)
+	reader := storage.NewReader(db, settings)
+	rmw := http.NewRemoteWriter(writer, reader, settings)
 	server := http.NewServer(settings,
 		[]http.RouteSegment{
 			{Route: "/validate/pod", Hook: handler.NewPodHandler(writer, settings, errChan)},
@@ -56,6 +58,8 @@ func main() {
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-signalChan
 		log.Error().Msgf("Received %s signal; shutting down...", sig)
+		// flush database before shutdown
+		rmw.Flush()
 		if err := server.Shutdown(context.Background()); err != nil {
 			log.Error().Err(err).Msg("Error shutting down server")
 		}
@@ -67,9 +71,8 @@ func main() {
 				fmt.Println("Recovered from panic in remote write:", r)
 			}
 		}()
-		reader := storage.NewReader(db, settings)
-		rmw := http.NewRemoteWriter(writer, reader, settings)
-		rmw.StartRemoteWriter()
+		ticker := rmw.StartRemoteWriter()
+		defer ticker.Stop()
 	}()
 
 	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {
