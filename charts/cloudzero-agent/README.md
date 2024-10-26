@@ -14,6 +14,7 @@ For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-ch
 - Helm 3+
 - A CloudZero API key
 - Each Kubernetes cluster must have a route to the internet and a rule that allows egress from the agent to the CloudZero collector endpoint at https://api.cloudzero.com on port 443
+- A kube-state-metrics exporter running in the cluster, available via Kubernetes Service (see below for details)
 
 ## Installation
 
@@ -37,7 +38,9 @@ helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
     --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
-    --set region=<REGION>
+    --set region=<REGION> \
+    # optionally deploy kube-state-metrics if it doesn't exist in the cluster already
+    --set kube-state-metrics.enabled=<true|false>
 ```
 
 ### Update Helm Chart
@@ -54,7 +57,8 @@ helm upgrade <RELEASE_NAME> cloudzero/cloudzero-agent \
     --set existingSecretName=<NAME_OF_SECRET> \
     --set clusterName=<CLUSTER_NAME> \
     --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
-    --set region=<REGION>
+    --set region=<REGION> \
+    --set kube-state-metrics.enabled=<true|false>
 ```
 
 ### Mandatory Values
@@ -105,6 +109,33 @@ helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
     -f values-override.yaml
 ```
 
+### Metric Exporters
+
+This chart depends on metrics from [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics). There are two installation options for providing the `kube-state-metrics` metrics to the cloudzero-agent. If you don't know which option is right for you, use the second option.
+
+#### Option 1 (default): Use existing kube-state-metrics
+
+Using an existing `kube-state-metrics` exporter may be desirable for minimizing cost. By default, the `cloudzero-agent` will attempt to find an existing `kube-state-metrics` K8s Service by searching for a K8s Service with the annotation `prometheus.io/scrape: "true"`. If an existing `kube-state-metrics` Service exists but does not have that annotation and you do not wish to add it, see the **Custom Scrape Configs** section below.
+
+In addition to the above, the existing `kube-state-metrics` Service address should be added in `values-override.yaml` as shown below so that the `cloudzero-agent` can validate the connection:
+
+```yaml
+validator:
+  serviceEndpoints:
+     kubeStateMetrics: <kube-state-metrics>.<example-namespace>.svc.cluster.local:8080
+```
+
+
+#### Option 2: Use kube-state-metrics subchart
+
+Alternatively, deploy the `kube-state-metrics` subchart that comes packaged with this chart. This is done by enabling settings in `values-override.yaml` as shown:
+
+```yaml
+kube-state-metrics:
+  enabled: true
+```
+In this option, no additional configuration is required in the `validator` field.
+
 ### Secret Management
 
 The chart requires a CloudZero API key to send metric data. Admins can retrieve API keys [here](https://app.cloudzero.com/organization/api-keys).
@@ -128,31 +159,9 @@ The secret can then be used with `existingSecretName`.
 
 Please see the [sizing guide](./docs/sizing-guide.md) in the docs directory.
 
-### Metric Exporters
-
-This chart depends on metrics from [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node-exporter](https://github.com/prometheus/node_exporter) projects as subcharts.
-
-By default, these subcharts are disabled to allow scraping from existing instances. Configure the `cloudzero-agent` to use existing service endpoint addresses in `values.yaml`:
-
-```yaml
-validator:
-  serviceEndpoints:
-     kubeStateMetrics: <kube-state-metrics>.<example-namespace>.svc.cluster.local:8080
-     prometheusNodeExporter: <node-exporter>.<example-namespace>.svc.cluster.local:9100
-```
-
-Alternatively, deploy them automatically by enabling settings in `values-override.yaml`:
-
-```yaml
-kube-state-metrics:
-  enabled: true
-prometheus-node-exporter:
-  enabled: true
-```
-
 #### Passing Values to Subcharts
 
-Values can be passed to subcharts like [kube-state-metrics](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-state-metrics/values.yaml) and [prometheus-node-exporter](https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-node-exporter/values.yaml) by adding entries in `values-override.yaml` as per their specifications.
+Values can be passed to subcharts like [kube-state-metrics](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-state-metrics/values.yaml) by adding entries in `values-override.yaml` as per their specifications.
 
 A common addition may be to pull the container images from custom image registries/repositories:
 
@@ -163,17 +172,11 @@ kube-state-metrics:
   image:
     registry: my-custom-registry.io
     repository: my-custom-kube-state-metrics/kube-state-metrics
-
-prometheus-node-exporter:
-  enabled: true
-  image:
-    registry: my-custom-registry.io
-    repository: my-custom-prometheus/node-exporter
 ```
 
 ### Custom Scrape Configs
 
-If running without the default exporters, adjust Prometheus scrape configs:
+If running without the default `kube-state-metrics` exporter subchart and your existing `kube-state-metrics` deployment does not have the required `prometheus.io/scrape: "true"`, adjust the Prometheus scrape configs as shown:
 
 `values-override.yaml`
 ```yaml
@@ -190,7 +193,6 @@ prometheusConfig:
       static_configs:
         - targets:
           - 'my-kube-state-metrics-service.default.svc.cluster.local:8080'
-          - 'my-node-exporter.default.svc.cluster.local:9100'
       relabel_configs:
       - separator: ;
         regex: __meta_kubernetes_service_label_(.+)
@@ -239,7 +241,6 @@ kube-state-metrics:
 | Repository                                         | Name                     | Version |
 |----------------------------------------------------|--------------------------|---------|
 | https://prometheus-community.github.io/helm-charts | kube-state-metrics       | 5.15.*  |
-| https://prometheus-community.github.io/helm-charts | prometheus-node-exporter | 4.24.*  |
 
 ## Enabling Release Notifications
 
@@ -249,6 +250,47 @@ To receive a notification when a new version of the chart is [released](https://
 2. Select **Watch > Custom**.
 3. Check the **Releases** box.
 4. Select **Apply**.
+
+
+## Troubleshooting
+
+### Issue
+I've deployed the chart, but I don't see Kubernetes data in CloudZero.
+
+## Resolution
+This can happen for a number of reasons; see below for solutions to the most common problems
+
+### Ensure kube-state-metrics is deployed correctly
+
+1. Review the **Metric Exporters** section.
+2. If opting for **Option 1**
+  - Is kube-state-metrics installed?
+  ```bash
+  kubectl get services --all-namespaces | grep kube-state-metrics
+  ```
+  If the above command does not return any services, install a `kube-state-metrics` exporter, or use **Option 2** in the **Metric Exporters** section.
+  
+3. If opting for **Option 2**, ensure that `kube-state-metrics.enabled=true` is set as an annotation on the Service.
+4. Ensure the cloudzero-agent pod can find the `kube-state-metrics` Service.
+   Run the following command:
+   ```
+   kubectl get services -A -o jsonpath='{range .items[?(@.metadata.annotations.prometheus\.io/scrape=="true")]}{.metadata.name}{" in "}{.metadata.namespace}{"\n"}{end}'
+   ```
+   If this does not return a `kube-state-metrics` Service, then either annotate the existing Service found in Step 2 with `prometheus.io/scrape: "true"`, or following the instructions in the **Custom Scrape Configs** section above.
+5. Ensure connectivity between the `cloudzero-agent` pod and the `kube-state-metrics` Service.
+  ```
+  SERVER_POD=$(kubectl get pod -l app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
+  kubectl exec -it -n <NAMESPACE> $SERVER_POD -- wget -qO- <KSM_SERVICE_NAME>.<KSM_NAMESPACE>.svc.cluster.local:8080/metrics
+  ```
+  The request should return a 200 response with a list of metrics prefixed with `kube_`, i.e., `kube_pod_info`. If not, ensure that the `kube-state-metrics` deployment is configured correctly.
+
+### Issue
+I have Kubernetes data in CloudZero, but I don't see Kubernetes labels as Dimensions.
+
+## Resolution
+Note that
+1. Only labels on Pods are currently supported, and
+2. Labels are "opt-in"; see the **Exporting Pod Labels** section for details.
 
 ## Useful References
 
