@@ -1,12 +1,14 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 	"gorm.io/gorm"
 )
 
@@ -27,17 +29,18 @@ func (w *Reader) ReadData(ct time.Time) ([]ResourceTags, error) {
 	records := []ResourceTags{}
 	totalSize := 0
 	offset := 0
+	ctf := utils.FormatForStorage(ct)
 	whereClause := fmt.Sprintf(`
 		(updated_at < '%[1]s' AND created_at < '%[1]s' AND sent_at IS NULL)
 		OR
 		(sent_at IS NOT NULL AND updated_at > sent_at)
-		`, ct.Format(time.RFC3339))
+		`, ctf)
 	for totalSize < w.settings.RemoteWrite.MaxBytesPerSend {
 		var record ResourceTags
 		result := w.db.Offset(offset).
 			Where(whereClause).
 			First(&record)
-		if result.RowsAffected == 0 && result.Error.Error() == "record not found" {
+		if result.RowsAffected == 0 && errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			break
 		}
 		if result.Error != nil {

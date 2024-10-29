@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -68,11 +67,21 @@ func main() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Recovered from panic in remote write:", r)
+				log.Info().Msgf("Recovered from panic in remote write: %v", r)
 			}
 		}()
 		ticker := rmw.StartRemoteWriter()
 		defer ticker.Stop()
+	}()
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Info().Msgf("Recovered from panic in stale data removal: %v", r)
+			}
+		}()
+		hk := storage.NewHouseKeeper(writer, settings)
+		hk.StartHouseKeeper()
 	}()
 
 	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {

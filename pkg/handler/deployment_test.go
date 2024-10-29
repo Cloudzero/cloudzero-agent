@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
@@ -17,19 +18,26 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
+func dbCleanup(db *gorm.DB) {
+	instance, _ := db.DB()
+	instance.Close()
+}
+
 type TestRecord struct {
+	Type         config.ResourceType
 	Name         string
-	Namespace    string
+	Namespace    *string
 	MetricLabels map[string]string
 	Labels       map[string]string
 	Annotations  map[string]string
 }
 
-func makeRequest(record TestRecord) *hook.Request {
+func makeDeploymentRequest(record TestRecord) *hook.Request {
+
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
-			Namespace:   record.Namespace,
+			Namespace:   *record.Namespace,
 			Labels:      record.Labels,
 			Annotations: record.Annotations,
 		},
@@ -64,16 +72,18 @@ func TestDeploymentHandler_Create(t *testing.T) {
 	handler := NewDeploymentHandler(writer, settings, errChan)
 	var testRecords []TestRecord
 	for i := 1; i <= 20; i++ {
+		namespace := fmt.Sprintf("ns-%d", i)
 		testRecord := TestRecord{
+			Type:         config.Deployment,
 			Name:         fmt.Sprintf("test-deployment-%d", i),
-			Namespace:    fmt.Sprintf("ns-%d", i),
+			Namespace:    &namespace,
 			MetricLabels: map[string]string{"workload": fmt.Sprintf("test-deployment-%d", i)},
 			Labels:       map[string]string{"label-key": fmt.Sprintf("label-value-%d", i)},
 			Annotations: map[string]string{
 				"annotation-key": fmt.Sprintf("annotation-value-%d", i),
 			},
 		}
-		request := makeRequest(testRecord)
+		request := makeDeploymentRequest(testRecord)
 		result, err := handler.Create(request)
 		testRecords = append(testRecords, testRecord)
 		assert.NoError(t, err)
@@ -84,16 +94,14 @@ func TestDeploymentHandler_Create(t *testing.T) {
 	currentTime := time.Now().UTC()
 	insertedRecords, _ := reader.ReadData(currentTime)
 
-	// rmw := http.NewRemoteWriter(writer, reader, settings)
-	// ticker := rmw.StartRemoteWriter()
-	// time.Sleep(10 * time.Second)
-	// ticker.Stop()
-
 	assert.Len(t, insertedRecords, 20)
 	for i, record := range insertedRecords {
 		assert.Equal(t, testRecords[i].Name, record.Name)
-		assert.Equal(t, testRecords[i].Namespace, *record.Namespace)
+		assert.Equal(t, *testRecords[i].Namespace, *record.Namespace)
 		assert.Equal(t, testRecords[i].Labels, *record.Labels)
 		assert.Equal(t, testRecords[i].Annotations, *record.Annotations)
 	}
+	t.Cleanup(func() {
+		dbCleanup(db)
+	})
 }

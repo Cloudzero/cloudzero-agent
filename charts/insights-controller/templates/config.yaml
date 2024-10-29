@@ -17,9 +17,12 @@ data:
     host: {{ .Values.host }}
     {{- with .Values.server.tls }}
     remote_write:
-      send_interval: 60s
+      send_interval: 1m
       max_bytes_per_send: 10000000
       send_timeout: 10s
+    database:
+      retention_time: 24h
+      cleanup_interval: 3h
     certificate:
       key: {{ .mountPath }}/tls.key
       cert: {{ .mountPath }}/tls.crt

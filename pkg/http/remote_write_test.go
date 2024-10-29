@@ -22,9 +22,14 @@ func (m *MockWriter) WriteData(data storage.ResourceTags) error {
 	args := m.Called(data)
 	return args.Error(1)
 }
-func (m *MockWriter) UpdateSentAtForRecords(records []storage.ResourceTags, ct time.Time) error {
+
+func (m *MockWriter) UpdateSentAtForRecords(records []storage.ResourceTags, ct time.Time) (int64, error) {
 	args := m.Called(records, ct)
-	return args.Error(0)
+	return 0, args.Error(0)
+}
+
+func (m *MockWriter) PurgeStaleData(rt time.Duration) error {
+	return nil
 }
 
 // create mock reader
@@ -47,7 +52,6 @@ func (m *MockReader) ReadData(ct time.Time) ([]storage.ResourceTags, error) {
 	mockRecords := args.Get(0)
 	return mockRecords.([]storage.ResourceTags), args.Error(1)
 }
-
 func TestRemoteWriter_Flush(t *testing.T) {
 
 	testApiKey := "test-api-key"

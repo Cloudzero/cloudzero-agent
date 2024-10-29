@@ -81,15 +81,3 @@ func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment) {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
-
-// TODO: Implement this function in CP-21966
-// func (d *DeploymentHandler) collectMetrics(dp v1.Deployment) []prompb.TimeSeries {
-// 	additionalMetricLabels := config.MetricLabels{
-// 		"workload": dp.GetName(), // standard metric labels to attach to metric
-// 	}
-// 	metrics := map[string]map[string]string{
-// 		"kube_deployment_labels":      config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings),
-// 		"kube_deployment_annotations": config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings),
-// 	}
-// 	return remoteWrite.FormatMetrics(metrics, additionalMetricLabels)
-// }

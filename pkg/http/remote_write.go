@@ -14,27 +14,18 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
 type RemoteWriter struct {
 	writer   storage.DatabaseWriter
 	reader   storage.DatabaseReader
 	settings *config.Settings
-	clock    remoteWriterClock
-}
-
-type remoteWriterClock interface {
-	GetCurrentTime() time.Time
-}
-
-type clock struct{}
-
-func (c *clock) GetCurrentTime() time.Time {
-	return time.Now().UTC()
+	clock    utils.TimeProvider
 }
 
 func NewRemoteWriter(writer storage.DatabaseWriter, reader storage.DatabaseReader, settings *config.Settings) *RemoteWriter {
-	return &RemoteWriter{writer: writer, reader: reader, settings: settings, clock: &clock{}}
+	return &RemoteWriter{writer: writer, reader: reader, settings: settings, clock: &utils.Clock{}}
 }
 
 func (rw *RemoteWriter) StartRemoteWriter() time.Ticker {
@@ -71,7 +62,7 @@ func (rw *RemoteWriter) Flush() {
 			}
 			// format metrics to prometheus format
 			ts := rw.formatMetrics(recordsToProcess)
-			log.Debug().Msgf("Pushing %d records to remote write", len(ts))
+			log.Debug().Msgf("Pushing %d records to remote write endpoint", len(ts))
 
 			// push data to remote write - todo: make this part of this struct, add retry logic
 			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
@@ -80,8 +71,8 @@ func (rw *RemoteWriter) Flush() {
 				break
 			}
 
-			// mark records as processed
-			err = rw.writer.UpdateSentAtForRecords(recordsToProcess, currentTime)
+			// mark records as processed TODO: make a check for records updated
+			_, err = rw.writer.UpdateSentAtForRecords(recordsToProcess, currentTime)
 			if err != nil {
 				log.Error().Msgf("failed to update sent_at for records: %v", err)
 			}
