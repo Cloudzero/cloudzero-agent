@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to use for the release'
+        description: 'Version to use for the release (beta suffix will be automatically appended (e.g. "0.0.1" + "-beta"))'
         required: false
         default: ''
       branch:
