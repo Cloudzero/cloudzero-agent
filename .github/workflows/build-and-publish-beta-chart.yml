@@ -97,7 +97,7 @@ jobs:
           name: ${{ env.NEW_VERSION }}
           tag_name: ${{ env.NEW_VERSION }}
           files: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
-          make_latest: true
+          make_latest: false
           target_commitish: ${{ env.COMMIT_HASH }}
           body: |
             ## Installation Instructions
