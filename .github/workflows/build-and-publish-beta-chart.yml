@@ -1,0 +1,109 @@
+name: Manual Release Beta Chart
+
+# Manual trigger only
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to use for the release'
+        required: false
+        default: ''
+      branch:
+        description: 'Branch to use for the release'
+        required: true
+
+jobs:
+  build-and-publish-beta-chart:
+    permissions:
+      contents: 'write'
+      packages: 'write'
+      id-token: write
+      actions: 'read'
+    runs-on: ubuntu-latest
+    steps:
+
+      # Step 1: Checkout and Setup
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --local user.email "ops@cloudzero.com"
+          git config --local user.name "Automated CZ Release"
+      
+      - name: Fetch All Branches
+        run: git fetch --all
+
+      # Step 2: Helm Setup
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Build Dependencies
+        run: helm dependency update charts/cloudzero-agent/
+
+      # Step 3: Determine Version
+      - name: Get Github Tag Version
+        id: version
+        uses: flatherskevin/semver-action@v1
+        with:
+          incrementLevel: patch
+          source: tags
+
+      - name: Determine Chart Version
+        run: |
+          NEW_VERSION=${{ github.event.inputs.version || steps.version.outputs.nextVersion }}
+          echo "NEW_VERSION=$NEW_VERSION-beta" >> $GITHUB_ENV
+
+      - name: Update Chart Version
+        run: |
+          VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
+          sed -i ''$VERSION_LINE's/.*/version: ${{ env.NEW_VERSION }}/' charts/cloudzero-agent/Chart.yaml
+
+      # Step 4: Package and Commit Chart
+      - name: Package Chart
+        run: helm package charts/cloudzero-agent/ --destination .deploy
+
+      - name: Commit updated Chart.yaml
+        run: |
+          git add .
+          git commit -m "Update Chart.yaml to version ${{ env.NEW_VERSION }}"
+          git push origin ${{ github.event.inputs.branch }}
+          COMMIT_HASH=$(git rev-parse HEAD)
+          echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Step 7: Handle Artifacts and Update Pages
+      - name: Upload Chart as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-chart
+          path: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+
+      - name: Move release Tarball
+        run: |
+          cp .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz ./
+          rm -fr .deploy
+
+      - name: Update Index
+        run: helm repo index --url https://cloudzero.github.io/cloudzero-charts .
+
+      # Step 5: Create GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ env.NEW_VERSION }}
+          tag_name: ${{ env.NEW_VERSION }}
+          files: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
+          make_latest: true
+          target_commitish: ${{ env.COMMIT_HASH }}
+          body: |
+            ## Installation Instructions
+      
+            [Please follow the Installation Instructions provided in this releases README](https://github.com/Cloudzero/cloudzero-charts/blob/${{ env.NEW_VERSION }}/charts/cloudzero-agent/README.md).
+      
+            ## Release ${{ env.NEW_VERSION }} Changes
+      
+            ${{ steps.get_changes.outputs.changes }}
