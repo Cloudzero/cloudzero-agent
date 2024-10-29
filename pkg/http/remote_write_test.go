@@ -18,7 +18,7 @@ type MockWriter struct {
 	mock.Mock
 }
 
-func (m *MockWriter) WriteData(data storage.ResourceTags) error {
+func (m *MockWriter) WriteData(data storage.ResourceTags, isCreate bool) error {
 	args := m.Called(data)
 	return args.Error(1)
 }
@@ -90,16 +90,16 @@ func TestRemoteWriter_Flush(t *testing.T) {
 		currentTime := time.Now().UTC()
 		testNamespace := "test-namespace"
 		singleRecord := storage.ResourceTags{
-			Name:         "test-deployment",
-			Type:         config.Deployment,
-			Namespace:    &testNamespace,
-			Labels:       &config.MetricLabelTags{"label1": "value1"},
-			Annotations:  nil,
-			MetricLabels: &config.MetricLabels{"metric1": "value1"},
-			CreatedAt:    currentTime,
-			UpdatedAt:    currentTime,
-			SentAt:       nil,
-			Size:         20,
+			Name:          "test-deployment",
+			Type:          config.Deployment,
+			Namespace:     &testNamespace,
+			Labels:        &config.MetricLabelTags{"label1": "value1"},
+			Annotations:   nil,
+			MetricLabels:  &config.MetricLabels{"metric1": "value1"},
+			RecordCreated: currentTime,
+			RecordUpdated: currentTime,
+			SentAt:        nil,
+			Size:          20,
 		}
 		records := []storage.ResourceTags{singleRecord}
 

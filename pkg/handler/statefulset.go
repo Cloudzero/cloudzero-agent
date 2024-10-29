@@ -31,7 +31,7 @@ func (sh *StatefulSetHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		s, err := sh.parseV1(r.Object.Raw)
 
-		sh.writeDataToStorage(s)
+		sh.writeDataToStorage(s, true)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -42,7 +42,7 @@ func (sh *StatefulSetHandler) Create() hook.AdmitFunc {
 func (sh *StatefulSetHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		s, err := sh.parseV1(r.Object.Raw)
-		sh.writeDataToStorage(s)
+		sh.writeDataToStorage(s, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -58,7 +58,7 @@ func (sh *StatefulSetHandler) parseV1(object []byte) (*v1.StatefulSet, error) {
 	return &s, nil
 }
 
-func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet) {
+func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet, isCreate bool) {
 	namespace := s.GetNamespace()
 	labels := config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings)
 	metricLabels := config.MetricLabels{
@@ -71,7 +71,7 @@ func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet) {
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 	}
-	if err := sh.Writer.WriteData(row); err != nil {
+	if err := sh.Writer.WriteData(row, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

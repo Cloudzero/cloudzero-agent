@@ -14,23 +14,31 @@ import (
 )
 
 type DatabaseWriter interface {
-	WriteData(data ResourceTags) error
+	WriteData(data ResourceTags, isCreate bool) error
 	UpdateSentAtForRecords(data []ResourceTags, ct time.Time) (int64, error)
 	PurgeStaleData(rt time.Duration) error
 }
 
 func NewWriter(db *gorm.DB) *Writer {
-	return &Writer{db: db, mu: sync.Mutex{}}
+	return &Writer{db: db, mu: sync.Mutex{}, clock: utils.Clock{}}
 }
 
 type Writer struct {
-	db *gorm.DB
-	mu sync.Mutex
+	db    *gorm.DB
+	mu    sync.Mutex
+	clock utils.Clock
 }
 
-func (w *Writer) WriteData(data ResourceTags) error {
+func (w *Writer) WriteData(data ResourceTags, isCreate bool) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	ct := w.clock.GetCurrentTime()
+	if isCreate {
+		data.RecordCreated = ct
+		data.RecordUpdated = ct
+	} else {
+		data.RecordUpdated = ct
+	}
 	result := w.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
 	}).Create(&data)
@@ -58,13 +66,12 @@ func (w *Writer) UpdateSentAtForRecords(records []ResourceTags, ct time.Time) (i
 			args = append(args, record.Type, record.Name)
 		}
 	}
-
-	whereClause := fmt.Sprintf("updated_at < ? AND created_at < ? AND (%s)", strings.Join(conditions, " OR "))
+	whereClause := fmt.Sprintf("record_updated < ? AND record_created < ? AND (%s)", strings.Join(conditions, " OR "))
 	args = append([]interface{}{ctf, ctf}, args...) //nolint:gofmt
 	result := w.db.Model(&ResourceTags{}).
 		Where(whereClause, args...).
 		Update("sent_at", ct).
-		Update("updated_at", ct)
+		Update("record_updated", ct)
 	if result.Error != nil {
 		log.Error().Msgf("failed to update sent_at for records: %v", result.Error)
 		return 0, result.Error
@@ -79,7 +86,7 @@ func (w *Writer) PurgeStaleData(rt time.Duration) error {
 	log.Debug().Msgf("Starting data purge process for stale records older than %s", retentionTime)
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	whereClause := fmt.Sprintf("sent_at < '%[1]s' AND created_at < '%[1]s' AND updated_at < '%[1]s' AND sent_at IS NOT NULL", retentionTime)
+	whereClause := fmt.Sprintf("sent_at < '%[1]s' AND record_created < '%[1]s' AND record_updated < '%[1]s' AND sent_at IS NOT NULL", retentionTime)
 	result := w.db.Where(whereClause).Delete(&ResourceTags{})
 
 	if result.Error != nil {

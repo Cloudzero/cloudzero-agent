@@ -31,7 +31,7 @@ func (nh *NamespaceHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		ns, err := nh.parseV1(r.Object.Raw)
 
-		nh.writeDataToStorage(ns)
+		nh.writeDataToStorage(ns, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -42,7 +42,7 @@ func (nh *NamespaceHandler) Create() hook.AdmitFunc {
 func (nh *NamespaceHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		ns, err := nh.parseV1(r.Object.Raw)
-		nh.writeDataToStorage(ns)
+		nh.writeDataToStorage(ns, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -58,7 +58,7 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 	return &ns, nil
 }
 
-func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace) {
+func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace, isCreate bool) {
 	labels := config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
 	metricLabels := config.MetricLabels{
 		"namespace": ns.GetName(), // standard metric labels to attach to metric
@@ -70,7 +70,7 @@ func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace) {
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 	}
-	if err := nh.Writer.WriteData(row); err != nil {
+	if err := nh.Writer.WriteData(row, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

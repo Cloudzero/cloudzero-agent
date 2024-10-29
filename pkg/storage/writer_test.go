@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -24,7 +25,7 @@ func TestWriter_WriteData(t *testing.T) {
 		Namespace: func(s string) *string { return &s }("test-namespace"),
 	}
 
-	err := writer.WriteData(data)
+	err := writer.WriteData(data, true)
 	assert.NoError(t, err)
 
 	var result ResourceTags
@@ -57,18 +58,20 @@ func TestWriter_UpdateSentAtForRecords(t *testing.T) {
 			Name:      "test-pod-3",
 			Namespace: func(s string) *string { return &s }("test-namespace-3"),
 		},
-		// {
-		// 	Type: 4,
-		// 	Name: "test-node-4",
-		// },
-		// {
-		// 	Type: 5,
-		// 	Name: "test-namespace-5",
-		// },
+		{
+			Type:      4,
+			Name:      "test-node-4",
+			Namespace: nil,
+		},
+		{
+			Type:      5,
+			Name:      "test-namespace-5",
+			Namespace: nil,
+		},
 	}
 
 	for _, record := range records {
-		err := writer.WriteData(record)
+		err := writer.WriteData(record, true)
 		assert.NoError(t, err)
 	}
 
@@ -80,13 +83,9 @@ func TestWriter_UpdateSentAtForRecords(t *testing.T) {
 		var result ResourceTags
 		err = db.Where("type = ? AND name = ?", record.Type, record.Name).First(&result).Error
 		assert.NoError(t, err)
-		// if result.SentAt == nil {
-		// 	assert.Fail(t, "sent_at should not be nil")
-		// }
-		// assert that result.SentAt is not nil
-		// assert.NotNil(t, result.SentAt)
-		// assert.Equal(t, utils.FormatForStorage(ct), utils.FormatForStorage(*result.SentAt))
-		// assert.Equal(t, utils.FormatForStorage(ct), utils.FormatForStorage(result.UpdatedAt))
+		assert.NotNil(t, result.SentAt)
+		assert.Equal(t, utils.FormatForStorage(ct), utils.FormatForStorage(*result.SentAt))
+		assert.Equal(t, utils.FormatForStorage(ct), utils.FormatForStorage(result.RecordUpdated))
 	}
 	t.Cleanup(func() {
 		dbCleanup(db)
@@ -98,33 +97,33 @@ func TestWriter_PurgeStaleData(t *testing.T) {
 
 	records := []ResourceTags{
 		{
-			Type:      1,
-			Name:      "test-name-1",
-			Namespace: func(s string) *string { return &s }("test-namespace-1"),
-			CreatedAt: time.Now().Add(-48 * time.Hour),
-			UpdatedAt: time.Now().Add(-48 * time.Hour),
-			SentAt:    func(t time.Time) *time.Time { return &t }(time.Now().Add(-48 * time.Hour)),
+			Type:          1,
+			Name:          "test-name-1",
+			Namespace:     func(s string) *string { return &s }("test-namespace-1"),
+			RecordCreated: time.Now().Add(-48 * time.Hour),
+			RecordUpdated: time.Now().Add(-48 * time.Hour),
+			SentAt:        func(t time.Time) *time.Time { return &t }(time.Now().Add(-48 * time.Hour)),
 		},
 		{
-			Type:      2,
-			Name:      "test-name-2",
-			Namespace: func(s string) *string { return &s }("test-namespace-2"),
-			CreatedAt: time.Now().Add(-24 * time.Hour),
-			UpdatedAt: time.Now().Add(-24 * time.Hour),
-			SentAt:    func(t time.Time) *time.Time { return &t }(time.Now().Add(-24 * time.Hour)),
+			Type:          2,
+			Name:          "test-name-2",
+			Namespace:     func(s string) *string { return &s }("test-namespace-2"),
+			RecordCreated: time.Now().Add(-24 * time.Hour),
+			RecordUpdated: time.Now().Add(-24 * time.Hour),
+			SentAt:        func(t time.Time) *time.Time { return &t }(time.Now().Add(-24 * time.Hour)),
 		},
 		{
-			Type:      3,
-			Name:      "test-name-3",
-			Namespace: func(s string) *string { return &s }("test-namespace-3"),
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			SentAt:    func(t time.Time) *time.Time { return &t }(time.Now()),
+			Type:          3,
+			Name:          "test-name-3",
+			Namespace:     func(s string) *string { return &s }("test-namespace-3"),
+			RecordCreated: time.Now(),
+			RecordUpdated: time.Now(),
+			SentAt:        func(t time.Time) *time.Time { return &t }(time.Now()),
 		},
 	}
 
 	for _, record := range records {
-		err := writer.WriteData(record)
+		err := db.Create(&record).Error
 		assert.NoError(t, err)
 	}
 	var resultsBefore []ResourceTags

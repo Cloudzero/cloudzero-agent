@@ -30,7 +30,7 @@ func (ph *PodHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		po, err := ph.parseV1(r.Object.Raw)
 
-		ph.writeDataToStorage(po)
+		ph.writeDataToStorage(po, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -41,7 +41,7 @@ func (ph *PodHandler) Create() hook.AdmitFunc {
 func (ph *PodHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		po, err := ph.parseV1(r.Object.Raw)
-		ph.writeDataToStorage(po)
+		ph.writeDataToStorage(po, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -57,7 +57,7 @@ func (ph *PodHandler) parseV1(object []byte) (*corev1.Pod, error) {
 	return &po, nil
 }
 
-func (ph *PodHandler) writeDataToStorage(po *corev1.Pod) {
+func (ph *PodHandler) writeDataToStorage(po *corev1.Pod, isCreate bool) {
 	namespace := po.GetNamespace()
 	labels := config.Filter(po.GetLabels(), ph.settings.LabelMatches, ph.settings.Filters.Labels.Enabled, *ph.settings)
 	metricLabels := config.MetricLabels{
@@ -70,7 +70,7 @@ func (ph *PodHandler) writeDataToStorage(po *corev1.Pod) {
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 	}
-	if err := ph.Writer.WriteData(row); err != nil {
+	if err := ph.Writer.WriteData(row, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

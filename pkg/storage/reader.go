@@ -31,9 +31,9 @@ func (w *Reader) ReadData(ct time.Time) ([]ResourceTags, error) {
 	offset := 0
 	ctf := utils.FormatForStorage(ct)
 	whereClause := fmt.Sprintf(`
-		(updated_at < '%[1]s' AND created_at < '%[1]s' AND sent_at IS NULL)
+		(record_updated < '%[1]s' AND record_created < '%[1]s' AND sent_at IS NULL)
 		OR
-		(sent_at IS NOT NULL AND updated_at > sent_at)
+		(sent_at IS NOT NULL AND record_updated > sent_at)
 		`, ctf)
 	for totalSize < w.settings.RemoteWrite.MaxBytesPerSend {
 		var record ResourceTags

@@ -14,5 +14,5 @@ func (c *Clock) GetCurrentTime() time.Time {
 
 // formats a time.Time value to the ISO 8601 format
 func FormatForStorage(t time.Time) string {
-	return t.Format("2006-01-02 15:04:05")
+	return t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
 }

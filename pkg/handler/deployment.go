@@ -35,7 +35,7 @@ func NewDeploymentHandler(writer storage.DatabaseWriter, settings *config.Settin
 func (d *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(dp)
+		d.writeDataToStorage(dp, true)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -46,7 +46,7 @@ func (d *DeploymentHandler) Create() hook.AdmitFunc {
 func (d *DeploymentHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		dp, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(dp)
+		d.writeDataToStorage(dp, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -62,7 +62,7 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 	return &dp, nil
 }
 
-func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment) {
+func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment, isCreate bool) {
 	namespace := dp.GetNamespace()
 	labels := config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings)
 	annotations := config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings)
@@ -77,7 +77,7 @@ func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment) {
 		Labels:       &labels,
 		Annotations:  &annotations,
 	}
-	if err := d.Writer.WriteData(row); err != nil {
+	if err := d.Writer.WriteData(row, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

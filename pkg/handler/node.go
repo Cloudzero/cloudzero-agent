@@ -31,7 +31,7 @@ func (nh *NodeHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		node, err := nh.parseV1(r.Object.Raw)
 
-		nh.writeDataToStorage(node)
+		nh.writeDataToStorage(node, true)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -42,7 +42,7 @@ func (nh *NodeHandler) Create() hook.AdmitFunc {
 func (nh *NodeHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
 		node, err := nh.parseV1(r.Object.Raw)
-		nh.writeDataToStorage(node)
+		nh.writeDataToStorage(node, false)
 		if err != nil {
 			return &hook.Result{Msg: err.Error()}, nil
 		}
@@ -58,7 +58,7 @@ func (nh *NodeHandler) parseV1(object []byte) (*corev1.Node, error) {
 	return &node, nil
 }
 
-func (nh *NodeHandler) writeDataToStorage(n *corev1.Node) {
+func (nh *NodeHandler) writeDataToStorage(n *corev1.Node, isCreate bool) {
 	labels := config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
 	metricLabels := config.MetricLabels{
 		"node": n.GetName(), // standard metric labels to attach to metric
@@ -70,7 +70,7 @@ func (nh *NodeHandler) writeDataToStorage(n *corev1.Node) {
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 	}
-	if err := nh.Writer.WriteData(row); err != nil {
+	if err := nh.Writer.WriteData(row, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

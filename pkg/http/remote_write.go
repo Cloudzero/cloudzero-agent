@@ -84,7 +84,7 @@ func (rw *RemoteWriter) formatMetrics(records []storage.ResourceTags) []prompb.T
 	timeSeries := []prompb.TimeSeries{}
 	for _, record := range records {
 		metricName := rw.constructMetricTagName(record, "labels")
-		recordCreatedOrUpdated := rw.maxTime(record.UpdatedAt, record.CreatedAt)
+		recordCreatedOrUpdated := rw.maxTime(record.RecordUpdated, record.RecordCreated)
 		timeSeries = append(timeSeries, rw.createTimeseries(metricName, *record.Labels, *record.MetricLabels, recordCreatedOrUpdated))
 		if record.Annotations != nil {
 			metricName := rw.constructMetricTagName(record, "annotations")
