@@ -62,7 +62,8 @@ func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet, isCreate boo
 	namespace := s.GetNamespace()
 	labels := config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings)
 	metricLabels := config.MetricLabels{
-		"workload": s.GetName(), // standard metric labels to attach to metric
+		"workload":  s.GetName(), // standard metric labels to attach to metric
+		"namespace": namespace,
 	}
 	row := storage.ResourceTags{
 		Name:         s.GetName(),

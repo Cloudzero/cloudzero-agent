@@ -96,7 +96,7 @@ func (rw *RemoteWriter) formatMetrics(records []storage.ResourceTags) []prompb.T
 }
 
 func (rw *RemoteWriter) constructMetricTagName(record storage.ResourceTags, metricType string) string {
-	return fmt.Sprintf("kube_%s_%s", config.ResourceTypeToMetricName[record.Type], metricType)
+	return fmt.Sprintf("cloudzero_%s_%s", config.ResourceTypeToMetricName[record.Type], metricType)
 }
 
 func (rw *RemoteWriter) createTimeseries(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels, recordCreatedOrUpdated time.Time) prompb.TimeSeries {
