@@ -67,8 +67,9 @@ func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment, isCreate bool)
 	labels := config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings)
 	annotations := config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings)
 	metricLabels := config.MetricLabels{
-		"workload":  dp.GetName(), // standard metric labels to attach to metric
-		"namespace": namespace,
+		"workload":      dp.GetName(), // standard metric labels to attach to metric
+		"namespace":     namespace,
+		"resource_type": config.ResourceTypeToMetricName[config.Deployment],
 	}
 	row := storage.ResourceTags{
 		Type:         config.Deployment,

@@ -84,6 +84,15 @@ webhook:
     nodes:
       path: /validate/node
       apiGroups: [ '""' ]
+    jobs:
+      path: /validate/job
+      apiGroups: [ "batch" ]
+    cronjobs:
+      path: /validate/cronjob
+      apiGroups: [ "batch" ]
+    daemonsets:
+      path: /validate/daemonset
+      apiGroups: [ "apps" ]
 
 serviceAccount:
   create: true

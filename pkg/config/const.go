@@ -9,6 +9,9 @@ const (
 	Pod         ResourceType = 3
 	Node        ResourceType = 4
 	Namespace   ResourceType = 5
+	Job         ResourceType = 6
+	CronJob     ResourceType = 7
+	DaemonSet   ResourceType = 8
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
@@ -18,4 +21,7 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	Pod:         "pod",
 	Node:        "node",
 	Namespace:   "namespace",
+	Job:         "job",
+	CronJob:     "cronjob",
+	DaemonSet:   "daemonset",
 }

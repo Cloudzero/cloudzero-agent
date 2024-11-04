@@ -61,7 +61,8 @@ func (nh *NodeHandler) parseV1(object []byte) (*corev1.Node, error) {
 func (nh *NodeHandler) writeDataToStorage(n *corev1.Node, isCreate bool) {
 	labels := config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
 	metricLabels := config.MetricLabels{
-		"node": n.GetName(), // standard metric labels to attach to metric
+		"node":          n.GetName(), // standard metric labels to attach to metric
+		"resource_type": config.ResourceTypeToMetricName[config.Node],
 	}
 	row := storage.ResourceTags{
 		Name:         n.GetName(),

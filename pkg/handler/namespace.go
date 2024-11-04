@@ -61,7 +61,8 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace, isCreate bool) {
 	labels := config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
 	metricLabels := config.MetricLabels{
-		"namespace": ns.GetName(), // standard metric labels to attach to metric
+		"namespace":     ns.GetName(), // standard metric labels to attach to metric
+		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
 	}
 	row := storage.ResourceTags{
 		Name:         ns.GetName(),

@@ -47,6 +47,9 @@ func main() {
 			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(writer, settings, errChan)},
 			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(writer, settings, errChan)},
 			{Route: "/validate/node", Hook: handler.NewNodeHandler(writer, settings, errChan)},
+			{Route: "/validate/job", Hook: handler.NewJobHandler(writer, settings, errChan)},
+			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(writer, settings, errChan)},
+			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(writer, settings, errChan)},
 			// TODO: Add others
 		}..., // variadic arguments expansion
 	)
