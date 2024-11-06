@@ -82,6 +82,11 @@ jobs:
           name: agent-chart
           path: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
 
+
+      - name: Checkout GH Pages
+        run: |
+          git checkout -f gh-pages
+
       - name: Move release Tarball
         run: |
           cp .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz ./
@@ -89,6 +94,28 @@ jobs:
 
       - name: Update Index
         run: helm repo index --url https://cloudzero.github.io/cloudzero-charts .
+
+      - name: Save Index in GH Pages
+        run: |
+          # copy the new chart and index.yaml
+          git add cloudzero-agent-${{ env.NEW_VERSION }}.tgz index.yaml 
+          git commit -m "Updating ${{ env.NEW_VERSION }} Index"
+          git push origin gh-pages
+        continue-on-error: true
+
+
+      - name: Update Docs for GH Pages
+        run: |
+          # cleanup garbage files
+          rm -fr .deploy charts/cloudzero-agent/charts
+          git reset --hard 
+          # now checkout docs from main
+          git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
+          git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
+          git commit -m "Update docs for ${{ env.NEW_VERSION }}"
+          git push origin gh-pages
+        continue-on-error: true
+
 
       # Step 5: Create GitHub Release
       - name: Create Release
