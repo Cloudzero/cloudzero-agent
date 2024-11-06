@@ -59,21 +59,25 @@ func (sh *StatefulSetHandler) parseV1(object []byte) (*v1.StatefulSet, error) {
 }
 
 func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet, isCreate bool) {
+	record := FormatStatefulsetData(s, sh.settings)
+	if err := sh.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatStatefulsetData(s *v1.StatefulSet, settings *config.Settings) storage.ResourceTags {
 	namespace := s.GetNamespace()
-	labels := config.Filter(s.GetLabels(), sh.settings.LabelMatches, sh.settings.Filters.Labels.Enabled, *sh.settings)
+	labels := config.Filter(s.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      s.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Name:         s.GetName(),
 		Type:         config.StatefulSet,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := sh.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

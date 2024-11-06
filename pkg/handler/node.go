@@ -59,19 +59,23 @@ func (nh *NodeHandler) parseV1(object []byte) (*corev1.Node, error) {
 }
 
 func (nh *NodeHandler) writeDataToStorage(n *corev1.Node, isCreate bool) {
-	labels := config.Filter(n.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
+	record := FormatNodeData(n, nh.settings)
+	if err := nh.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatNodeData(n *corev1.Node, settings *config.Settings) storage.ResourceTags {
+	labels := config.Filter(n.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"node":          n.GetName(), // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Node],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Name:         n.GetName(),
 		Namespace:    nil,
 		Type:         config.Node,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := nh.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

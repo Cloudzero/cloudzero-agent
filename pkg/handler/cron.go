@@ -59,21 +59,25 @@ func (cjh *CronJobHandler) parseV1(object []byte) (*batchv1.CronJob, error) {
 }
 
 func (cjh *CronJobHandler) writeDataToStorage(cj *batchv1.CronJob, isCreate bool) {
+	record := FormatCronJobData(cj, cjh.settings)
+	if err := cjh.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatCronJobData(cj *batchv1.CronJob, settings *config.Settings) storage.ResourceTags {
 	namespace := cj.GetNamespace()
-	labels := config.Filter(cj.GetLabels(), cjh.settings.LabelMatches, cjh.settings.Filters.Labels.Enabled, *cjh.settings)
+	labels := config.Filter(cj.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      cj.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.CronJob],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Type:         config.CronJob,
 		Name:         cj.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := cjh.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

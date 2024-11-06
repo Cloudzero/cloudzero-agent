@@ -147,3 +147,24 @@ Name for the issuer resource
 {{- define "insights-controller.issuerName" -}}
 {{- printf "%s-issuer" (include "insights-controller.fullname" .) }}
 {{- end }}
+
+{{/*
+Name for the job resource
+*/}}
+{{- define "insights-controller.initJobName" -}}
+{{- printf "%s-init" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the clusterrole resource
+*/}}
+{{- define "insights-controller.clusterRoleName" -}}
+{{- printf "%s" (include "insights-controller.fullname" .) }}
+{{- end }}
+
+{{/*
+Name for the clusterrolebinding resource
+*/}}
+{{- define "insights-controller.clusterRoleBindingName" -}}
+{{- printf "%s" (include "insights-controller.fullname" .) }}
+{{- end }}

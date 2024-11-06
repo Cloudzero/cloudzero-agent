@@ -31,6 +31,7 @@ type Settings struct {
 	Database          Database    `yaml:"database"`
 	Filters           Filters     `yaml:"filters"`
 	RemoteWrite       RemoteWrite `yaml:"remote_write"`
+	K8sClient         K8sClient   `yaml:"k8s_client"`
 	LabelMatches      []regexp.Regexp
 	AnnotationMatches []regexp.Regexp
 }

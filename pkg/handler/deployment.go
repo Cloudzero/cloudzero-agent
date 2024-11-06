@@ -63,23 +63,27 @@ func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
 }
 
 func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment, isCreate bool) {
+	record := FormatDeploymentData(dp, d.settings)
+	if err := d.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatDeploymentData(dp *v1.Deployment, settings *config.Settings) storage.ResourceTags {
 	namespace := dp.GetNamespace()
-	labels := config.Filter(dp.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings)
-	annotations := config.Filter(dp.GetAnnotations(), d.settings.AnnotationMatches, d.settings.Filters.Annotations.Enabled, *d.settings)
+	labels := config.Filter(dp.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(dp.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      dp.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Deployment],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Type:         config.Deployment,
 		Name:         dp.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 		Annotations:  &annotations,
-	}
-	if err := d.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

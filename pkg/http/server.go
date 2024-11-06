@@ -14,19 +14,28 @@ import (
 
 type RouteSegment struct {
 	Route string
+	Hook  http.Handler
+}
+
+type AdmissionRouteSegment struct {
+	Route string
 	Hook  hook.Handler
 }
 
 // NewServer creates and return a http.Server
-func NewServer(cfg *config.Settings, routes ...RouteSegment) *http.Server {
+func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...AdmissionRouteSegment) *http.Server {
 
 	ah := handler()
 	mux := http.NewServeMux()
-	for _, route := range routes {
+	for _, route := range admissionRoutes {
 		mux.Handle(route.Route, ah.Serve(route.Hook))
 	}
 	// Internal routes
 	mux.Handle("/healthz", healthz.NewHealthz().EndpointHandler())
+
+	for _, route := range routes {
+		mux.Handle(route.Route, route.Hook)
+	}
 
 	return &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),

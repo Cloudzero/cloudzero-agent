@@ -59,21 +59,25 @@ func (jh *JobHandler) parseV1(object []byte) (*batchv1.Job, error) {
 }
 
 func (jh *JobHandler) writeDataToStorage(jo *batchv1.Job, isCreate bool) {
+	record := FormatJobData(jo, jh.settings)
+	if err := jh.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatJobData(jo *batchv1.Job, settings *config.Settings) storage.ResourceTags {
 	namespace := jo.GetNamespace()
-	labels := config.Filter(jo.GetLabels(), jh.settings.LabelMatches, jh.settings.Filters.Labels.Enabled, *jh.settings)
+	labels := config.Filter(jo.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      jo.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Job],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Type:         config.Job,
 		Name:         jo.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := jh.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

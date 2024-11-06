@@ -59,21 +59,25 @@ func (ph *PodHandler) parseV1(object []byte) (*corev1.Pod, error) {
 }
 
 func (ph *PodHandler) writeDataToStorage(po *corev1.Pod, isCreate bool) {
+	record := FormatPodData(po, ph.settings)
+	if err := ph.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTags { // todo - make pointer?
 	namespace := po.GetNamespace()
-	labels := config.Filter(po.GetLabels(), ph.settings.LabelMatches, ph.settings.Filters.Labels.Enabled, *ph.settings)
+	labels := config.Filter(po.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"pod":           po.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Pod],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Type:         config.Pod,
 		Name:         po.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := ph.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

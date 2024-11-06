@@ -98,5 +98,15 @@ serviceAccount:
   create: true
   annotations: {}
 
+rbac:
+  create: true
+
 cert-manager:
   enabled: true
+
+initJob:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    pullPolicy: Always
+    tag: "8.10.1"

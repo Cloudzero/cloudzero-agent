@@ -15,6 +15,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 )
 
@@ -32,16 +33,28 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
-	// error channel
-	errChan := make(chan error)
-
 	// setup database
 	db := storage.SetupDatabase()
 	writer := storage.NewWriter(db)
 	reader := storage.NewReader(db, settings)
 	rmw := http.NewRemoteWriter(writer, reader, settings)
+
+	// error channel
+	errChan := make(chan error)
+
+	// setup k8s client
+	k8sClient, err := k8s.BuildKubeClient(settings.K8sClient.KubeConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to build k8s client")
+	}
+	// create scraper
+	scraper := k8s.NewScraper(k8sClient, writer, settings)
+
 	server := http.NewServer(settings,
 		[]http.RouteSegment{
+			{Route: "/scrape", Hook: handler.NewScraperHandler(scraper, settings)},
+		},
+		[]http.AdmissionRouteSegment{
 			{Route: "/validate/pod", Hook: handler.NewPodHandler(writer, settings, errChan)},
 			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(writer, settings, errChan)},
 			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(writer, settings, errChan)},
@@ -50,7 +63,6 @@ func main() {
 			{Route: "/validate/job", Hook: handler.NewJobHandler(writer, settings, errChan)},
 			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(writer, settings, errChan)},
 			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(writer, settings, errChan)},
-			// TODO: Add others
 		}..., // variadic arguments expansion
 	)
 

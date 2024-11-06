@@ -62,21 +62,25 @@ func (d *DaemonSetHandler) parseV1(object []byte) (*v1.DaemonSet, error) {
 }
 
 func (d *DaemonSetHandler) writeDataToStorage(ds *v1.DaemonSet, isCreate bool) {
+	record := FormatDaemonSetData(ds, d.settings)
+	if err := d.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatDaemonSetData(ds *v1.DaemonSet, settings *config.Settings) storage.ResourceTags {
 	namespace := ds.GetNamespace()
-	labels := config.Filter(ds.GetLabels(), d.settings.LabelMatches, d.settings.Filters.Labels.Enabled, *d.settings)
+	labels := config.Filter(ds.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      ds.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.DaemonSet],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Type:         config.DaemonSet,
 		Name:         ds.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := d.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }

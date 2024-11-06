@@ -59,19 +59,23 @@ func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
 }
 
 func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace, isCreate bool) {
-	labels := config.Filter(ns.GetLabels(), nh.settings.LabelMatches, nh.settings.Filters.Labels.Enabled, *nh.settings)
+	record := FormatNamespaceData(ns, nh.settings)
+	if err := nh.Writer.WriteData(record, isCreate); err != nil {
+		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+	}
+}
+
+func FormatNamespaceData(ns *corev1.Namespace, settings *config.Settings) storage.ResourceTags {
+	labels := config.Filter(ns.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"namespace":     ns.GetName(), // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
 	}
-	row := storage.ResourceTags{
+	return storage.ResourceTags{
 		Name:         ns.GetName(),
 		Namespace:    nil,
 		Type:         config.Namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
-	}
-	if err := nh.Writer.WriteData(row, isCreate); err != nil {
-		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
