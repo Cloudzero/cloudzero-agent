@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-and-publish-chart:
+    environment: release
     permissions:
       contents: 'write'
       packages: 'write'
@@ -47,10 +48,6 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Build Dependencies
-        run: helm dependency update charts/cloudzero-agent/
-
-
       # Step 4: Determine Version
       - name: Get Github Tag Version
         id: version
@@ -68,6 +65,16 @@ jobs:
         run: |
           VERSION_LINE=$(awk '/version:/ && !done {print NR; done=1}' charts/cloudzero-agent/Chart.yaml)
           sed -i ''$VERSION_LINE's/.*/version: ${{ env.NEW_VERSION }}/' charts/cloudzero-agent/Chart.yaml
+
+      - name: Validate Release Notes are Present
+        run: |
+          if [ ! -f "charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md" ]; then
+            echo "Release notes for ${{ env.NEW_VERSION }} are missing. Please create a release notes file at charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md"
+            exit 1
+          fi
+
+      - name: Build Dependencies
+        run: helm dependency update charts/cloudzero-agent/
 
       # Step 5: Package and Commit Chart
       - name: Package Chart
@@ -144,12 +151,5 @@ jobs:
           files: cloudzero-agent-${{ env.NEW_VERSION }}.tgz
           make_latest: true
           target_commitish: ${{ env.COMMIT_HASH }}
-          body: |
-            ## Installation Instructions
-
-            [Please follow the Installation Instructions provided in this releases README](https://github.com/Cloudzero/cloudzero-charts/blob/${{ env.NEW_VERSION }}/charts/cloudzero-agent/README.md).
-
-            ## Release ${{ env.NEW_VERSION }} Changes
-
-            ${{ steps.get_changes.outputs.changes }}
+          body_path: ${{ github.workspace }}/charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md
 
