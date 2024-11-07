@@ -65,8 +65,8 @@ jobs:
 
       - name: Validate Release Notes are Present
         run: |
-          if [ ! -f "charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md" ]; then
-            echo "Release notes for ${{ env.NEW_VERSION }} are missing. Please create a release notes file at charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md"
+          if [ ! -f "docs/releases/${{ env.NEW_VERSION }}.md" ]; then
+            echo "Release notes for ${{ env.NEW_VERSION }} are missing. Please create a release notes file at docs/releases/${{ env.NEW_VERSION }}.md"
             exit 1
           fi
 
@@ -134,4 +134,4 @@ jobs:
           files: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
           make_latest: false
           target_commitish: ${{ env.COMMIT_HASH }}
-          body_path: ${{ github.workspace }}/charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md
+          body_path: ${{ github.workspace }}/docs/releases/${{ env.NEW_VERSION }}.md
