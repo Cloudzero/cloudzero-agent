@@ -9,7 +9,7 @@ This guide outlines the steps and best practices for managing releases in the re
 3. **Review and Merge**
 4. **Trigger Manual Release Workflow**
 5. **Obtain External Approvals**
-6. **Publish Release**
+6. **Publish Release**, **IMPORANT as the release is published only as a `pre-release` due to actions workflow limitations_**
 
 ---
 
@@ -69,7 +69,8 @@ This guide outlines the steps and best practices for managing releases in the re
 
 ### 6. Publish the Release
 
-- Once the manual release workflow is approved and completed, the release will be published.
+- Once the manual release workflow is approved and completed, the release will be published only as a `pre-release`.
+- _**You must go to the release and remove the `pre-release` flag. This will trigger the container image publish.**_
 - Stakeholders will be notified upon successful publication.
 
 ---
