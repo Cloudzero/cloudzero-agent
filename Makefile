@@ -53,6 +53,11 @@ clean: ## Clean the binary
 test: ## Run the unit tests
 	@go test -timeout 60s ./... -race -cover
 
+
+.PHONY: test-integration
+test-integration: ## Run the integration tests
+	@go test -tags=integration -timeout 60s -race ./... 
+
 .PHONY: package
 package:  ## Builds the Docker image
 ifeq ($(BUILDX_CONTAINER_EXISTS), 0)
