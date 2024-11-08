@@ -84,8 +84,8 @@ jobs:
 
       - name: Validate Release Notes are Present
         run: |
-          if [ ! -f "charts/cloudzero-agent/docs/releases/${{ env.final_tag }}.md" ]; then
-            echo "Release notes for ${{ env.final_tag }} are missing. Please create a release notes file at charts/cloudzero-agent/docs/releases/${{ env.final_tag }}.md"
+          if [ ! -f "docs/releases/${{ env.final_tag }}.md" ]; then
+            echo "Release notes for ${{ env.final_tag }} are missing. Please create a release notes file at docs/releases/${{ env.final_tag }}.md"
             exit 1
           fi
 
@@ -97,6 +97,6 @@ jobs:
         with:
           tag_name: ${{ env.final_tag }}
           release_name: Release ${{ env.final_tag }}
-          body_path: ${{ github.workspace }}/charts/cloudzero-agent/docs/releases/${{ env.final_tag }}.md
+          body_path: ${{ github.workspace }}/docs/releases/${{ env.final_tag }}.md
           draft: false
           prerelease: ${{ env.VERSION_PROVIDED == 'true' }}
