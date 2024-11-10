@@ -1,0 +1,52 @@
+{
+  "timeseries": [
+    {
+      "labels": [
+        { "name": "__name__", "value": "container_network_transmit_bytes_total" },
+        { "name": "image", "value": "602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/pause:3.5" },
+        { "name": "instance", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "k8s_io_cloud_provider_aws", "value": "34e5d1c2b4c342a2b309496648e0449a" },
+        { "name": "name", "value": "36c2a2ae0ca48432069fe79696d9be6bdf711f22e0284e31f35a0f4c0e5f9247" },
+        { "name": "namespace", "value": "kube-system" },
+        { "name": "node", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "node_kubernetes_io_instance_type", "value": "t3.large" },
+        { "name": "pod", "value": "aws-node-gbjz2" }
+      ],
+      "samples": [
+        { "value": 446.0, "timestamp": "1730858398500" }
+      ]
+    },
+    {
+      "labels": [
+        { "name": "__name__", "value": "container_network_transmit_bytes_total" },
+        { "name": "image", "value": "602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/pause:3.5" },
+        { "name": "instance", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "k8s_io_cloud_provider_aws", "value": "34e5d1c2b4c342a2b309496648e0449a" },
+        { "name": "name", "value": "36c2a2ae0ca48432069fe79696d9be6bdf711f22e0284e31f35a0f4c0e5f9247" },
+        { "name": "namespace", "value": "kube-system" },
+        { "name": "node", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "node_kubernetes_io_instance_type", "value": "t3.large" },
+        { "name": "pod", "value": "aws-node-gbjz2" }
+      ],
+      "samples": [
+        { "value": 1808961074.0, "timestamp": "1730858398500" }
+      ]
+    },
+    {
+      "labels": [
+        { "name": "__name__", "value": "container_network_transmit_bytes_total" },
+        { "name": "image", "value": "602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/pause:3.5" },
+        { "name": "instance", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "k8s_io_cloud_provider_aws", "value": "34e5d1c2b4c342a2b309496648e0449a" },
+        { "name": "name", "value": "36c2a2ae0ca48432069fe79696d9be6bdf711f22e0284e31f35a0f4c0e5f9247" },
+        { "name": "namespace", "value": "kube-system" },
+        { "name": "node", "value": "ip-192-168-94-204.ec2.internal" },
+        { "name": "node_kubernetes_io_instance_type", "value": "t3.large" },
+        { "name": "pod", "value": "aws-node-gbjz2" }
+      ],
+      "samples": [
+        { "value": 238446.0, "timestamp": "1730858398500" }
+      ]
+    }
+  ]
+}

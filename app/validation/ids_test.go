@@ -1,10 +1,13 @@
+//go:build unit
+// +build unit
+
 package validation_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/cloudzero/cirrus-remote-write/app/remotewrite/internal/validation"
+	"github.com/cloudzero/cirrus-remote-write/app/validation"
 )
 
 func TestValidateCloudAccountID(t *testing.T) {

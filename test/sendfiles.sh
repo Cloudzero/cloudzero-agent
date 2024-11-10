@@ -13,17 +13,17 @@
 # ----------------------------
 
 # Cluster configuration
-CLUSTER_NAME="rancher-stack"
+CLUSTER_NAME="test-stack"
 REGION="us-east-1"
 CLOUD_ACCOUNT_ID="1234567890"
 
 # API Endpoint
-API_ENDPOINT="https://ft0hrt94f8.execute-api.us-east-1.amazonaws.com/Stage/metrics"
+API_ENDPOINT="http://localhost:8080/metrics"
 
 # HTTP Headers
 ORGANIZATION_ID="3e0e0d25-12345-12345-12345"
 CONTENT_TYPE="application/x-protobuf"
-
+CONTENT_ENCODING="snappy"
 # ----------------------------
 # Function: Upload File
 # ----------------------------
@@ -39,10 +39,11 @@ upload_file() {
         -X POST "$url" \
         -H "organization_id: ${ORGANIZATION_ID}" \
         -H "Content-Type: ${CONTENT_TYPE}" \
+        -H "Content-Encoding: ${CONTENT_ENCODING}" \
         --data-binary "@${file_path}")
 
     # Check the HTTP status code
-    if [[ "$response" -eq 200 || "$response" -eq 201 ]]; then
+    if [[ "$response" -eq 200 || "$response" -eq 201 || "$response" -eq 204 ]]; then
         echo "[SUCCESS] Uploaded '${file_path}' successfully. HTTP Status: ${response}"
     else
         echo "[ERROR] Failed to upload '${file_path}'. HTTP Status: ${response}"
@@ -55,7 +56,7 @@ upload_file() {
 
 # Check if there are any .snappy files in the current directory
 shopt -s nullglob
-snappy_files=(*.snappy)
+snappy_files=(files/*.snappy)
 shopt -u nullglob
 
 if [[ ${#snappy_files[@]} -eq 0 ]]; then
