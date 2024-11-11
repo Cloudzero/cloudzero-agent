@@ -22,6 +22,14 @@ type Appendable interface {
 	Pending() int
 }
 
+type AppendableFiles interface {
+	GetFiles() ([]string, error)
+}
+
+type AppendableReader interface {
+	All(context.Context, string) (MetricRange, error)
+}
+
 // Store represents a storage interface that provides methods to interact with metrics.
 // It embeds the Appendable interface and includes methods to retrieve, delete, and list all metrics.
 type Store interface {

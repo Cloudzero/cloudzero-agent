@@ -1,0 +1,116 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: cirrus
+  name: collector
+  labels:
+    app: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      containers:
+        - name: collector
+          image: ghcr.io/josephbarnett/hexigon/collector:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          command: ["/cloudzero/app", "-config", "/cloudzero/config/config.yml"]
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+
+        # - name: shipper
+        #   image: ghcr.io/josephbarnett/hexigon/shipper:latest
+        #   imagePullPolicy: Always
+        #   volumeMounts:
+        #     - name: secret-volume
+        #       mountPath: /cloudzero/secret
+        #       readOnly: true
+        #     - name: config-volume
+        #       mountPath: /cloudzero/config
+        #       readOnly: true
+        #     - name: persistent-storage
+        #       mountPath: /cloudzero/data
+        #   readinessProbe:
+        #     httpGet:
+        #       path: /healthz
+        #       port: 8080
+        #     initialDelaySeconds: 10
+        #     periodSeconds: 10
+        #     failureThreshold: 3
+        #   livenessProbe:
+        #     httpGet:
+        #       path: /healthz
+        #       port: 8080
+        #     initialDelaySeconds: 30
+        #     periodSeconds: 30
+        #     failureThreshold: 3
+        #   resources:
+        #     requests:
+        #       memory: "512Mi"
+        #       cpu: "500m"
+        #     limits:
+        #       memory: "1024Mi"
+        #       cpu: "1000m"
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cloudzero-collector-config
+        - name: secret-volume
+          secret:
+            secretName: cloudzero-secret
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: database-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: cirrus
+  name: collector
+  labels:
+    app: collector
+spec:
+  selector:
+    app: collector
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: cirrus
+  name: cloudzero-collector-config
+data:
+  config.yml: |-
+    cloud_account_id: 123456789012
+    region: us-west-2
+    cluster_name: my-cluster
+
+    server:
+      mode: http
+      port: 8080
+
+    logging:
+      level: debug
+
+    database:
+      storage_path: /cloudzero/data
+      max_records: 1000000
+      compress: true
+
+    cloudzero:
+      api_key_path: /cloudzero/secret/value
+      send_interval: 10m
+      send_timeout: 10s
+      lock_stale_duration: 3m
+      host: demo.cloudzero.com

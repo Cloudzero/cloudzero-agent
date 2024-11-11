@@ -61,7 +61,7 @@ COPY --from=builder /etc/passwd_nobody /etc/passwd
 USER nobody
 
 # Set the working directory inside the container
-WORKDIR /app
+WORKDIR /cloudzero
 
 LABEL org.opencontainers.image.title="cloudzero-${APP_NAME}"
 LABEL org.opencontainers.image.description="cloudzero ${APP_NAME} application"
@@ -71,13 +71,12 @@ LABEL org.opencontainers.image.source="https://github.com/Cloudzero/cloudzero-di
 LABEL io.artifacthub.package.readme-url="https://raw.githubusercontent.com/Cloudzero/cloudzero-discovery/main/README.md"
 LABEL io.artifacthub.package.license="Apache-2.0"
 
-EXPOSE 8443
-VOLUME [ "/app/config" ]
+EXPOSE 8080
+VOLUME [ "/cloudzero/config" ]
 ENV PATH=/app:$PATH
 
 # Copy the Go binary from the builder stage
-COPY --from=builder /build/$APP_NAME /app/bootstrap
+COPY --from=builder /build/$APP_NAME /cloudzero/app
 
-# Allow the default ENTRYPOINT from busybox to be the default,
-# however run the app as the default command
-CMD ["/app/bootstrap"]
+# Run the Go binary
+CMD ["/cloudzero/app"]

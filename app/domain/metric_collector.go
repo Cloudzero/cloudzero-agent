@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -33,65 +32,17 @@ var (
 	v2ContentType = string(prom.RemoteWriteProtoMsgV2)
 )
 
-type Metrics struct {
+type MetricCollector struct {
 	appendable types.Appendable
-	store      types.Store
 }
 
-func NewMetricsDomain(s types.Store, a types.Appendable) *Metrics {
-	return &Metrics{
+func NewMetricCollector(a types.Appendable) *MetricCollector {
+	return &MetricCollector{
 		appendable: a,
-		store:      s,
 	}
 }
 
-func (d *Metrics) Flush(ctx context.Context) error {
-	return d.store.Flush()
-}
-
-func (d *Metrics) GetMetric(ctx context.Context, id string) (*types.Metric, error) {
-	metric, err := d.store.Get(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-
-	return metric, nil
-}
-
-func (d *Metrics) AllMetrics(ctx context.Context, next *string) (types.MetricRange, error) {
-	if next != nil && strings.TrimSpace(*next) == "" {
-		next = nil
-	}
-
-	metricsRange, err := d.store.All(ctx, next)
-	if err != nil {
-		return metricsRange, fmt.Errorf("%w", err)
-	}
-
-	return metricsRange, nil
-}
-
-func (d *Metrics) GetMetricNames(ctx context.Context) ([]string, error) {
-	metricsRange, err := d.store.All(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-	// create a unique set of metric names
-	metricNames := make(map[string]struct{})
-	for _, metric := range metricsRange.Metrics {
-		metricNames[metric.Name] = struct{}{}
-	}
-	// Return only a list
-	names := make([]string, 0, len(metricNames))
-	for name := range metricNames {
-		names = append(names, name)
-	}
-	// sort the names
-	sort.Strings(names)
-	return names, nil
-}
-
-func (d *Metrics) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*remote.WriteResponseStats, error) {
+func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*remote.WriteResponseStats, error) {
 	var (
 		metrics      []types.Metric
 		stats        *remote.WriteResponseStats
@@ -127,24 +78,10 @@ func (d *Metrics) PutMetrics(ctx context.Context, contentType, encodingType stri
 		}
 	}
 
-	if d.appendable != nil {
-		if err := d.appendable.Put(ctx, metrics...); err != nil {
-			return stats, err
-		}
-	}
-	if err := d.store.Put(ctx, metrics...); err != nil {
-		return nil, err
+	if err := d.appendable.Put(ctx, metrics...); err != nil {
+		return stats, err
 	}
 	return stats, nil
-}
-
-func (d *Metrics) DeleteMetric(ctx context.Context, id string) error {
-	err := d.store.Delete(ctx, id)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	return nil
 }
 
 func parseProtoMsg(contentType string) (string, error) {

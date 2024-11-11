@@ -119,7 +119,7 @@ spec:
               global:
                 scrape_interval: 60s
               remote_write:
-                - url: http://remotewrite.cirrus.svc.cluster.local/metrics?cluster_name=rancher-stack&cloud_account_id=01234567890&region=us-east-1
+                - url: http://collector.cirrus.svc.cluster.local/metrics?cluster_name=rancher-stack&cloud_account_id=01234567890&region=us-east-1
                   headers:
                     "organization_id": "3e0e0d25-b482-4e61-aa52-9994b2dcd51e"
                   remote_timeout: 30s
@@ -268,7 +268,7 @@ spec:
               global:
                 scrape_interval: 60s
               remote_write:
-                - url: http://remotewrite.cirrus.svc.cluster.local/metrics?cluster_name=rancher-stack&cloud_account_id=01234567890&region=us-east-1
+                - url: http://collector.cirrus.svc.cluster.local/metrics?cluster_name=rancher-stack&cloud_account_id=01234567890&region=us-east-1
                   headers:
                     "organization_id": "3e0e0d25-b482-4e61-aa52-9994b2dcd51e"
                   remote_timeout: 30s
