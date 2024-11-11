@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cloudzero/cirrus-remote-write/app/config"
 	"github.com/cloudzero/cirrus-remote-write/app/domain"
 	"github.com/cloudzero/cirrus-remote-write/app/domain/testdata"
 	"github.com/cloudzero/cirrus-remote-write/app/handlers"
@@ -36,7 +37,18 @@ func TestRemoteWriteMethods(t *testing.T) {
 
 	storage := mocks.NewMockStore(ctrl)
 
-	d := domain.NewMetricCollector(storage, 1000*time.Second)
+	cfg := config.Settings{
+		OrganizationID: "testorg",
+		CloudAccountID: "123456789012",
+		Region:         "us-west-2",
+		ClusterName:    "testcluster",
+		Cloudzero: config.Cloudzero{
+			Host:           "api.cloudzero.com",
+			RotateInterval: 10 * time.Minute,
+		},
+	}
+
+	d := domain.NewMetricCollector(&cfg, storage)
 	defer d.Close()
 
 	handler := handlers.NewRemoteWriteAPI(MountBase, d)

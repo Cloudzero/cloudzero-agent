@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/cloudzero/cirrus-remote-write/app/config"
-	"github.com/cloudzero/cirrus-remote-write/app/types"
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 	"github.com/parquet-go/parquet-go"
+	"github.com/rs/zerolog/log"
+
+	"github.com/cloudzero/cirrus-remote-write/app/config"
+	"github.com/cloudzero/cirrus-remote-write/app/types"
 )
 
 const (
@@ -27,7 +29,8 @@ const (
 
 type ParquetStore struct {
 	dirPath        string
-	activeFilename string
+	id             string
+	activeFilePath string
 	rowLimit       int
 	rowCount       int
 	file           *os.File
@@ -48,9 +51,9 @@ func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 	}
 
 	store := &ParquetStore{
-		dirPath:        settings.StoragePath,
-		rowLimit:       settings.MaxRecords,
-		activeFilename: fmt.Sprintf("active_%s.parquet", uuid.New().String()[:8]),
+		dirPath:  settings.StoragePath,
+		rowLimit: settings.MaxRecords,
+		id:       uuid.New().String()[:8],
 	}
 
 	if err := store.newFileWriter(); err != nil {
@@ -59,20 +62,30 @@ func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 	return store, nil
 }
 
+func (p *ParquetStore) makeFileName() string {
+	return fmt.Sprintf("%s.%d", p.id, timestamp.Milli())
+}
+
 // newFileWriter creates a new Parquet writer with `active.parquet` as the active file
 func (p *ParquetStore) newFileWriter() error {
-	activeFilePath := filepath.Join(p.dirPath, p.activeFilename)
+	// Intentionally make a new file, to prevent from collision on rename
+	// for any OS level buffering
+	p.activeFilePath = filepath.Join(p.dirPath, p.makeFileName())
 
-	file, err := os.Create(activeFilePath)
+	file, err := os.Create(p.activeFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create active parquet file: %w", err)
 	}
-	writer := parquet.NewGenericWriter[types.Metric](file)
+	writer := parquet.NewGenericWriter[types.Metric](
+		file,
+		parquet.SchemaOf(new(types.Metric)),
+		parquet.Compression(&parquet.Snappy),
+	)
 
-	p.file = file
-	p.writer = writer
 	p.rowCount = 0
 	p.startTime = timestamp.Milli() // Capture the start time
+	p.file = file
+	p.writer = writer
 	return nil
 }
 
@@ -89,10 +102,12 @@ func (p *ParquetStore) Put(ctx context.Context, metrics ...types.Metric) error {
 
 	// If row count exceeds the limit, flush and create a new active file
 	if p.rowCount >= p.rowLimit {
-		if err := p.Flush(); err != nil {
+		if err := p.flush(); err != nil {
+			log.Error().Err(err).Msg("failed to flush writer")
 			return err
 		}
 		if err := p.newFileWriter(); err != nil {
+			log.Error().Err(err).Msg("failed to create new file writer")
 			return err
 		}
 	}
@@ -101,7 +116,21 @@ func (p *ParquetStore) Put(ctx context.Context, metrics ...types.Metric) error {
 
 // Flush finalizes the current writer, writes all buffered data to disk, and renames the file
 func (p *ParquetStore) Flush() error {
-	// Ensure Flush is protected by the mutex lock in Put
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if err := p.flush(); err != nil {
+		log.Error().Err(err).Msg("failed to flush writer")
+		return err
+	}
+	if err := p.newFileWriter(); err != nil {
+		log.Error().Err(err).Msg("failed to create new file writer")
+		return err
+	}
+	return nil
+}
+
+// Flush finalizes the current writer, writes all buffered data to disk, and renames the file
+func (p *ParquetStore) flush() error {
 	if p.writer == nil {
 		return nil
 	}
@@ -124,7 +153,7 @@ func (p *ParquetStore) Flush() error {
 		p.dirPath,
 		fmt.Sprintf("metrics_%d_%d.parquet", p.startTime, stopTime),
 	)
-	err := os.Rename(filepath.Join(p.dirPath, p.activeFilename), timestampedFilePath)
+	err := os.Rename(p.activeFilePath, timestampedFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to rename active parquet file: %w", err)
 	}
@@ -138,8 +167,6 @@ func (p *ParquetStore) Flush() error {
 
 // Pending returns the count of buffered rows not yet written to disk
 func (p *ParquetStore) Pending() int {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	return p.rowCount
 }
 
@@ -151,9 +178,6 @@ func (p *ParquetStore) GetFiles() ([]string, error) {
 // All retrieves all metrics from uncompacted .parquet files, excluding the active and compressed files.
 // It reads the data into memory and returns a MetricRange.
 func (p *ParquetStore) All(ctx context.Context, file string) (types.MetricRange, error) {
-	p.mu.Lock() // Don't allow a flush to occur while reading
-	defer p.mu.Unlock()
-
 	metrics, err := p.readParquetFile(file)
 	if err != nil {
 		return types.MetricRange{}, fmt.Errorf("failed to read parquet file %s: %w", file, err)

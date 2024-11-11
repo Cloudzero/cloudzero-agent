@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cloudzero/cirrus-remote-write/app/config"
 	"github.com/cloudzero/cirrus-remote-write/app/domain"
 	"github.com/cloudzero/cirrus-remote-write/app/domain/testdata"
 	"github.com/cloudzero/cirrus-remote-write/app/types/mocks"
@@ -21,11 +22,21 @@ func TestPutMetrics(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	cfg := config.Settings{
+		OrganizationID: "testorg",
+		CloudAccountID: "123456789012",
+		Region:         "us-west-2",
+		ClusterName:    "testcluster",
+		Cloudzero: config.Cloudzero{
+			Host:           "api.cloudzero.com",
+			RotateInterval: 10 * time.Second,
+		},
+	}
 
 	t.Run("V1 Decode with Compression", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(storage, 10*time.Second)
+		d := domain.NewMetricCollector(&cfg, storage)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
@@ -37,7 +48,7 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V2 Decode Path", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(storage, 10*time.Second)
+		d := domain.NewMetricCollector(&cfg, storage)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildV2WriteRequest(

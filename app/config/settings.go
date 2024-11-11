@@ -14,6 +14,7 @@ import (
 
 type Settings struct {
 	// Core Settings
+	OrganizationID string `yaml:"organization_id" env:"ORGANIZATION_ID" env-description:"organization ID"`
 	CloudAccountID string `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
 	Region         string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
 	ClusterName    string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
@@ -29,7 +30,7 @@ type Logging struct {
 }
 
 type Database struct {
-	StoragePath string `yaml:"storage_path" default:"/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
+	StoragePath string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
 	MaxRecords  int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
 	Compress    bool   `yaml:"compress" default:"true" env:"DATABASE_COMPRESS" env-description:"compress database files"`
 }
@@ -42,7 +43,7 @@ type Server struct {
 type Cloudzero struct {
 	APIKeyPath        string        `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
 	RotateInterval    time.Duration `yaml:"rotate_interval" default:"10m" env:"ROTATE_INTERVAL" env-description:"interval in hours to rotate API key"`
-	SendInterval      time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
+	SendInterval      time.Duration `yaml:"send_interval" default:"10m" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
 	SendTimeout       time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	LockStaleDuration time.Duration `json:"lock_stale_duration"` // Duration to consider a lock stale
 	Host              string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
@@ -82,6 +83,11 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 }
 
 func (s *Settings) Validate() error {
+	// Cleanup and validate settings
+	s.OrganizationID = strings.TrimSpace(s.OrganizationID)
+	if s.OrganizationID == "" {
+		return errors.New("Organization ID is empty")
+	}
 	// Cleanup and validate settings
 	s.CloudAccountID = strings.TrimSpace(s.CloudAccountID)
 	if s.CloudAccountID == "" {

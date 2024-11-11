@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/rs/zerolog/log"
 
+	"github.com/cloudzero/cirrus-remote-write/app/config"
 	"github.com/cloudzero/cirrus-remote-write/app/types"
 )
 
@@ -36,18 +37,23 @@ var (
 
 // MetricCollector is responsible for collecting and flushing metrics.
 type MetricCollector struct {
-	appendable     types.Appendable
-	rotateInterval time.Duration
-	cancelFunc     context.CancelFunc
+	settings   *config.Settings
+	appendable types.Appendable
+	cancelFunc context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(a types.Appendable, rotateInterval time.Duration) *MetricCollector {
+func NewMetricCollector(s *config.Settings, a types.Appendable) *MetricCollector {
+
+	if s.Cloudzero.RotateInterval <= 0 {
+		s.Cloudzero.RotateInterval = 10 * time.Minute
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	collector := &MetricCollector{
-		appendable:     a,
-		rotateInterval: rotateInterval,
-		cancelFunc:     cancel,
+		settings:   s,
+		appendable: a,
+		cancelFunc: cancel,
 	}
 	go collector.rotateCachePeriodically(ctx)
 	return collector
@@ -79,12 +85,12 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 
 	switch contentType {
 	case v1ContentType:
-		metrics, err = DecodeV1(decompressed)
+		metrics, err = d.DecodeV1(decompressed)
 		if err != nil {
 			return nil, ErrJsonUnmarshal
 		}
 	case v2ContentType:
-		metrics, stats, err = DecodeV2(decompressed)
+		metrics, stats, err = d.DecodeV2(decompressed)
 		if err != nil {
 			return &remote.WriteResponseStats{}, ErrJsonUnmarshal
 		}
@@ -110,13 +116,13 @@ func (d *MetricCollector) Close() {
 
 // rotateCachePeriodically runs a background goroutine that flushes metrics at regular intervals.
 func (d *MetricCollector) rotateCachePeriodically(ctx context.Context) {
-	ticker := time.NewTicker(d.rotateInterval)
+	ticker := time.NewTicker(d.settings.Cloudzero.RotateInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			flushCtx, cancel := context.WithTimeout(ctx, d.rotateInterval)
+			flushCtx, cancel := context.WithTimeout(ctx, d.settings.Cloudzero.RotateInterval)
 			if err := d.Flush(flushCtx); err != nil {
 				log.Err(err).Msg("Error during flush")
 			}
@@ -160,7 +166,7 @@ func parseProtoMsg(contentType string) (string, error) {
 }
 
 // DecodeV1 decompresses and decodes a Protobuf v1 WriteRequest, then converts it to a slice of Metric structs.
-func DecodeV1(data []byte) ([]types.Metric, error) {
+func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 	// Parse Protobuf v1 WriteRequest
 	var writeReq prompb.WriteRequest
 	if err := proto.Unmarshal(data, &writeReq); err != nil {
@@ -181,7 +187,13 @@ func DecodeV1(data []byte) ([]types.Metric, error) {
 		}
 
 		for _, sample := range ts.Samples {
+			if len(metricName) == 0 { // don't save garbage metrics
+				continue
+			}
 			metrics = append(metrics, types.NewMetric(
+				d.settings.OrganizationID,
+				d.settings.CloudAccountID,
+				d.settings.ClusterName,
 				metricName,
 				sample.Timestamp,
 				labelsMap,
@@ -193,7 +205,7 @@ func DecodeV1(data []byte) ([]types.Metric, error) {
 }
 
 // DecodeV2 decompresses and decodes a Protobuf v2 WriteRequest, then converts it to a slice of Metric structs and collects stats.
-func DecodeV2(data []byte) ([]types.Metric, *remote.WriteResponseStats, error) {
+func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteResponseStats, error) {
 	// Parse Protobuf v2 WriteRequest
 	var writeReq writev2.Request
 	if err := proto.Unmarshal(data, &writeReq); err != nil {

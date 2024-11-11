@@ -5,6 +5,7 @@ metadata:
   name: cloudzero-collector-config
 data:
   config.yml: |-
+    organization_id: abc-org
     cloud_account_id: 123456789012
     region: us-west-2
     cluster_name: my-cluster
@@ -25,5 +26,6 @@ data:
       api_key_path: /cloudzero/secret/value
       send_interval: 10m
       send_timeout: 10s
-      lock_stale_duration: 3m
+      rotate_interval: 10m
+      lock_stale_duration: 5m
       host: demo.cloudzero.com
