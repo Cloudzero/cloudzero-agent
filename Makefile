@@ -1,5 +1,5 @@
 project_root := $(shell pwd)
-FUNCTIONS := remotewrite
+FUNCTIONS := collector shipper
 REGION := us-east-2
 
 # Docker is the default container tool (and buildx buildkit)
@@ -8,7 +8,7 @@ BUILDX_CONTAINER_EXISTS := $(shell $(CONTAINER_TOOL) buildx ls --format "{{.Name
 
 BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 REVISION ?= $(shell git rev-parse HEAD)
-TAG ?= dev-$(REVISION) 
+TAG ?= latest
 
 GO := go
 
