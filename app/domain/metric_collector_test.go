@@ -6,6 +6,7 @@ package domain_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,8 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V1 Decode with Compression", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(storage)
+		d := domain.NewMetricCollector(storage, 10*time.Second)
+		defer d.Close()
 
 		payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
 		stats, err := d.PutMetrics(ctx, "application/x-protobuf", "snappy", payload)
@@ -35,7 +37,8 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V2 Decode Path", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(storage)
+		d := domain.NewMetricCollector(storage, 10*time.Second)
+		defer d.Close()
 
 		payload, _, _, err := testdata.BuildV2WriteRequest(
 			testdata.WriteV2RequestFixture.Timeseries,

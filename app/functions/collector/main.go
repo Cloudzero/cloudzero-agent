@@ -39,7 +39,8 @@ func main() {
 
 	go HandleShutdownEvents(appendable)
 
-	domain := domain.NewMetricCollector(appendable)
+	domain := domain.NewMetricCollector(appendable, settings.Cloudzero.SendInterval)
+	defer domain.Close()
 
 	log.Info().Msg("Starting service")
 	server.New(build.Version(), handlers.NewRemoteWriteAPI("/metrics", domain)).Run(context.Background())

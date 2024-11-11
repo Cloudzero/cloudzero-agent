@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
@@ -13,6 +14,7 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
 	"github.com/prometheus/prometheus/storage/remote"
+	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cirrus-remote-write/app/types"
 )
@@ -32,16 +34,26 @@ var (
 	v2ContentType = string(prom.RemoteWriteProtoMsgV2)
 )
 
+// MetricCollector is responsible for collecting and flushing metrics.
 type MetricCollector struct {
-	appendable types.Appendable
+	appendable    types.Appendable
+	flushInterval time.Duration
+	cancelFunc    context.CancelFunc
 }
 
-func NewMetricCollector(a types.Appendable) *MetricCollector {
-	return &MetricCollector{
-		appendable: a,
+// NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
+func NewMetricCollector(a types.Appendable, flushInterval time.Duration) *MetricCollector {
+	ctx, cancel := context.WithCancel(context.Background())
+	collector := &MetricCollector{
+		appendable:    a,
+		flushInterval: flushInterval,
+		cancelFunc:    cancel,
 	}
+	go collector.startFlushing(ctx)
+	return collector
 }
 
+// PutMetrics appends metrics and returns write response stats.
 func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*remote.WriteResponseStats, error) {
 	var (
 		metrics      []types.Metric
@@ -76,6 +88,8 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		if err != nil {
 			return &remote.WriteResponseStats{}, ErrJsonUnmarshal
 		}
+	default:
+		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}
 
 	if err := d.appendable.Put(ctx, metrics...); err != nil {
@@ -84,6 +98,42 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	return stats, nil
 }
 
+// Flush triggers the flushing of accumulated metrics.
+func (d *MetricCollector) Flush(ctx context.Context) error {
+	return d.appendable.Flush()
+}
+
+// Close stops the flushing goroutine gracefully.
+func (d *MetricCollector) Close() {
+	d.cancelFunc()
+}
+
+// startFlushing runs a background goroutine that flushes metrics at regular intervals.
+func (d *MetricCollector) startFlushing(ctx context.Context) {
+	ticker := time.NewTicker(d.flushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			flushCtx, cancel := context.WithTimeout(ctx, d.flushInterval)
+			if err := d.Flush(flushCtx); err != nil {
+				log.Err(err).Msg("Error during flush")
+			}
+			cancel()
+		case <-ctx.Done():
+			// Perform a final flush before exiting
+			// flushCtx, cancel := context.WithTimeout(context.Background(), d.flushInterval)
+			// if err := d.Flush(flushCtx); err != nil {
+			// 	log.Err(err).Msg("Error during final flush")
+			// }
+			// cancel()
+			return
+		}
+	}
+}
+
+// parseProtoMsg parses the content type and extracts the proto message version.
 func parseProtoMsg(contentType string) (string, error) {
 	contentType = strings.TrimSpace(contentType)
 
@@ -142,6 +192,7 @@ func DecodeV1(data []byte) ([]types.Metric, error) {
 	return metrics, nil
 }
 
+// DecodeV2 decompresses and decodes a Protobuf v2 WriteRequest, then converts it to a slice of Metric structs and collects stats.
 func DecodeV2(data []byte) ([]types.Metric, *remote.WriteResponseStats, error) {
 	// Parse Protobuf v2 WriteRequest
 	var writeReq writev2.Request
@@ -186,9 +237,9 @@ func DecodeV2(data []byte) ([]types.Metric, *remote.WriteResponseStats, error) {
 		}
 
 		// Process histograms
-		stats.Histograms = len(ts.Histograms)
+		stats.Histograms += len(ts.Histograms)
 		// Process exemplars
-		stats.Exemplars = len(ts.Exemplars)
+		stats.Exemplars += len(ts.Exemplars)
 	}
 
 	// Set Confirmed to true, indicating that statistics are reliable
