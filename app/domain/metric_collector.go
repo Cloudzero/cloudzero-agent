@@ -36,20 +36,20 @@ var (
 
 // MetricCollector is responsible for collecting and flushing metrics.
 type MetricCollector struct {
-	appendable    types.Appendable
-	flushInterval time.Duration
-	cancelFunc    context.CancelFunc
+	appendable     types.Appendable
+	rotateInterval time.Duration
+	cancelFunc     context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(a types.Appendable, flushInterval time.Duration) *MetricCollector {
+func NewMetricCollector(a types.Appendable, rotateInterval time.Duration) *MetricCollector {
 	ctx, cancel := context.WithCancel(context.Background())
 	collector := &MetricCollector{
-		appendable:    a,
-		flushInterval: flushInterval,
-		cancelFunc:    cancel,
+		appendable:     a,
+		rotateInterval: rotateInterval,
+		cancelFunc:     cancel,
 	}
-	go collector.startFlushing(ctx)
+	go collector.rotateCachePeriodically(ctx)
 	return collector
 }
 
@@ -108,15 +108,15 @@ func (d *MetricCollector) Close() {
 	d.cancelFunc()
 }
 
-// startFlushing runs a background goroutine that flushes metrics at regular intervals.
-func (d *MetricCollector) startFlushing(ctx context.Context) {
-	ticker := time.NewTicker(d.flushInterval)
+// rotateCachePeriodically runs a background goroutine that flushes metrics at regular intervals.
+func (d *MetricCollector) rotateCachePeriodically(ctx context.Context) {
+	ticker := time.NewTicker(d.rotateInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			flushCtx, cancel := context.WithTimeout(ctx, d.flushInterval)
+			flushCtx, cancel := context.WithTimeout(ctx, d.rotateInterval)
 			if err := d.Flush(flushCtx); err != nil {
 				log.Err(err).Msg("Error during flush")
 			}

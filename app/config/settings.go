@@ -41,6 +41,7 @@ type Server struct {
 
 type Cloudzero struct {
 	APIKeyPath        string        `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
+	RotateInterval    time.Duration `yaml:"rotate_interval" default:"10m" env:"ROTATE_INTERVAL" env-description:"interval in hours to rotate API key"`
 	SendInterval      time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
 	SendTimeout       time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	LockStaleDuration time.Duration `json:"lock_stale_duration"` // Duration to consider a lock stale

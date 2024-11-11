@@ -39,7 +39,7 @@ func main() {
 
 	go HandleShutdownEvents(appendable)
 
-	domain := domain.NewMetricCollector(appendable, settings.Cloudzero.SendInterval)
+	domain := domain.NewMetricCollector(appendable, settings.Cloudzero.RotateInterval)
 	defer domain.Close()
 
 	log.Info().Msg("Starting service")
