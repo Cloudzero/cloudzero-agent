@@ -50,7 +50,7 @@ kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
 1. There are `unit tests` included in the project.
 2. Additionally the applications can be build, and debugged locally. (`make build`)
 3. Use the `test/sendfiles.sh` to send a metrics payload to the collector "remote write" API
-
+4. Use the `test/dumpfile.sh` to decode and dump the parquet files (verify will be usable on our AWS side)
 ---
 
 ## Debugging
