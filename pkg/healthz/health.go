@@ -17,7 +17,7 @@ type HealthChecker interface {
 // can be used to add specific health checks
 func Register(name string, fn HealthCheck) {
 	// get the interface and cast to internal type
-	NewHealthz().(*checker).add(name, fn)
+	NewHealthz().(*checker).add(name, fn) //nolint
 }
 
 var (

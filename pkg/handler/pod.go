@@ -65,9 +65,10 @@ func (ph *PodHandler) writeDataToStorage(po *corev1.Pod, isCreate bool) {
 	}
 }
 
-func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTags { // todo - make pointer?
+func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTags {
 	namespace := po.GetNamespace()
 	labels := config.Filter(po.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(po.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"pod":           po.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
@@ -79,5 +80,6 @@ func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTa
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

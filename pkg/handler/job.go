@@ -68,6 +68,7 @@ func (jh *JobHandler) writeDataToStorage(jo *batchv1.Job, isCreate bool) {
 func FormatJobData(jo *batchv1.Job, settings *config.Settings) storage.ResourceTags {
 	namespace := jo.GetNamespace()
 	labels := config.Filter(jo.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(jo.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      jo.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
@@ -79,5 +80,6 @@ func FormatJobData(jo *batchv1.Job, settings *config.Settings) storage.ResourceT
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

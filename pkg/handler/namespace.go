@@ -67,6 +67,7 @@ func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace, isCreate bo
 
 func FormatNamespaceData(ns *corev1.Namespace, settings *config.Settings) storage.ResourceTags {
 	labels := config.Filter(ns.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(ns.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"namespace":     ns.GetName(), // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
@@ -77,5 +78,6 @@ func FormatNamespaceData(ns *corev1.Namespace, settings *config.Settings) storag
 		Type:         config.Namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

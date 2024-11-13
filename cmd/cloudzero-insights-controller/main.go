@@ -20,19 +20,24 @@ import (
 )
 
 func main() {
-	var configFile string
-	flag.StringVar(&configFile, "config", configFile, "Path to the configuration file")
+	var configFiles config.Files
+	flag.Var(&configFiles, "config", "Path to the configuration file(s)")
 	flag.Parse()
 
 	log.Info().Msgf("Starting CloudZero Insights Controller %s", build.GetVersion())
-	if configFile == "" {
-		log.Fatal().Msg("No configuration file provided")
+	if len(configFiles) == 0 {
+		log.Fatal().Msg("No configuration files provided")
 	}
 
-	settings, err := config.NewSettings(configFile)
+	settings, err := config.NewSettings(configFiles...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
+	log.Info().Msgf("Loaded settings from %v", configFiles)
+	log.Info().Msgf("Settings are %v", settings)
+	log.Info().Msgf("cloud account Id is %v", settings.CloudAccountID)
+	log.Info().Msgf("host name is %v", settings.Host)
+
 	// setup database
 	db := storage.SetupDatabase()
 	writer := storage.NewWriter(db)

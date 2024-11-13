@@ -71,6 +71,7 @@ func (d *DaemonSetHandler) writeDataToStorage(ds *v1.DaemonSet, isCreate bool) {
 func FormatDaemonSetData(ds *v1.DaemonSet, settings *config.Settings) storage.ResourceTags {
 	namespace := ds.GetNamespace()
 	labels := config.Filter(ds.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(ds.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      ds.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
@@ -82,5 +83,6 @@ func FormatDaemonSetData(ds *v1.DaemonSet, settings *config.Settings) storage.Re
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

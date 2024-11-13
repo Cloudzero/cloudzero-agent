@@ -74,41 +74,41 @@ func (s *Scraper) Start() {
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.CoreV1().Pods(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatPodData(obj.(*corev1.Pod), settings)
+					return handler.FormatPodData(obj.(*corev1.Pod), settings) // nolint
 				}, s.settings)
 
 				// write all deployments in the namespace storage
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().Deployments(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings)
+					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings) // nolint
 				}, s.settings)
 
 				// write all statefulsets in the namespace storage
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().StatefulSets(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings)
+					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings) // nolint
 				}, s.settings)
 
 				// write all daemonsets in the namespace storage
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().DaemonSets(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings)
+					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings) // nolint
 				}, s.settings)
 
 				// write all jobs in the namespace storage
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().Jobs(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatJobData(obj.(*batchv1.Job), settings)
+					return handler.FormatJobData(obj.(*batchv1.Job), settings) // nolint
 				}, s.settings)
 
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().CronJobs(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) storage.ResourceTags {
-					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings)
+					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings) // nolint
 				}, s.settings)
 
 			}

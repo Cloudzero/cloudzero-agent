@@ -68,6 +68,7 @@ func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet, isCreate boo
 func FormatStatefulsetData(s *v1.StatefulSet, settings *config.Settings) storage.ResourceTags {
 	namespace := s.GetNamespace()
 	labels := config.Filter(s.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(s.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      s.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
@@ -79,5 +80,6 @@ func FormatStatefulsetData(s *v1.StatefulSet, settings *config.Settings) storage
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

@@ -14,10 +14,6 @@ func TestNewSettings(t *testing.T) {
 	t.Run("valid config file", func(t *testing.T) {
 		// Create a temporary config file
 		configContent := `
-cloud_account_id: "123456789012"
-region: "us-west-2"
-cluster_name: "test-cluster"
-host: "api.cloudzero.com"
 api_key_path: "/path/to/api_key"
 server:
   port: 8080
@@ -40,11 +36,22 @@ remote_write:
   max_bytes_per_send: 10000000
   send_interval: 60s
 `
+		configContentExtra := `
+cloud_account_id: "123456789012"
+region: "us-west-2"
+cluster_name: "test-cluster"
+host: "api.cloudzero.com"
+`
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		require.NoError(t, err)
+		tmpFileExtra, err := os.CreateTemp("", "config-extra-*.yaml")
+		require.NoError(t, err)
 		defer os.Remove(tmpFile.Name())
+		defer os.Remove(tmpFileExtra.Name())
 
 		_, err = tmpFile.Write([]byte(configContent))
+		require.NoError(t, err)
+		_, err = tmpFileExtra.Write([]byte(configContentExtra))
 		require.NoError(t, err)
 		require.NoError(t, tmpFile.Close())
 
@@ -62,8 +69,8 @@ remote_write:
 		configContent = strings.Replace(configContent, "/path/to/api_key", apiKeyFile.Name(), 1)
 		err = os.WriteFile(tmpFile.Name(), []byte(configContent), 0644)
 		require.NoError(t, err)
-
-		settings, err := NewSettings(tmpFile.Name())
+		configFiles := Files{tmpFile.Name(), tmpFileExtra.Name()}
+		settings, err := NewSettings(configFiles...)
 		require.NoError(t, err)
 		assert.NotNil(t, settings)
 		assert.Equal(t, "123456789012", settings.CloudAccountID)

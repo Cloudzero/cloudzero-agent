@@ -68,6 +68,7 @@ func (cjh *CronJobHandler) writeDataToStorage(cj *batchv1.CronJob, isCreate bool
 func FormatCronJobData(cj *batchv1.CronJob, settings *config.Settings) storage.ResourceTags {
 	namespace := cj.GetNamespace()
 	labels := config.Filter(cj.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
+	annotations := config.Filter(cj.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      cj.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
@@ -79,5 +80,6 @@ func FormatCronJobData(cj *batchv1.CronJob, settings *config.Settings) storage.R
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
+		Annotations:  &annotations,
 	}
 }

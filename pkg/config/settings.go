@@ -155,3 +155,16 @@ func absFilePath(location string) (string, error) {
 	}
 	return location, nil
 }
+
+// ConfigFiles is a custom flag type to handle multiple configuration files
+type Files []string
+
+func (c *Files) String() string {
+	return strings.Join(*c, ",")
+}
+
+// appends a new configuration file to the ConfigFiles
+func (c *Files) Set(value string) error {
+	*c = append(*c, value)
+	return nil
+}
