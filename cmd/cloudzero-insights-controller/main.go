@@ -33,10 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
-	log.Info().Msgf("Loaded settings from %v", configFiles)
-	log.Info().Msgf("Settings are %v", settings)
-	log.Info().Msgf("cloud account Id is %v", settings.CloudAccountID)
-	log.Info().Msgf("host name is %v", settings.Host)
 
 	// setup database
 	db := storage.SetupDatabase()
