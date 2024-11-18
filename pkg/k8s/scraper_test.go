@@ -37,8 +37,8 @@ func (m *MockClusterScraper) Start() {
 
 func TestScraper_Start(t *testing.T) {
 	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
 	settings := &config.Settings{}
+	writer := storage.NewWriter(db, settings)
 
 	t.Run("with fake client", func(t *testing.T) {
 		clientset := fake.NewSimpleClientset()
@@ -54,9 +54,7 @@ func TestScraper_Start(t *testing.T) {
 			t.Skip("Skipping integration test as RUN_INTEGRATION_TESTS is not set to true")
 		}
 		kubeconfig := filepath.Join(homedir.HomeDir(), ".kube", "config")
-		settings.K8sClient.PaginationLimit = 500
-		settings.K8sClient.Timeout = 1000
-		fmt.Printf("results: %v\n", settings.K8sClient.Timeout)
+		settings.K8sClient.PaginationLimit = 3
 
 		k8sClient, err := BuildKubeClient(kubeconfig)
 

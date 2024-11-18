@@ -66,8 +66,8 @@ func (nh *NodeHandler) writeDataToStorage(n *corev1.Node, isCreate bool) {
 }
 
 func FormatNodeData(n *corev1.Node, settings *config.Settings) storage.ResourceTags {
-	labels := config.Filter(n.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
-	annotations := config.Filter(n.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
+	labels := config.Filter(n.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Nodes), *settings)
+	annotations := config.Filter(n.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Nodes), *settings)
 	metricLabels := config.MetricLabels{
 		"node":          n.GetName(), // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Node],

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
@@ -16,8 +17,9 @@ func dbCleanup(db *gorm.DB) {
 
 func TestWriter_WriteData(t *testing.T) {
 	db := SetupDatabase()
+	settings := &config.Settings{}
 
-	writer := NewWriter(db)
+	writer := NewWriter(db, settings)
 
 	data := ResourceTags{
 		Type:      1,
@@ -40,7 +42,9 @@ func TestWriter_WriteData(t *testing.T) {
 }
 func TestWriter_UpdateSentAtForRecords(t *testing.T) {
 	db := SetupDatabase()
-	writer := NewWriter(db)
+	settings := &config.Settings{}
+	settings.Database.BatchUpdateSize = 3
+	writer := NewWriter(db, settings)
 
 	records := []ResourceTags{
 		{
@@ -91,9 +95,38 @@ func TestWriter_UpdateSentAtForRecords(t *testing.T) {
 		dbCleanup(db)
 	})
 }
-func TestWriter_PurgeStaleData(t *testing.T) {
+
+func TestWriter_UpdateSentAtForRecords_EmptyResources(t *testing.T) {
 	db := SetupDatabase()
-	writer := NewWriter(db)
+	settings := &config.Settings{}
+	settings.Database.BatchUpdateSize = 3
+	writer := NewWriter(db, settings)
+
+	records := []ResourceTags{}
+
+	for _, record := range records {
+		err := writer.WriteData(record, true)
+		assert.NoError(t, err)
+	}
+
+	ct := time.Now().UTC()
+	_, err := writer.UpdateSentAtForRecords(records, ct)
+	assert.NoError(t, err)
+	var result []ResourceTags
+	err = db.Find(&result).Error
+	assert.NoError(t, err)
+	assert.Len(t, result, 0)
+
+	t.Cleanup(func() {
+		dbCleanup(db)
+	})
+}
+
+func TestWriter_PurgeStaleData(t *testing.T) {
+
+	db := SetupDatabase()
+	settings := &config.Settings{}
+	writer := NewWriter(db, settings)
 
 	records := []ResourceTags{
 		{

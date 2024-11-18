@@ -79,6 +79,7 @@ func TestRemoteWriter_Flush(t *testing.T) {
 			Host:         server.URL,
 			APIKey:       testApiKey,
 			SendTimeout:  5 * time.Second,
+			MaxRetries:   3,
 		},
 	}
 

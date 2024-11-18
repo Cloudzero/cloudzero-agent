@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/exp/rand"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
@@ -41,7 +43,7 @@ func (rw *RemoteWriter) Flush() {
 	ctx, cancel := context.WithTimeout(context.Background(), rw.settings.RemoteWrite.SendTimeout)
 	defer cancel()
 	currentTime := rw.clock.GetCurrentTime()
-
+flushLoop:
 	for {
 		select {
 		case <-ctx.Done():
@@ -53,7 +55,7 @@ func (rw *RemoteWriter) Flush() {
 			recordsToProcess, err := rw.reader.ReadData(currentTime)
 			if err != nil {
 				log.Error().Msgf("failed to read data from storage: %v", err)
-				break
+				break flushLoop
 			}
 			// if there are no records to process, stop processing
 			if len(recordsToProcess) == 0 {
@@ -64,17 +66,18 @@ func (rw *RemoteWriter) Flush() {
 			ts := rw.formatMetrics(recordsToProcess)
 			log.Debug().Msgf("Pushing %d records to remote write endpoint", len(ts))
 
-			// push data to remote write - todo: make this part of this struct, add retry logic
+			// push data to remote write
 			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
 			if err != nil {
 				log.Error().Msgf("failed to push metrics to remote write: %v", err)
-				break
+				break flushLoop
 			}
 
-			// mark records as processed TODO: make a check for records updated
-			_, err = rw.writer.UpdateSentAtForRecords(recordsToProcess, currentTime)
-			if err != nil {
+			// mark records as processed
+			updatedRecordCount, err := rw.writer.UpdateSentAtForRecords(recordsToProcess, currentTime)
+			if err != nil || updatedRecordCount != int64(len(recordsToProcess)) {
 				log.Error().Msgf("failed to update sent_at for records: %v", err)
+				break flushLoop
 			}
 		}
 	}
@@ -131,7 +134,6 @@ func (rw *RemoteWriter) createTimeseries(metricName string, metricTags config.Me
 }
 
 func (rw *RemoteWriter) pushMetrics(remoteWriteURL string, apiKey string, timeSeries []prompb.TimeSeries) error {
-
 	writeRequest := &prompb.WriteRequest{
 		Timeseries: timeSeries,
 	}
@@ -143,27 +145,37 @@ func (rw *RemoteWriter) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 
 	compressed := snappy.Encode(nil, data)
 
-	req, err := http.NewRequest("POST", remoteWriteURL, bytes.NewBuffer(compressed))
-	if err != nil {
-		return fmt.Errorf("error creating HTTP request: %v", err)
+	var resp *http.Response
+	var req *http.Request
+
+	for attempt := 0; attempt < rw.settings.RemoteWrite.MaxRetries; attempt++ {
+		req, err = http.NewRequest("POST", remoteWriteURL, bytes.NewBuffer(compressed))
+		if err != nil {
+			return fmt.Errorf("error creating HTTP request: %v", err)
+		}
+
+		req.Header.Set("Content-Type", "application/x-protobuf")
+		req.Header.Set("Content-Encoding", "snappy")
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+
+		client := &http.Client{}
+		resp, err = client.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			return nil
+		}
+
+		if resp != nil {
+			resp.Body.Close()
+			log.Error().Msgf("received non-200 response: %v, retrying...", resp.StatusCode)
+		}
+
+		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		jitter := time.Duration(rand.Int63n(int64(time.Second)))
+		time.Sleep(backoff + jitter)
 	}
 
-	req.Header.Set("Content-Type", "application/x-protobuf")
-	req.Header.Set("Content-Encoding", "snappy")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error sending request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("received non-200 response code: %d", resp.StatusCode)
-	}
-
-	return nil
+	return fmt.Errorf("received non-200 response: %v after %d retries", err, rw.settings.RemoteWrite.MaxRetries)
 }
 
 func (rw *RemoteWriter) maxTime(t1, t2 time.Time) time.Time {

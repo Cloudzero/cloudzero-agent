@@ -36,7 +36,7 @@ func main() {
 
 	// setup database
 	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
+	writer := storage.NewWriter(db, settings)
 	reader := storage.NewReader(db, settings)
 	rmw := http.NewRemoteWriter(writer, reader, settings)
 

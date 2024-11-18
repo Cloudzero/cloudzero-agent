@@ -71,8 +71,8 @@ func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment, isCreate bool)
 
 func FormatDeploymentData(dp *v1.Deployment, settings *config.Settings) storage.ResourceTags {
 	namespace := dp.GetNamespace()
-	labels := config.Filter(dp.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, *settings)
-	annotations := config.Filter(dp.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, *settings)
+	labels := config.Filter(dp.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), *settings)
+	annotations := config.Filter(dp.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), *settings)
 	metricLabels := config.MetricLabels{
 		"workload":      dp.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,

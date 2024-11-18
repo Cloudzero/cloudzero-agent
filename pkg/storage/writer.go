@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 	"github.com/rs/zerolog/log"
 
@@ -19,14 +20,15 @@ type DatabaseWriter interface {
 	PurgeStaleData(rt time.Duration) error
 }
 
-func NewWriter(db *gorm.DB) *Writer {
-	return &Writer{db: db, mu: sync.Mutex{}, clock: utils.Clock{}}
+func NewWriter(db *gorm.DB, settings *config.Settings) *Writer {
+	return &Writer{db: db, mu: sync.Mutex{}, clock: utils.Clock{}, settings: settings}
 }
 
 type Writer struct {
-	db    *gorm.DB
-	mu    sync.Mutex
-	clock utils.Clock
+	db       *gorm.DB
+	mu       sync.Mutex
+	clock    utils.Clock
+	settings *config.Settings
 }
 
 func (w *Writer) WriteData(data ResourceTags, isCreate bool) error {
@@ -55,29 +57,40 @@ func (w *Writer) UpdateSentAtForRecords(records []ResourceTags, ct time.Time) (i
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	if len(records) == 0 {
+		return 0, nil
+	}
+
 	var conditions []string
-	var args []interface{} //nolint:gofmt
 	for _, record := range records {
 		if record.Namespace != nil {
-			conditions = append(conditions, "(type = ? AND name = ? AND namespace = ?)")
-			args = append(args, record.Type, record.Name, *record.Namespace)
+			conditions = append(conditions, fmt.Sprintf("(type = '%d' AND name = '%s' AND namespace = '%s')", record.Type, record.Name, *record.Namespace))
 		} else {
-			conditions = append(conditions, "(type = ? AND name = ? AND namespace IS NULL)")
-			args = append(args, record.Type, record.Name)
+			conditions = append(conditions, fmt.Sprintf("(type = '%d' AND name = '%s' AND namespace IS NULL)", record.Type, record.Name))
 		}
 	}
-	whereClause := fmt.Sprintf("record_updated < ? AND record_created < ? AND (%s)", strings.Join(conditions, " OR "))
-	args = append([]interface{}{ctf, ctf}, args...) //nolint:gofmt
-	result := w.db.Model(&ResourceTags{}).
-		Where(whereClause, args...).
-		Update("sent_at", ct).
-		Update("record_updated", ct)
-	if result.Error != nil {
-		log.Error().Msgf("failed to update sent_at for records: %v", result.Error)
-		return 0, result.Error
+
+	var batchSize = w.settings.Database.BatchUpdateSize
+	var updatedRows int64
+
+	for i := 0; i < len(conditions); i += batchSize {
+		end := i + batchSize
+		if end > len(conditions) {
+			end = len(conditions)
+		}
+		batchConditions := conditions[i:end]
+		whereClause := fmt.Sprintf("record_updated < '%s' AND record_created < '%s' AND (%s)", ctf, ctf, strings.Join(batchConditions, " OR "))
+		result := w.db.Model(&ResourceTags{}).
+			Where(whereClause).
+			Update("sent_at", ct).
+			Update("record_updated", ct)
+		if result.Error != nil {
+			log.Error().Msgf("failed to update sent_at for records: %v", result.Error)
+			return 0, result.Error
+		}
+		updatedRows += result.RowsAffected
+		log.Debug().Msgf("Updated sent_at for %d records in this batch", result.RowsAffected)
 	}
-	updatedRows := result.RowsAffected
-	log.Debug().Msgf("Updated sent_at for %d records", updatedRows)
 	return updatedRows, nil
 }
 

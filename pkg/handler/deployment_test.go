@@ -58,6 +58,10 @@ func makeDeploymentRequest(record TestRecord) *hook.Request {
 
 func NewTestSettings() *config.Settings {
 	filter := config.Filters{Labels: config.Labels{Enabled: true, Patterns: []string{"*"}}, Annotations: config.Annotations{Enabled: true, Patterns: []string{"*"}}}
+	filter.Labels.Resources.Deployments = true
+	filter.Annotations.Resources.Deployments = true
+	filter.Labels.Resources.Namespaces = true
+	filter.Annotations.Resources.Namespaces = true
 	compiledPatterns := []regexp.Regexp{}
 	testPattern, _ := regexp.Compile(".*")
 	compiledPatterns = append(compiledPatterns, *testPattern)
@@ -67,7 +71,7 @@ func NewTestSettings() *config.Settings {
 func TestDeploymentHandler_Create(t *testing.T) {
 	settings := NewTestSettings()
 	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
+	writer := storage.NewWriter(db, settings)
 	errChan := make(chan error)
 	handler := NewDeploymentHandler(writer, settings, errChan)
 	var testRecords []TestRecord

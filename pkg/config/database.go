@@ -9,4 +9,5 @@ type Database struct {
 	StoragePath     string        `yaml:"storage_path" default:"/opt/insights" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
 	RetentionTime   time.Duration `yaml:"retention_time" default:"24h" env:"DATABASE_RETENTION" env-description:"how long local data should be retain before being deleted"`
 	CleanupInterval time.Duration `yaml:"cleanup_interval" default:"3h" env:"DATABASE_CLEANUP_INTERVAL" env-description:"how often to check for expired data"`
+	BatchUpdateSize int           `yaml:"batch_update_size" default:"500" env:"DATABASE_BATCH_UPDATE_SIZE" env-description:"how many records to update in a single batch"`
 }

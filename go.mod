@@ -11,6 +11,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
+	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.12
 	gotest.tools/v3 v3.0.3

@@ -25,6 +25,17 @@ func SetupDatabase() *gorm.DB {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create database")
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to get access underlying sql object from gorm")
+	}
+
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	_, err = sqlDB.Exec("PRAGMA busy_timeout = 5000;") // 5000 milliseconds
+	if err != nil {
+		log.Error().Msgf("Failed to set busy timeout: %v", err)
+	}
 	if err := db.AutoMigrate(&RemoteWriteHistory{}); err != nil {
 		errHistory = append(errHistory, err)
 	}

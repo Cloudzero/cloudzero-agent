@@ -24,7 +24,7 @@ import (
 func TestIntegration(t *testing.T) {
 	settings := &config.Settings{}
 	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
+	writer := storage.NewWriter(db, settings)
 	errChan := make(chan error)
 
 	server := http.NewServer(settings,

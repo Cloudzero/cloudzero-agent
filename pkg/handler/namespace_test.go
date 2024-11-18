@@ -39,7 +39,7 @@ func makeNamespaceRequest(record TestRecord) *hook.Request {
 func TestAllHandlers_Create(t *testing.T) {
 	settings := NewTestSettings()
 	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db)
+	writer := storage.NewWriter(db, settings)
 	errChan := make(chan error)
 	handler := NewNamespaceHandler(writer, settings, errChan)
 	var testRecords []TestRecord
