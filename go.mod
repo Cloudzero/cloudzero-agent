@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.4
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-obvious/server v0.1.6
 	github.com/go-obvious/timestamp v0.0.1
@@ -18,6 +19,7 @@ require (
 	github.com/prometheus/prometheus v0.55.1
 	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.9.0
+	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 )
 
 require (

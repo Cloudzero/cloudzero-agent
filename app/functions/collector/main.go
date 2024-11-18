@@ -37,13 +37,18 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize database")
 	}
 
+	ctx := context.Background()
+
+	// Handle shutdown events gracefully
 	go HandleShutdownEvents(appendable)
 
+	// create the metric collector service interface
 	domain := domain.NewMetricCollector(settings, appendable)
 	defer domain.Close()
 
+	// Expose the service
 	log.Info().Msg("Starting service")
-	server.New(build.Version(), handlers.NewRemoteWriteAPI("/metrics", domain)).Run(context.Background())
+	server.New(build.Version(), handlers.NewRemoteWriteAPI("/metrics", domain)).Run(ctx)
 	log.Info().Msg("Service stopping")
 }
 

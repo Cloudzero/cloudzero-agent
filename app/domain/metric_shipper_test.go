@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package domain_test
 
 import (
@@ -7,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -44,7 +46,6 @@ func setupSettings(mockURL string) *config.Settings {
 		Region:         "us-east-1",
 		Cloudzero: config.Cloudzero{
 			Host:              mockURL,
-			APIKey:            "test-api-key",
 			LockStaleDuration: 10 * time.Minute,
 			SendTimeout:       30,
 		},
@@ -61,7 +62,6 @@ func TestPerformShipping(t *testing.T) {
 			SendTimeout:       10,
 			SendInterval:      1,
 			Host:              "http://example.com",
-			APIKey:            "test-api-key",
 			LockStaleDuration: 10 * time.Minute,
 		},
 		Database: config.Database{
@@ -86,7 +86,6 @@ func TestGetStatus(t *testing.T) {
 			SendTimeout:       10,
 			SendInterval:      1,
 			Host:              "http://example.com",
-			APIKey:            "test-api-key",
 			LockStaleDuration: 10 * time.Minute,
 		},
 		Database: config.Database{
@@ -108,7 +107,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	mockURL := "https://example.com/upload"
 	expectedURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 
-	mockResponseBody := `{"presigned_url": "` + expectedURL + `"}`
+	mockResponseBody := `{"urls": ["` + expectedURL + `", "` + expectedURL + `"]}`
 
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
@@ -126,11 +125,25 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	shipper.HttpClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURLs, err := shipper.AllocatePresignedURLs(2)
 
 	// Verify
 	assert.NoError(t, err)
-	assert.Equal(t, expectedURL, presignedURL)
+	assert.Equal(t, []string{expectedURL, expectedURL}, presignedURLs)
+}
+
+func TestAllocatePresignedURL_NoFiles(t *testing.T) {
+	// Setup
+	settings := setupSettings("https://example.com/upload")
+
+	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
+
+	// Execute
+	presignedURLs, err := shipper.AllocatePresignedURLs(0)
+
+	// Verify
+	assert.NoError(t, err)
+	assert.Nil(t, presignedURLs)
 }
 
 func TestAllocatePresignedURL_HTTPError(t *testing.T) {
@@ -155,11 +168,41 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	shipper.HttpClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
 
 	// Verify
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected status code 400")
+	assert.Empty(t, presignedURL)
+}
+
+func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
+	// Setup
+	mockURL := "https://example.com/upload"
+
+	mockResponseBody := `{"error": "invalid request"}`
+
+	mockResponse := &http.Response{
+		StatusCode: http.StatusUnauthorized,
+		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
+	}
+
+	mockRoundTripper := &MockRoundTripper{
+		mockResponse: mockResponse,
+		mockError:    nil,
+	}
+
+	settings := setupSettings(mockURL)
+
+	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
+	shipper.HttpClient.Transport = mockRoundTripper
+
+	// Execute
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
+
+	// Verify
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrUnauthorized)
 	assert.Empty(t, presignedURL)
 }
 
@@ -168,7 +211,7 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	mockURL := "https://example.com/upload"
 
 	// Malformed JSON
-	mockResponseBody := `{"presigned_url": "https://s3.amazonaws.com/bucket/file.tgz"`
+	mockResponseBody := `{"urls": ["https://s3.amazonaws.com/bucket/file.tgz"`
 
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
@@ -186,7 +229,7 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	shipper.HttpClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
 
 	// Verify
 	assert.Error(t, err)
@@ -198,7 +241,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := `{"presigned_url": ""}`
+	mockResponseBody := `{"urls": []}`
 
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
@@ -216,11 +259,11 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	shipper.HttpClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "presigned_url is empty")
+	assert.Contains(t, err.Error(), "no presigned URLs returned")
 	assert.Empty(t, presignedURL)
 }
 
@@ -234,7 +277,7 @@ func TestAllocatePresignedURL_RequestCreationError(t *testing.T) {
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
 
 	// Verify
 	assert.Error(t, err)
@@ -257,7 +300,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	shipper.HttpClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURL("file.tgz")
+	presignedURL, err := shipper.AllocatePresignedURLs(1)
 
 	// Verify
 	assert.Error(t, err)
@@ -408,161 +451,4 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	// Verify
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to open file for upload")
-}
-
-// TestLockFile_Success tests successful locking of a file when no lock exists.
-func TestLockFile_Success(t *testing.T) {
-	// Setup
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "testfile.txt")
-	// Create the file to lock
-	err := os.WriteFile(filePath, []byte("test data"), 0644)
-	assert.NoError(t, err)
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Execute
-	locked, err := shipper.LockFile(filePath)
-
-	// Verify
-	assert.NoError(t, err)
-	assert.True(t, locked)
-
-	// Check that lock file exists
-	lockFilePath := filePath + ".lock"
-	_, err = os.Stat(lockFilePath)
-	assert.NoError(t, err)
-}
-
-// TestLockFile_AlreadyLocked_NotStale tests that locking fails when a valid lock exists.
-func TestLockFile_AlreadyLocked_NotStale(t *testing.T) {
-	// Setup
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "testfile.txt")
-	// Create the file to lock
-	err := os.WriteFile(filePath, []byte("test data"), 0644)
-	assert.NoError(t, err)
-
-	// Create a lock file with current modification time
-	lockFilePath := filePath + ".lock"
-	err = os.WriteFile(lockFilePath, []byte("lock"), 0600)
-	assert.NoError(t, err)
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Execute
-	locked, err := shipper.LockFile(filePath)
-
-	// Verify
-	assert.NoError(t, err)
-	assert.False(t, locked)
-}
-
-// TestLockFile_AlreadyLocked_Stale tests that a stale lock is removed and locking succeeds.
-func TestLockFile_AlreadyLocked_Stale(t *testing.T) {
-	// Setup
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "testfile.txt")
-	// Create the file to lock
-	err := os.WriteFile(filePath, []byte("test data"), 0644)
-	assert.NoError(t, err)
-
-	// Create a stale lock file by setting its modification time to past
-	lockFilePath := filePath + ".lock"
-	err = os.WriteFile(lockFilePath, []byte("lock"), 0600)
-	assert.NoError(t, err)
-
-	// Set modification time to 20 minutes ago
-	staleTime := time.Now().Add(-20 * time.Minute)
-	err = os.Chtimes(lockFilePath, staleTime, staleTime)
-	assert.NoError(t, err)
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Execute
-	locked, err := shipper.LockFile(filePath)
-
-	// Verify
-	assert.NoError(t, err)
-	assert.True(t, locked)
-
-	// Check that lock file exists
-	_, err = os.Stat(lockFilePath)
-	assert.NoError(t, err)
-}
-
-// TestLockFile_CreateError tests handling of errors when creating a lock file.
-func TestLockFile_CreateError(t *testing.T) {
-	// Setup
-	// Attempt to lock a file in a non-existent directory
-	invalidPath := "/nonexistent_dir/testfile.txt"
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Execute
-	locked, err := shipper.LockFile(invalidPath)
-
-	// Verify
-	assert.Error(t, err)
-	assert.False(t, locked)
-}
-
-// TestUnlockFile_Success tests successful unlocking of a file.
-func TestUnlockFile_Success(t *testing.T) {
-	// Setup
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "testfile.txt")
-	// Create the file and lock file
-	err := os.WriteFile(filePath, []byte("test data"), 0644)
-	assert.NoError(t, err)
-
-	lockFilePath := filePath + ".lock"
-	err = os.WriteFile(lockFilePath, []byte("lock"), 0600)
-	assert.NoError(t, err)
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Ensure lock file exists
-	_, err = os.Stat(lockFilePath)
-	assert.NoError(t, err)
-
-	// Execute
-	shipper.UnlockFile(filePath)
-
-	// Verify lock file is removed
-	_, err = os.Stat(lockFilePath)
-	assert.True(t, os.IsNotExist(err))
-}
-
-// TestUnlockFile_NotExist tests unlocking a file when no lock exists.
-func TestUnlockFile_NotExist(t *testing.T) {
-	// Setup
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "testfile.txt")
-
-	settings := setupSettings("")
-
-	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-
-	// Ensure lock file does not exist
-	lockFilePath := filePath + ".lock"
-	_, err := os.Stat(lockFilePath)
-	assert.True(t, os.IsNotExist(err))
-
-	// Execute
-	shipper.UnlockFile(filePath)
-
-	// Verify no error and lock file still does not exist
-	_, err = os.Stat(lockFilePath)
-	assert.True(t, os.IsNotExist(err))
 }

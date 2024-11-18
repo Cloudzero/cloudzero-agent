@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package config_test
 
 import (
@@ -20,9 +23,9 @@ func TestCloudzeroSettings_APIKey(t *testing.T) {
 			APIKeyPath: "testdata/api_key.txt",
 		},
 	}
-	err := settings.GetAPIKey()
+	err := settings.SetAPIKey()
 	assert.NoError(t, err)
-	assert.Equal(t, "test-api-key", settings.Cloudzero.APIKey)
+	assert.Equal(t, "test-api-key", settings.GetAPIKey())
 }
 
 func TestCloudzeroSettings_InvalidAPIKeyPath(t *testing.T) {
@@ -32,14 +35,14 @@ func TestCloudzeroSettings_InvalidAPIKeyPath(t *testing.T) {
 		},
 	}
 
-	assert.Error(t, settings.GetAPIKey())
+	assert.Error(t, settings.SetAPIKey())
 
 	settings = config.Settings{
 		Cloudzero: config.Cloudzero{
 			APIKeyPath: "testdata/invalid.file",
 		},
 	}
-	assert.Error(t, settings.GetAPIKey())
+	assert.Error(t, settings.SetAPIKey())
 }
 
 func TestSettings_Validate(t *testing.T) {

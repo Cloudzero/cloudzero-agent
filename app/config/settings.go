@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -23,6 +24,8 @@ type Settings struct {
 	Logging   Logging   `yaml:"logging"`
 	Database  Database  `yaml:"database"`
 	Cloudzero Cloudzero `yaml:"cloudzero"`
+
+	mu sync.Mutex
 }
 
 type Logging struct {
@@ -47,7 +50,7 @@ type Cloudzero struct {
 	SendTimeout       time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	LockStaleDuration time.Duration `json:"lock_stale_duration"` // Duration to consider a lock stale
 	Host              string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
-	APIKey            string        // Set after reading keypath
+	apiKey            string        // Set after reading keypath
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
@@ -71,7 +74,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		return nil, errors.Wrap(err, "failed to validate settings")
 	}
 
-	if err := cfg.GetAPIKey(); err != nil {
+	if err := cfg.SetAPIKey(); err != nil {
 		return nil, errors.Wrap(err, "failed to get API key")
 	}
 
@@ -159,7 +162,16 @@ func (c *Cloudzero) Validate() error {
 	return nil
 }
 
-func (s *Settings) GetAPIKey() error {
+func (s *Settings) GetAPIKey() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Cloudzero.apiKey
+}
+
+func (s *Settings) SetAPIKey() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	apiKeyPathLocation, err := absFilePath(s.Cloudzero.APIKeyPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to get absolute path")
@@ -172,9 +184,9 @@ func (s *Settings) GetAPIKey() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to read API key")
 	}
-	s.Cloudzero.APIKey = strings.TrimSpace(string(apiKey))
+	s.Cloudzero.apiKey = strings.TrimSpace(string(apiKey))
 
-	if len(s.Cloudzero.APIKey) == 0 {
+	if len(s.Cloudzero.apiKey) == 0 {
 		return errors.New("API key is empty")
 	}
 	return nil

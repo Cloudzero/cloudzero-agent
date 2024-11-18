@@ -36,10 +36,24 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize database")
 	}
 
+	ctx := context.Background()
+
+	// Start a monitor that can pickup secrets changes and update the settings
+	monitor, err := domain.NewSecretMonitor(ctx, settings)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize secret monitor")
+	}
+	defer monitor.Shutdown()
+	if err := monitor.Run(); err != nil {
+		log.Fatal().Err(err).Msg("failed to run secret monitor")
+	}
+
 	go HandleShutdownEvents()
 
-	ctx := context.Background()
+	// Create the shipper and start in a thread
 	domain := domain.NewMetricShipper(ctx, settings, appendable)
+	defer domain.Shutdown()
+	go domain.Run()
 
 	log.Info().Msg("Starting service")
 	server.New(build.Version(), handlers.NewShipperAPI("/", domain)).Run(context.Background())
