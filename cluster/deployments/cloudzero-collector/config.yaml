@@ -23,7 +23,7 @@ data:
 
     cloudzero:
       api_key_path: /cloudzero/secret/apiToken
-      send_interval: 1m
+      send_interval: 30m
       send_timeout: 10s
-      rotate_interval: 1m
+      rotate_interval: 5m
       host: dev-api.cloudzero.com
