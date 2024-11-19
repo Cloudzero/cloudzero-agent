@@ -35,11 +35,6 @@ data:
       {{- else }}
       kube_state_metrics_service_endpoint: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
       {{- end }}
-      {{- if .Values.validator.serviceEndpoints.prometheusNodeExporter }}
-      prometheus_node_exporter_service_endpoint: http://{{ .Values.validator.serviceEndpoints.prometheusNodeExporter }}/
-      {{- else }}
-      prometheus_node_exporter_service_endpoint: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}prometheus-node-exporter:9100/
-      {{- end }}
       executable: /bin/prometheus
       configurations:
         - /etc/prometheus/prometheus.yml
@@ -57,7 +52,6 @@ data:
           checks:
             - k8s_version
             - kube_state_metrics_reachable
-            - node_exporter_reachable
             - prometheus_version
             - scrape_cfg
         - name: pre-stop

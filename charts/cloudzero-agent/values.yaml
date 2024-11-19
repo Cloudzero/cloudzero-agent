@@ -51,8 +51,6 @@ kube-state-metrics:
   enabled: false
   extraArgs:
     - --metric-labels-allowlist=pods=[app.kubernetes.io/component]
-prometheus-node-exporter:
-  enabled: false
 
 # -- Annotations to be added to the Secret, if the chart is configured to create one
 secretAnnotations: {}
@@ -62,12 +60,11 @@ imagePullSecrets: []
 validator:
   serviceEndpoints:
     kubeStateMetrics:
-    prometheusNodeExporter:
   # -- Flag to skip validator failure if unable to connect to the CloudZero API.
   name: env-validator
   image:
     repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
-    tag: 0.4.1
+    tag: 0.8.0
     digest:
     pullPolicy: Always
 
