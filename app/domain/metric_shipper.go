@@ -225,6 +225,8 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 
 // UploadFile uploads the specified file to S3 using the provided presigned URL.
 func (m *MetricShipper) UploadFile(presignedURL, filePath string) error {
+
+	log.Info().Msgf("Uploading %s to %s", filePath, presignedURL)
 	// Open the file to upload
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -232,18 +234,25 @@ func (m *MetricShipper) UploadFile(presignedURL, filePath string) error {
 	}
 	defer file.Close()
 
+	log.Info().Msgf("Reading %s", filePath)
+
+	// read file content into buffer
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read file content: %w", err)
+	}
+
 	// Create a unique context with a timeout for the upload
 	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
 	defer cancel()
 
 	// Create a new HTTP PUT request with the file as the body
-	req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, file)
+	req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewReader(fileContent))
 	if err != nil {
 		return fmt.Errorf("failed to create upload HTTP request: %w", err)
 	}
 
-	// Set the appropriate Content-Type if required by the presigned URL
-	req.Header.Set("Content-Type", "application/octet-stream")
+	log.Info().Msgf("Uploading %s to %s", filePath, presignedURL)
 
 	// Send the request
 	resp, err := m.HttpClient.Do(req)
@@ -251,6 +260,8 @@ func (m *MetricShipper) UploadFile(presignedURL, filePath string) error {
 		return fmt.Errorf("file upload HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	log.Info().Msgf("Upload response: %s", resp.Status)
 
 	// Check for successful upload
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
