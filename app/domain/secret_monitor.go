@@ -2,21 +2,24 @@ package domain
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"sync"
+	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cirrus-remote-write/app/config"
-	"github.com/cloudzero/cirrus-remote-write/app/store"
 	"github.com/cloudzero/cirrus-remote-write/app/types"
 )
 
 type secretsMonitor struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	settings     *config.Settings
-	bus          types.Bus
-	subscription *types.Subscription
-	running      bool
-	mu           sync.Mutex
+	ctx      context.Context
+	cancel   context.CancelFunc
+	settings *config.Settings
+	running  bool
+	mu       sync.Mutex
+	lastHash [32]byte
 }
 
 func NewSecretMonitor(ctx context.Context, settings *config.Settings) (types.Runnable, error) {
@@ -24,7 +27,6 @@ func NewSecretMonitor(ctx context.Context, settings *config.Settings) (types.Run
 	return &secretsMonitor{
 		settings: settings,
 		ctx:      ctx,
-		bus:      store.NewBus(),
 		cancel:   cancel,
 	}, nil
 }
@@ -37,32 +39,34 @@ func (s *secretsMonitor) Run() error {
 		return nil
 	}
 
-	fm, err := NewFileMonitor(s.ctx, s.bus, s.settings.Cloudzero.APIKeyPath)
-	if err != nil {
-		return err
-	}
-
+	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
-		fm.Start()
-		defer fm.Close()
-
-		s.subscription = s.bus.Subscribe()
-		defer s.bus.Unsubscribe(s.subscription)
-
+		defer ticker.Stop()
 		for {
 			select {
 			case <-s.ctx.Done():
 				s.running = false
 				return
-			case event := <-s.subscription.Events():
-				if event.Type == FileChanged {
-					s.settings.SetAPIKey()
+			case <-ticker.C:
+				s.settings.SetAPIKey()
+				newSecret := s.settings.GetAPIKey()
+				newHash := sha256.Sum256([]byte(newSecret))
+				if newHash != s.lastHash {
+					log.Info().Msgf("discovered new secret %s", redactSecret(newSecret))
+					s.lastHash = newHash
 				}
 			}
 		}
 	}()
 	s.running = true
 	return nil
+}
+
+func redactSecret(secret string) string {
+	if len(secret) > 2 {
+		return fmt.Sprintf("%s***", secret[:2])
+	}
+	return "*****"
 }
 
 // Shutdown implements types.Runnable.
