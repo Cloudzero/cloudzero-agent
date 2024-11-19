@@ -1,6 +1,5 @@
 project_root := $(shell pwd)
-#FUNCTIONS := collector shipper
-FUNCTIONS := collector
+FUNCTIONS := collector shipper
 REGION := us-east-2
 
 # Docker is the default container tool (and buildx buildkit)

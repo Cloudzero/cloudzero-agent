@@ -1,56 +1,154 @@
 # Application Architecture
 
-![](./docs/assets/overvierw.png)
+![](./docs/assets/overview.png)
 
 This project provides a collector application, written in golang, which provides two applications:
 
 * `Collector` - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
 * `Shipper` - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
 
-The data is stored on a persistent volume to allow for application restarts, so no data is ever lost.
-
-Additionally, both applications are designed to allow for horizontal scaling behind a Service interface.
-
-In testing on a small cluster, the avarage memory us of the applications was below 25MB, while an overnight run showed only 5MB of disk usage.
-
-![](./docs/assets/files.png)
 
 ---
 
 ## DEPLOY QUICK START
 
-You may want to modify the parameters in the file:
+### **Step 1: Create an Amazon EKS Cluster**
 
-* app/manifests/cloudzero/config.yaml - this file has the configuration for the deployment
-* app/manifests/cloudzero/secret.yaml - this file has the CloudZero API secret
+We'll use `eksctl` to create a new EKS cluster.
 
-### 1. Build and Package the application
+Run the following command to create the cluster:
 
-```
-make package
-```
-
-### 2. Deploy Collector Application Set
-```
-kubectl apply  -f app/manifests/cloudzero/namespace.yml \
-               -f app/manifests/cloudzero/secret.yml \
-               -f app/manifests/cloudzero/config.yaml \
-               -f app/manifests/cloudzero/pvc.yaml \
-               -f app/manifests/cloudzero/deployment.yml
+```bash
+eksctl create cluster -f cluster/cluster.yaml
 ```
 
-### 3. Deploy Federated Cloudzero Agent
-```
-kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
-```
+> **Note**: This process may take several minutes to complete. Once finished, `kubectl` will be configured to interact with your new cluster.
 
 ---
-## Testing
 
-1. There are `unit tests` included in the project.
-2. Additionally the applications can be build, and debugged locally. (`make build`)
-3. Use the `test/sendfiles.sh` to send a metrics payload to the collector "remote write" API
-4. Use the `test/dumpfile.sh` to decode and dump the parquet files (verify will be usable on our AWS side)
+## **Step 2: Install External Secrets Operator**
+
+Next use Helm to install the External Secrets Operator into your cluster.
+
+1. **Add the External Secrets Helm Repository**
+
+   ```bash
+   helm repo add external-secrets https://charts.external-secrets.io
+   helm repo update
+   ```
+
+2. **Install the Operator Using Helm**
+
+   ```bash
+   helm install external-secrets external-secrets/external-secrets \
+     --namespace external-secrets --create-namespace
+   ```
+
+---
+
+## **Step 3: Create a Secret in AWS Secrets Manager**
+
+We'll create a secret in AWS Secrets Manager that we want to sync to Kubernetes.
+
+1. **Create the Secret**
+
+   ```bash
+   aws secretsmanager create-secret \
+     --region us-east-2 \
+     --name 'dev/cloudzero-secret-api-key' \
+     --secret-string "{\"apiToken\":\"$CZ_DEV_API_TOKEN\"}"
+   ```
+
+   > **Note**:
+   > Replace `$CZ_API_TOKEN` with your actual API token or ensure that the `CZ_API_TOKEN` environment variable is set.
+
+---
+
+## **Step 4: Configure IAM Roles for Service Accounts (IRSA)**
+
+To allow the operator to securely access AWS Secrets Manager, we'll use IAM Roles for Service Accounts.
+
+1. **Enable and Associate the OIDC Provider**
+
+   If you haven't enabled the OIDC provider for your cluster, run:
+
+   ```bash
+   eksctl utils associate-iam-oidc-provider --cluster aws-cirrus-jb-cluster --approve
+   ```
+
+2. **Create the IAM Policy**
+
+   Run:
+
+   ```bash
+   aws iam create-policy \
+     --policy-name ExternalSecretsPolicy \
+     --policy-document file://cluster/deployments/cloudzero-secrets/external-secrets-policy.json
+   ```
+
+3. **Create the IAM Service Account Using `eksctl`**
+
+   ```bash
+   eksctl create iamserviceaccount \
+     --name external-secrets-irsa \
+     --namespace default \
+     --cluster aws-cirrus-jb-cluster \
+     --role-name external-secrets-irsa-role \
+     --attach-policy-arn arn:aws:iam::975482786146:policy/ExternalSecretsPolicy \
+     --approve \
+     --override-existing-serviceaccounts
+   ```
+
+4. **Verify the Service Account Creation**
+
+   ```bash
+   kubectl get serviceaccount external-secrets-irsa -n default -o yaml
+   ```
+
+---
+
+## **Step 5: Deployment the Cloudzero Collector Application Set**
+
+1. **Build the Container Images**
+
+    ```bash
+    make package
+    ```
+
+2. **Make the `cloudzero` namespace**
+
+    ```bash
+    kubectl apply  -f cluster/deployments/namespace.yml
+    ```
+
+3. **Deploy the External Secret Store**
+
+    ```bash
+    kubectl apply  -f cluster/deployments/cloudzero-secrets/secretstore.yaml
+    ```
+
+4. **Add the External Secret**
+
+    ```bash
+    kubectl apply  -f cluster/deployments/cloudzero-secrets/externalsecret.yaml
+    ```
+
+5. **Deploy Collector Application Set**
+
+    ```bash
+    kubectl apply -f cluster/deployments/cloudzero-collector/config.yaml \
+                  -f cluster/deployments/cloudzero-collector/deployment.yaml
+    ```
+
+
+## **Step 6: Deploy Federated Cloudzero Agent**
+
+1. **Deploy the  Federated Cloudzero Agent**
+
+    ```bash
+    kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
+    ```
+
 ---
 
 ## Debugging
@@ -59,13 +157,24 @@ The applications are based on a scratch container, so no shell is available. The
 
 To monitor the data directory, you must deploy a `debug` container as follows:
 
-```
-kubectl apply  -f app/manifests/cloudzero/cdebug.yaml
-```
+1. **Deploy a debug container**
 
-Next you can access it using the following:
-```
-kubectl exec -it temp-shell -n cirrus -- /bin/sh
-```
+    ```bash
+    kubectl apply  -f cluster/deployments/debug/deployment.yaml
+    ```
 
-To inspect the data directory, `cd /cloudzero/data`
+2. **Attach to the shell of the debug container**
+
+    ```bash
+    kubectl exec -it temp-shell -- /bin/sh
+    ```
+
+    To inspect the data directory, `cd /cloudzero/data`
+
+---
+
+## **Clean Up**
+
+```bash
+eksctl delete cluster -f cluster/cluster.yaml --disable-nodegroup-eviction
+```

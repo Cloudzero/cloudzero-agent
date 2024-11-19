@@ -44,13 +44,12 @@ type Server struct {
 }
 
 type Cloudzero struct {
-	APIKeyPath        string        `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
-	RotateInterval    time.Duration `yaml:"rotate_interval" default:"10m" env:"ROTATE_INTERVAL" env-description:"interval in hours to rotate API key"`
-	SendInterval      time.Duration `yaml:"send_interval" default:"10m" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
-	SendTimeout       time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
-	LockStaleDuration time.Duration `json:"lock_stale_duration"` // Duration to consider a lock stale
-	Host              string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
-	apiKey            string        // Set after reading keypath
+	APIKeyPath     string        `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
+	RotateInterval time.Duration `yaml:"rotate_interval" default:"10m" env:"ROTATE_INTERVAL" env-description:"interval in hours to rotate API key"`
+	SendInterval   time.Duration `yaml:"send_interval" default:"10m" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
+	SendTimeout    time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
+	Host           string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
+	apiKey         string        // Set after reading keypath
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
@@ -145,13 +144,13 @@ func (c *Cloudzero) Validate() error {
 		c.Host = "api.cloudzero.com"
 	}
 	if c.SendInterval <= 0 {
-		c.SendInterval = 60 * time.Second
+		c.SendInterval = 10 * time.Minute
 	}
 	if c.SendTimeout <= 0 {
 		c.SendTimeout = 10 * time.Second
 	}
-	if c.LockStaleDuration <= 0 {
-		c.LockStaleDuration = 5 * time.Minute
+	if c.RotateInterval <= 0 {
+		c.RotateInterval = 10 * time.Minute
 	}
 	if c.APIKeyPath == "" {
 		return errors.New("API key path is empty")

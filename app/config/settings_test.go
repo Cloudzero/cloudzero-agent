@@ -68,11 +68,10 @@ func TestSettings_Validate(t *testing.T) {
 					Compress:    true,
 				},
 				Cloudzero: config.Cloudzero{
-					APIKeyPath:        "testdata/api_key.txt",
-					SendInterval:      60 * time.Second,
-					SendTimeout:       10 * time.Second,
-					LockStaleDuration: 5 * time.Minute,
-					Host:              "api.cloudzero.com",
+					APIKeyPath:   "testdata/api_key.txt",
+					SendInterval: 60 * time.Second,
+					SendTimeout:  10 * time.Second,
+					Host:         "api.cloudzero.com",
 				},
 			},
 			wantErr: false,
@@ -254,11 +253,10 @@ func TestCloudzeroSettings_Validate(t *testing.T) {
 		{
 			name: "valid cloudzero settings",
 			settings: config.Cloudzero{
-				APIKeyPath:        "testdata/api_key.txt",
-				SendInterval:      60 * time.Second,
-				SendTimeout:       10 * time.Second,
-				LockStaleDuration: 5 * time.Minute,
-				Host:              "api.cloudzero.com",
+				APIKeyPath:   "testdata/api_key.txt",
+				SendInterval: 60 * time.Second,
+				SendTimeout:  10 * time.Second,
+				Host:         "api.cloudzero.com",
 			},
 			wantErr: false,
 		},
@@ -297,14 +295,6 @@ func TestCloudzeroSettings_Validate(t *testing.T) {
 			settings: config.Cloudzero{
 				APIKeyPath:  "testdata/api_key.txt",
 				SendTimeout: -1,
-			},
-			wantErr: false,
-		},
-		{
-			name: "negative lock stale duration",
-			settings: config.Cloudzero{
-				APIKeyPath:        "testdata/api_key.txt",
-				LockStaleDuration: -1,
 			},
 			wantErr: false,
 		},

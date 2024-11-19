@@ -1,0 +1,134 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  name: collector
+  labels:
+    app: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      containers:
+        - name: collector
+          image: ghcr.io/josephbarnett/hexigon/collector:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          command: ["/cloudzero/app", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+
+        - name: shipper
+          image: ghcr.io/josephbarnett/hexigon/shipper:latest
+          imagePullPolicy: Always
+          command: ["/cloudzero/app", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+        - name: temp-shell
+          image: busybox
+          command: ["sleep", "36000"]  # Keeps the pod running
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cloudzero-collector-config
+        - name: secret-volume
+          secret:
+            secretName: cloudzero-secret-api-key
+        - name: persistent-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: collector
+  labels:
+    app: collector
+spec:
+  selector:
+    app: collector
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

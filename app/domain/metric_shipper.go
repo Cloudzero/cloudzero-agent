@@ -53,7 +53,7 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, f types.Appendabl
 
 	// Initialize an HTTP client with the specified timeout
 	httpClient := &http.Client{
-		Timeout: time.Duration(s.Cloudzero.SendTimeout) * time.Second,
+		Timeout: s.Cloudzero.SendTimeout,
 	}
 
 	return &MetricShipper{
@@ -74,7 +74,7 @@ func (m *MetricShipper) Run() error {
 	defer signal.Stop(sigChan)
 
 	// Initialize ticker for periodic shipping
-	ticker := time.NewTicker(time.Duration(m.setting.Cloudzero.SendInterval) * time.Second)
+	ticker := time.NewTicker(m.setting.Cloudzero.SendInterval)
 	defer ticker.Stop()
 
 	log.Info().Msg("Shipper service starting")
@@ -177,7 +177,7 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 
 	// Set necessary headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", m.setting.GetAPIKey()))
+	req.Header.Set("Authorization", fmt.Sprintf("%s", m.setting.GetAPIKey()))
 
 	// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 	q := req.URL.Query()
@@ -188,14 +188,17 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 	q.Add("cluster_name", m.setting.ClusterName)
 	req.URL.RawQuery = q.Encode()
 
+	log.Info().Msgf("Requesting %d presigned URLs from %s with key %s", count, req.URL.String(), m.setting.GetAPIKey())
+
 	// Send the request
 	resp, err := m.HttpClient.Do(req)
 	if err != nil {
+		log.Error().Err(err).Msg("HTTP request failed")
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, ErrUnauthorized
 	}
 
@@ -230,7 +233,7 @@ func (m *MetricShipper) UploadFile(presignedURL, filePath string) error {
 	defer file.Close()
 
 	// Create a unique context with a timeout for the upload
-	ctx, cancel := context.WithTimeout(m.ctx, time.Duration(m.setting.Cloudzero.SendTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
 	defer cancel()
 
 	// Create a new HTTP PUT request with the file as the body

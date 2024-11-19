@@ -45,9 +45,8 @@ func setupSettings(mockURL string) *config.Settings {
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
 		Cloudzero: config.Cloudzero{
-			Host:              mockURL,
-			LockStaleDuration: 10 * time.Minute,
-			SendTimeout:       30,
+			Host:        mockURL,
+			SendTimeout: 30,
 		},
 		Database: config.Database{
 			StoragePath: "/tmp/storage",
@@ -59,10 +58,9 @@ func TestPerformShipping(t *testing.T) {
 	ctx := context.Background()
 	settings := &config.Settings{
 		Cloudzero: config.Cloudzero{
-			SendTimeout:       10,
-			SendInterval:      1,
-			Host:              "http://example.com",
-			LockStaleDuration: 10 * time.Minute,
+			SendTimeout:  10,
+			SendInterval: 1,
+			Host:         "http://example.com",
 		},
 		Database: config.Database{
 			StoragePath: t.TempDir(),
@@ -83,10 +81,9 @@ func TestGetStatus(t *testing.T) {
 	ctx := context.Background()
 	settings := &config.Settings{
 		Cloudzero: config.Cloudzero{
-			SendTimeout:       10,
-			SendInterval:      1,
-			Host:              "http://example.com",
-			LockStaleDuration: 10 * time.Minute,
+			SendTimeout:  10,
+			SendInterval: 1,
+			Host:         "http://example.com",
 		},
 		Database: config.Database{
 			StoragePath: t.TempDir(),
