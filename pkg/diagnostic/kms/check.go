@@ -33,7 +33,7 @@ type checker struct {
 	clientset kubernetes.Interface
 }
 
-func NewProvider(ctx context.Context, cfg *config.Settings, clientset ...kubernetes.Interface) diagnostic.Provider {
+var NewProvider = func(ctx context.Context, cfg *config.Settings, clientset ...kubernetes.Interface) diagnostic.Provider {
 	var cs kubernetes.Interface
 	if len(clientset) > 0 {
 		cs = clientset[0]
