@@ -2,14 +2,34 @@ package catalog_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/kms"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/kubernetes"
 )
 
+type mockProvider struct{}
+
+func (m *mockProvider) Check(ctx context.Context, client *http.Client, recorder status.Accessor) error {
+	return nil
+}
+
+func mockKMSProvider(ctx context.Context, cfg *config.Settings, clientset ...kubernetes.Interface) diagnostic.Provider {
+	return &mockProvider{}
+}
+
 func TestRegistry_Get(t *testing.T) {
+	// Override kms.NewProvider
+	originalNewProvider := kms.NewProvider
+	kms.NewProvider = mockKMSProvider
+	defer func() { kms.NewProvider = originalNewProvider }()
+
 	ctx := context.Background()
 	c := &config.Settings{}
 	r := catalog.NewCatalog(ctx, c)
@@ -28,6 +48,11 @@ func TestRegistry_Get(t *testing.T) {
 }
 
 func TestRegistry_Has(t *testing.T) {
+	// Override kms.NewProvider
+	originalNewProvider := kms.NewProvider
+	kms.NewProvider = mockKMSProvider
+	defer func() { kms.NewProvider = originalNewProvider }()
+
 	ctx := context.Background()
 	c := &config.Settings{}
 	r := catalog.NewCatalog(ctx, c)
@@ -42,6 +67,11 @@ func TestRegistry_Has(t *testing.T) {
 }
 
 func TestRegistry_List(t *testing.T) {
+	// Override kms.NewProvider
+	originalNewProvider := kms.NewProvider
+	kms.NewProvider = mockKMSProvider
+	defer func() { kms.NewProvider = originalNewProvider }()
+
 	ctx := context.Background()
 	c := &config.Settings{}
 	r := catalog.NewCatalog(ctx, c)
