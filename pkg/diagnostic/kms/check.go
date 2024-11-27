@@ -3,7 +3,7 @@ package kms
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -126,7 +126,7 @@ func (c *checker) Check(ctx context.Context, client *http.Client, accessor statu
 		resp, err := client.Get(endpointURL)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				c.logger.Errorf("Failed to read metrics: %v", err)
 				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to read metrics: %s", err.Error())})
