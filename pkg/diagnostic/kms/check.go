@@ -13,7 +13,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -66,69 +65,19 @@ var NewProvider = func(ctx context.Context, cfg *config.Settings, clientset ...k
 func (c *checker) Check(ctx context.Context, client *http.Client, accessor status.Accessor) error {
 	var (
 		retriesRemaining = MaxRetry
-		namespace        = "prom-agent"
-		serviceName      = "cz-prom-agent-kube-state-metrics"
-		endpointURL      string
+		endpointURL      = fmt.Sprintf("%s/metrics", c.cfg.Prometheus.KubeStateMetricsServiceEndpoint)
 	)
-
-	// Wait for the pod to become ready and find the first available endpoint
-	for retriesRemaining > 0 {
-		endpoints, err := c.clientset.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
-		if err != nil {
-			c.logger.Errorf("Failed to get service endpoints: %v", err)
-			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to get service endpoints: %s", err.Error())})
-			return nil
-		}
-
-		// Log the endpoints for debugging
-		c.logger.Infof("Endpoints: %v", endpoints)
-
-		// Check if there are any ready addresses and find the first available endpoint
-		for _, subset := range endpoints.Subsets {
-			for _, address := range subset.Addresses {
-				c.logger.Infof("Address: %v", address)
-				for _, port := range subset.Ports {
-					c.logger.Infof("Port: %v", port)
-					if port.Port == 8080 {
-						endpointURL = fmt.Sprintf("http://%s:%d/metrics", address.IP, port.Port)
-						break
-					}
-				}
-				if endpointURL != "" {
-					break
-				}
-			}
-			if endpointURL != "" {
-				break
-			}
-		}
-
-		if endpointURL != "" {
-			break
-		}
-
-		c.logger.Infof("Pod is not ready, waiting...")
-		retriesRemaining--
-		time.Sleep(RetryInterval)
-	}
-
-	if retriesRemaining == 0 {
-		c.logger.Errorf("Pod did not become ready in time")
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: "Pod did not become ready in time"})
-		return nil
-	}
 
 	c.logger.Infof("Using endpoint URL: %s", endpointURL)
 
 	// Retry logic to handle transient issues
-	retriesRemaining = MaxRetry
-	for retriesRemaining > 0 {
+	for attempt := 1; retriesRemaining > 0; attempt++ {
 		resp, err := client.Get(endpointURL)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				c.logger.Errorf("Failed to read metrics: %v", err)
+				c.logger.Errorf("Failed to read metrics on attempt %d: %v", attempt, err)
 				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to read metrics: %s", err.Error())})
 				return nil
 			}
@@ -137,7 +86,7 @@ func (c *checker) Check(ctx context.Context, client *http.Client, accessor statu
 			requiredMetrics := []string{"kube_pod_info", "kube_node_info"} // Add the required metrics here
 			for _, metric := range requiredMetrics {
 				if !strings.Contains(metrics, metric) {
-					c.logger.Errorf("Required metric %s not found", metric)
+					c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)
 					accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Required metric %s not found", metric)})
 					return nil
 				}
@@ -147,7 +96,7 @@ func (c *checker) Check(ctx context.Context, client *http.Client, accessor statu
 			return nil
 		}
 
-		c.logger.Errorf("Failed to fetch metrics: %v", err)
+		c.logger.Errorf("Failed to fetch metrics on attempt %d: %v", attempt, err)
 		retriesRemaining--
 		time.Sleep(RetryInterval)
 	}
