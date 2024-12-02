@@ -73,32 +73,40 @@ func (c *checker) Check(ctx context.Context, client *http.Client, accessor statu
 	// Retry logic to handle transient issues
 	for attempt := 1; retriesRemaining > 0; attempt++ {
 		resp, err := client.Get(endpointURL)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				c.logger.Errorf("Failed to read metrics on attempt %d: %v", attempt, err)
-				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to read metrics: %s", err.Error())})
-				return nil
-			}
+		if err != nil {
+			c.logger.Errorf("Failed to fetch metrics on attempt %d: %v", attempt, err)
+			retriesRemaining--
+			time.Sleep(RetryInterval)
+			continue
+		}
 
-			metrics := string(body)
-			requiredMetrics := []string{"kube_pod_info", "kube_node_info"} // Add the required metrics here
-			for _, metric := range requiredMetrics {
-				if !strings.Contains(metrics, metric) {
-					c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)
-					accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Required metric %s not found", metric)})
-					return nil
-				}
-			}
+		if resp.StatusCode != http.StatusOK {
+			c.logger.Errorf("Unexpected status code on attempt %d: %d", attempt, resp.StatusCode)
+			retriesRemaining--
+			time.Sleep(RetryInterval)
+			continue
+		}
 
-			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: true})
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			c.logger.Errorf("Failed to read metrics on attempt %d: %v", attempt, err)
+			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to read metrics: %s", err.Error())})
 			return nil
 		}
 
-		c.logger.Errorf("Failed to fetch metrics on attempt %d: %v", attempt, err)
-		retriesRemaining--
-		time.Sleep(RetryInterval)
+		metrics := string(body)
+		requiredMetrics := []string{"kube_pod_info", "kube_node_info"} // Add the required metrics here
+		for _, metric := range requiredMetrics {
+			if !strings.Contains(metrics, metric) {
+				c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)
+				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Required metric %s not found", metric)})
+				return nil
+			}
+		}
+
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: true})
+		return nil
 	}
 
 	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to fetch metrics after %d retries", MaxRetry)})
