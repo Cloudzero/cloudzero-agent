@@ -62,7 +62,7 @@ var NewProvider = func(ctx context.Context, cfg *config.Settings, clientset ...k
 	}
 }
 
-func (c *checker) Check(ctx context.Context, client *http.Client, accessor status.Accessor) error {
+func (c *checker) Check(_ context.Context, client *http.Client, accessor status.Accessor) error {
 	var (
 		retriesRemaining = MaxRetry
 		endpointURL      = fmt.Sprintf("%s/metrics", c.cfg.Prometheus.KubeStateMetricsServiceEndpoint)
