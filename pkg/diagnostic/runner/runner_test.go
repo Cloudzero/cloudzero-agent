@@ -7,9 +7,12 @@ import (
 	"testing"
 
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/kms"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/kubernetes"
 )
 
 type mockProvider struct {
@@ -23,6 +26,15 @@ func (m *mockProvider) Check(ctx context.Context, client *http.Client, recorder 
 	return nil
 }
 
+func NewMockKMSProvider(ctx context.Context, cfg *config.Settings, clientset ...kubernetes.Interface) diagnostic.Provider {
+	return &mockProvider{
+		Test: func(ctx context.Context, client *http.Client, recorder status.Accessor) error {
+			// Simulate a successful check
+			return nil
+		},
+	}
+}
+
 func TestRunner_Run_Error(t *testing.T) {
 	cfg := &config.Settings{
 		Deployment: config.Deployment{
@@ -31,6 +43,11 @@ func TestRunner_Run_Error(t *testing.T) {
 			ClusterName: "test-cluster",
 		},
 	}
+
+	// Use the mock provider for KMS
+	originalNewProvider := kms.NewProvider
+	kms.NewProvider = NewMockKMSProvider
+	defer func() { kms.NewProvider = originalNewProvider }()
 
 	reg := catalog.NewCatalog(context.Background(), cfg)
 	stage := config.ContextStageInit
@@ -64,6 +81,11 @@ func TestRunner_Run(t *testing.T) {
 			ClusterName: "test-cluster",
 		},
 	}
+
+	// Use the mock provider for KMS
+	originalNewProvider := kms.NewProvider
+	kms.NewProvider = NewMockKMSProvider
+	defer func() { kms.NewProvider = originalNewProvider }()
 
 	reg := catalog.NewCatalog(context.Background(), cfg)
 	stage := config.ContextStageInit
