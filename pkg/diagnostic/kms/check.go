@@ -96,7 +96,7 @@ func (c *checker) Check(_ context.Context, client *http.Client, accessor status.
 		}
 
 		metrics := string(body)
-		requiredMetrics := []string{"kube_pod_info", "kube_node_info"} // Add the required metrics here
+		requiredMetrics := c.cfg.Prometheus.KubeMetrics // Use the required metrics from the configuration
 		for _, metric := range requiredMetrics {
 			if !strings.Contains(metrics, metric) {
 				c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)

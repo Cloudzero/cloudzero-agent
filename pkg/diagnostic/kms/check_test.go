@@ -53,6 +53,7 @@ func TestChecker_CheckOK(t *testing.T) {
 	cfg := &config.Settings{
 		Prometheus: config.Prometheus{
 			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info"},
 		},
 	}
 	clientset := fake.NewSimpleClientset()
@@ -80,6 +81,7 @@ func TestChecker_CheckRetry(t *testing.T) {
 	cfg := &config.Settings{
 		Prometheus: config.Prometheus{
 			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info"},
 		},
 	}
 	clientset := fake.NewSimpleClientset()
@@ -114,6 +116,7 @@ func TestChecker_CheckRetryFailure(t *testing.T) {
 	cfg := &config.Settings{
 		Prometheus: config.Prometheus{
 			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info"},
 		},
 	}
 	clientset := fake.NewSimpleClientset()
@@ -147,6 +150,7 @@ func TestChecker_CheckMetricsValidation(t *testing.T) {
 	cfg := &config.Settings{
 		Prometheus: config.Prometheus{
 			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info"},
 		},
 	}
 	clientset := fake.NewSimpleClientset()
@@ -174,6 +178,7 @@ func TestChecker_CheckHandles500Error(t *testing.T) {
 	cfg := &config.Settings{
 		Prometheus: config.Prometheus{
 			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info"},
 		},
 	}
 	clientset := fake.NewSimpleClientset()
