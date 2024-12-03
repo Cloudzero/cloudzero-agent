@@ -18,6 +18,14 @@ cloudzero:
 
 prometheus:
   kube_state_metrics_service_endpoint: http://kube-state-metrics:8080
+  kube_metrics:
+    - kube_node_info
+    - kube_node_status_capacity
+    - kube_pod_container_resource_limits
+    - kube_pod_container_resource_requests
+    - kube_pod_labels
+    - kube_pod_info
+    - node_dmi_info
   configurations: 
     - prometheus.yml
 
