@@ -3,6 +3,7 @@ package kms_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -199,5 +200,44 @@ func TestChecker_CheckHandles500Error(t *testing.T) {
 		for _, c := range s.Checks {
 			assert.False(t, c.Passing)
 		}
+	})
+}
+
+func TestChecker_CheckMissingMetrics(t *testing.T) {
+	cfg := &config.Settings{
+		Prometheus: config.Prometheus{
+			KubeStateMetricsServiceEndpoint: mockURL,
+			KubeMetrics:                     []string{"kube_pod_info", "kube_node_info", "missing_metric"},
+		},
+	}
+	clientset := fake.NewSimpleClientset()
+	createMockEndpoints(clientset)
+	provider := kms.NewProvider(context.Background(), cfg, clientset)
+
+	mock := test.NewHTTPMock()
+	mock.Expect(http.MethodGet, "kube_pod_info\nkube_node_info\n", http.StatusOK, nil)
+	client := mock.HTTPClient()
+
+	accessor := makeReport()
+
+	err := provider.Check(context.Background(), client, accessor)
+	assert.NoError(t, err)
+
+	accessor.ReadFromReport(func(s *status.ClusterStatus) {
+		assert.Len(t, s.Checks, 2)
+		foundMissingMetricError := false
+		foundRetryError := false
+		for _, c := range s.Checks {
+			t.Logf("Check: %+v", c)
+			assert.False(t, c.Passing)
+			if strings.Contains(c.Error, "Required metric missing_metric not found") {
+				foundMissingMetricError = true
+			}
+			if strings.Contains(c.Error, "Failed to fetch metrics after 3 retries") {
+				foundRetryError = true
+			}
+		}
+		assert.True(t, foundMissingMetricError, "Expected error for missing metric not found")
+		assert.True(t, foundRetryError, "Expected error for failed retries not found")
 	})
 }
