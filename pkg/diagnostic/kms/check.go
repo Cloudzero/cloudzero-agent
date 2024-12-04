@@ -98,7 +98,9 @@ func (c *checker) Check(_ context.Context, client *http.Client, accessor status.
 		metrics := string(body)
 		allMetricsFound := true
 		for _, metric := range c.cfg.Prometheus.KubeMetrics {
-			if !strings.Contains(metrics, metric) {
+			if strings.Contains(metrics, metric) {
+				c.logger.Infof("Found required metric %s on attempt %d", metric, attempt)
+			} else {
 				c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)
 				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Required metric %s not found", metric)})
 				allMetricsFound = false
