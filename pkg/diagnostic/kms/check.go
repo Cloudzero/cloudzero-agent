@@ -96,17 +96,22 @@ func (c *checker) Check(_ context.Context, client *http.Client, accessor status.
 		}
 
 		metrics := string(body)
-		requiredMetrics := []string{"kube_pod_info", "kube_node_info"} // Add the required metrics here
-		for _, metric := range requiredMetrics {
+		allMetricsFound := true
+		for _, metric := range c.cfg.Prometheus.KubeMetrics {
 			if !strings.Contains(metrics, metric) {
 				c.logger.Errorf("Required metric %s not found on attempt %d", metric, attempt)
 				accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Required metric %s not found", metric)})
-				return nil
+				allMetricsFound = false
 			}
 		}
 
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: true})
-		return nil
+		if allMetricsFound {
+			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: true})
+			return nil
+		}
+
+		retriesRemaining--
+		time.Sleep(RetryInterval)
 	}
 
 	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to fetch metrics after %d retries", MaxRetry)})

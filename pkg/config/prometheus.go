@@ -11,6 +11,7 @@ type Prometheus struct {
 	Executable                      string   `yaml:"executable" default:"/bin/prometheus" env:"PROMETHEUS_EXECUTABLE" env-description:"Prometheus Executable Path"`
 	KubeStateMetricsServiceEndpoint string   `yaml:"kube_state_metrics_service_endpoint" env:"KMS_EP_URL" required:"true" env-description:"Kube State Metrics Service Endpoint"`
 	Configurations                  []string `yaml:"configurations"`
+	KubeMetrics                     []string `yaml:"kube_metrics"`
 }
 
 func (s *Prometheus) Validate() error {
@@ -43,5 +44,10 @@ func (s *Prometheus) Validate() error {
 		}
 		s.Configurations = cleanedPaths
 	}
+
+	if len(s.KubeMetrics) == 0 {
+		return errors.New("no KubeMetrics provided")
+	}
+
 	return nil
 }
