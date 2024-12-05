@@ -23,6 +23,7 @@ func TestPrometheus_Validate(t *testing.T) {
 			prom: config.Prometheus{
 				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
 				Configurations:                  []string{scrapeConfigFile},
+				KubeMetrics:                     []string{"kube_node_info", "kube_pod_info"},
 			},
 			expected: nil,
 		},
@@ -30,6 +31,7 @@ func TestPrometheus_Validate(t *testing.T) {
 			name: "MissingKubeStateMetricsServiceEndpoint",
 			prom: config.Prometheus{
 				Configurations: []string{scrapeConfigFile},
+				KubeMetrics:    []string{"kube_node_info", "kube_pod_info"},
 			},
 			expected: errors.New(config.ErrNoKubeStateMetricsServiceEndpointMsg),
 		},
@@ -37,8 +39,17 @@ func TestPrometheus_Validate(t *testing.T) {
 			name: "MissingScrapeConfigLocation",
 			prom: config.Prometheus{
 				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
+				KubeMetrics:                     []string{"kube_node_info", "kube_pod_info"},
 			},
 			expected: nil,
+		},
+		{
+			name: "MissingKubeMetrics",
+			prom: config.Prometheus{
+				KubeStateMetricsServiceEndpoint: kmsServiceEndpoint,
+				Configurations:                  []string{scrapeConfigFile},
+			},
+			expected: errors.New("no KubeMetrics provided"),
 		},
 	}
 
