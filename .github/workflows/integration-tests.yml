@@ -1,0 +1,40 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    # references local file ".secrets"
+    env:
+      CLOUDZERO_API_KEY: ${{ secrets.CLOUDZERO_API_KEY }}
+      CLOUDZERO_HOST: ${{ secrets.CLOUDZERO_HOST }}
+      CLOUD_ACCOUNT_ID: ${{ secrets.CLOUD_ACCOUNT_ID }}
+      CSP_REGION: ${{ secrets.CSP_REGION }}
+      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+      API_KEY_PATH: ${{ secrets.API_KEY_PATH }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.22.4
+
+      - name: Print environment variables
+        run: env
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run integration tests
+        run: go test -tags=integration -run ^TestRemoteWrite$ ./...

@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package test
 
 import (
@@ -8,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
-
-	netHttp "net/http"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	netHttp "net/http"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
@@ -99,6 +98,80 @@ func TestIntegration(t *testing.T) {
 	assert.Equal(t, (*results[0].MetricLabels)["namespace"], "default")
 	assert.Equal(t, (*results[0].MetricLabels)["pod"], "example-pod")
 	assert.Equal(t, (*results[0].MetricLabels)["resource_type"], "pod")
+}
+
+func TestRemoteWrite(t *testing.T) {
+	// Set up the configuration settings directly
+  settings := &config.Settings{
+      CloudAccountID: os.Getenv("CLOUD_ACCOUNT_ID"),
+      Region:         os.Getenv("CSP_REGION"),
+      ClusterName:    os.Getenv("CLUSTER_NAME"),
+      Host:           os.Getenv("CLOUDZERO_HOST"),
+      RemoteWrite: config.RemoteWrite{
+          APIKey:          os.Getenv("CLOUDZERO_API_KEY"), // Set the API key directly from environment variable
+          MaxBytesPerSend: 10000000,
+          SendInterval:    60 * time.Second,
+          SendTimeout:     10 * time.Second,
+          MaxRetries:      3,
+      },
+      Database: config.Database{
+          BatchUpdateSize: 100, // Set the batch update size
+      },
+  }
+
+	// Manually set the RemoteWrite URL
+	baseURL, err := url.Parse(fmt.Sprintf("https://%s", settings.Host))
+	if err != nil {
+		t.Fatalf("Malformed URL: %v", err)
+	}
+	baseURL.Path += "/v1/container-metrics"
+	params := url.Values{}
+	params.Add("cluster_name", settings.ClusterName)
+	params.Add("cloud_account_id", settings.CloudAccountID)
+	params.Add("region", settings.Region)
+	baseURL.RawQuery = params.Encode()
+	settings.RemoteWrite.Host = baseURL.String()
+
+	db := storage.SetupDatabase()
+	writer := storage.NewWriter(db, settings)
+	reader := storage.NewReader(db, settings)
+
+	// Insert dummy data into the database
+	insertDummyData(writer)
+
+	remoteWriter := http.NewRemoteWriter(writer, reader, settings)
+
+	// Call the Flush method and check for errors
+	err = remoteWriter.Flush()
+	assert.NilError(t, err)
+}
+
+func insertDummyData(writer storage.DatabaseWriter) {
+    dummyRecords := []storage.ResourceTags{
+        {
+            Type:          config.Pod,
+            Name:          "example-pod-with-namespace",
+            Namespace:     stringPtr("default"),
+            Labels:        &config.MetricLabelTags{"example-label": "pod-label-1", "env": "production"},
+            MetricLabels:  &config.MetricLabels{"namespace": "default", "pod": "example-pod-with-namespace", "resource_type": "pod"},
+            Annotations:   &config.MetricLabelTags{"example-annotation": "pod-annotation-1"},
+            RecordCreated: time.Now(),
+            RecordUpdated: time.Now(),
+        },
+    }
+
+    for _, record := range dummyRecords {
+        log.Printf("Inserting dummy record: %+v", record)
+        err := writer.WriteData(record, true) // Use the WriteData method to insert data
+        if err != nil {
+            log.Printf("failed to insert dummy data: %v", err)
+        }
+    }
+}
+
+// stringPtr returns a pointer to the given string
+func stringPtr(s string) *string {
+	return &s
 }
 
 type AdmissionReviewRequest struct {
