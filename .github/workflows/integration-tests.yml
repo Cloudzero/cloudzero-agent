@@ -14,12 +14,11 @@ jobs:
 
     # references local file ".secrets"
     env:
-      CLOUDZERO_API_KEY: ${{ secrets.CLOUDZERO_API_KEY }}
-      CLOUDZERO_HOST: ${{ secrets.CLOUDZERO_HOST }}
-      CLOUD_ACCOUNT_ID: ${{ secrets.CLOUD_ACCOUNT_ID }}
-      CSP_REGION: ${{ secrets.CSP_REGION }}
-      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
-      API_KEY_PATH: ${{ secrets.API_KEY_PATH }}
+      CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+      CLOUDZERO_HOST: dev-api.cloudzero.com
+      CLOUD_ACCOUNT_ID: "12345"
+      CSP_REGION: "us-east-1"
+      CLUSTER_NAME: "insights-controller-integration-test"
 
     steps:
       - name: Checkout code
