@@ -102,22 +102,22 @@ func TestIntegration(t *testing.T) {
 
 func TestRemoteWrite(t *testing.T) {
 	// Set up the configuration settings directly
-  settings := &config.Settings{
-      CloudAccountID: os.Getenv("CLOUD_ACCOUNT_ID"),
-      Region:         os.Getenv("CSP_REGION"),
-      ClusterName:    os.Getenv("CLUSTER_NAME"),
-      Host:           os.Getenv("CLOUDZERO_HOST"),
-      RemoteWrite: config.RemoteWrite{
-          APIKey:          os.Getenv("CLOUDZERO_API_KEY"), // Set the API key directly from environment variable
-          MaxBytesPerSend: 10000000,
-          SendInterval:    60 * time.Second,
-          SendTimeout:     10 * time.Second,
-          MaxRetries:      3,
-      },
-      Database: config.Database{
-          BatchUpdateSize: 100, // Set the batch update size
-      },
-  }
+	settings := &config.Settings{
+		CloudAccountID: os.Getenv("CLOUD_ACCOUNT_ID"),
+		Region:         os.Getenv("CSP_REGION"),
+		ClusterName:    os.Getenv("CLUSTER_NAME"),
+		Host:           os.Getenv("CLOUDZERO_HOST"),
+		RemoteWrite: config.RemoteWrite{
+			APIKey:          os.Getenv("CLOUDZERO_DEV_API_KEY"), // Set the API key directly from environment variable
+			MaxBytesPerSend: 10000000,
+			SendInterval:    60 * time.Second,
+			SendTimeout:     10 * time.Second,
+			MaxRetries:      3,
+		},
+		Database: config.Database{
+			BatchUpdateSize: 100, // Set the batch update size
+		},
+	}
 
 	// Manually set the RemoteWrite URL
 	baseURL, err := url.Parse(fmt.Sprintf("https://%s", settings.Host))
@@ -147,26 +147,26 @@ func TestRemoteWrite(t *testing.T) {
 }
 
 func insertDummyData(writer storage.DatabaseWriter) {
-    dummyRecords := []storage.ResourceTags{
-        {
-            Type:          config.Pod,
-            Name:          "example-pod-with-namespace",
-            Namespace:     stringPtr("default"),
-            Labels:        &config.MetricLabelTags{"example-label": "pod-label-1", "env": "production"},
-            MetricLabels:  &config.MetricLabels{"namespace": "default", "pod": "example-pod-with-namespace", "resource_type": "pod"},
-            Annotations:   &config.MetricLabelTags{"example-annotation": "pod-annotation-1"},
-            RecordCreated: time.Now(),
-            RecordUpdated: time.Now(),
-        },
-    }
+	dummyRecords := []storage.ResourceTags{
+		{
+			Type:          config.Pod,
+			Name:          "example-pod-with-namespace",
+			Namespace:     stringPtr("default"),
+			Labels:        &config.MetricLabelTags{"example-label": "pod-label-1", "env": "production"},
+			MetricLabels:  &config.MetricLabels{"namespace": "default", "pod": "example-pod-with-namespace", "resource_type": "pod"},
+			Annotations:   &config.MetricLabelTags{"example-annotation": "pod-annotation-1"},
+			RecordCreated: time.Now(),
+			RecordUpdated: time.Now(),
+		},
+	}
 
-    for _, record := range dummyRecords {
-        log.Printf("Inserting dummy record: %+v", record)
-        err := writer.WriteData(record, true) // Use the WriteData method to insert data
-        if err != nil {
-            log.Printf("failed to insert dummy data: %v", err)
-        }
-    }
+	for _, record := range dummyRecords {
+		log.Printf("Inserting dummy record: %+v", record)
+		err := writer.WriteData(record, true) // Use the WriteData method to insert data
+		if err != nil {
+			log.Printf("failed to insert dummy data: %v", err)
+		}
+	}
 }
 
 // stringPtr returns a pointer to the given string
