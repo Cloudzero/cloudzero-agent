@@ -39,28 +39,28 @@ func (rw *RemoteWriter) StartRemoteWriter() time.Ticker {
 	return *ticker
 }
 
-func (rw *RemoteWriter) Flush() {
+func (rw *RemoteWriter) Flush() error {
 	ctx, cancel := context.WithTimeout(context.Background(), rw.settings.RemoteWrite.SendTimeout)
 	defer cancel()
 	currentTime := rw.clock.GetCurrentTime()
-flushLoop:
+
 	for {
 		select {
 		case <-ctx.Done():
 			log.Printf("Flush operation timed out: %v", ctx.Err())
-			return
+			return ctx.Err()
 		default:
 			log.Debug().Msgf("Starting data upload at %v", currentTime)
 			// get a chunk of data to process
 			recordsToProcess, err := rw.reader.ReadData(currentTime)
 			if err != nil {
 				log.Error().Msgf("failed to read data from storage: %v", err)
-				break flushLoop
+				return err
 			}
 			// if there are no records to process, stop processing
 			if len(recordsToProcess) == 0 {
 				log.Debug().Msg("Done remote writing records")
-				return
+				return nil
 			}
 			// format metrics to prometheus format
 			ts := rw.formatMetrics(recordsToProcess)
@@ -70,14 +70,14 @@ flushLoop:
 			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
 			if err != nil {
 				log.Error().Msgf("failed to push metrics to remote write: %v", err)
-				break flushLoop
+				return err
 			}
 
 			// mark records as processed
 			updatedRecordCount, err := rw.writer.UpdateSentAtForRecords(recordsToProcess, currentTime)
 			if err != nil || updatedRecordCount != int64(len(recordsToProcess)) {
 				log.Error().Msgf("failed to update sent_at for records: %v", err)
-				break flushLoop
+				return err
 			}
 		}
 	}
