@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/healthz"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
@@ -24,7 +26,6 @@ type AdmissionRouteSegment struct {
 
 // NewServer creates and return a http.Server
 func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...AdmissionRouteSegment) *http.Server {
-
 	ah := handler()
 	mux := http.NewServeMux()
 	for _, route := range admissionRoutes {
@@ -32,6 +33,7 @@ func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...A
 	}
 	// Internal routes
 	mux.Handle("/healthz", healthz.NewHealthz().EndpointHandler())
+	mux.Handle("/metrics", promhttp.Handler())
 
 	for _, route := range routes {
 		mux.Handle(route.Route, route.Hook)
