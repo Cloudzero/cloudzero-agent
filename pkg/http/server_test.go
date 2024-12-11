@@ -36,7 +36,6 @@ func TestNewServer(t *testing.T) {
 	assert.Equal(t, 10*time.Second, server.WriteTimeout)
 	assert.Equal(t, 15*time.Second, server.IdleTimeout)
 
-	// Instead of casting to *http.ServeMux, just use server.Handler directly
 	handler := server.Handler
 
 	tests := []struct {
