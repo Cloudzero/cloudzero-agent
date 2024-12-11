@@ -180,7 +180,6 @@ func TestMetricsInterface(t *testing.T) {
 
 	server := NewServer(cfg, routes)
 
-	// Don't cast to *http.ServeMux since the middleware changed the handler type
 	handler := server.Handler
 
 	req, err := http.NewRequest(http.MethodGet, "/metrics", nil)
