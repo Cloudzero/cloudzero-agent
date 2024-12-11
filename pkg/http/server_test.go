@@ -36,23 +36,22 @@ func TestNewServer(t *testing.T) {
 	assert.Equal(t, 10*time.Second, server.WriteTimeout)
 	assert.Equal(t, 15*time.Second, server.IdleTimeout)
 
-	mux := server.Handler.(*http.ServeMux)
+	handler := server.Handler
 
 	tests := []struct {
-		route         string
-		expectedRoute string
-		expectedCode  int
+		route        string
+		expectedCode int
 	}{
-		{route: "/test", expectedRoute: "/test", expectedCode: http.StatusOK},
-		{route: "/healthz", expectedRoute: "/healthz", expectedCode: http.StatusOK},
-		{route: "/metrics", expectedRoute: "/metrics", expectedCode: http.StatusOK},
+		{route: "/test", expectedCode: http.StatusOK},
+		{route: "/healthz", expectedCode: http.StatusOK},
+		{route: "/metrics", expectedCode: http.StatusOK},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.route, func(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, tt.route, nil)
 			rr := httptest.NewRecorder()
-			mux.ServeHTTP(rr, req)
+			handler.ServeHTTP(rr, req)
 			assert.Equal(t, tt.expectedCode, rr.Code)
 		})
 	}
@@ -180,15 +179,18 @@ func TestMetricsInterface(t *testing.T) {
 	}
 
 	server := NewServer(cfg, routes)
-	mux := server.Handler.(*http.ServeMux)
+
+	handler := server.Handler
 
 	req, err := http.NewRequest(http.MethodGet, "/metrics", nil)
 	assert.NoError(t, err)
 
 	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, req)
-	assert.Equal(t, http.StatusOK, rr.Code) // Assuming /metrics is not handled by this handler
+	handler.ServeHTTP(rr, req) // Use the handler interface directly
+
+	assert.Equal(t, http.StatusOK, rr.Code)
 	body := rr.Body.String()
+
 	for _, metric := range basicMetrics {
 		assert.Contains(t, body, metric)
 	}
