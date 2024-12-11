@@ -28,7 +28,7 @@ var (
 		[]string{"route", "method", "status_code"},
 	)
 
-	once sync.Once
+	httpMiddlewareStatsOnce sync.Once
 )
 
 type statusRecorder struct {
@@ -42,7 +42,7 @@ func (r *statusRecorder) WriteHeader(code int) {
 }
 
 func MetricsMiddlewareWrapper(next http.Handler) http.Handler {
-	once.Do(func() {
+	httpMiddlewareStatsOnce.Do(func() {
 		prometheus.MustRegister(RequestCount, RequestDuration)
 	})
 
