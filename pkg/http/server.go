@@ -40,9 +40,12 @@ func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...A
 		mux.Handle(route.Route, route.Hook)
 	}
 
+	handler := MetricsMiddlewareWrapper(mux)
+	handler = LoggingMiddlewareWrapper(handler)
+
 	return &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
-		Handler:      MetricsMiddlewareWrapper(mux),
+		Handler:      handler,
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout),
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout),
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout),

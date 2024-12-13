@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/k8s"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/monitors"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 )
 
@@ -32,6 +34,18 @@ func main() {
 	settings, err := config.NewSettings(configFiles...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load settings")
+	}
+	ctx := context.Background()
+
+	// Start a monitor that can pickup secrets changes and update the settings
+	monitor, err := monitors.NewSecretMonitor(ctx, settings)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize secret monitor")
+	}
+	defer func() { _ = monitor.Shutdown() }()
+
+	if err := monitor.Start(); err != nil {
+		log.Fatal().Err(err).Msg("failed to run secret monitor") // nolint: gocritic
 	}
 
 	// setup database
@@ -75,7 +89,7 @@ func main() {
 		log.Error().Msgf("Received %s signal; shutting down...", sig)
 		// flush database before shutdown
 		rmw.Flush()
-		if err := server.Shutdown(context.Background()); err != nil {
+		if err := server.Shutdown(ctx); err != nil {
 			log.Error().Err(err).Msg("Error shutting down server")
 		}
 	}()
@@ -108,7 +122,21 @@ func main() {
 		}
 	} else {
 		log.Info().Msg("Starting server with TLS")
-		err := server.ListenAndServeTLS(settings.Certificate.Cert, settings.Certificate.Key)
+		// Register a signup handler
+		sigc := make(chan os.Signal, 1)
+		defer close(sigc)
+		signal.Notify(sigc, syscall.SIGHUP)
+
+		// Options
+		sig := monitors.WithSIGHUPReload(sigc)
+		certs := monitors.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
+		verify := monitors.WithVerifyConnection()
+		cb := monitors.WithOnReload(func(c *tls.Config) {
+			log.Info().Msg("TLS certificates rotated !!")
+		})
+		server.TLSConfig = monitors.TLSConfig(sig, certs, verify, cb)
+
+		err := server.ListenAndServeTLS("", "")
 		if err != nil {
 			log.Fatal().Err(err).Msgf("Failed to listen and serve: %v", err)
 		}

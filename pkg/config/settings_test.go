@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
@@ -77,7 +79,7 @@ host: "api.cloudzero.com"
 		assert.Equal(t, "us-west-2", settings.Region)
 		assert.Equal(t, "test-cluster", settings.ClusterName)
 		assert.Equal(t, "api.cloudzero.com", settings.Host)
-		assert.Equal(t, apiKeyContent, settings.RemoteWrite.APIKey)
+		assert.Equal(t, apiKeyContent, settings.GetAPIKey())
 		assert.Equal(t, "https://api.cloudzero.com/v1/container-metrics?cloud_account_id=123456789012&cluster_name=test-cluster&region=us-west-2", settings.RemoteWrite.Host)
 		assert.Equal(t, 10000000, settings.RemoteWrite.MaxBytesPerSend)
 		assert.Equal(t, 60*time.Second, settings.RemoteWrite.SendInterval)

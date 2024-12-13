@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog/log"
 )
 
 // Define your Prometheus metrics
@@ -62,5 +63,22 @@ func MetricsMiddlewareWrapper(next http.Handler) http.Handler {
 
 		// Observe the request duration
 		RequestDuration.WithLabelValues(route, method, statusCode).Observe(duration)
+	})
+}
+
+func LoggingMiddlewareWrapper(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+
+		next.ServeHTTP(recorder, r)
+
+		duration := time.Since(startTime)
+		statusCode := recorder.status
+		route := r.URL.Path
+		method := r.Method
+
+		// Log the request details
+		log.Debug().Msgf("%s %s %d %s", method, route, statusCode, duration)
 	})
 }

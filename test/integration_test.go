@@ -1,6 +1,9 @@
 //go:build integration
 // +build integration
 
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package test
 
 import (
@@ -13,8 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	netHttp "net/http"
+
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/require"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
@@ -103,15 +108,37 @@ func TestIntegration(t *testing.T) {
 	assert.Equal(t, (*results[0].MetricLabels)["resource_type"], "pod")
 }
 
+// createAPIKeyFile creates a temporary API key file with the given content.
+// It returns the file path and a cleanup function to remove the file.
+func createAPIKeyFile(t *testing.T, apiKeyContent string) string {
+	apiKeyFile, err := os.CreateTemp("", "api_key-*.txt")
+	require.NoError(t, err, "Failed to create temp API key file")
+
+	_, err = apiKeyFile.Write([]byte(apiKeyContent))
+	require.NoError(t, err, "Failed to write to temp API key file")
+
+	err = apiKeyFile.Close()
+	require.NoError(t, err, "Failed to close temp API key file")
+
+	t.Cleanup(func() {
+		_ = os.Remove(apiKeyFile.Name())
+	})
+
+	return apiKeyFile.Name()
+}
+
 func TestRemoteWrite(t *testing.T) {
+
+	apiKeyPath := createAPIKeyFile(t, os.Getenv("CLOUDZERO_DEV_API_KEY"))
+
 	// Set up the configuration settings directly
 	settings := &config.Settings{
+		APIKeyPath:     apiKeyPath,
 		CloudAccountID: os.Getenv("CLOUD_ACCOUNT_ID"),
 		Region:         os.Getenv("CSP_REGION"),
 		ClusterName:    os.Getenv("CLUSTER_NAME"),
 		Host:           os.Getenv("CLOUDZERO_HOST"),
 		RemoteWrite: config.RemoteWrite{
-			APIKey:          os.Getenv("CLOUDZERO_DEV_API_KEY"), // Set the API key directly from environment variable
 			MaxBytesPerSend: 10000000,
 			SendInterval:    60 * time.Second,
 			SendTimeout:     10 * time.Second,
@@ -121,6 +148,7 @@ func TestRemoteWrite(t *testing.T) {
 			BatchUpdateSize: 100, // Set the batch update size
 		},
 	}
+	settings.SetAPIKey()
 
 	// Manually set the RemoteWrite URL
 	baseURL, err := url.Parse(fmt.Sprintf("https://%s", settings.Host))

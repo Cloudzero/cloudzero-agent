@@ -171,11 +171,18 @@ func (rw *RemoteWriter) Flush() error {
 				return nil
 			}
 
+			apiToken := rw.settings.GetAPIKey()
+			if apiToken == "" {
+				log.Error().Msg("API key is empty")
+				remoteWriteFailures.WithLabelValues(endpoint).Inc()
+				return fmt.Errorf("API key is empty")
+			}
+
 			ts := rw.formatMetrics(recordsToProcess)
 			log.Debug().Msgf("Pushing %d records to remote write endpoint", len(ts))
 
 			// Attempt to push metrics
-			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, string(rw.settings.RemoteWrite.APIKey), ts)
+			err = rw.pushMetrics(rw.settings.RemoteWrite.Host, apiToken, ts)
 			if err != nil {
 				log.Error().Msgf("failed to push metrics to remote write: %v", err)
 				// Increment the failure counter since it was not successful

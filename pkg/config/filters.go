@@ -20,7 +20,7 @@ type MetricLabels = map[string]string
 // Represents metric labels attached to a metric that represent annotations or labels; value must be prefixed with "label_"
 type MetricLabelTags = map[string]string
 
-func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, settings Settings) MetricLabelTags {
+func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, settings *Settings) MetricLabelTags {
 	filteredTags := make(MetricLabels)
 	if !enabled {
 		return filteredTags
@@ -33,7 +33,7 @@ func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, sett
 	return filteredTags
 }
 
-func evalTag(key string, value string, patterns []regexp.Regexp, settings Settings) bool {
+func evalTag(key string, value string, patterns []regexp.Regexp, settings *Settings) bool {
 	if settings.Filters.Policy.Sanitize(key) != key {
 		log.Warn().Msgf("tag: %s does not satisfy filter policy", key)
 		return false

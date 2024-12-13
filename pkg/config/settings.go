@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -34,10 +35,13 @@ type Settings struct {
 	K8sClient         K8sClient   `yaml:"k8s_client"`
 	LabelMatches      []regexp.Regexp
 	AnnotationMatches []regexp.Regexp
+
+	// control for dynamic reloading
+	mu sync.Mutex
 }
 
 type RemoteWrite struct {
-	APIKey          string
+	apiKey          string
 	Host            string
 	MaxBytesPerSend int           `yaml:"max_bytes_per_send" default:"10000000" env:"MAX_BYTES_PER_SEND" env-description:"maximum bytes to send in a single request"`
 	SendInterval    time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
@@ -62,27 +66,44 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		}
 	}
 	cfg.setCompiledFilters()
-	cfg.getAPIKey()
+
+	if err := cfg.SetAPIKey(); err != nil {
+		return nil, errors.Wrap(err, "failed to get API key")
+	}
+
 	cfg.setRemoteWriteURL()
 	cfg.setPolicy()
 	return &cfg, nil
 }
 
-func (s *Settings) getAPIKey() {
+func (s *Settings) GetAPIKey() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.RemoteWrite.apiKey
+}
+
+func (s *Settings) SetAPIKey() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	apiKeyPathLocation, err := absFilePath(s.APIKeyPath)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get API key file path")
+		return errors.Wrap(err, "failed to get absolute path")
 	}
 
 	if _, err := os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
-		log.Fatal().Err(err).Msg("API key file does not exist")
+		return errors.Wrap(err, fmt.Sprintf("API key file %s not found", apiKeyPathLocation))
 	}
 	apiKey, err := os.ReadFile(s.APIKeyPath)
 	if err != nil {
-		log.Err(err).Msg("Failed to read API key")
+		return errors.Wrap(err, "failed to read API key")
 	}
-	s.RemoteWrite.APIKey = string(apiKey)
+	s.RemoteWrite.apiKey = strings.TrimSpace(string(apiKey))
+
+	if len(s.RemoteWrite.apiKey) == 0 {
+		return errors.New("API key is empty")
+	}
+	return nil
 }
 
 func (s *Settings) setRemoteWriteURL() {

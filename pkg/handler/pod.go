@@ -67,8 +67,8 @@ func (ph *PodHandler) writeDataToStorage(po *corev1.Pod, isCreate bool) {
 
 func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTags {
 	namespace := po.GetNamespace()
-	labels := config.Filter(po.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), *settings)
-	annotations := config.Filter(po.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), *settings)
+	labels := config.Filter(po.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
+	annotations := config.Filter(po.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
 	metricLabels := config.MetricLabels{
 		"pod":           po.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,

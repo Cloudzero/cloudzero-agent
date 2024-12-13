@@ -1,9 +1,12 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package http
 
 import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -11,15 +14,17 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
+// MockWriter is a mock implementation of the Writer interface.
 type MockWriter struct {
 	mock.Mock
 }
 
 func (m *MockWriter) WriteData(data storage.ResourceTags, isCreate bool) error {
-	args := m.Called(data)
-	return args.Error(1)
+	args := m.Called(data, isCreate)
+	return args.Error(0)
 }
 
 func (m *MockWriter) UpdateSentAtForRecords(records []storage.ResourceTags, ct time.Time) (int64, error) {
@@ -33,6 +38,7 @@ func (m *MockWriter) PurgeStaleData(rt time.Duration) error {
 	return nil
 }
 
+// MockReader is a mock implementation of the Reader interface.
 type MockReader struct {
 	mock.Mock
 }
@@ -40,9 +46,13 @@ type MockReader struct {
 func (m *MockReader) ReadData(ct time.Time) ([]storage.ResourceTags, error) {
 	args := m.Called(ct)
 	mockRecords := args.Get(0)
+	if mockRecords == nil {
+		return nil, args.Error(1)
+	}
 	return mockRecords.([]storage.ResourceTags), args.Error(1)
 }
 
+// MockClock is a mock implementation of the Clock interface.
 type MockClock struct {
 	mock.Mock
 }
@@ -52,50 +62,120 @@ func (m *MockClock) GetCurrentTime() time.Time {
 	return args.Get(0).(time.Time)
 }
 
-func TestRemoteWriter_Flush(t *testing.T) {
-	testApiKey := "test-api-key"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Basic request validation
-		if r.Method != http.MethodPost {
-			t.Errorf("Expected POST method, got: %s", r.Method)
-		}
-		if r.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", testApiKey) {
-			t.Errorf("Expected test-api-key for Authorization, got: %s", r.Header.Get("Authorization"))
-		}
-		if r.Header.Get("Content-Encoding") != "snappy" {
-			t.Errorf("Expected snappy for Content-Encoding, got: %s", r.Header.Get("Content-Encoding"))
-		}
-		if r.Header.Get("Content-Type") != "application/x-protobuf" {
-			t.Errorf("Expected Content-Type: application/x-protobuf, got: %s", r.Header.Get("Content-Type"))
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+// TestSetup encapsulates common setup for tests.
+type TestSetup struct {
+	apiKeyPath string
+	server     *httptest.Server
+	settings   *config.Settings
+	mockClock  *MockClock
+	mockWriter *MockWriter
+	mockReader *MockReader
+	rw         *RemoteWriter
+}
 
+// createAPIKeyFile creates a temporary API key file with the given content.
+// It returns the file path and a cleanup function to remove the file.
+func createAPIKeyFile(t *testing.T, apiKeyContent string) string {
+	apiKeyFile, err := os.CreateTemp("", "api_key-*.txt")
+	require.NoError(t, err, "Failed to create temp API key file")
+
+	_, err = apiKeyFile.Write([]byte(apiKeyContent))
+	require.NoError(t, err, "Failed to write to temp API key file")
+
+	err = apiKeyFile.Close()
+	require.NoError(t, err, "Failed to close temp API key file")
+
+	t.Cleanup(func() {
+		_ = os.Remove(apiKeyFile.Name())
+	})
+
+	return apiKeyFile.Name()
+}
+
+// setupTest initializes the test environment and returns a TestSetup instance.
+func setupTest(t *testing.T, handlerFunc http.HandlerFunc, apiKeyContent string) *TestSetup {
+	// Create temporary API key file
+	apiKeyPath := createAPIKeyFile(t, apiKeyContent)
+
+	// Start test HTTP server
+	server := httptest.NewServer(http.HandlerFunc(handlerFunc))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	// Initialize settings
 	settings := &config.Settings{
+		APIKeyPath: apiKeyPath,
 		RemoteWrite: config.RemoteWrite{
 			SendInterval: time.Minute,
 			Host:         server.URL,
-			APIKey:       testApiKey,
 			SendTimeout:  5 * time.Second,
 			MaxRetries:   3,
 		},
 	}
+	settings.SetAPIKey()
 
+	// Initialize mocks
+	mockClock := new(MockClock)
+	mockWriter := new(MockWriter)
+	mockReader := new(MockReader)
+
+	// Initialize RemoteWriter
+	rw := &RemoteWriter{
+		reader:   mockReader,
+		writer:   mockWriter,
+		settings: settings,
+		clock:    mockClock,
+	}
+
+	return &TestSetup{
+		apiKeyPath: apiKeyPath,
+		server:     server,
+		settings:   settings,
+		mockClock:  mockClock,
+		mockWriter: mockWriter,
+		mockReader: mockReader,
+		rw:         rw,
+	}
+}
+
+// resetAllMetrics resets all Prometheus metrics used in the tests.
+func resetAllMetrics() {
+	remoteWriteTimeseriesSent.Reset()
+	remoteWriteBacklog.Reset()
+	remoteWriteFailures.Reset()
+	remoteWriteRequestDuration.Reset()
+	remoteWriteResponseCodes.Reset()
+	remoteWritePayloadSizeBytes.Reset()
+	remoteWriteRecordsProcessed.Reset()
+	remoteWriteDBFailures.Reset()
+}
+
+func TestRemoteWriter_Flush(t *testing.T) {
 	t.Run("successful flush with metrics check", func(t *testing.T) {
-		// Reset metrics to a known state before test
-		remoteWriteTimeseriesSent.Reset()
-		remoteWriteBacklog.Reset()
-		remoteWriteFailures.Reset()
-		remoteWriteRequestDuration.Reset()
-		remoteWriteResponseCodes.Reset()
-		remoteWritePayloadSizeBytes.Reset()
+		resetAllMetrics()
 
-		mockClock := new(MockClock)
-		mockWriter := new(MockWriter)
-		mockReader := new(MockReader)
-		rw := &RemoteWriter{reader: mockReader, writer: mockWriter, settings: settings, clock: mockClock}
+		apiKeyContent := "test-api-key"
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			// Basic request validation
+			if r.Method != http.MethodPost {
+				t.Errorf("Expected POST method, got: %s", r.Method)
+			}
+			if r.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", apiKeyContent) {
+				t.Errorf("Expected Authorization header to be 'Bearer %s', got: %s", apiKeyContent, r.Header.Get("Authorization"))
+			}
+			if r.Header.Get("Content-Encoding") != "snappy" {
+				t.Errorf("Expected Content-Encoding 'snappy', got: %s", r.Header.Get("Content-Encoding"))
+			}
+			if r.Header.Get("Content-Type") != "application/x-protobuf" {
+				t.Errorf("Expected Content-Type 'application/x-protobuf', got: %s", r.Header.Get("Content-Type"))
+			}
+			w.WriteHeader(http.StatusOK)
+		}
 
+		setup := setupTest(t, handler, apiKeyContent)
+
+		// Prepare test data
 		currentTime := time.Now().UTC()
 		singleRecord := storage.ResourceTags{
 			Name:          "test-deployment",
@@ -110,147 +190,88 @@ func TestRemoteWriter_Flush(t *testing.T) {
 		}
 		records := []storage.ResourceTags{singleRecord}
 
-		expectedTime := time.Now().UTC()
-		mockClock.On("GetCurrentTime").Return(expectedTime).Once()
-		mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
-		mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(1), nil).Once()
+		expectedTime := currentTime.Add(time.Minute) // Arbitrary adjustment for example
+		setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()
+		setup.mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
+		setup.mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(1), nil).Once()
+		setup.mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
 
-		// After sending the first batch, we expect the next ReadData call to return no records
-		mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
+		// Execute Flush
+		err := setup.rw.Flush()
+		require.NoError(t, err, "Flush should not return an error")
 
-		err := rw.Flush()
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
+		// Validate metrics
+		endpoint := setup.server.URL
 
-		// Check metrics
-		endpoint := server.URL
-
-		// We sent 1 timeseries (two sets if annotations were included, but here just one timeseries),
-		// The formatMetrics method returns at least one timeseries per record, possibly more.
-		// In this example:
-		// Each record with labels creates one timeseries. (No annotations in this record.)
 		wantTimeseries := float64(1)
+		got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint))
+		require.Equal(t, wantTimeseries, got, "remoteWriteTimeseriesSent metric mismatch")
 
-		// remoteWriteTimeseriesSent should have incremented by wantTimeseries
-		if got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint)); got != wantTimeseries {
-			t.Errorf("remoteWriteTimeseriesSent: got %f, want %f", got, wantTimeseries)
-		}
+		got = testutil.ToFloat64(remoteWriteBacklog.WithLabelValues(endpoint))
+		require.Equal(t, 0.0, got, "remoteWriteBacklog metric should be 0")
 
-		// Expect backlog of 0 by the end of flush
-		if got := testutil.ToFloat64(remoteWriteBacklog.WithLabelValues(endpoint)); got != 0 {
-			t.Errorf("remoteWriteBacklog: got %f, want 0", got)
-		}
+		got = testutil.ToFloat64(remoteWriteResponseCodes.WithLabelValues(endpoint, "200"))
+		require.Equal(t, 1.0, got, "remoteWriteResponseCodes for 200 should be 1")
 
-		// Since we got a 200 OK, remoteWriteResponseCodes with "200" label should have incremented
-		if got := testutil.ToFloat64(remoteWriteResponseCodes.WithLabelValues(endpoint, "200")); got != 1 {
-			t.Errorf("remoteWriteResponseCodes 200: got %f, want 1", got)
-		}
+		got = testutil.ToFloat64(remoteWriteFailures.WithLabelValues(endpoint))
+		require.Equal(t, 0.0, got, "remoteWriteFailures metric should be 0")
 
-		// No failures expected in this scenario
-		if got := testutil.ToFloat64(remoteWriteFailures.WithLabelValues(endpoint)); got != 0 {
-			t.Errorf("remoteWriteFailures: got %f, want 0", got)
-		}
+		require.True(t, testutil.CollectAndCount(remoteWriteRequestDuration) > 0, "remoteWriteRequestDuration should have observations")
+		require.True(t, testutil.CollectAndCount(remoteWritePayloadSizeBytes) > 0, "remoteWritePayloadSizeBytes should have observations")
 
-		// Request durations should have at least one observation
-		// Since it's a histogram, we just check that there's something registered
-		if count := testutil.CollectAndCount(remoteWriteRequestDuration); count == 0 {
-			t.Error("expected remoteWriteRequestDuration to have observations, got none")
-		}
-
-		// Payload size should also have at least one observation
-		if count := testutil.CollectAndCount(remoteWritePayloadSizeBytes); count == 0 {
-			t.Error("expected remoteWritePayloadSizeBytes to have observations, got none")
-		}
-
-		mockReader.AssertExpectations(t)
-		mockWriter.AssertExpectations(t)
+		// Assert mock expectations
+		setup.mockReader.AssertExpectations(t)
+		setup.mockWriter.AssertExpectations(t)
 	})
 
 	t.Run("no records to process", func(t *testing.T) {
-		// Reset metrics again for a clean slate
-		remoteWriteTimeseriesSent.Reset()
-		remoteWriteBacklog.Reset()
-		remoteWriteFailures.Reset()
-		remoteWriteRequestDuration.Reset()
-		remoteWriteResponseCodes.Reset()
-		remoteWritePayloadSizeBytes.Reset()
+		resetAllMetrics()
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			t.Errorf("Expected no request, got: %s", r.Method)
-		}))
-		defer server.Close()
-
-		settings := &config.Settings{
-			RemoteWrite: config.RemoteWrite{
-				SendInterval: time.Minute,
-				Host:         server.URL,
-				APIKey:       testApiKey,
-				SendTimeout:  5 * time.Second,
-			},
+		apiKeyContent := "test-api-key-no-records"
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			t.Errorf("Expected no request, but received one with method: %s", r.Method)
 		}
 
-		mockClock := new(MockClock)
-		mockWriter := new(MockWriter)
-		mockReader := new(MockReader)
-		rw := &RemoteWriter{reader: mockReader, writer: mockWriter, settings: settings, clock: mockClock}
+		setup := setupTest(t, handler, apiKeyContent)
 
-		records := []storage.ResourceTags{}
-		expectedTime := time.Now().UTC()
-		mockClock.On("GetCurrentTime").Return(expectedTime)
-		mockReader.On("ReadData", expectedTime).Return(records, nil)
+		// Setup mocks for no records
+		currentTime := time.Now().UTC()
+		setup.mockClock.On("GetCurrentTime").Return(currentTime).Once()
+		setup.mockReader.On("ReadData", currentTime).Return([]storage.ResourceTags{}, nil).Once()
 
-		err := rw.Flush()
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
+		// Execute Flush
+		err := setup.rw.Flush()
+		require.NoError(t, err, "Flush should not return an error when there are no records")
 
-		// We had no records, so backlog should have been set to 0
-		endpoint := server.URL
-		if got := testutil.ToFloat64(remoteWriteBacklog.WithLabelValues(endpoint)); got != 0 {
-			t.Errorf("remoteWriteBacklog: got %f, want 0", got)
-		}
+		// Validate metrics
+		endpoint := setup.server.URL
 
-		// Since we never sent any timeseries, remoteWriteTimeseriesSent should remain 0
-		if got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint)); got != 0 {
-			t.Errorf("remoteWriteTimeseriesSent: got %f, want 0", got)
-		}
+		got := testutil.ToFloat64(remoteWriteBacklog.WithLabelValues(endpoint))
+		require.Equal(t, 0.0, got, "remoteWriteBacklog metric should be 0")
 
-		mockReader.AssertExpectations(t)
-		mockWriter.AssertNotCalled(t, "UpdateSentAtForRecords", mock.Anything)
+		got = testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint))
+		require.Equal(t, 0.0, got, "remoteWriteTimeseriesSent metric should be 0")
+
+		// Assert mock expectations
+		setup.mockReader.AssertExpectations(t)
+		setup.mockWriter.AssertNotCalled(t, "UpdateSentAtForRecords", mock.Anything, mock.Anything)
 	})
 }
 
 func TestRemoteWriter_Flush_DBUpdateSuccess(t *testing.T) {
-	// Reset all relevant metrics to a known state
-	remoteWriteTimeseriesSent.Reset()
-	remoteWriteRecordsProcessed.Reset()
-	remoteWriteDBFailures.Reset()
+	resetAllMetrics()
 
-	testApiKey := "test-api-key"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiKeyContent := "test-api-key-db-success"
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	settings := &config.Settings{
-		RemoteWrite: config.RemoteWrite{
-			SendInterval: time.Minute,
-			Host:         server.URL,
-			APIKey:       testApiKey,
-			SendTimeout:  5 * time.Second,
-			MaxRetries:   3,
-		},
 	}
 
-	mockClock := new(MockClock)
-	mockWriter := new(MockWriter)
-	mockReader := new(MockReader)
-	rw := &RemoteWriter{reader: mockReader, writer: mockWriter, settings: settings, clock: mockClock}
+	setup := setupTest(t, handler, apiKeyContent)
 
+	// Prepare test data
 	currentTime := time.Now().UTC()
 	singleRecord := storage.ResourceTags{
-		Name:          "test-deployment",
+		Name:          "test-deployment-db-success",
 		Type:          config.Deployment,
 		Labels:        &config.MetricLabelTags{"label1": "value1"},
 		Annotations:   nil,
@@ -258,73 +279,51 @@ func TestRemoteWriter_Flush_DBUpdateSuccess(t *testing.T) {
 		RecordCreated: currentTime,
 		RecordUpdated: currentTime,
 		SentAt:        nil,
+		Size:          30,
 	}
 	records := []storage.ResourceTags{singleRecord}
 
-	expectedTime := time.Now().UTC()
-	endpoint := server.URL
+	expectedTime := currentTime.Add(2 * time.Minute) // Arbitrary adjustment for example
+	setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()
+	setup.mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
+	setup.mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(len(records)), nil).Once()
+	setup.mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
 
-	// Set expectations
-	mockClock.On("GetCurrentTime").Return(expectedTime).Once()
-	mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
-	// On the second iteration, no more records
-	mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
-	// Simulate successful update
-	mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(len(records)), nil).Once()
-
-	// Run Flush
-	err := rw.Flush()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
+	// Execute Flush
+	err := setup.rw.Flush()
+	require.NoError(t, err, "Flush should not return an error on successful DB update")
 
 	// Validate metrics
-	// Timeseries sent should be incremented by 1 (we had 1 record)
-	if got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint)); got != 1.0 {
-		t.Errorf("remoteWriteTimeseriesSent: got %f, want 1.0", got)
-	}
+	endpoint := setup.server.URL
 
-	// Records processed should be incremented by the number of records (1)
-	if got := testutil.ToFloat64(remoteWriteRecordsProcessed.WithLabelValues(endpoint)); got != 1.0 {
-		t.Errorf("remoteWriteRecordsProcessed: got %f, want 1.0", got)
-	}
+	got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint))
+	require.Equal(t, 1.0, got, "remoteWriteTimeseriesSent metric should be 1")
 
-	// No DB failures should be recorded
-	if got := testutil.ToFloat64(remoteWriteDBFailures.WithLabelValues(endpoint)); got != 0.0 {
-		t.Errorf("remoteWriteDBFailures: got %f, want 0.0", got)
-	}
+	got = testutil.ToFloat64(remoteWriteRecordsProcessed.WithLabelValues(endpoint))
+	require.Equal(t, 1.0, got, "remoteWriteRecordsProcessed metric should be 1")
+
+	got = testutil.ToFloat64(remoteWriteDBFailures.WithLabelValues(endpoint))
+	require.Equal(t, 0.0, got, "remoteWriteDBFailures metric should be 0")
+
+	// Assert mock expectations
+	setup.mockReader.AssertExpectations(t)
+	setup.mockWriter.AssertExpectations(t)
 }
 
 func TestRemoteWriter_Flush_DBUpdateFailure(t *testing.T) {
-	// Reset metrics again
-	remoteWriteTimeseriesSent.Reset()
-	remoteWriteRecordsProcessed.Reset()
-	remoteWriteDBFailures.Reset()
+	resetAllMetrics()
 
-	testApiKey := "test-api-key"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiKeyContent := "test-api-key-db-failure"
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	settings := &config.Settings{
-		RemoteWrite: config.RemoteWrite{
-			SendInterval: time.Minute,
-			Host:         server.URL,
-			APIKey:       testApiKey,
-			SendTimeout:  5 * time.Second,
-			MaxRetries:   3,
-		},
 	}
 
-	mockClock := new(MockClock)
-	mockWriter := new(MockWriter)
-	mockReader := new(MockReader)
-	rw := &RemoteWriter{reader: mockReader, writer: mockWriter, settings: settings, clock: mockClock}
+	setup := setupTest(t, handler, apiKeyContent)
 
+	// Prepare test data
 	currentTime := time.Now().UTC()
 	singleRecord := storage.ResourceTags{
-		Name:          "test-deployment",
+		Name:          "test-deployment-db-failure",
 		Type:          config.Deployment,
 		Labels:        &config.MetricLabelTags{"label1": "value1"},
 		Annotations:   nil,
@@ -332,36 +331,32 @@ func TestRemoteWriter_Flush_DBUpdateFailure(t *testing.T) {
 		RecordCreated: currentTime,
 		RecordUpdated: currentTime,
 		SentAt:        nil,
+		Size:          25,
 	}
 	records := []storage.ResourceTags{singleRecord}
 
-	expectedTime := time.Now().UTC()
-	endpoint := server.URL
+	expectedTime := currentTime.Add(3 * time.Minute) // Arbitrary adjustment for example
+	setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()
+	setup.mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
+	setup.mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(0), fmt.Errorf("database error")).Once()
 
-	mockClock.On("GetCurrentTime").Return(expectedTime).Once()
-	mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
-	// Expect that we won't get to the second read due to error
-	mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(0), fmt.Errorf("database error")).Once()
+	// Execute Flush
+	err := setup.rw.Flush()
+	require.Error(t, err, "Flush should return an error when DB update fails")
 
-	// Call Flush - it will fail updating the database
-	err := rw.Flush()
-	if err == nil {
-		t.Fatalf("expected an error, got nil")
-	}
+	// Validate metrics
+	endpoint := setup.server.URL
 
-	// Timeseries sent should have been incremented by 1 because the push succeeded
-	// before we tried to update the database.
-	if got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint)); got != 1.0 {
-		t.Errorf("remoteWriteTimeseriesSent: got %f, want 1.0", got)
-	}
+	got := testutil.ToFloat64(remoteWriteTimeseriesSent.WithLabelValues(endpoint))
+	require.Equal(t, 1.0, got, "remoteWriteTimeseriesSent metric should be 1")
 
-	// Records processed should NOT increment because the database update failed
-	if got := testutil.ToFloat64(remoteWriteRecordsProcessed.WithLabelValues(endpoint)); got != 0.0 {
-		t.Errorf("remoteWriteRecordsProcessed: got %f, want 0.0", got)
-	}
+	got = testutil.ToFloat64(remoteWriteRecordsProcessed.WithLabelValues(endpoint))
+	require.Equal(t, 0.0, got, "remoteWriteRecordsProcessed metric should be 0 due to DB failure")
 
-	// DB failures should increment by 1
-	if got := testutil.ToFloat64(remoteWriteDBFailures.WithLabelValues(endpoint)); got != 1.0 {
-		t.Errorf("remoteWriteDBFailures: got %f, want 1.0", got)
-	}
+	got = testutil.ToFloat64(remoteWriteDBFailures.WithLabelValues(endpoint))
+	require.Equal(t, 1.0, got, "remoteWriteDBFailures metric should be 1")
+
+	// Assert mock expectations
+	setup.mockReader.AssertExpectations(t)
+	setup.mockWriter.AssertExpectations(t)
 }

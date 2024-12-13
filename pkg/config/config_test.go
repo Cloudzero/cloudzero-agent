@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package config_test
 
 import (
@@ -97,7 +99,7 @@ func TestFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := config.Filter(tt.tags, tt.patterns, tt.enabled, config.Settings{})
+			actual := config.Filter(tt.tags, tt.patterns, tt.enabled, &config.Settings{})
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
