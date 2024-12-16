@@ -42,7 +42,7 @@ jobs:
           echo "Processing tag: ${{ env.REGISTRY }}:${{ matrix.tag }}"
 
       - name: Grype Image Scan
-        uses: anchore/scan-action@v5
+        uses: anchore/scan-action@v6
         with:
           image: ${{ env.REGISTRY }}:${{ matrix.tag }}
           fail-build: true
