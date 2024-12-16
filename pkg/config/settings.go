@@ -73,6 +73,9 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 
 	cfg.setRemoteWriteURL()
 	cfg.setPolicy()
+
+	setLoggingOptions(&cfg.Logging)
+
 	return &cfg, nil
 }
 

@@ -2,6 +2,30 @@
 // SPDX-License-Identifier: Apache-2.0
 package config
 
+import (
+	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
+
 type Logging struct {
 	Level string `yaml:"level" default:"info" env:"LOG_LEVEL" env-description:"logging level such as debug, info, error"`
+}
+
+func setLoggingOptions(l *Logging) {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	// Set the logging level
+	switch l.Level {
+	case "debug":
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		log.Warn().Msgf("Unknown log level %s, defaulting to info", l.Level)
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 }
