@@ -159,6 +159,11 @@ func writeResources[T metav1.ListInterface](writer storage.DatabaseWriter, names
 }
 
 func (s *Scraper) writeNodes(ctx context.Context) {
+	// if nodes are not enabled, skip the work
+	if !s.settings.Filters.Labels.Resources.Nodes && !s.settings.Filters.Annotations.Resources.Nodes {
+		return
+	}
+
 	log.Info().Msg("Writing nodes to storage")
 	var _continue string
 	for {
