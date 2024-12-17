@@ -7,13 +7,11 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	v1 "k8s.io/api/apps/v1"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-
-	v1 "k8s.io/api/apps/v1"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type DeploymentHandler struct {
@@ -22,7 +20,7 @@ type DeploymentHandler struct {
 } // &v1.Deployment{}
 
 // NewValidationHook creates a new instance of deployment validation hook
-func NewDeploymentHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewDeploymentHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
@@ -71,12 +69,12 @@ func (h *DeploymentHandler) writeDataToStorage(o *v1.Deployment, isCreate bool) 
 	}
 }
 
-func FormatDeploymentData(o *v1.Deployment, settings *config.Settings) storage.ResourceTags {
+func FormatDeploymentData(o *v1.Deployment, settings *config.Settings) types.ResourceTags {
 	var (
-		labels      config.MetricLabelTags = config.MetricLabelTags{}
-		annotations config.MetricLabelTags = config.MetricLabelTags{}
-		namespace                          = o.GetNamespace()
-		workload                           = o.GetName()
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		namespace   = o.GetNamespace()
+		workload    = o.GetName()
 	)
 	if settings.Filters.Labels.Resources.Deployments {
 		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
@@ -89,7 +87,7 @@ func FormatDeploymentData(o *v1.Deployment, settings *config.Settings) storage.R
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Deployment],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Type:         config.Deployment,
 		Name:         workload,
 		Namespace:    &namespace,

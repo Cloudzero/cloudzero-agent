@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package k8s
 
 import (
@@ -8,24 +7,25 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type Scraper struct {
 	k8sClient kubernetes.Interface
 	settings  *config.Settings
-	writer    storage.DatabaseWriter
+	writer    types.DatabaseWriter
 }
 
-func NewScraper(k8sClient kubernetes.Interface, writer storage.DatabaseWriter, settings *config.Settings) *Scraper {
+func NewScraper(k8sClient kubernetes.Interface, writer types.DatabaseWriter, settings *config.Settings) *Scraper {
 	return &Scraper{
 		k8sClient: k8sClient,
 		settings:  settings,
@@ -68,7 +68,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.Pods || s.settings.Filters.Annotations.Resources.Pods { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.CoreV1().Pods(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatPodData(obj.(*corev1.Pod), settings) // nolint
 				}, s.settings)
 			}
@@ -77,7 +77,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.Deployments || s.settings.Filters.Annotations.Resources.Deployments { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().Deployments(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings) // nolint
 				}, s.settings)
 			}
@@ -86,7 +86,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.StatefulSets || s.settings.Filters.Annotations.Resources.StatefulSets { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().StatefulSets(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings) // nolint
 				}, s.settings)
 			}
@@ -95,7 +95,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.DaemonSets || s.settings.Filters.Annotations.Resources.DaemonSets { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().DaemonSets(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings) // nolint
 				}, s.settings)
 			}
@@ -104,7 +104,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.Jobs || s.settings.Filters.Annotations.Resources.Jobs { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().Jobs(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatJobData(obj.(*batchv1.Job), settings) // nolint
 				}, s.settings)
 			}
@@ -113,7 +113,7 @@ func (s *Scraper) Start() {
 			if s.settings.Filters.Labels.Resources.CronJobs || s.settings.Filters.Annotations.Resources.CronJobs { // nolint
 				writeResources(s.writer, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().CronJobs(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) storage.ResourceTags {
+				}, func(obj any, settings *config.Settings) types.ResourceTags {
 					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings) // nolint
 				}, s.settings)
 			}
@@ -127,9 +127,9 @@ func (s *Scraper) Start() {
 	}
 }
 
-func writeResources[T metav1.ListInterface](writer storage.DatabaseWriter, namespace string,
+func writeResources[T metav1.ListInterface](writer types.DatabaseWriter, namespace string,
 	listFunc func(string, metav1.ListOptions) (T, error),
-	formatFunc func(any, *config.Settings) storage.ResourceTags, settings *config.Settings) {
+	formatFunc func(any, *config.Settings) types.ResourceTags, settings *config.Settings) {
 	var _continue string
 	for {
 		resources, err := listFunc(namespace, metav1.ListOptions{

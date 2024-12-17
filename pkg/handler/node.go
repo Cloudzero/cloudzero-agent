@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type NodeHandler struct {
@@ -18,7 +19,7 @@ type NodeHandler struct {
 	settings *config.Settings
 } // &corev1.Node{}
 
-func NewNodeHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewNodeHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &NodeHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -66,11 +67,11 @@ func (h *NodeHandler) writeDataToStorage(o *corev1.Node, isCreate bool) {
 	}
 }
 
-func FormatNodeData(o *corev1.Node, settings *config.Settings) storage.ResourceTags {
+func FormatNodeData(o *corev1.Node, settings *config.Settings) types.ResourceTags {
 	var (
-		labels      config.MetricLabelTags = config.MetricLabelTags{}
-		annotations config.MetricLabelTags = config.MetricLabelTags{}
-		workload                           = o.GetName()
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		workload    = o.GetName()
 	)
 
 	if settings.Filters.Labels.Resources.Nodes {
@@ -84,7 +85,7 @@ func FormatNodeData(o *corev1.Node, settings *config.Settings) storage.ResourceT
 		"node":          workload, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Node],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Name:         workload,
 		Namespace:    nil,
 		Type:         config.Node,

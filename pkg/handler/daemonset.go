@@ -7,13 +7,11 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	v1 "k8s.io/api/apps/v1"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-
-	v1 "k8s.io/api/apps/v1"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type DaemonSetHandler struct {
@@ -21,7 +19,7 @@ type DaemonSetHandler struct {
 	settings *config.Settings
 } // &v1.DaemonSet{}
 
-func NewDaemonSetHandler(writer storage.DatabaseWriter,
+func NewDaemonSetHandler(writer types.DatabaseWriter,
 	settings *config.Settings,
 	errChan chan<- error,
 ) hook.Handler {
@@ -73,7 +71,7 @@ func (h *DaemonSetHandler) writeDataToStorage(o *v1.DaemonSet, isCreate bool) {
 	}
 }
 
-func FormatDaemonSetData(o *v1.DaemonSet, settings *config.Settings) storage.ResourceTags {
+func FormatDaemonSetData(o *v1.DaemonSet, settings *config.Settings) types.ResourceTags {
 	namespace := o.GetNamespace()
 	labels := config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.DaemonSets), settings)
 	annotations := config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.DaemonSets), settings)
@@ -82,7 +80,7 @@ func FormatDaemonSetData(o *v1.DaemonSet, settings *config.Settings) storage.Res
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.DaemonSet],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Type:         config.DaemonSet,
 		Name:         o.GetName(),
 		Namespace:    &namespace,

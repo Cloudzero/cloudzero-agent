@@ -16,11 +16,11 @@ const (
 
 func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	config.QPS = 50
-	config.Burst = 100
 	if err != nil {
 		return nil, errors.Wrap(err, "building kubeconfig")
 	}
+	config.QPS = 50
+	config.Burst = 100
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "building clientset")

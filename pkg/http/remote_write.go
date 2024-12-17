@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package http
 
 import (
@@ -17,7 +19,7 @@ import (
 	"golang.org/x/exp/rand"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
@@ -101,13 +103,13 @@ var (
 
 // -------------------- RemoteWriter Struct --------------------
 type RemoteWriter struct {
-	writer   storage.DatabaseWriter
-	reader   storage.DatabaseReader
+	writer   types.DatabaseWriter
+	reader   types.DatabaseReader
 	settings *config.Settings
 	clock    utils.TimeProvider
 }
 
-func NewRemoteWriter(writer storage.DatabaseWriter, reader storage.DatabaseReader, settings *config.Settings) *RemoteWriter {
+func NewRemoteWriter(writer types.DatabaseWriter, reader types.DatabaseReader, settings *config.Settings) *RemoteWriter {
 	remoteWriteStatsOnce.Do(func() {
 		prometheus.MustRegister(
 			remoteWriteTimeseriesSent,
@@ -211,7 +213,7 @@ func (rw *RemoteWriter) Flush() error {
 	}
 }
 
-func (rw *RemoteWriter) formatMetrics(records []storage.ResourceTags) []prompb.TimeSeries {
+func (rw *RemoteWriter) formatMetrics(records []types.ResourceTags) []prompb.TimeSeries {
 	timeSeries := []prompb.TimeSeries{}
 	for _, record := range records {
 		metricName := rw.constructMetricTagName(record, "labels")
@@ -225,11 +227,15 @@ func (rw *RemoteWriter) formatMetrics(records []storage.ResourceTags) []prompb.T
 	return timeSeries
 }
 
-func (rw *RemoteWriter) constructMetricTagName(record storage.ResourceTags, metricType string) string {
+func (rw *RemoteWriter) constructMetricTagName(record types.ResourceTags, metricType string) string {
 	return fmt.Sprintf("cloudzero_%s_%s", config.ResourceTypeToMetricName[record.Type], metricType)
 }
 
-func (rw *RemoteWriter) createTimeseries(metricName string, metricTags config.MetricLabelTags, additionalMetricLabels config.MetricLabels, recordCreatedOrUpdated time.Time) prompb.TimeSeries {
+func (rw *RemoteWriter) createTimeseries(
+	metricName string, metricTags config.MetricLabelTags,
+	additionalMetricLabels config.MetricLabels,
+	recordCreatedOrUpdated time.Time,
+) prompb.TimeSeries {
 	ts := prompb.TimeSeries{
 		Labels: []prompb.Label{
 			{

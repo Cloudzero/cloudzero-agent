@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package handler
 
 import (
@@ -6,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,7 +16,8 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 )
 
 func TestFormatStatefulSetData(t *testing.T) {
@@ -21,7 +25,7 @@ func TestFormatStatefulSetData(t *testing.T) {
 		name     string
 		sts      *appsv1.StatefulSet
 		settings *config.Settings
-		expected storage.ResourceTags
+		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
@@ -59,7 +63,7 @@ func TestFormatStatefulSetData(t *testing.T) {
 					*regexp.MustCompile("annotation-key"),
 				},
 			},
-			expected: storage.ResourceTags{
+			expected: types.ResourceTags{
 				Type:      config.StatefulSet,
 				Name:      "test-sts",
 				Namespace: stringPtr("default"),
@@ -100,7 +104,7 @@ func TestFormatStatefulSetData(t *testing.T) {
 					},
 				},
 			},
-			expected: storage.ResourceTags{
+			expected: types.ResourceTags{
 				Type:      config.StatefulSet,
 				Name:      "test-sts",
 				Namespace: stringPtr("default"),
@@ -137,13 +141,11 @@ func TestFormatStatefulSetData(t *testing.T) {
 func TestNewStatefulSetHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		writer   storage.DatabaseWriter
 		settings *config.Settings
 		errChan  chan<- error
 	}{
 		{
-			name:   "Test with valid settings",
-			writer: &mockDatabaseWriter{},
+			name: "Test with valid settings",
 			settings: &config.Settings{
 				Filters: config.Filters{
 					Labels: config.Labels{
@@ -164,7 +166,6 @@ func TestNewStatefulSetHandler(t *testing.T) {
 		},
 		{
 			name:     "Test with nil settings",
-			writer:   &mockDatabaseWriter{},
 			settings: nil,
 			errChan:  make(chan error),
 		},
@@ -172,9 +173,13 @@ func TestNewStatefulSetHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewStatefulsetHandler(tt.writer, tt.settings, tt.errChan)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
+
+			handler := NewStatefulsetHandler(writer, tt.settings, tt.errChan)
 			assert.NotNil(t, handler)
-			assert.Equal(t, tt.writer, handler.Writer)
+			assert.Equal(t, writer, handler.Writer)
 			assert.Equal(t, tt.errChan, handler.ErrorChan)
 		})
 	}
@@ -271,13 +276,98 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			writer := &mockDatabaseWriter{}
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
+
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().WriteData(gomock.Any(), true).Return(nil)
+			}
+
 			handler := NewStatefulsetHandler(writer, tt.settings, make(chan error))
 			result, err := handler.Create(tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
 
-			result, err = handler.Update(tt.request)
+func TestStatefulSetHandler_Update(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings *config.Settings
+		request  *hook.Request
+		expected *hook.Result
+	}{
+		{
+			name: "Test update with labels and annotations enabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
+					},
+				},
+			},
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
+				Namespace: stringPtr("default"),
+				Labels: map[string]string{
+					"app": "test",
+				},
+				Annotations: map[string]string{
+					"annotation-key": "annotation-value",
+				},
+			}),
+			expected: &hook.Result{Allowed: true},
+		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+				},
+			},
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &hook.Result{Allowed: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
+
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().WriteData(gomock.Any(), false).Return(nil)
+			}
+
+			handler := NewStatefulsetHandler(writer, tt.settings, make(chan error))
+
+			result, err := handler.Update(tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})

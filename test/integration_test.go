@@ -20,12 +20,13 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-	"gotest.tools/v3/assert"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 func TestIntegration(t *testing.T) {
@@ -98,7 +99,7 @@ func TestIntegration(t *testing.T) {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 	}
-	var results []storage.ResourceTags
+	var results []types.ResourceTags
 	db.Find(&results)
 	assert.Equal(t, len(results), 1)
 	assert.Equal(t, results[0].Type, config.Pod)
@@ -177,8 +178,8 @@ func TestRemoteWrite(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func insertDummyData(writer storage.DatabaseWriter) {
-	dummyRecords := []storage.ResourceTags{
+func insertDummyData(writer types.DatabaseWriter) {
+	dummyRecords := []types.ResourceTags{
 		{
 			Type:          config.Pod,
 			Name:          "example-pod-with-namespace",

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package storage
 
 import (
@@ -6,19 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 	"github.com/rs/zerolog/log"
-
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-)
 
-type DatabaseWriter interface {
-	WriteData(data ResourceTags, isCreate bool) error
-	UpdateSentAtForRecords(data []ResourceTags, ct time.Time) (int64, error)
-	PurgeStaleData(rt time.Duration) error
-}
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
+)
 
 func NewWriter(db *gorm.DB, settings *config.Settings) *Writer {
 	return &Writer{db: db, mu: sync.Mutex{}, clock: utils.Clock{}, settings: settings}
@@ -31,7 +28,7 @@ type Writer struct {
 	settings *config.Settings
 }
 
-func (w *Writer) WriteData(data ResourceTags, isCreate bool) error {
+func (w *Writer) WriteData(data types.ResourceTags, isCreate bool) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	ct := w.clock.GetCurrentTime()
@@ -51,7 +48,7 @@ func (w *Writer) WriteData(data ResourceTags, isCreate bool) error {
 	return nil
 }
 
-func (w *Writer) UpdateSentAtForRecords(records []ResourceTags, ct time.Time) (int64, error) {
+func (w *Writer) UpdateSentAtForRecords(records []types.ResourceTags, ct time.Time) (int64, error) {
 	log.Debug().Msgf("Updating the sent_at column for %d records", len(records))
 	ctf := utils.FormatForStorage(ct)
 	w.mu.Lock()
@@ -80,7 +77,7 @@ func (w *Writer) UpdateSentAtForRecords(records []ResourceTags, ct time.Time) (i
 		}
 		batchConditions := conditions[i:end]
 		whereClause := fmt.Sprintf("record_updated < '%s' AND record_created < '%s' AND (%s)", ctf, ctf, strings.Join(batchConditions, " OR "))
-		result := w.db.Model(&ResourceTags{}).
+		result := w.db.Model(&types.ResourceTags{}).
 			Where(whereClause).
 			Update("sent_at", ct).
 			Update("record_updated", ct)
@@ -100,7 +97,7 @@ func (w *Writer) PurgeStaleData(rt time.Duration) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	whereClause := fmt.Sprintf("sent_at < '%[1]s' AND record_created < '%[1]s' AND record_updated < '%[1]s' AND sent_at IS NOT NULL", retentionTime)
-	result := w.db.Where(whereClause).Delete(&ResourceTags{})
+	result := w.db.Where(whereClause).Delete(&types.ResourceTags{})
 
 	if result.Error != nil {
 		log.Printf("failed to delete old tag data: %v", result.Error)

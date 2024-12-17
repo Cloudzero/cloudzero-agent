@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	batchv1 "k8s.io/api/batch/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type CronJobHandler struct {
@@ -18,7 +19,7 @@ type CronJobHandler struct {
 	settings *config.Settings
 }
 
-func NewCronJobHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewCronJobHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &CronJobHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -66,12 +67,12 @@ func (h *CronJobHandler) writeDataToStorage(o *batchv1.CronJob, isCreate bool) {
 	}
 }
 
-func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) storage.ResourceTags {
+func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) types.ResourceTags {
 	var (
-		labels      config.MetricLabelTags = config.MetricLabelTags{}
-		annotations config.MetricLabelTags = config.MetricLabelTags{}
-		namespace                          = o.GetNamespace()
-		workload                           = o.GetName()
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		namespace   = o.GetNamespace()
+		workload    = o.GetName()
 	)
 	if settings.Filters.Labels.Resources.CronJobs {
 		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.CronJobs), settings)
@@ -84,7 +85,7 @@ func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) storage.Re
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.CronJob],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Type:         config.CronJob,
 		Name:         workload,
 		Namespace:    &namespace,

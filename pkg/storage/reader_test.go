@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 func TestReader_ReadData(t *testing.T) {
@@ -17,7 +19,7 @@ func TestReader_ReadData(t *testing.T) {
 
 	now := time.Now().UTC()
 	testNamespace := "test-namespace"
-	records := []ResourceTags{
+	records := []types.ResourceTags{
 		{Type: 1, Name: "test-deploy", Namespace: &testNamespace, RecordUpdated: now.Add(-2 * time.Hour), RecordCreated: now.Add(-3 * time.Hour)},
 		{Type: 2, Name: "test-sts", Namespace: &testNamespace, RecordUpdated: now.Add(-1 * time.Hour), RecordCreated: now.Add(-2 * time.Hour)},
 	}

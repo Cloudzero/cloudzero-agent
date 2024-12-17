@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type NamespaceHandler struct {
@@ -18,7 +19,7 @@ type NamespaceHandler struct {
 	settings *config.Settings
 } // &corev1.nsd{}
 
-func NewNamespaceHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewNamespaceHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &NamespaceHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -66,7 +67,7 @@ func (h *NamespaceHandler) writeDataToStorage(o *corev1.Namespace, isCreate bool
 	}
 }
 
-func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) storage.ResourceTags {
+func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      config.MetricLabelTags = config.MetricLabelTags{}
 		annotations config.MetricLabelTags = config.MetricLabelTags{}
@@ -84,7 +85,7 @@ func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) storage
 		"namespace":     namespace, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Name:         namespace,
 		Namespace:    nil,
 		Type:         config.Namespace,

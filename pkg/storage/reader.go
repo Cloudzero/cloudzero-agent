@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package storage
 
 import (
@@ -6,15 +8,12 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
-	"gorm.io/gorm"
 )
-
-type DatabaseReader interface {
-	ReadData(time.Time) ([]ResourceTags, error)
-}
 
 func NewReader(db *gorm.DB, settings *config.Settings) *Reader {
 	return &Reader{db: db, settings: settings}
@@ -25,8 +24,8 @@ type Reader struct {
 	settings *config.Settings
 }
 
-func (w *Reader) ReadData(ct time.Time) ([]ResourceTags, error) {
-	records := []ResourceTags{}
+func (w *Reader) ReadData(ct time.Time) ([]types.ResourceTags, error) {
+	records := []types.ResourceTags{}
 	totalSize := 0
 	offset := 0
 	ctf := utils.FormatForStorage(ct)
@@ -36,7 +35,7 @@ func (w *Reader) ReadData(ct time.Time) ([]ResourceTags, error) {
 		(sent_at IS NOT NULL AND record_updated > sent_at)
 		`, ctf)
 	for totalSize < w.settings.RemoteWrite.MaxBytesPerSend {
-		var record ResourceTags
+		var record types.ResourceTags
 		result := w.db.Offset(offset).
 			Where(whereClause).
 			First(&record)

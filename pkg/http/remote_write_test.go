@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 // MockWriter is a mock implementation of the Writer interface.
@@ -22,12 +23,12 @@ type MockWriter struct {
 	mock.Mock
 }
 
-func (m *MockWriter) WriteData(data storage.ResourceTags, isCreate bool) error {
+func (m *MockWriter) WriteData(data types.ResourceTags, isCreate bool) error {
 	args := m.Called(data, isCreate)
 	return args.Error(0)
 }
 
-func (m *MockWriter) UpdateSentAtForRecords(records []storage.ResourceTags, ct time.Time) (int64, error) {
+func (m *MockWriter) UpdateSentAtForRecords(records []types.ResourceTags, ct time.Time) (int64, error) {
 	args := m.Called(records, ct)
 	intVal, _ := args.Get(0).(int64)
 	errVal := args.Error(1)
@@ -43,13 +44,13 @@ type MockReader struct {
 	mock.Mock
 }
 
-func (m *MockReader) ReadData(ct time.Time) ([]storage.ResourceTags, error) {
+func (m *MockReader) ReadData(ct time.Time) ([]types.ResourceTags, error) {
 	args := m.Called(ct)
 	mockRecords := args.Get(0)
 	if mockRecords == nil {
 		return nil, args.Error(1)
 	}
-	return mockRecords.([]storage.ResourceTags), args.Error(1)
+	return mockRecords.([]types.ResourceTags), args.Error(1)
 }
 
 // MockClock is a mock implementation of the Clock interface.
@@ -177,7 +178,7 @@ func TestRemoteWriter_Flush(t *testing.T) {
 
 		// Prepare test data
 		currentTime := time.Now().UTC()
-		singleRecord := storage.ResourceTags{
+		singleRecord := types.ResourceTags{
 			Name:          "test-deployment",
 			Type:          config.Deployment,
 			Labels:        &config.MetricLabelTags{"label1": "value1"},
@@ -188,13 +189,13 @@ func TestRemoteWriter_Flush(t *testing.T) {
 			SentAt:        nil,
 			Size:          20,
 		}
-		records := []storage.ResourceTags{singleRecord}
+		records := []types.ResourceTags{singleRecord}
 
 		expectedTime := currentTime.Add(time.Minute) // Arbitrary adjustment for example
 		setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()
 		setup.mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
 		setup.mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(1), nil).Once()
-		setup.mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
+		setup.mockReader.On("ReadData", expectedTime).Return([]types.ResourceTags{}, nil).Once()
 
 		// Execute Flush
 		err := setup.rw.Flush()
@@ -237,7 +238,7 @@ func TestRemoteWriter_Flush(t *testing.T) {
 		// Setup mocks for no records
 		currentTime := time.Now().UTC()
 		setup.mockClock.On("GetCurrentTime").Return(currentTime).Once()
-		setup.mockReader.On("ReadData", currentTime).Return([]storage.ResourceTags{}, nil).Once()
+		setup.mockReader.On("ReadData", currentTime).Return([]types.ResourceTags{}, nil).Once()
 
 		// Execute Flush
 		err := setup.rw.Flush()
@@ -270,7 +271,7 @@ func TestRemoteWriter_Flush_DBUpdateSuccess(t *testing.T) {
 
 	// Prepare test data
 	currentTime := time.Now().UTC()
-	singleRecord := storage.ResourceTags{
+	singleRecord := types.ResourceTags{
 		Name:          "test-deployment-db-success",
 		Type:          config.Deployment,
 		Labels:        &config.MetricLabelTags{"label1": "value1"},
@@ -281,13 +282,13 @@ func TestRemoteWriter_Flush_DBUpdateSuccess(t *testing.T) {
 		SentAt:        nil,
 		Size:          30,
 	}
-	records := []storage.ResourceTags{singleRecord}
+	records := []types.ResourceTags{singleRecord}
 
 	expectedTime := currentTime.Add(2 * time.Minute) // Arbitrary adjustment for example
 	setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()
 	setup.mockReader.On("ReadData", expectedTime).Return(records, nil).Once()
 	setup.mockWriter.On("UpdateSentAtForRecords", records, expectedTime).Return(int64(len(records)), nil).Once()
-	setup.mockReader.On("ReadData", expectedTime).Return([]storage.ResourceTags{}, nil).Once()
+	setup.mockReader.On("ReadData", expectedTime).Return([]types.ResourceTags{}, nil).Once()
 
 	// Execute Flush
 	err := setup.rw.Flush()
@@ -322,7 +323,7 @@ func TestRemoteWriter_Flush_DBUpdateFailure(t *testing.T) {
 
 	// Prepare test data
 	currentTime := time.Now().UTC()
-	singleRecord := storage.ResourceTags{
+	singleRecord := types.ResourceTags{
 		Name:          "test-deployment-db-failure",
 		Type:          config.Deployment,
 		Labels:        &config.MetricLabelTags{"label1": "value1"},
@@ -333,7 +334,7 @@ func TestRemoteWriter_Flush_DBUpdateFailure(t *testing.T) {
 		SentAt:        nil,
 		Size:          25,
 	}
-	records := []storage.ResourceTags{singleRecord}
+	records := []types.ResourceTags{singleRecord}
 
 	expectedTime := currentTime.Add(3 * time.Minute) // Arbitrary adjustment for example
 	setup.mockClock.On("GetCurrentTime").Return(expectedTime).Once()

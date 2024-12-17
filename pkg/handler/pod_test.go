@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,7 +16,8 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 )
 
 func TestFormatPodData(t *testing.T) {
@@ -24,7 +25,7 @@ func TestFormatPodData(t *testing.T) {
 		name     string
 		pod      *corev1.Pod
 		settings *config.Settings
-		expected storage.ResourceTags
+		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
@@ -62,7 +63,7 @@ func TestFormatPodData(t *testing.T) {
 					*regexp.MustCompile("annotation-key"),
 				},
 			},
-			expected: storage.ResourceTags{
+			expected: types.ResourceTags{
 				Type:      config.Pod,
 				Name:      "test-pod",
 				Namespace: stringPtr("default"),
@@ -103,7 +104,7 @@ func TestFormatPodData(t *testing.T) {
 					},
 				},
 			},
-			expected: storage.ResourceTags{
+			expected: types.ResourceTags{
 				Type:      config.Pod,
 				Name:      "test-pod",
 				Namespace: stringPtr("default"),
@@ -140,13 +141,11 @@ func TestFormatPodData(t *testing.T) {
 func TestNewPodHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		writer   storage.DatabaseWriter
 		settings *config.Settings
 		errChan  chan<- error
 	}{
 		{
-			name:   "Test with valid settings",
-			writer: &mockDatabaseWriter{},
+			name: "Test with valid settings",
 			settings: &config.Settings{
 				Filters: config.Filters{
 					Labels: config.Labels{
@@ -167,7 +166,6 @@ func TestNewPodHandler(t *testing.T) {
 		},
 		{
 			name:     "Test with nil settings",
-			writer:   &mockDatabaseWriter{},
 			settings: nil,
 			errChan:  make(chan error),
 		},
@@ -175,9 +173,13 @@ func TestNewPodHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewPodHandler(tt.writer, tt.settings, tt.errChan)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
+
+			handler := NewJobHandler(writer, tt.settings, tt.errChan)
 			assert.NotNil(t, handler)
-			assert.Equal(t, tt.writer, handler.Writer)
+			assert.Equal(t, writer, handler.Writer)
 			assert.Equal(t, tt.errChan, handler.ErrorChan)
 		})
 	}
@@ -274,32 +276,102 @@ func TestPodHandler_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			writer := &mockDatabaseWriter{}
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
+
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().WriteData(gomock.Any(), true).Return(nil)
+			}
+
 			handler := NewPodHandler(writer, tt.settings, make(chan error))
 			result, err := handler.Create(tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
-
-			result, err = handler.Update(tt.request)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-
 		})
 	}
 }
 
-type mockDatabaseWriter struct{}
+func TestPodHandler_Update(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings *config.Settings
+		request  *hook.Request
+		expected *hook.Result
+	}{
+		{
+			name: "Test update with labels and annotations enabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
+					},
+				},
+			},
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+				Labels: map[string]string{
+					"app": "test",
+				},
+				Annotations: map[string]string{
+					"annotation-key": "annotation-value",
+				},
+			}),
+			expected: &hook.Result{Allowed: true},
+		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+				},
+			},
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &hook.Result{Allowed: true},
+		},
+	}
 
-func (m *mockDatabaseWriter) WriteData(data storage.ResourceTags, isCreate bool) error {
-	return nil
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			writer := mocks.NewMockDatabaseWriter(mockCtl)
 
-func (m *mockDatabaseWriter) UpdateSentAtForRecords(data []storage.ResourceTags, ct time.Time) (int64, error) {
-	return 0, nil
-}
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().WriteData(gomock.Any(), false).Return(nil)
+			}
 
-func (m *mockDatabaseWriter) PurgeStaleData(rt time.Duration) error {
-	return nil
+			handler := NewPodHandler(writer, tt.settings, make(chan error))
+
+			result, err := handler.Update(tt.request)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 func stringPtr(s string) *string {

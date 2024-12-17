@@ -10,15 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/homedir"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type MockClusterScraper struct {
@@ -44,7 +45,7 @@ func TestScraper_Start(t *testing.T) {
 		clientset := fake.NewSimpleClientset()
 		scraper := NewScraper(clientset, writer, settings)
 		scraper.Start()
-		var results []storage.ResourceTags
+		var results []types.ResourceTags
 		db.Find(&results)
 
 	})
@@ -62,7 +63,7 @@ func TestScraper_Start(t *testing.T) {
 		scraper := NewScraper(k8sClient, writer, settings)
 		scraper.Start()
 		time.Sleep(5 * time.Second)
-		var results []storage.ResourceTags
+		var results []types.ResourceTags
 		db.Find(&results)
 		assert.NotEmpty(t, results)
 	})

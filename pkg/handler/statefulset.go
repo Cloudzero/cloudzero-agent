@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/apps/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type StatefulSetHandler struct {
@@ -18,7 +19,7 @@ type StatefulSetHandler struct {
 	settings *config.Settings
 }
 
-func NewStatefulsetHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewStatefulsetHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &StatefulSetHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -66,12 +67,12 @@ func (h *StatefulSetHandler) writeDataToStorage(o *v1.StatefulSet, isCreate bool
 	}
 }
 
-func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) storage.ResourceTags {
+func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) types.ResourceTags {
 	var (
-		labels      config.MetricLabelTags = config.MetricLabelTags{}
-		annotations config.MetricLabelTags = config.MetricLabelTags{}
-		namespace                          = o.GetNamespace()
-		workload                           = o.GetName()
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		namespace   = o.GetNamespace()
+		workload    = o.GetName()
 	)
 	if settings.Filters.Labels.Resources.StatefulSets {
 		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
@@ -84,7 +85,7 @@ func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) storage
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Name:         workload,
 		Type:         config.StatefulSet,
 		Namespace:    &namespace,

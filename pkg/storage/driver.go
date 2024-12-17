@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package storage
 
 import (
@@ -7,6 +9,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 func newDriver() (*gorm.DB, error) {
@@ -36,10 +40,10 @@ func SetupDatabase() *gorm.DB {
 	if err != nil {
 		log.Error().Msgf("Failed to set busy timeout: %v", err)
 	}
-	if err := db.AutoMigrate(&RemoteWriteHistory{}); err != nil {
+	if err := db.AutoMigrate(&types.RemoteWriteHistory{}); err != nil {
 		errHistory = append(errHistory, err)
 	}
-	if err := db.AutoMigrate(&ResourceTags{}); err != nil {
+	if err := db.AutoMigrate(&types.ResourceTags{}); err != nil {
 		errHistory = append(errHistory, err)
 	}
 

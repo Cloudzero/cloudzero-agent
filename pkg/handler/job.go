@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
 	"github.com/rs/zerolog/log"
 	batchv1 "k8s.io/api/batch/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type JobHandler struct {
@@ -18,7 +19,7 @@ type JobHandler struct {
 	settings *config.Settings
 }
 
-func NewJobHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewJobHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &JobHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -66,7 +67,7 @@ func (h *JobHandler) writeDataToStorage(o *batchv1.Job, isCreate bool) {
 	}
 }
 
-func FormatJobData(o *batchv1.Job, settings *config.Settings) storage.ResourceTags {
+func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      config.MetricLabelTags = config.MetricLabelTags{}
 		annotations config.MetricLabelTags = config.MetricLabelTags{}
@@ -85,7 +86,7 @@ func FormatJobData(o *batchv1.Job, settings *config.Settings) storage.ResourceTa
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Job],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Type:         config.Job,
 		Name:         workload,
 		Namespace:    &namespace,

@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type PodHandler struct {
@@ -19,7 +19,7 @@ type PodHandler struct {
 	settings *config.Settings
 } // &corev1.Pod{}
 
-func NewPodHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewPodHandler(writer types.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
 	h := &PodHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
@@ -68,7 +68,7 @@ func (h *PodHandler) writeDataToStorage(o *corev1.Pod, isCreate bool) {
 	}
 }
 
-func FormatPodData(o *corev1.Pod, settings *config.Settings) storage.ResourceTags {
+func FormatPodData(o *corev1.Pod, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      config.MetricLabelTags = config.MetricLabelTags{}
 		annotations config.MetricLabelTags = config.MetricLabelTags{}
@@ -86,7 +86,7 @@ func FormatPodData(o *corev1.Pod, settings *config.Settings) storage.ResourceTag
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Pod],
 	}
-	return storage.ResourceTags{
+	return types.ResourceTags{
 		Type:         config.Pod,
 		Name:         podName,
 		Namespace:    &namespace,

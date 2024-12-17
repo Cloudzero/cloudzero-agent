@@ -5,9 +5,9 @@ package hook
 import (
 	"fmt"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-
 	v1 "k8s.io/api/admission/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type Request = v1.AdmissionRequest
@@ -27,7 +27,7 @@ type Handler struct {
 	Delete    AdmitFunc
 	Update    AdmitFunc
 	Connect   AdmitFunc
-	Writer    storage.DatabaseWriter
+	Writer    types.DatabaseWriter
 	ErrorChan chan<- error
 }
 
