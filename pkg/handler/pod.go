@@ -6,11 +6,12 @@ package handler
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog/log"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
-	"github.com/rs/zerolog/log"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type PodHandler struct {
@@ -19,64 +20,75 @@ type PodHandler struct {
 } // &corev1.Pod{}
 
 func NewPodHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
-	ph := &PodHandler{settings: settings}
-	ph.Handler.Create = ph.Create()
-	ph.Handler.Update = ph.Update()
-	ph.Handler.Writer = writer
-	ph.Handler.ErrorChan = errChan
-	return ph.Handler
+	h := &PodHandler{settings: settings}
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
+	return h.Handler
 }
 
-func (ph *PodHandler) Create() hook.AdmitFunc {
+func (h *PodHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		po, err := ph.parseV1(r.Object.Raw)
-
-		ph.writeDataToStorage(po, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (ph *PodHandler) Update() hook.AdmitFunc {
+func (h *PodHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		po, err := ph.parseV1(r.Object.Raw)
-		ph.writeDataToStorage(po, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
+
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (ph *PodHandler) parseV1(object []byte) (*corev1.Pod, error) {
-	var po corev1.Pod
-	if err := json.Unmarshal(object, &po); err != nil {
+func (h *PodHandler) parseV1(data []byte) (*corev1.Pod, error) {
+	var o corev1.Pod
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &po, nil
+	return &o, nil
 }
 
-func (ph *PodHandler) writeDataToStorage(po *corev1.Pod, isCreate bool) {
-	record := FormatPodData(po, ph.settings)
-	if err := ph.Writer.WriteData(record, isCreate); err != nil {
+func (h *PodHandler) writeDataToStorage(o *corev1.Pod, isCreate bool) {
+	record := FormatPodData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatPodData(po *corev1.Pod, settings *config.Settings) storage.ResourceTags {
-	namespace := po.GetNamespace()
-	labels := config.Filter(po.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
-	annotations := config.Filter(po.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
+func FormatPodData(o *corev1.Pod, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = o.GetNamespace()
+		podName                            = o.GetName()
+	)
+	if settings.Filters.Labels.Resources.Pods {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
+	}
+	if settings.Filters.Annotations.Resources.Pods {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
+	}
 	metricLabels := config.MetricLabels{
-		"pod":           po.GetName(), // standard metric labels to attach to metric
+		"pod":           podName, // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Pod],
 	}
 	return storage.ResourceTags{
 		Type:         config.Pod,
-		Name:         po.GetName(),
+		Name:         podName,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

@@ -21,65 +21,70 @@ type DaemonSetHandler struct {
 	settings *config.Settings
 } // &v1.DaemonSet{}
 
-func NewDaemonSetHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewDaemonSetHandler(writer storage.DatabaseWriter,
+	settings *config.Settings,
+	errChan chan<- error,
+) hook.Handler {
 	// Need little trick to protect internal data
-	d := &DaemonSetHandler{settings: settings}
-	d.Handler.Create = d.Create()
-	d.Handler.Update = d.Update()
-	d.Handler.Writer = writer
-	d.Handler.ErrorChan = errChan
-	return d.Handler
+	h := &DaemonSetHandler{settings: settings}
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
+	return h.Handler
 }
 
-func (d *DaemonSetHandler) Create() hook.AdmitFunc {
+func (h *DaemonSetHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		ds, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(ds, true)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.DaemonSets || h.settings.Filters.Annotations.Resources.DaemonSets {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (d *DaemonSetHandler) Update() hook.AdmitFunc {
+func (h *DaemonSetHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		ds, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(ds, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.DaemonSets || h.settings.Filters.Annotations.Resources.DaemonSets {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (d *DaemonSetHandler) parseV1(object []byte) (*v1.DaemonSet, error) {
-	var ds v1.DaemonSet
-	if err := json.Unmarshal(object, &ds); err != nil {
+func (h *DaemonSetHandler) parseV1(data []byte) (*v1.DaemonSet, error) {
+	var o v1.DaemonSet
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &ds, nil
+	return &o, nil
 }
 
-func (d *DaemonSetHandler) writeDataToStorage(ds *v1.DaemonSet, isCreate bool) {
-	record := FormatDaemonSetData(ds, d.settings)
-	if err := d.Writer.WriteData(record, isCreate); err != nil {
+func (h *DaemonSetHandler) writeDataToStorage(o *v1.DaemonSet, isCreate bool) {
+	record := FormatDaemonSetData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatDaemonSetData(ds *v1.DaemonSet, settings *config.Settings) storage.ResourceTags {
-	namespace := ds.GetNamespace()
-	labels := config.Filter(ds.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.DaemonSets), settings)
-	annotations := config.Filter(ds.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.DaemonSets), settings)
+func FormatDaemonSetData(o *v1.DaemonSet, settings *config.Settings) storage.ResourceTags {
+	namespace := o.GetNamespace()
+	labels := config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.DaemonSets), settings)
+	annotations := config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.DaemonSets), settings)
 	metricLabels := config.MetricLabels{
-		"workload":      ds.GetName(), // standard metric labels to attach to metric
+		"workload":      o.GetName(), // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.DaemonSet],
 	}
 	return storage.ResourceTags{
 		Type:         config.DaemonSet,
-		Name:         ds.GetName(),
+		Name:         o.GetName(),
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

@@ -19,64 +19,75 @@ type JobHandler struct {
 }
 
 func NewJobHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
-	jh := &JobHandler{settings: settings}
-	jh.Handler.Create = jh.Create()
-	jh.Handler.Update = jh.Update()
-	jh.Handler.Writer = writer
-	jh.Handler.ErrorChan = errChan
-	return jh.Handler
+	h := &JobHandler{settings: settings}
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
+	return h.Handler
 }
 
-func (jh *JobHandler) Create() hook.AdmitFunc {
+func (h *JobHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		jo, err := jh.parseV1(r.Object.Raw)
-
-		jh.writeDataToStorage(jo, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (jh *JobHandler) Update() hook.AdmitFunc {
+func (h *JobHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		jo, err := jh.parseV1(r.Object.Raw)
-		jh.writeDataToStorage(jo, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (jh *JobHandler) parseV1(object []byte) (*batchv1.Job, error) {
-	var jo batchv1.Job
-	if err := json.Unmarshal(object, &jo); err != nil {
+func (h *JobHandler) parseV1(data []byte) (*batchv1.Job, error) {
+	var o batchv1.Job
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &jo, nil
+	return &o, nil
 }
 
-func (jh *JobHandler) writeDataToStorage(jo *batchv1.Job, isCreate bool) {
-	record := FormatJobData(jo, jh.settings)
-	if err := jh.Writer.WriteData(record, isCreate); err != nil {
+func (h *JobHandler) writeDataToStorage(o *batchv1.Job, isCreate bool) {
+	record := FormatJobData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatJobData(jo *batchv1.Job, settings *config.Settings) storage.ResourceTags {
-	namespace := jo.GetNamespace()
-	labels := config.Filter(jo.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Jobs), settings)
-	annotations := config.Filter(jo.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Jobs), settings)
+func FormatJobData(o *batchv1.Job, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = o.GetNamespace()
+		workload                           = o.GetName()
+	)
+	if settings.Filters.Labels.Resources.Jobs {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Jobs), settings)
+	}
+	if settings.Filters.Annotations.Resources.Jobs {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Jobs), settings)
+	}
+
 	metricLabels := config.MetricLabels{
-		"workload":      jo.GetName(), // standard metric labels to attach to metric
+		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Job],
 	}
 	return storage.ResourceTags{
 		Type:         config.Job,
-		Name:         jo.GetName(),
+		Name:         workload,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

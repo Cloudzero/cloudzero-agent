@@ -19,63 +19,73 @@ type StatefulSetHandler struct {
 }
 
 func NewStatefulsetHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
-	s := &StatefulSetHandler{settings: settings}
-	s.Handler.Create = s.Create()
-	s.Handler.Update = s.Update()
-	s.Handler.Writer = writer
-	s.Handler.ErrorChan = errChan
-	return s.Handler
+	h := &StatefulSetHandler{settings: settings}
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
+	return h.Handler
 }
 
-func (sh *StatefulSetHandler) Create() hook.AdmitFunc {
+func (h *StatefulSetHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		s, err := sh.parseV1(r.Object.Raw)
-
-		sh.writeDataToStorage(s, true)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (sh *StatefulSetHandler) Update() hook.AdmitFunc {
+func (h *StatefulSetHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		s, err := sh.parseV1(r.Object.Raw)
-		sh.writeDataToStorage(s, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (sh *StatefulSetHandler) parseV1(object []byte) (*v1.StatefulSet, error) {
-	var s v1.StatefulSet
-	if err := json.Unmarshal(object, &s); err != nil {
+func (h *StatefulSetHandler) parseV1(data []byte) (*v1.StatefulSet, error) {
+	var o v1.StatefulSet
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &s, nil
+	return &o, nil
 }
 
-func (sh *StatefulSetHandler) writeDataToStorage(s *v1.StatefulSet, isCreate bool) {
-	record := FormatStatefulsetData(s, sh.settings)
-	if err := sh.Writer.WriteData(record, isCreate); err != nil {
+func (h *StatefulSetHandler) writeDataToStorage(o *v1.StatefulSet, isCreate bool) {
+	record := FormatStatefulsetData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatStatefulsetData(s *v1.StatefulSet, settings *config.Settings) storage.ResourceTags {
-	namespace := s.GetNamespace()
-	labels := config.Filter(s.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
-	annotations := config.Filter(s.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
+func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = o.GetNamespace()
+		workload                           = o.GetName()
+	)
+	if settings.Filters.Labels.Resources.StatefulSets {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
+	}
+	if settings.Filters.Annotations.Resources.StatefulSets {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
+	}
 	metricLabels := config.MetricLabels{
-		"workload":      s.GetName(), // standard metric labels to attach to metric
+		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
 	}
 	return storage.ResourceTags{
-		Name:         s.GetName(),
+		Name:         workload,
 		Type:         config.StatefulSet,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,

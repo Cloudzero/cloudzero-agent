@@ -19,64 +19,74 @@ type CronJobHandler struct {
 }
 
 func NewCronJobHandler(writer storage.DatabaseWriter, settings *config.Settings, errChan chan<- error) hook.Handler {
-	cjh := &CronJobHandler{settings: settings}
-	cjh.Handler.Create = cjh.Create()
-	cjh.Handler.Update = cjh.Update()
-	cjh.Handler.Writer = writer
-	cjh.Handler.ErrorChan = errChan
-	return cjh.Handler
+	h := &CronJobHandler{settings: settings}
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Writer = writer
+	h.Handler.ErrorChan = errChan
+	return h.Handler
 }
 
-func (cjh *CronJobHandler) Create() hook.AdmitFunc {
+func (h *CronJobHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		cj, err := cjh.parseV1(r.Object.Raw)
-
-		cjh.writeDataToStorage(cj, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (cjh *CronJobHandler) Update() hook.AdmitFunc {
+func (h *CronJobHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		cj, err := cjh.parseV1(r.Object.Raw)
-		cjh.writeDataToStorage(cj, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (cjh *CronJobHandler) parseV1(object []byte) (*batchv1.CronJob, error) {
-	var cj batchv1.CronJob
-	if err := json.Unmarshal(object, &cj); err != nil {
+func (h *CronJobHandler) parseV1(data []byte) (*batchv1.CronJob, error) {
+	var o batchv1.CronJob
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &cj, nil
+	return &o, nil
 }
 
-func (cjh *CronJobHandler) writeDataToStorage(cj *batchv1.CronJob, isCreate bool) {
-	record := FormatCronJobData(cj, cjh.settings)
-	if err := cjh.Writer.WriteData(record, isCreate); err != nil {
+func (h *CronJobHandler) writeDataToStorage(o *batchv1.CronJob, isCreate bool) {
+	record := FormatCronJobData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatCronJobData(cj *batchv1.CronJob, settings *config.Settings) storage.ResourceTags {
-	namespace := cj.GetNamespace()
-	labels := config.Filter(cj.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.CronJobs), settings)
-	annotations := config.Filter(cj.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.CronJobs), settings)
+func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = o.GetNamespace()
+		workload                           = o.GetName()
+	)
+	if settings.Filters.Labels.Resources.CronJobs {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.CronJobs), settings)
+	}
+	if settings.Filters.Annotations.Resources.CronJobs {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.CronJobs), settings)
+	}
 	metricLabels := config.MetricLabels{
-		"workload":      cj.GetName(), // standard metric labels to attach to metric
+		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.CronJob],
 	}
 	return storage.ResourceTags{
 		Type:         config.CronJob,
-		Name:         cj.GetName(),
+		Name:         workload,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

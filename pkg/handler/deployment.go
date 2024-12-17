@@ -32,55 +32,66 @@ func NewDeploymentHandler(writer storage.DatabaseWriter, settings *config.Settin
 	return d.Handler
 }
 
-func (d *DeploymentHandler) Create() hook.AdmitFunc {
+func (h *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		dp, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(dp, true)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (d *DeploymentHandler) Update() hook.AdmitFunc {
+func (h *DeploymentHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		dp, err := d.parseV1(r.Object.Raw)
-		d.writeDataToStorage(dp, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (d *DeploymentHandler) parseV1(object []byte) (*v1.Deployment, error) {
-	var dp v1.Deployment
-	if err := json.Unmarshal(object, &dp); err != nil {
+func (h *DeploymentHandler) parseV1(data []byte) (*v1.Deployment, error) {
+	var o v1.Deployment
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &dp, nil
+	return &o, nil
 }
 
-func (d *DeploymentHandler) writeDataToStorage(dp *v1.Deployment, isCreate bool) {
-	record := FormatDeploymentData(dp, d.settings)
-	if err := d.Writer.WriteData(record, isCreate); err != nil {
+func (h *DeploymentHandler) writeDataToStorage(o *v1.Deployment, isCreate bool) {
+	record := FormatDeploymentData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatDeploymentData(dp *v1.Deployment, settings *config.Settings) storage.ResourceTags {
-	namespace := dp.GetNamespace()
-	labels := config.Filter(dp.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
-	annotations := config.Filter(dp.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), settings)
+func FormatDeploymentData(o *v1.Deployment, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = o.GetNamespace()
+		workload                           = o.GetName()
+	)
+	if settings.Filters.Labels.Resources.Deployments {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
+	}
+	if settings.Filters.Annotations.Resources.Deployments {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), settings)
+	}
 	metricLabels := config.MetricLabels{
-		"workload":      dp.GetName(), // standard metric labels to attach to metric
+		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
 		"resource_type": config.ResourceTypeToMetricName[config.Deployment],
 	}
 	return storage.ResourceTags{
 		Type:         config.Deployment,
-		Name:         dp.GetName(),
+		Name:         workload,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

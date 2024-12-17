@@ -27,53 +27,65 @@ func NewNamespaceHandler(writer storage.DatabaseWriter, settings *config.Setting
 	return h.Handler
 }
 
-func (nh *NamespaceHandler) Create() hook.AdmitFunc {
+func (h *NamespaceHandler) Create() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		ns, err := nh.parseV1(r.Object.Raw)
-
-		nh.writeDataToStorage(ns, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, true)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (nh *NamespaceHandler) Update() hook.AdmitFunc {
+func (h *NamespaceHandler) Update() hook.AdmitFunc {
 	return func(r *hook.Request) (*hook.Result, error) {
-		ns, err := nh.parseV1(r.Object.Raw)
-		nh.writeDataToStorage(ns, false)
-		if err != nil {
-			return &hook.Result{Msg: err.Error()}, nil
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+			if o, err := h.parseV1(r.Object.Raw); err == nil {
+				h.writeDataToStorage(o, false)
+			}
 		}
 		return &hook.Result{Allowed: true}, nil
 	}
 }
 
-func (nh *NamespaceHandler) parseV1(object []byte) (*corev1.Namespace, error) {
-	var ns corev1.Namespace
-	if err := json.Unmarshal(object, &ns); err != nil {
+func (h *NamespaceHandler) parseV1(data []byte) (*corev1.Namespace, error) {
+	var o corev1.Namespace
+	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
-	return &ns, nil
+	return &o, nil
 }
 
-func (nh *NamespaceHandler) writeDataToStorage(ns *corev1.Namespace, isCreate bool) {
-	record := FormatNamespaceData(ns, nh.settings)
-	if err := nh.Writer.WriteData(record, isCreate); err != nil {
+func (h *NamespaceHandler) writeDataToStorage(o *corev1.Namespace, isCreate bool) {
+	record := FormatNamespaceData(o, h.settings)
+	if err := h.Writer.WriteData(record, isCreate); err != nil {
 		log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 	}
 }
 
-func FormatNamespaceData(ns *corev1.Namespace, settings *config.Settings) storage.ResourceTags {
-	labels := config.Filter(ns.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Namespaces), settings)
-	annotations := config.Filter(ns.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Namespaces), settings)
+func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) storage.ResourceTags {
+	var (
+		labels      config.MetricLabelTags = config.MetricLabelTags{}
+		annotations config.MetricLabelTags = config.MetricLabelTags{}
+		namespace                          = h.GetName()
+	)
+
+	if settings.Filters.Labels.Resources.Namespaces {
+		labels = config.Filter(h.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Namespaces), settings)
+	}
+	if settings.Filters.Annotations.Resources.Namespaces {
+		annotations = config.Filter(h.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Namespaces), settings)
+	}
+
 	metricLabels := config.MetricLabels{
-		"namespace":     ns.GetName(), // standard metric labels to attach to metric
+		"namespace":     namespace, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
 	}
 	return storage.ResourceTags{
-		Name:         ns.GetName(),
+		Name:         namespace,
 		Namespace:    nil,
 		Type:         config.Namespace,
 		MetricLabels: &metricLabels,
