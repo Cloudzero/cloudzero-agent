@@ -38,7 +38,7 @@ RUN CGO_ENABLED=0 go build \
 FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
 
 # Stage32: Create the distroless image
-FROM busybox:1.36.1-uclibc
+FROM busybox:1.37.0-uclibc
 
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
