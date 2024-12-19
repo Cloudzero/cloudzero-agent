@@ -10,115 +10,309 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
-	time "time"
 
-	types "github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockDatabaseWriter is a mock of DatabaseWriter interface.
-type MockDatabaseWriter struct {
+// MockStorageCommon is a mock of StorageCommon interface.
+type MockStorageCommon struct {
 	ctrl     *gomock.Controller
-	recorder *MockDatabaseWriterMockRecorder
+	recorder *MockStorageCommonMockRecorder
 	isgomock struct{}
 }
 
-// MockDatabaseWriterMockRecorder is the mock recorder for MockDatabaseWriter.
-type MockDatabaseWriterMockRecorder struct {
-	mock *MockDatabaseWriter
+// MockStorageCommonMockRecorder is the mock recorder for MockStorageCommon.
+type MockStorageCommonMockRecorder struct {
+	mock *MockStorageCommon
 }
 
-// NewMockDatabaseWriter creates a new mock instance.
-func NewMockDatabaseWriter(ctrl *gomock.Controller) *MockDatabaseWriter {
-	mock := &MockDatabaseWriter{ctrl: ctrl}
-	mock.recorder = &MockDatabaseWriterMockRecorder{mock}
+// NewMockStorageCommon creates a new mock instance.
+func NewMockStorageCommon(ctrl *gomock.Controller) *MockStorageCommon {
+	mock := &MockStorageCommon{ctrl: ctrl}
+	mock.recorder = &MockStorageCommonMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockDatabaseWriter) EXPECT() *MockDatabaseWriterMockRecorder {
+func (m *MockStorageCommon) EXPECT() *MockStorageCommonMockRecorder {
 	return m.recorder
 }
 
-// PurgeStaleData mocks base method.
-func (m *MockDatabaseWriter) PurgeStaleData(rt time.Duration) error {
+// Count mocks base method.
+func (m *MockStorageCommon) Count(ctx context.Context) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PurgeStaleData", rt)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PurgeStaleData indicates an expected call of PurgeStaleData.
-func (mr *MockDatabaseWriterMockRecorder) PurgeStaleData(rt any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeStaleData", reflect.TypeOf((*MockDatabaseWriter)(nil).PurgeStaleData), rt)
-}
-
-// UpdateSentAtForRecords mocks base method.
-func (m *MockDatabaseWriter) UpdateSentAtForRecords(data []types.ResourceTags, ct time.Time) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateSentAtForRecords", data, ct)
-	ret0, _ := ret[0].(int64)
+	ret := m.ctrl.Call(m, "Count", ctx)
+	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateSentAtForRecords indicates an expected call of UpdateSentAtForRecords.
-func (mr *MockDatabaseWriterMockRecorder) UpdateSentAtForRecords(data, ct any) *gomock.Call {
+// Count indicates an expected call of Count.
+func (mr *MockStorageCommonMockRecorder) Count(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSentAtForRecords", reflect.TypeOf((*MockDatabaseWriter)(nil).UpdateSentAtForRecords), data, ct)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockStorageCommon)(nil).Count), ctx)
 }
 
-// WriteData mocks base method.
-func (m *MockDatabaseWriter) WriteData(data types.ResourceTags, isCreate bool) error {
+// DeleteAll mocks base method.
+func (m *MockStorageCommon) DeleteAll(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteData", data, isCreate)
+	ret := m.ctrl.Call(m, "DeleteAll", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// WriteData indicates an expected call of WriteData.
-func (mr *MockDatabaseWriterMockRecorder) WriteData(data, isCreate any) *gomock.Call {
+// DeleteAll indicates an expected call of DeleteAll.
+func (mr *MockStorageCommonMockRecorder) DeleteAll(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteData", reflect.TypeOf((*MockDatabaseWriter)(nil).WriteData), data, isCreate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockStorageCommon)(nil).DeleteAll), ctx)
 }
 
-// MockDatabaseReader is a mock of DatabaseReader interface.
-type MockDatabaseReader struct {
+// Tx mocks base method.
+func (m *MockStorageCommon) Tx(ctx context.Context, block func(context.Context) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Tx", ctx, block)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Tx indicates an expected call of Tx.
+func (mr *MockStorageCommonMockRecorder) Tx(ctx, block any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tx", reflect.TypeOf((*MockStorageCommon)(nil).Tx), ctx, block)
+}
+
+// MockStorage is a mock of Storage interface.
+type MockStorage[Model any, ID comparable] struct {
 	ctrl     *gomock.Controller
-	recorder *MockDatabaseReaderMockRecorder
+	recorder *MockStorageMockRecorder[Model, ID]
 	isgomock struct{}
 }
 
-// MockDatabaseReaderMockRecorder is the mock recorder for MockDatabaseReader.
-type MockDatabaseReaderMockRecorder struct {
-	mock *MockDatabaseReader
+// MockStorageMockRecorder is the mock recorder for MockStorage.
+type MockStorageMockRecorder[Model any, ID comparable] struct {
+	mock *MockStorage[Model, ID]
 }
 
-// NewMockDatabaseReader creates a new mock instance.
-func NewMockDatabaseReader(ctrl *gomock.Controller) *MockDatabaseReader {
-	mock := &MockDatabaseReader{ctrl: ctrl}
-	mock.recorder = &MockDatabaseReaderMockRecorder{mock}
+// NewMockStorage creates a new mock instance.
+func NewMockStorage[Model any, ID comparable](ctrl *gomock.Controller) *MockStorage[Model, ID] {
+	mock := &MockStorage[Model, ID]{ctrl: ctrl}
+	mock.recorder = &MockStorageMockRecorder[Model, ID]{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockDatabaseReader) EXPECT() *MockDatabaseReaderMockRecorder {
+func (m *MockStorage[Model, ID]) EXPECT() *MockStorageMockRecorder[Model, ID] {
 	return m.recorder
 }
 
-// ReadData mocks base method.
-func (m *MockDatabaseReader) ReadData(arg0 time.Time) ([]types.ResourceTags, error) {
+// Create mocks base method.
+func (m *MockStorage[Model, ID]) Create(ctx context.Context, it *Model) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadData", arg0)
-	ret0, _ := ret[0].([]types.ResourceTags)
+	ret := m.ctrl.Call(m, "Create", ctx, it)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockStorageMockRecorder[Model, ID]) Create(ctx, it any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockStorage[Model, ID])(nil).Create), ctx, it)
+}
+
+// Delete mocks base method.
+func (m *MockStorage[Model, ID]) Delete(ctx context.Context, id ID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockStorageMockRecorder[Model, ID]) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStorage[Model, ID])(nil).Delete), ctx, id)
+}
+
+// Get mocks base method.
+func (m *MockStorage[Model, ID]) Get(ctx context.Context, id ID) (*Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id)
+	ret0, _ := ret[0].(*Model)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadData indicates an expected call of ReadData.
-func (mr *MockDatabaseReaderMockRecorder) ReadData(arg0 any) *gomock.Call {
+// Get indicates an expected call of Get.
+func (mr *MockStorageMockRecorder[Model, ID]) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadData", reflect.TypeOf((*MockDatabaseReader)(nil).ReadData), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStorage[Model, ID])(nil).Get), ctx, id)
+}
+
+// Update mocks base method.
+func (m *MockStorage[Model, ID]) Update(ctx context.Context, it *Model) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, it)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockStorageMockRecorder[Model, ID]) Update(ctx, it any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStorage[Model, ID])(nil).Update), ctx, it)
+}
+
+// MockCreator is a mock of Creator interface.
+type MockCreator[Model any] struct {
+	ctrl     *gomock.Controller
+	recorder *MockCreatorMockRecorder[Model]
+	isgomock struct{}
+}
+
+// MockCreatorMockRecorder is the mock recorder for MockCreator.
+type MockCreatorMockRecorder[Model any] struct {
+	mock *MockCreator[Model]
+}
+
+// NewMockCreator creates a new mock instance.
+func NewMockCreator[Model any](ctrl *gomock.Controller) *MockCreator[Model] {
+	mock := &MockCreator[Model]{ctrl: ctrl}
+	mock.recorder = &MockCreatorMockRecorder[Model]{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCreator[Model]) EXPECT() *MockCreatorMockRecorder[Model] {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockCreator[Model]) Create(ctx context.Context, it *Model) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, it)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockCreatorMockRecorder[Model]) Create(ctx, it any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCreator[Model])(nil).Create), ctx, it)
+}
+
+// MockReader is a mock of Reader interface.
+type MockReader[Model any, ID comparable] struct {
+	ctrl     *gomock.Controller
+	recorder *MockReaderMockRecorder[Model, ID]
+	isgomock struct{}
+}
+
+// MockReaderMockRecorder is the mock recorder for MockReader.
+type MockReaderMockRecorder[Model any, ID comparable] struct {
+	mock *MockReader[Model, ID]
+}
+
+// NewMockReader creates a new mock instance.
+func NewMockReader[Model any, ID comparable](ctrl *gomock.Controller) *MockReader[Model, ID] {
+	mock := &MockReader[Model, ID]{ctrl: ctrl}
+	mock.recorder = &MockReaderMockRecorder[Model, ID]{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockReader[Model, ID]) EXPECT() *MockReaderMockRecorder[Model, ID] {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockReader[Model, ID]) Get(ctx context.Context, id ID) (*Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id)
+	ret0, _ := ret[0].(*Model)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockReaderMockRecorder[Model, ID]) Get(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockReader[Model, ID])(nil).Get), ctx, id)
+}
+
+// MockUpdater is a mock of Updater interface.
+type MockUpdater[Model any] struct {
+	ctrl     *gomock.Controller
+	recorder *MockUpdaterMockRecorder[Model]
+	isgomock struct{}
+}
+
+// MockUpdaterMockRecorder is the mock recorder for MockUpdater.
+type MockUpdaterMockRecorder[Model any] struct {
+	mock *MockUpdater[Model]
+}
+
+// NewMockUpdater creates a new mock instance.
+func NewMockUpdater[Model any](ctrl *gomock.Controller) *MockUpdater[Model] {
+	mock := &MockUpdater[Model]{ctrl: ctrl}
+	mock.recorder = &MockUpdaterMockRecorder[Model]{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUpdater[Model]) EXPECT() *MockUpdaterMockRecorder[Model] {
+	return m.recorder
+}
+
+// Update mocks base method.
+func (m *MockUpdater[Model]) Update(ctx context.Context, it *Model) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, it)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockUpdaterMockRecorder[Model]) Update(ctx, it any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUpdater[Model])(nil).Update), ctx, it)
+}
+
+// MockDeleter is a mock of Deleter interface.
+type MockDeleter[ID comparable] struct {
+	ctrl     *gomock.Controller
+	recorder *MockDeleterMockRecorder[ID]
+	isgomock struct{}
+}
+
+// MockDeleterMockRecorder is the mock recorder for MockDeleter.
+type MockDeleterMockRecorder[ID comparable] struct {
+	mock *MockDeleter[ID]
+}
+
+// NewMockDeleter creates a new mock instance.
+func NewMockDeleter[ID comparable](ctrl *gomock.Controller) *MockDeleter[ID] {
+	mock := &MockDeleter[ID]{ctrl: ctrl}
+	mock.recorder = &MockDeleterMockRecorder[ID]{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDeleter[ID]) EXPECT() *MockDeleterMockRecorder[ID] {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockDeleter[ID]) Delete(ctx context.Context, id ID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockDeleterMockRecorder[ID]) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeleter[ID])(nil).Delete), ctx, id)
 }

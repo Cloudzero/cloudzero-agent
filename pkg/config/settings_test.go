@@ -106,3 +106,71 @@ host: "api.cloudzero.com"
 		assert.Nil(t, settings)
 	})
 }
+
+func TestCleanString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "string with leading and trailing spaces",
+			input:    "  test-string  ",
+			expected: "test-string",
+		},
+		{
+			name:     "string with leading and trailing quotes",
+			input:    "\"test-string\"",
+			expected: "test-string",
+		},
+		{
+			name:     "string with leading and trailing single quotes",
+			input:    "'test-string'",
+			expected: "test-string",
+		},
+		{
+			name:     "string with mixed leading and trailing quotes",
+			input:    "'test-string\"",
+			expected: "test-string",
+		},
+		{
+			name:     "string with no leading or trailing spaces or quotes",
+			input:    "test-string",
+			expected: "test-string",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "string with only spaces",
+			input:    "   ",
+			expected: "",
+		},
+		{
+			name:     "string with only quotes",
+			input:    "\"\"",
+			expected: "",
+		},
+		{
+			name:     "string with only single quotes",
+			input:    "''",
+			expected: "",
+		},
+		{
+			name: "string with newlintes, and other special charactewrs",
+			input: `
+			"foobar"
+`,
+			expected: "foobar",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := cleanString(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

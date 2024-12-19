@@ -4,14 +4,16 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
 	"gotest.tools/v3/assert"
 	admission "k8s.io/api/admission/v1"
+
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
 type MockHandler struct {
@@ -25,7 +27,7 @@ func NewMockHandler() hook.Handler {
 }
 
 func (m *MockHandler) Create() hook.AdmitFunc {
-	return func(r *hook.Request) (*hook.Result, error) {
+	return func(c context.Context, r *hook.Request) (*hook.Result, error) {
 		return &hook.Result{Allowed: true}, nil
 	}
 }

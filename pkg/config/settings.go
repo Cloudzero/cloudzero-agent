@@ -65,6 +65,11 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 			return nil, errors.Wrap(err, fmt.Sprintf("config read %s", cfgFile))
 		}
 	}
+
+	// clean unexpected characters from CloudAccountID
+	// should only be A-Z, a-z, 0-9 at beginning and end
+	cfg.CloudAccountID = cleanString(cfg.CloudAccountID)
+
 	cfg.setCompiledFilters()
 
 	if err := cfg.SetAPIKey(); err != nil {
@@ -192,4 +197,11 @@ func (c *Files) String() string {
 func (c *Files) Set(value string) error {
 	*c = append(*c, value)
 	return nil
+}
+
+func cleanString(s string) string {
+	// clean unexpected characters from CloudAccountID
+	// should only be A-Z, a-z, 0-9 at beginning and end
+	s = strings.TrimSpace(s)
+	return strings.Trim(s, "\"'")
 }

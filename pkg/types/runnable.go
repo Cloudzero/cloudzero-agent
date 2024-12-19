@@ -4,5 +4,6 @@ package types
 
 type Runnable interface {
 	Start() error
+	IsRunning() bool
 	Shutdown() error
 }

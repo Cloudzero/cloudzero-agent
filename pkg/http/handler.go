@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	log "k8s.io/klog/v2"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
 // admissionHandler represents the HTTP handler for an admission webhook
@@ -61,7 +61,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 			return
 		}
 
-		result, err := handler.Execute(review.Request)
+		result, err := handler.Execute(r.Context(), review.Request)
 		if err != nil {
 			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)

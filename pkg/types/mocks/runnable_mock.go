@@ -39,6 +39,20 @@ func (m *MockRunnable) EXPECT() *MockRunnableMockRecorder {
 	return m.recorder
 }
 
+// IsRunning mocks base method.
+func (m *MockRunnable) IsRunning() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsRunning indicates an expected call of IsRunning.
+func (mr *MockRunnableMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockRunnable)(nil).IsRunning))
+}
+
 // Shutdown mocks base method.
 func (m *MockRunnable) Shutdown() error {
 	m.ctrl.T.Helper()

@@ -8,6 +8,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -23,29 +24,36 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/handler"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/pusher"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
 func TestIntegration(t *testing.T) {
 	settings := &config.Settings{}
-	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db, settings)
+
+	clock := utils.Clock{}
+	store, err := repo.NewInMemoryResourceRepository(&clock)
+	if err != nil {
+		t.Fatalf("Failed to create storage system: %v", err)
+	}
+
 	errChan := make(chan error)
 
 	server := http.NewServer(settings,
 		[]http.RouteSegment{},
 		[]http.AdmissionRouteSegment{
-			{Route: "/validate/pod", Hook: handler.NewPodHandler(writer, settings, errChan)},
-			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(writer, settings, errChan)},
-			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(writer, settings, errChan)},
-			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(writer, settings, errChan)},
-			{Route: "/validate/node", Hook: handler.NewNodeHandler(writer, settings, errChan)},
-			{Route: "/validate/job", Hook: handler.NewJobHandler(writer, settings, errChan)},
-			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(writer, settings, errChan)},
-			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(writer, settings, errChan)},
+			{Route: "/validate/pod", Hook: handler.NewPodHandler(store, settings, errChan)},
+			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(store, settings, errChan)},
+			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(store, settings, errChan)},
+			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(store, settings, errChan)},
+			{Route: "/validate/node", Hook: handler.NewNodeHandler(store, settings, errChan)},
+			{Route: "/validate/job", Hook: handler.NewJobHandler(store, settings, errChan)},
+			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(store, settings, errChan)},
+			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(store, settings, errChan)},
 		}...,
 	)
 
@@ -99,8 +107,7 @@ func TestIntegration(t *testing.T) {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 	}
-	var results []types.ResourceTags
-	db.Find(&results)
+	results, err := store.FindAllBy(context.Background(), "1=1")
 	assert.Equal(t, len(results), 1)
 	assert.Equal(t, results[0].Type, config.Pod)
 	assert.Equal(t, results[0].Name, "example-pod")
@@ -164,21 +171,24 @@ func TestRemoteWrite(t *testing.T) {
 	baseURL.RawQuery = params.Encode()
 	settings.RemoteWrite.Host = baseURL.String()
 
-	db := storage.SetupDatabase()
-	writer := storage.NewWriter(db, settings)
-	reader := storage.NewReader(db, settings)
+	clock := utils.Clock{}
+	store, err := repo.NewInMemoryResourceRepository(&clock)
+	if err != nil {
+		t.Fatalf("Failed to create storage system: %v", err)
+	}
 
 	// Insert dummy data into the database
-	insertDummyData(writer)
+	insertDummyData(store)
 
-	remoteWriter := http.NewRemoteWriter(writer, reader, settings)
+	remoteWriter := pusher.New(context.Background(), store, &clock, settings)
+	writer := remoteWriter.(*pusher.MetricsPusher)
 
 	// Call the Flush method and check for errors
-	err = remoteWriter.Flush()
+	err = writer.Flush()
 	assert.NilError(t, err)
 }
 
-func insertDummyData(writer types.DatabaseWriter) {
+func insertDummyData(writer types.ResourceStore) {
 	dummyRecords := []types.ResourceTags{
 		{
 			Type:          config.Pod,
@@ -194,7 +204,7 @@ func insertDummyData(writer types.DatabaseWriter) {
 
 	for _, record := range dummyRecords {
 		log.Printf("Inserting dummy record: %+v", record)
-		err := writer.WriteData(record, true) // Use the WriteData method to insert data
+		err := writer.Create(context.Background(), &record) // Use the WriteData method to insert data
 		if err != nil {
 			log.Printf("failed to insert dummy data: %v", err)
 		}

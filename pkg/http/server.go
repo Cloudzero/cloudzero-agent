@@ -10,8 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/healthz"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/healthz"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
 type RouteSegment struct {
