@@ -167,6 +167,7 @@ func TestReconcilerCertificates(t *testing.T) {
 		require.Equal(t, tt.p.cert, cert)
 
 		if len(tt.subjects) > 0 {
+			//lint:ignore SA1019 even if the API is deprecated we still need to make sure we implement it correctly
 			require.Equal(t, tt.subjects, pool.Subjects())
 		} else {
 			require.Nil(t, pool)
@@ -244,6 +245,7 @@ func TestReconcilerVerifyConnection(t *testing.T) {
 		require.NoError(t, err)
 	}
 }
+
 func TestFileSystemProvider(t *testing.T) {
 	tests := []struct {
 		p        fileSystemProvider
@@ -303,6 +305,7 @@ func TestReconciliation(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, cert, rcert)
+		//lint:ignore SA1019 even if the API is deprecated we still need to make sure we implement it correctly
 		require.Equal(t, raw, pool.Subjects())
 		require.Equal(t, r.rootsLimit, uint(r.ll.Len()))
 	}

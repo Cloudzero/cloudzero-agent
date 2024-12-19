@@ -9,14 +9,17 @@ import (
 
 // StorageCommon defines common methods all repos implement by virtue of using BaseRepoImpl.
 type StorageCommon interface {
+	// Tx runs block in a transaction.
 	Tx(ctx context.Context, block func(ctxTx context.Context) error) error
+	// Count returns the number of records.
 	Count(ctx context.Context) (int, error)
+	// DeleteAll deletes all records.
 	DeleteAll(ctx context.Context) error
 }
 
-// CRUD is an interface that defines the minimal methods that must be
-// implemented by a storage that provides access to records. It is
-// a combination of the Creator, Reader, Updater, and Deleter interfaces.
+// Storage is a CRUD interface that defines the minimal methods that must be
+// implemented by a storage that provides access to records. It is a combination
+// of the Creator, Reader, Updater, and Deleter interfaces.
 type Storage[Model any, ID comparable] interface {
 	Creator[Model]
 	Reader[Model, ID]

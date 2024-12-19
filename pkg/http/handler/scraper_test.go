@@ -30,5 +30,4 @@ func TestNewScraperHandler(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	// handler.StartScrape(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
-
 }

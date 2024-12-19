@@ -17,10 +17,10 @@ type Filters struct {
 	Policy      bluemonday.Policy
 }
 
-// Represents any metric label that can be added to a metric; "pod", "namespace", "label_foo" etc.
+// MetricLabels represents any metric label that can be added to a metric; "pod", "namespace", "label_foo" etc.
 type MetricLabels = map[string]string
 
-// Represents metric labels attached to a metric that represent annotations or labels; value must be prefixed with "label_"
+// MetricLabelTags represents metric labels attached to a metric that represent annotations or labels; value must be prefixed with "label_"
 type MetricLabelTags = map[string]string
 
 func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, settings *Settings) MetricLabelTags {

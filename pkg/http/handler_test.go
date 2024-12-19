@@ -37,7 +37,7 @@ func TestServe(t *testing.T) {
 	// Setup
 	mockHandler := NewMockHandler()
 	handler := handler()
-	handler_func := handler.Serve(mockHandler)
+	handlerFunc := handler.Serve(mockHandler)
 
 	// Test cases
 	tests := []struct {
@@ -83,7 +83,7 @@ func TestServe(t *testing.T) {
 			mockRequest, _ := http.NewRequest(tt.method, "/validate/deployment", bytes.NewReader(jsonBody))
 			mockRequest.Header.Set("Content-Type", tt.contentType)
 			rr := httptest.NewRecorder()
-			handler_func(rr, mockRequest)
+			handlerFunc(rr, mockRequest)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}

@@ -7,8 +7,6 @@
 // database operations.
 //
 // ZeroLogAdapter is a custom logger adapter for GORM that uses zerolog for logging.
-//
-//nolint:gofmt
 package core
 
 import (
@@ -20,8 +18,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type ZeroLogAdapter struct {
-}
+type ZeroLogAdapter struct{}
 
 func (l ZeroLogAdapter) LogMode(logger.LogLevel) logger.Interface {
 	return l
@@ -88,6 +85,4 @@ func (l ZeroLogAdapter) Trace(ctx context.Context, begin time.Time, f func() (st
 	}
 
 	event.Send()
-
-	return
 }

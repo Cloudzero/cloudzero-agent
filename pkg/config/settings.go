@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package config contains the configuration for the application.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -17,7 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/pkg/errors"
 )
 
 // Settings represents the configuration settings for the application.
@@ -58,12 +59,12 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		}
 
 		if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-			return nil, errors.Wrap(err, fmt.Sprintf("no config %s", cfgFile))
+			return nil, fmt.Errorf("no config %s: %w", cfgFile, err)
 		}
 
 		err := cleanenv.ReadConfig(cfgFile, &cfg)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("config read %s", cfgFile))
+			return nil, fmt.Errorf("config read %s: %w", cfgFile, err)
 		}
 	}
 
@@ -74,7 +75,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	cfg.setCompiledFilters()
 
 	if err := cfg.SetAPIKey(); err != nil {
-		return nil, errors.Wrap(err, "failed to get API key")
+		return nil, fmt.Errorf("failed to get API key: %w", err)
 	}
 
 	cfg.setRemoteWriteURL()
@@ -97,15 +98,15 @@ func (s *Settings) SetAPIKey() error {
 
 	apiKeyPathLocation, err := absFilePath(s.APIKeyPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to get absolute path")
+		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	if _, err := os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
-		return errors.Wrap(err, fmt.Sprintf("API key file %s not found", apiKeyPathLocation))
+	if _, err = os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
+		return fmt.Errorf("API key file %s not found: %w", apiKeyPathLocation, err)
 	}
 	apiKey, err := os.ReadFile(s.APIKeyPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to read API key")
+		return fmt.Errorf("failed to read API key: %w", err)
 	}
 	s.RemoteWrite.apiKey = strings.TrimSpace(string(apiKey))
 
@@ -119,7 +120,7 @@ func (s *Settings) setRemoteWriteURL() {
 	if s.Host == "" {
 		log.Fatal().Msg("Host is required")
 	}
-	baseURL, err := url.Parse(fmt.Sprintf("https://%s", s.Host))
+	baseURL, err := url.Parse("https://" + s.Host)
 	if err != nil {
 		fmt.Println("Malformed URL: ", err.Error())
 		return
@@ -144,6 +145,7 @@ func isValidURL(uri string) bool {
 	}
 	return true
 }
+
 func (s *Settings) setPolicy() {
 	s.Filters.Policy = *bluemonday.StrictPolicy()
 }
@@ -180,21 +182,21 @@ func absFilePath(location string) (string, error) {
 	if dir == "" || strings.HasPrefix(dir, ".") {
 		wd, err := os.Getwd()
 		if err != nil {
-			return "", errors.Wrap(err, "working directory")
+			return "", fmt.Errorf("failed to get working directory: %w", err)
 		}
 		location = filepath.Clean(filepath.Join(wd, location))
 	}
 	return location, nil
 }
 
-// ConfigFiles is a custom flag type to handle multiple configuration files
+// Files is a custom flag type to handle multiple configuration files
 type Files []string
 
 func (c *Files) String() string {
 	return strings.Join(*c, ",")
 }
 
-// appends a new configuration file to the ConfigFiles
+// Set appends a new configuration file to the Files
 func (c *Files) Set(value string) error {
 	*c = append(*c, value)
 	return nil

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"go.uber.org/mock/gomock"
-	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
@@ -22,11 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
-
-func dbCleanup(db *gorm.DB) {
-	instance, _ := db.DB()
-	instance.Close()
-}
 
 type TestRecord struct {
 	Type         config.ResourceType

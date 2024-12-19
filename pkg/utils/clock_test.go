@@ -31,6 +31,7 @@ func TestFormatForStorage(t *testing.T) {
 		})
 	}
 }
+
 func TestGetCurrentTime(t *testing.T) {
 	clock := &utils.Clock{}
 

@@ -176,7 +176,6 @@ func Test_FlushMany(t *testing.T) {
 
 	got = testutil.ToFloat64(pusher.RemoteWriteDBFailures.WithLabelValues(host))
 	require.Equal(t, 0.0, got, "remoteWriteDBFailures metric should be 0")
-
 }
 
 func Test_Flush_FindAll_ReturnsNothing(t *testing.T) {

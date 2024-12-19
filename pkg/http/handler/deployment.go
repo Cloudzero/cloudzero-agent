@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint:dupl,gofmt
+//nolint:dupl // There is currently substantial duplication in the handlers :(
 package handler
 
 import (
@@ -22,7 +22,7 @@ type DeploymentHandler struct {
 	settings *config.Settings
 } // &v1.Deployment{}
 
-// NewValidationHook creates a new instance of deployment validation hook
+// NewDeploymentHandler creates a new instance of deployment validation hook
 func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, errChan chan<- error) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
@@ -75,13 +75,13 @@ func (h *DeploymentHandler) writeDataToStorage(ctx context.Context, o *v1.Deploy
 	}
 
 	if found, err := h.Store.FindFirstBy(ctx, conditions...); (err != nil && errors.Is(err, types.ErrNotFound)) || found == nil {
-		if err := h.Store.Tx(ctx, func(txCtx context.Context) error {
+		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			return h.Store.Create(txCtx, &record)
 		}); err != nil {
 			log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 		}
 	} else if found != nil {
-		if err := h.Store.Tx(ctx, func(txCtx context.Context) error {
+		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			record.ID = found.ID
 			record.RecordCreated = found.RecordCreated
 			record.SentAt = nil // reset send

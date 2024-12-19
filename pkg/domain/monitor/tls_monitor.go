@@ -14,8 +14,6 @@
 // This package is valuable for applications that require robust and flexible TLS certificate
 // management, ensuring that the TLS configuration stays up-to-date with the latest certificates
 // without requiring application restarts.
-//
-//nolint:gofmt
 package monitor
 
 import (
@@ -472,20 +470,20 @@ func (r *reconciler) certificates() (cert *tls.Certificate, pool *x509.CertPool,
 		// even if multiple goroutines request a reload simultaneously.
 		_, err, _ = r.flight.Do("reconciler", func() (interface{}, error) {
 			// Retrieve certificates from the provider.
-			cert, roots, err := r.p.Certificates()
-			if err != nil {
-				return nil, err
+			latestCert, roots, certErr := r.p.Certificates()
+			if certErr != nil {
+				return nil, certErr
 			}
 
 			// If root CAs are provided, update the CA pool.
 			if len(roots) > 0 {
-				pool := x509.NewCertPool()
+				poolToUpdate := x509.NewCertPool()
 
 				// Add new root CAs to the front of the list.
 				for _, ca := range roots {
 					_ = r.ll.PushFront(ca)
 					// Remove the oldest root CA if the limit is exceeded.
-					if uint(r.ll.Len()) > r.rootsLimit { //nolint:gosec
+					if uint(r.ll.Len()) > r.rootsLimit { //nolint:gosec // the length of the linked list will never be negative
 						e := r.ll.Back()
 						_ = r.ll.Remove(e)
 					}
@@ -494,16 +492,16 @@ func (r *reconciler) certificates() (cert *tls.Certificate, pool *x509.CertPool,
 				// Rebuild the CA pool from the list of root CAs.
 				for e := r.ll.Front(); e != nil; e = e.Next() {
 					if cert, ok := e.Value.(*x509.Certificate); ok {
-						pool.AddCert(cert)
+						poolToUpdate.AddCert(cert)
 					}
 				}
 
 				// Atomically store the updated CA pool.
-				r.pool.Store(pool)
+				r.pool.Store(poolToUpdate)
 			}
 
 			// Atomically store the updated TLS certificate.
-			r.cert.Store(cert)
+			r.cert.Store(latestCert)
 
 			// Invoke the onReload callback if it is set.
 			if r.onReload != nil {
@@ -514,7 +512,7 @@ func (r *reconciler) certificates() (cert *tls.Certificate, pool *x509.CertPool,
 			atomic.StoreUint32(&r.reloading, 0)
 			// Broadcast to all waiting goroutines that the reload is done.
 			r.cond.Broadcast()
-			return nil, nil
+			return nil, nil //nolint:nilnil // we don't actually use interface return value, but it's part of the singleflight API
 		})
 	}
 

@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 package test
 
 // This file provides utilities meant for use in tests that want to verify log output
@@ -71,7 +72,7 @@ func (l *LogCapture) Extract(index int, key string) string {
 
 	line := l.Lines[index]
 	// look for key=value and key="some stuff, in quotes"
-	regexPattern := fmt.Sprintf(`%s=("[^"]*"|[\w\d\p{P}]+)`, key)
+	regexPattern := key + `=("[^"]*"|[\w\d\p{P}]+)`
 
 	re := regexp.MustCompile(regexPattern)
 	matches := re.FindStringSubmatch(line)

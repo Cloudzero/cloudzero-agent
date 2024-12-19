@@ -9,8 +9,10 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 )
 
-type Labels = map[string]string
-type Annotations = map[string]string
+type (
+	Labels      = map[string]string
+	Annotations = map[string]string
+)
 
 type ResourceTags struct {
 	ID            string                  `gorm:"unique;autoIncrement"`

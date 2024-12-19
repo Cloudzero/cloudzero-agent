@@ -136,7 +136,6 @@ func createAPIKeyFile(t *testing.T, apiKeyContent string) string {
 }
 
 func TestRemoteWrite(t *testing.T) {
-
 	apiKeyPath := createAPIKeyFile(t, os.Getenv("CLOUDZERO_DEV_API_KEY"))
 
 	// Set up the configuration settings directly

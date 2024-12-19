@@ -23,9 +23,9 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} \
 		/^[a-zA-Z_-]+:.*##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-.PHONY: fmt
-fmt: ## Run go fmt against code
-	@go fmt ./...
+.PHONY: format
+format: ## Run go fmt against code
+	gofumpt -w .
 
 .PHONY: lint
 lint: ## Run the linter 
@@ -34,6 +34,10 @@ lint: ## Run the linter
 .PHONY: vet
 vet: ## Run go vet against code
 	@go vet ./...
+
+.PHONY: analyze
+analyze: ## Run static analysis
+	@staticcheck -checks all ./...
 
 .PHONY: build
 build: ## Build the binary

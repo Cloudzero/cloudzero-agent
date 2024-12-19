@@ -77,6 +77,7 @@ func TestResourceRepoImpl_Create(t *testing.T) {
 		assert.Equal(t, initialTime, createdRecord.RecordUpdated)
 	}
 }
+
 func TestResourceRepoImpl_Update(t *testing.T) {
 	// Initialize MockClock with a fixed current time
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)

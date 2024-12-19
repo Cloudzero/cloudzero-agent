@@ -15,6 +15,8 @@ import (
 type HealthCheck func() error
 
 type HealthChecker interface {
+	// EndpointHandler returns an http.HandlerFunc that checks the health of the
+	// service.
 	EndpointHandler() http.HandlerFunc
 }
 
@@ -22,7 +24,11 @@ type HealthChecker interface {
 // can be used to add specific health checks
 func Register(name string, fn HealthCheck) {
 	// get the interface and cast to internal type
-	NewHealthz().(*checker).add(name, fn) //nolint:errcheck
+	chkr, success := NewHealthz().(*checker)
+	if !success {
+		panic("unexpected type mismatch")
+	}
+	chkr.add(name, fn)
 }
 
 var (

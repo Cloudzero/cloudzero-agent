@@ -21,6 +21,7 @@ package scraper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -74,63 +75,86 @@ func (s *Scraper) Start(ctx context.Context) {
 		for _, ns := range namespaces.Items {
 			log.Info().Msgf("Scraping data from namespace: %s", ns.Name)
 			// write namespace record
-			ns := ns
 			nr := handler.FormatNamespaceData(&ns, s.settings)
 			if err := s.store.Create(ctx, &nr); err != nil {
 				log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
 			}
 
 			// write all pods in the namespace storage
-			if s.settings.Filters.Labels.Resources.Pods || s.settings.Filters.Annotations.Resources.Pods { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.Pods || s.settings.Filters.Annotations.Resources.Pods { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.CoreV1().Pods(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatPodData(obj.(*corev1.Pod), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*corev1.Pod)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted corev1.Pod, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatPodData(data, settings), nil
 				}, s.settings)
 			}
 
 			// write all deployments in the namespace storage
-			if s.settings.Filters.Labels.Resources.Deployments || s.settings.Filters.Annotations.Resources.Deployments { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.Deployments || s.settings.Filters.Annotations.Resources.Deployments { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().Deployments(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*appsv1.Deployment)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted appsv1.Deployment, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatDeploymentData(data, settings), nil
 				}, s.settings)
 			}
 
 			// write all statefulsets in the namespace storage
-			if s.settings.Filters.Labels.Resources.StatefulSets || s.settings.Filters.Annotations.Resources.StatefulSets { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.StatefulSets || s.settings.Filters.Annotations.Resources.StatefulSets { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().StatefulSets(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*appsv1.StatefulSet)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted appsv1.StatefulSet, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatStatefulsetData(data, settings), nil
 				}, s.settings)
 			}
 
 			// write all daemonsets in the namespace storage
-			if s.settings.Filters.Labels.Resources.DaemonSets || s.settings.Filters.Annotations.Resources.DaemonSets { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.DaemonSets || s.settings.Filters.Annotations.Resources.DaemonSets { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().DaemonSets(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*appsv1.DaemonSet)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted appsv1.DaemonSet, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatDaemonSetData(data, settings), nil
 				}, s.settings)
 			}
 
 			// write all jobs in the namespace storage
-			if s.settings.Filters.Labels.Resources.Jobs || s.settings.Filters.Annotations.Resources.Jobs { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.Jobs || s.settings.Filters.Annotations.Resources.Jobs { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().Jobs(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatJobData(obj.(*batchv1.Job), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*batchv1.Job)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted batchv1.Job, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatJobData(data, settings), nil
 				}, s.settings)
 			}
 
 			// write all cronjobs in the namespace storage
-			if s.settings.Filters.Labels.Resources.CronJobs || s.settings.Filters.Annotations.Resources.CronJobs { //nolint:dupl
+			if s.settings.Filters.Labels.Resources.CronJobs || s.settings.Filters.Annotations.Resources.CronJobs { //nolint:dupl // code is similar, but not duplicated
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().CronJobs(namespace).List(ctx, opts)
-				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings) //nolint:errcheck
+				}, func(obj any, settings *config.Settings) (types.ResourceTags, error) {
+					data, ok := obj.(*batchv1.CronJob)
+					if !ok {
+						return types.ResourceTags{}, fmt.Errorf("type mismatch: wanted batchv1.CronJob, got %s", reflect.TypeOf(obj))
+					}
+					return handler.FormatCronJobData(data, settings), nil
 				}, s.settings)
 			}
 
@@ -143,26 +167,34 @@ func (s *Scraper) Start(ctx context.Context) {
 	}
 }
 
-func writeResources[T metav1.ListInterface](ctx context.Context, store types.ResourceStore, namespace string,
+func writeResources[T metav1.ListInterface](
+	ctx context.Context,
+	store types.ResourceStore,
+	namespace string,
 	listFunc func(string, metav1.ListOptions) (T, error),
-	formatFunc func(any, *config.Settings) types.ResourceTags, settings *config.Settings) {
+	formatFunc func(any, *config.Settings) (types.ResourceTags, error),
+	settings *config.Settings,
+) {
 	var _continue string
 	for {
 		resources, err := listFunc(namespace, metav1.ListOptions{
 			Limit:    settings.K8sClient.PaginationLimit,
 			Continue: _continue,
 		})
-
 		if err != nil {
 			log.Error().Msgf("Error listing resources in namespace %s: %v", namespace, err)
 			break
 		}
 
 		items := reflect.ValueOf(resources).Elem().FieldByName("Items")
-		for i := 0; i < items.Len(); i++ {
+		for i := range items.Len() {
 			resource := items.Index(i).Addr().Interface()
-			record := formatFunc(resource, settings)
-			if err := store.Create(ctx, &record); err != nil {
+			record, err := formatFunc(resource, settings)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to format data")
+				continue
+			}
+			if err = store.Create(ctx, &record); err != nil {
 				log.Error().Err(err).Msg("Failed to write data to storage")
 			}
 		}
@@ -192,7 +224,6 @@ func (s *Scraper) writeNodes(ctx context.Context) {
 			continue
 		}
 		for _, node := range nodes.Items {
-			node := node
 			record := handler.FormatNodeData(&node, s.settings)
 			if err := s.store.Create(ctx, &record); err != nil {
 				log.Error().Err(err).Msgf("failed to write node data to storage: %v", err)

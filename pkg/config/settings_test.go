@@ -70,7 +70,7 @@ host: "api.cloudzero.com"
 
 		// Update the API key path in the config
 		configContent = strings.Replace(configContent, "/path/to/api_key", apiKeyFile.Name(), 1)
-		err = os.WriteFile(tmpFile.Name(), []byte(configContent), 0644)
+		err = os.WriteFile(tmpFile.Name(), []byte(configContent), 0o644)
 		require.NoError(t, err)
 		configFiles := Files{tmpFile.Name(), tmpFileExtra.Name()}
 		settings, err := NewSettings(configFiles...)

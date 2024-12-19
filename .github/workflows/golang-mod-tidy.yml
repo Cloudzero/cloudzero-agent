@@ -1,4 +1,4 @@
-name: GoFmt
+name: GoModTidy
 
 on: [push]
 
@@ -12,9 +12,7 @@ jobs:
         with:
           go-version: '1.22.x'
           cache-dependency-path: go.sum
-      - name: Install gofumpt
-        run: go install mvdan.cc/gofumpt@latest
-      - name: Format code
-        run: make format
-      - name: Check file format
+      - name: Run go mod tidy
+        run: go mod tidy
+      - name: Check for differences
         run: git diff --exit-code --color

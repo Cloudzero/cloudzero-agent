@@ -4,7 +4,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -27,7 +26,6 @@ type AdmissionRouteSegment struct {
 
 // NewServer creates and return a http.Server
 func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...AdmissionRouteSegment) *http.Server {
-
 	ah := handler()
 	mux := http.NewServeMux()
 	for _, route := range admissionRoutes {
@@ -45,7 +43,7 @@ func NewServer(cfg *config.Settings, routes []RouteSegment, admissionRoutes ...A
 	handler = LoggingMiddlewareWrapper(handler)
 
 	return &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
+		Addr:         ":" + cfg.Server.Port,
 		Handler:      handler,
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout),
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout),

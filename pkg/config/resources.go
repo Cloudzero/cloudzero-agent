@@ -8,8 +8,8 @@ type Resources struct {
 	Namespaces   bool `yaml:"namespaces" default:"true"`
 	Deployments  bool `yaml:"deployments" default:"false"`
 	Jobs         bool `yaml:"jobs" default:"false"`
-	CronJobs     bool `yaml:"cronjobs" default:"false"`     //nolint:tagliatelle
-	StatefulSets bool `yaml:"statefulsets" default:"false"` //nolint:tagliatelle
-	DaemonSets   bool `yaml:"daemonsets" default:"false"`   //nolint:tagliatelle
+	CronJobs     bool `yaml:"cronjobs" default:"false"`     //nolint:tagliatelle // compatibility
+	StatefulSets bool `yaml:"statefulsets" default:"false"` //nolint:tagliatelle // compatibility
+	DaemonSets   bool `yaml:"daemonsets" default:"false"`   //nolint:tagliatelle // compatibility
 	Nodes        bool `yaml:"nodes" default:"false"`
 }

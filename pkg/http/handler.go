@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package http implements an admission webhook handler.
 package http
 
 import (
@@ -52,7 +53,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 		}
 
 		var review admission.AdmissionReview
-		if _, _, err := h.decoder.Decode(body, nil, &review); err != nil {
+		if _, _, err = h.decoder.Decode(body, nil, &review); err != nil {
 			http.Error(w, fmt.Sprintf("could not deserialize request: %v", err), http.StatusBadRequest)
 			return
 		}

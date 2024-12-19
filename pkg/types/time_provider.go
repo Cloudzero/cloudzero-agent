@@ -6,5 +6,6 @@ package types
 import "time"
 
 type TimeProvider interface {
+	// GetCurrentTime returns the current time.
 	GetCurrentTime() time.Time
 }

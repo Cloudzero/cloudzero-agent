@@ -61,7 +61,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestMetricsInterface(t *testing.T) {
-	var basicMetrics = []string{
+	basicMetrics := []string{
 		// # HELP go_gc_duration_seconds A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles.
 		// # TYPE go_gc_duration_seconds summary
 		"go_gc_duration_seconds",

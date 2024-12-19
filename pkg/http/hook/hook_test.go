@@ -14,7 +14,6 @@ import (
 )
 
 func TestHandler_Execute(t *testing.T) {
-
 	ctx := context.Background()
 	tests := []struct {
 		name        string

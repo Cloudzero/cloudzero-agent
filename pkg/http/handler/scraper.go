@@ -20,6 +20,7 @@ type ScraperHandler struct {
 }
 
 type ClusterScraper interface {
+	// Start starts the scraper.
 	Start(context.Context)
 }
 

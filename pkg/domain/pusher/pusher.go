@@ -10,18 +10,21 @@ package pusher
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/golang/snappy"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/protoadapt"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
@@ -106,7 +109,7 @@ var (
 	)
 )
 
-// -------------------- MetricsPusher Struct --------------------
+// MetricsPusher is a runnable that periodically flushes metrics to a remote write endpoint.
 type MetricsPusher struct {
 	// interfaces
 	clock types.TimeProvider
@@ -243,7 +246,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	apiToken := h.settings.GetAPIKey()
 	if apiToken == "" {
 		RemoteWriteFailures.WithLabelValues(endpoint).Inc()
-		return fmt.Errorf("API key is empty")
+		return errors.New("API key is empty")
 	}
 
 	ts := h.formatMetrics(batch)
@@ -370,7 +373,7 @@ func (h *MetricsPusher) createTimeseries(
 	}
 	for labelKey, labelValue := range metricTags {
 		ts.Labels = append(ts.Labels, prompb.Label{
-			Name:  fmt.Sprintf("label_%s", labelKey),
+			Name:  "label_" + labelKey,
 			Value: labelValue,
 		})
 	}
@@ -383,7 +386,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 		Timeseries: timeSeries,
 	}
 
-	data, err := proto.Marshal(writeRequest)
+	data, err := proto.Marshal(protoadapt.MessageV2Of(writeRequest))
 	if err != nil {
 		return fmt.Errorf("error marshaling WriteRequest: %v", err)
 	}
@@ -399,7 +402,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 	var resp *http.Response
 	var req *http.Request
 
-	for attempt := 0; attempt < h.maxRetries; attempt++ {
+	for attempt := range h.maxRetries {
 		ctx, cancel := context.WithTimeout(h.ctx, h.sendTimeout)
 		defer cancel()
 
@@ -427,7 +430,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 		}
 
 		if resp != nil {
-			statusCode := fmt.Sprintf("%d", resp.StatusCode)
+			statusCode := strconv.Itoa(resp.StatusCode)
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, statusCode).Inc()
 			resp.Body.Close()
 			log.Error().Msgf("received non-200 response: %v, retrying...", resp.StatusCode)

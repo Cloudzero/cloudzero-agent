@@ -49,7 +49,6 @@ func Test_Logger_Sqlite(t *testing.T) {
 	now := time.Now()
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{NowFunc: func() time.Time { return now }, Logger: core.ZeroLogAdapter{}})
-
 	if err != nil {
 		panic(err)
 	}
@@ -63,9 +62,9 @@ func Test_Logger_Sqlite(t *testing.T) {
 	db.AutoMigrate(&Post{})
 
 	cases := []struct {
-		run    func() error
-		sql    string
-		err_ok bool
+		run   func() error
+		sql   string
+		errOk bool
 	}{
 		{
 			run: func() error { return db.Create(&Post{Title: "awesome"}).Error },
@@ -73,12 +72,12 @@ func Test_Logger_Sqlite(t *testing.T) {
 				"INSERT INTO `posts` (`title`,`body`,`created_at`) VALUES (%q,%q,%q)",
 				"awesome", "", now.Format("2006-01-02 15:04:05.000"),
 			),
-			err_ok: false,
+			errOk: false,
 		},
 		{
-			run:    func() error { return db.Model(&Post{}).Find(&[]*Post{}).Error },
-			sql:    "SELECT * FROM `posts`",
-			err_ok: false,
+			run:   func() error { return db.Model(&Post{}).Find(&[]*Post{}).Error },
+			sql:   "SELECT * FROM `posts`",
+			errOk: false,
 		},
 		{
 			run: func() error {
@@ -88,12 +87,12 @@ func Test_Logger_Sqlite(t *testing.T) {
 				"SELECT * FROM `posts` WHERE `posts`.`title` = %q AND `posts`.`body` = %q ORDER BY `posts`.`title` LIMIT 1",
 				"awesome", "This is awesome post !",
 			),
-			err_ok: true,
+			errOk: true,
 		},
 		{
-			run:    func() error { return db.Raw("THIS is,not REAL sql").Scan(&Post{}).Error },
-			sql:    "THIS is,not REAL sql",
-			err_ok: true,
+			run:   func() error { return db.Raw("THIS is,not REAL sql").Scan(&Post{}).Error },
+			sql:   "THIS is,not REAL sql",
+			errOk: true,
 		},
 	}
 
@@ -102,7 +101,7 @@ func Test_Logger_Sqlite(t *testing.T) {
 
 		err := c.run()
 
-		if err != nil && !c.err_ok {
+		if err != nil && !c.errOk {
 			t.Fatalf("Unexpected error: %s (%T)", err, err)
 		}
 

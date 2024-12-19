@@ -6,14 +6,17 @@
 package k8s
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	EnvVarHostname = "HOSTNAME"
-	PodNamePartial = "insights-controller-server"
+	EnvVarHostname   = "HOSTNAME"
+	PodNamePartial   = "insights-controller-server"
+	queriesPerSecond = 50
+	maxBurst         = 100
 )
 
 // NewClient creates a new Kubernetes client using the provided kubeconfig file path.
@@ -23,13 +26,13 @@ const (
 func NewClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "building kubeconfig")
+		return nil, fmt.Errorf("failed to build kubeconfig: %w", err)
 	}
-	config.QPS = 50
-	config.Burst = 100
+	config.QPS = queriesPerSecond
+	config.Burst = maxBurst
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "building clientset")
+		return nil, fmt.Errorf("failed to build clientset: %w", err)
 	}
 	return clientset, nil
 }

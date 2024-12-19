@@ -5,8 +5,6 @@
 // This package includes base implementations for repositories that can be extended
 // to fit specific use cases. It supports transaction management and context-based
 // database operations.
-//
-//nolint:gofmt
 package core
 
 import (

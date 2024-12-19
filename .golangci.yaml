@@ -19,19 +19,28 @@ linters:
     - staticcheck
     - revive
     - govet
+    - copyloopvar
     - errcheck
     - gosec
     - dupl
+    - nilnil
+    - paralleltest
+    - promlinter
+    - sqlclosecheck
+    - tparallel
+    - zerologlint
 
     # performance
     - gocritic
     - prealloc
+    - perfsprint
 
     # style, formatting
     - stylecheck
     - goconst
-    - gofmt
+    - gofumpt
     - goheader
+    - intrange
     - nolintlint
     - tagliatelle
 
@@ -41,9 +50,9 @@ linters-settings:
     # Such cases aren't reported by default.
     # Default: false
     check-type-assertions: true
-  gofmt:
+  gofumpt:
     # Apply the rewrite rules to the source before reformatting.
-    # https://pkg.go.dev/cmd/gofmt
+    # https://github.com/mvdan/gofumpt
     # Default: []
     rewrite-rules:
       - pattern: 'interface{}'
@@ -56,11 +65,38 @@ linters-settings:
       SPDX-License-Identifier: Apache-2.0
     exclude-dirs:
       - pkg/types/mocks
+  govet:
+    enable:
+      - shadow
   dupl:
     # Tokens count to trigger issue, Default: 150
     threshold: 100
   nolintlint:
     require-specific: true
+    require-explanation: true
+  revive:
+    rules:
+      - name: add-constant
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2,3"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
+      - name: atomic
+      - name: comment-spacings
+      - name: confusing-naming
+      - name: confusing-results
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: datarace
+      - name: deep-exit
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "disableStutteringCheck"
+          - "checkPublicInterface"
+          - "disableChecksOnFunctions"
   tagliatelle:
     case:
       use-field-name: true
