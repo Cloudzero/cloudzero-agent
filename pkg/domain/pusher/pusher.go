@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package pusher provides a mechanism for pushing metrics to a remote write endpoint.
 // It periodically collects metrics from a resource store, formats them, and sends them to the specified endpoint.
 // The package includes Prometheus metrics to monitor the performance and success of the remote write operations.

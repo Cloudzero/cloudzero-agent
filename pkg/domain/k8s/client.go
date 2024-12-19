@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package k8s provides utilities for interacting with Kubernetes clusters.
 // It includes functions for creating Kubernetes clients and managing resources within a cluster.
 package k8s

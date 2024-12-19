@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -54,7 +55,7 @@ func main() {
 
 	secretMon := monitor.NewSecretMonitor(ctx, settings)
 	if err := secretMon.Start(); err != nil {
-		log.Fatal().Err(err).Msg("failed to run secret monitor") // nolint: gocritic
+		log.Fatal().Err(err).Msg("failed to run secret monitor") //nolint:gocritic
 	}
 	defer func() { _ = secretMon.Shutdown() }()
 

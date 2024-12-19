@@ -3,10 +3,6 @@ run:
   timeout: 5m
   issues-exit-code: 2
   tests: false
-  skip-dirs:
-    - pkg/status
-    - .go
-    - .git
 
 output:
   print-issued-lines: false
@@ -35,6 +31,8 @@ linters:
     - stylecheck
     - goconst
     - gofmt
+    - goheader
+    - nolintlint
     - tagliatelle
 
 linters-settings:
@@ -52,9 +50,17 @@ linters-settings:
         replacement: 'any'
       - pattern: 'a[b:len(a)]'
         replacement: 'a[b:]'
+  goheader:
+    template: |-
+      SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+      SPDX-License-Identifier: Apache-2.0
+    exclude-dirs:
+      - pkg/types/mocks
   dupl:
     # Tokens count to trigger issue, Default: 150
     threshold: 100
+  nolintlint:
+    require-specific: true
   tagliatelle:
     case:
       use-field-name: true
@@ -62,3 +68,13 @@ linters-settings:
         # Any struct tag type can be used.
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`.
         yaml: snake
+
+issues:
+  exclude-dirs:
+    - pkg/status
+    - .go
+    - .git
+  exclude-rules:
+    - path: pkg/types/mocks
+      linters:
+        - goheader

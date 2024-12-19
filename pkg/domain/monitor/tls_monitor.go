@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package monitor provides functionality to manage and reload TLS certificates dynamically.
 // This package is designed to enhance the security and flexibility of TLS configurations by
 // allowing dynamic reloading and rotation of TLS certificates. It supports various methods

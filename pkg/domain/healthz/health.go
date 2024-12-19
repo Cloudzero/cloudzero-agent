@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-//
+
 // Package healthz provides a simple and extensible health check mechanism for HTTP services.
 // It allows the registration of multiple health check functions and exposes an HTTP endpoint
 // to report the health status of the service. This can be useful for monitoring and ensuring
@@ -22,7 +22,7 @@ type HealthChecker interface {
 // can be used to add specific health checks
 func Register(name string, fn HealthCheck) {
 	// get the interface and cast to internal type
-	NewHealthz().(*checker).add(name, fn) //nolint
+	NewHealthz().(*checker).add(name, fn) //nolint:errcheck
 }
 
 var (

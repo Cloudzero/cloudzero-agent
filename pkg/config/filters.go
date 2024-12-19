@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package config
 
 import (
@@ -9,8 +12,8 @@ import (
 )
 
 type Filters struct {
-	Labels      Labels      `yaml:"labels"`      //nolint:tagliatelle
-	Annotations Annotations `yaml:"annotations"` //nolint:tagliatelle
+	Labels      Labels      `yaml:"labels"`
+	Annotations Annotations `yaml:"annotations"`
 	Policy      bluemonday.Policy
 }
 

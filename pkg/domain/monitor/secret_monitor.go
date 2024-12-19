@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package monitor provides functionality to manage and reload secrets dynamically.
 // This package is designed to enhance the security and flexibility of secret management by
 // allowing dynamic reloading and rotation of secrets. It supports various methods

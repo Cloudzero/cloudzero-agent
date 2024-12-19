@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package sqlite provides implementations for resource repository interfaces
 // using SQLite as the underlying database. This package includes implementations
 // for repositories that can be extended to fit specific use cases. It supports

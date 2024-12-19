@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package core provides core functionalities for database repository implementations.
 // This package includes base implementations for repositories that can be extended
 // to fit specific use cases. It supports transaction management and context-based

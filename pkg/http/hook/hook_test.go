@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc.
 // SPDX-License-Identifier: Apache-2.0
+
 package hook_test
 
 import (

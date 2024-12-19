@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
 // Package scraper provides functionality to scrape Kubernetes resources and store them in a specified storage.
 // This package is designed to gather data from various Kubernetes resources such as namespaces, pods, deployments,
 // statefulsets, daemonsets, jobs, cronjobs, and nodes. The gathered data is then formatted and stored using a
@@ -80,56 +81,56 @@ func (s *Scraper) Start(ctx context.Context) {
 			}
 
 			// write all pods in the namespace storage
-			if s.settings.Filters.Labels.Resources.Pods || s.settings.Filters.Annotations.Resources.Pods { // nolint
+			if s.settings.Filters.Labels.Resources.Pods || s.settings.Filters.Annotations.Resources.Pods { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.CoreV1().Pods(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatPodData(obj.(*corev1.Pod), settings) // nolint
+					return handler.FormatPodData(obj.(*corev1.Pod), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
 			// write all deployments in the namespace storage
-			if s.settings.Filters.Labels.Resources.Deployments || s.settings.Filters.Annotations.Resources.Deployments { // nolint
+			if s.settings.Filters.Labels.Resources.Deployments || s.settings.Filters.Annotations.Resources.Deployments { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().Deployments(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings) // nolint
+					return handler.FormatDeploymentData(obj.(*appsv1.Deployment), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
 			// write all statefulsets in the namespace storage
-			if s.settings.Filters.Labels.Resources.StatefulSets || s.settings.Filters.Annotations.Resources.StatefulSets { // nolint
+			if s.settings.Filters.Labels.Resources.StatefulSets || s.settings.Filters.Annotations.Resources.StatefulSets { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().StatefulSets(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings) // nolint
+					return handler.FormatStatefulsetData(obj.(*appsv1.StatefulSet), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
 			// write all daemonsets in the namespace storage
-			if s.settings.Filters.Labels.Resources.DaemonSets || s.settings.Filters.Annotations.Resources.DaemonSets { // nolint
+			if s.settings.Filters.Labels.Resources.DaemonSets || s.settings.Filters.Annotations.Resources.DaemonSets { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.AppsV1().DaemonSets(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings) // nolint
+					return handler.FormatDaemonSetData(obj.(*appsv1.DaemonSet), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
 			// write all jobs in the namespace storage
-			if s.settings.Filters.Labels.Resources.Jobs || s.settings.Filters.Annotations.Resources.Jobs { // nolint
+			if s.settings.Filters.Labels.Resources.Jobs || s.settings.Filters.Annotations.Resources.Jobs { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().Jobs(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatJobData(obj.(*batchv1.Job), settings) // nolint
+					return handler.FormatJobData(obj.(*batchv1.Job), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
 			// write all cronjobs in the namespace storage
-			if s.settings.Filters.Labels.Resources.CronJobs || s.settings.Filters.Annotations.Resources.CronJobs { // nolint
+			if s.settings.Filters.Labels.Resources.CronJobs || s.settings.Filters.Annotations.Resources.CronJobs { //nolint:dupl
 				writeResources(ctx, s.store, ns.Name, func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 					return s.k8sClient.BatchV1().CronJobs(namespace).List(ctx, opts)
 				}, func(obj any, settings *config.Settings) types.ResourceTags {
-					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings) // nolint
+					return handler.FormatCronJobData(obj.(*batchv1.CronJob), settings) //nolint:errcheck
 				}, s.settings)
 			}
 
