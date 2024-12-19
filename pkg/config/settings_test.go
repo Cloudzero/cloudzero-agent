@@ -159,7 +159,7 @@ func TestCleanString(t *testing.T) {
 			expected: "",
 		},
 		{
-			name: "string with newlintes, and other special charactewrs",
+			name: "string with newlines, and other special characters",
 			input: `
 			"foobar"
 `,
