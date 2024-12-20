@@ -134,7 +134,7 @@ func (s *Settings) setRemoteWriteURL() {
 	url := baseURL.String()
 
 	if !isValidURL(url) {
-		log.Fatal().Msgf("URL format invalid: %s", url)
+		log.Fatal().Str("url", url).Msg("URL format invalid")
 	}
 	s.RemoteWrite.Host = url
 }
@@ -169,7 +169,7 @@ func (s *Settings) compilePatterns(patterns []string) []regexp.Regexp {
 	}
 	if len(errHistory) > 0 {
 		for _, err := range errHistory {
-			log.Info().Err(err).Msgf("invalid regex pattern: %v", err)
+			log.Info().Err(err).Msg("invalid regex pattern")
 		}
 		log.Fatal().Msg("Config file contains invalid regex patterns")
 	}

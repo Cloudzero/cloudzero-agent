@@ -82,6 +82,12 @@ func LoggingMiddlewareWrapper(next http.Handler) http.Handler {
 		method := r.Method
 
 		// Log the request details
-		log.Debug().Msgf("%s %s %d %s", method, route, statusCode, duration)
+		log.Debug().
+			Str("method", method).
+			Str("route", route).
+			Int("status_code", statusCode).
+			Str("status", http.StatusText(statusCode)).
+			Dur("duration", duration).
+			Msg("HTTP request")
 	})
 }

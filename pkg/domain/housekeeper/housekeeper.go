@@ -63,7 +63,9 @@ func (h *HouseKeeper) Start() error {
 		defer close(h.done)
 		defer func() {
 			if r := recover(); r != nil {
-				log.Info().Msgf("Recovered from panic in stale data removal: %v", r)
+				log.Info().
+					Interface("panic", r).
+					Msg("Recovered from panic in stale data removal")
 			}
 		}()
 		for {
@@ -73,13 +75,18 @@ func (h *HouseKeeper) Start() error {
 				return
 			case <-ticker.C:
 				// use the store to cleanup old data
-				retentionTime := utils.FormatForStorage(h.clock.GetCurrentTime().Add(-1 * h.retentionTime))
-				log.Debug().Msgf("Starting data purge process for stale records older than %s", retentionTime)
+				currentTime := h.clock.GetCurrentTime()
+				retentionTime := currentTime.Add(-1 * h.retentionTime)
+				log.Debug().
+					Dur("retention_time", h.retentionTime).
+					Msg("Starting data purge process for stale records")
 				expired, err := h.store.FindAllBy(h.ctx,
-					fmt.Sprintf("sent_at < '%[1]s' AND record_created < '%[1]s' AND record_updated < '%[1]s' AND sent_at IS NOT NULL", retentionTime),
+					fmt.Sprintf("sent_at < '%[1]s' AND record_created < '%[1]s' AND record_updated < '%[1]s' AND sent_at IS NOT NULL", utils.FormatForStorage(retentionTime)),
 				)
 				if err != nil {
-					log.Printf("failed to delete old tag data: %v", err)
+					log.Error().
+						Err(err).
+						Msg("Failed to delete old tag data")
 					continue // keep trying
 				}
 
@@ -97,10 +104,12 @@ func (h *HouseKeeper) Start() error {
 							return err
 						}
 					}
-					log.Debug().Msgf("Deleted %d records", expiredLen)
+					log.Debug().
+						Int("deleted_count", expiredLen).
+						Msg("Deleted old records")
 					return nil // commit the transaction
 				}); err != nil {
-					log.Error().Err(err).Msg("Failed to delete old tag data")
+					log.Err(err).Msg("Failed to delete old tag data")
 				}
 			}
 		}

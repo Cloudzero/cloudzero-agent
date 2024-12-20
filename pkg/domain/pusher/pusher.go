@@ -191,7 +191,7 @@ func (h *MetricsPusher) Start() error {
 		h.ResetStats()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Info().Msgf("Recovered from panic in stale data removal: %v", r)
+				log.Info().Interface("panic", r).Msg("Recovered from panic in stale data removal")
 			}
 		}()
 
@@ -250,7 +250,9 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	}
 
 	ts := h.formatMetrics(batch)
-	log.Debug().Msgf("Pushing %d records to remote write endpoint", len(ts))
+	log.Debug().
+		Int("record_count", len(ts)).
+		Msg("Pushing records to remote write endpoint")
 
 	if err := h.pushMetrics(h.settings.RemoteWrite.Host, apiToken, ts); err != nil {
 		RemoteWriteFailures.WithLabelValues(endpoint).Inc()
@@ -287,7 +289,7 @@ func (h *MetricsPusher) Flush() error {
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
 			// Send the current batch
 			if err := h.sendBatch(batch); err != nil {
-				log.Error().Msgf("failed to send batch: %v", err)
+				log.Err(err).Msg("Failed to send batch")
 				return err
 			}
 
@@ -304,7 +306,7 @@ func (h *MetricsPusher) Flush() error {
 	// Send the last batch if it exists
 	if len(batch) > 0 {
 		if err := h.sendBatch(batch); err != nil {
-			log.Error().Msgf("failed to send partial batch: %v", err)
+			log.Err(err).Msg("Failed to send partial batch")
 			return err
 		}
 	}
@@ -320,7 +322,7 @@ func (h *MetricsPusher) Flush() error {
 			}
 			return nil
 		}); err != nil {
-			log.Error().Msgf("failed to update sent_at for records: %v", err)
+			log.Err(err).Msg("Failed to update sent_at for records")
 			RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()
 			return fmt.Errorf("failed to update sent_at for records: %v", err)
 		}
@@ -433,7 +435,10 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			statusCode := strconv.Itoa(resp.StatusCode)
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, statusCode).Inc()
 			resp.Body.Close()
-			log.Error().Msgf("received non-200 response: %v, retrying...", resp.StatusCode)
+			log.Error().
+				Int("status_code", resp.StatusCode).
+				Str("status_text", resp.Status).
+				Msg("Received non-200 response, retrying...")
 		} else {
 			// If resp is nil, we can track it as a failure as well
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()

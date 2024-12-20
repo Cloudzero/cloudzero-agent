@@ -54,7 +54,9 @@ func NewScraper(k8sClient kubernetes.Interface, store types.ResourceStore, setti
 func (s *Scraper) Start(ctx context.Context) {
 	var _continue string
 	allNamespaces := []corev1.Namespace{}
-	log.Info().Msgf("Starting scrape of existing resources at: %v", time.Now().UTC())
+	log.Info().
+		Time("current_time", time.Now().UTC()).
+		Msg("Starting scrape of existing resources")
 
 	// write all nodes in the cluster storage
 	s.writeNodes(ctx)
@@ -66,18 +68,18 @@ func (s *Scraper) Start(ctx context.Context) {
 			Continue: _continue,
 		})
 		if err != nil {
-			log.Error().Msgf("Error listing namespaces: %v", err)
+			log.Err(err).Msg("Error listing namespaces")
 			return
 		}
 		allNamespaces = append(allNamespaces, namespaces.Items...)
 
 		// For each namespace, gather all resources
 		for _, ns := range namespaces.Items {
-			log.Info().Msgf("Scraping data from namespace: %s", ns.Name)
+			log.Info().Str("namespace", ns.Name).Msg("Scraping data from namespace")
 			// write namespace record
 			nr := handler.FormatNamespaceData(&ns, s.settings)
 			if err := s.store.Create(ctx, &nr); err != nil {
-				log.Error().Err(err).Msgf("failed to write data to storage: %v", err)
+				log.Err(err).Msg("failed to write data to storage")
 			}
 
 			// write all pods in the namespace storage
@@ -160,7 +162,10 @@ func (s *Scraper) Start(ctx context.Context) {
 
 		}
 		if namespaces.GetContinue() == "" {
-			log.Info().Msgf("Scrape operation completed at: %v, scraped data from %d namespaces", time.Now().UTC(), len(allNamespaces))
+			log.Info().
+				Time("current_time", time.Now().UTC()).
+				Int("namespaces_count", len(allNamespaces)).
+				Msg("Scrape operation completed")
 			break
 		}
 		_continue = namespaces.GetContinue()
@@ -182,7 +187,7 @@ func writeResources[T metav1.ListInterface](
 			Continue: _continue,
 		})
 		if err != nil {
-			log.Error().Msgf("Error listing resources in namespace %s: %v", namespace, err)
+			log.Err(err).Str("namespace", namespace).Msg("Error listing resources")
 			break
 		}
 
@@ -191,11 +196,11 @@ func writeResources[T metav1.ListInterface](
 			resource := items.Index(i).Addr().Interface()
 			record, err := formatFunc(resource, settings)
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to format data")
+				log.Err(err).Msg("Failed to format data")
 				continue
 			}
 			if err = store.Create(ctx, &record); err != nil {
-				log.Error().Err(err).Msg("Failed to write data to storage")
+				log.Err(err).Msg("Failed to write data to storage")
 			}
 		}
 
@@ -226,7 +231,7 @@ func (s *Scraper) writeNodes(ctx context.Context) {
 		for _, node := range nodes.Items {
 			record := handler.FormatNodeData(&node, s.settings)
 			if err := s.store.Create(ctx, &record); err != nil {
-				log.Error().Err(err).Msgf("failed to write node data to storage: %v", err)
+				log.Err(err).Msg("failed to write node data to storage")
 			}
 		}
 		if nodes.Continue == "" {

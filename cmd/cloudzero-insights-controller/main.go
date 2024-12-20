@@ -33,7 +33,19 @@ func main() {
 
 	clock := &utils.Clock{}
 
-	log.Info().Msgf("Starting CloudZero Insights Controller %s", build.GetVersion())
+	log.Info().
+		Str("app_name", build.AppName).
+		Str("version", build.GetVersion()).
+		Str("build_time", build.Time).
+		Str("rev", build.Rev).
+		Str("tag", build.Tag).
+		Str("author", build.AuthorName).
+		Str("copyright", build.Copyright).
+		Str("author_email", build.AuthorEmail).
+		Str("charts_repo", build.ChartsRepo).
+		Str("platform_endpoint", build.PlatformEndpoint).
+		Interface("config_files", configFiles).
+		Msg("Starting CloudZero Insights Controller")
 	if len(configFiles) == 0 {
 		log.Fatal().Msg("No configuration files provided")
 	}
@@ -106,9 +118,9 @@ func main() {
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-signalChan
 
-		log.Error().Msgf("Received %s signal; shutting down...", sig)
+		log.Error().Str("signal", sig.String()).Msg("Received signal; shutting down...")
 		if err := server.Shutdown(ctx); err != nil {
-			log.Error().Err(err).Msg("Error shutting down server")
+			log.Err(err).Msg("Error shutting down server")
 		}
 
 		// Shutdown after disabling the exposed endpoints
@@ -119,7 +131,7 @@ func main() {
 		log.Info().Msg("Starting server without TLS")
 		err := server.ListenAndServe()
 		if err != nil {
-			log.Fatal().Err(err).Msgf("Failed to listen and serve: %v", err)
+			log.Fatal().Err(err).Msg("Failed to listen and serve")
 		}
 	} else {
 		log.Info().Msg("Starting server with TLS")
@@ -139,7 +151,7 @@ func main() {
 
 		err := server.ListenAndServeTLS("", "")
 		if err != nil {
-			log.Fatal().Err(err).Msgf("Failed to listen and serve: %v", err)
+			log.Fatal().Err(err).Msg("Failed to listen and serve")
 		}
 	}
 	// Print a message when the server is stopped.

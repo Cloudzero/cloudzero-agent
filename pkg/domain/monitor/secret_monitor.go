@@ -66,7 +66,7 @@ func (s *secretsMonitor) Start() error {
 		defer close(s.done)
 		defer func() {
 			if r := recover(); r != nil {
-				log.Info().Msgf("Recovered from panic in secret monitor: %v", r)
+				log.Info().Interface("panic", r).Msg("Recovered from panic in secret monitor")
 			}
 		}()
 
@@ -80,7 +80,7 @@ func (s *secretsMonitor) Start() error {
 				newSecret := s.settings.GetAPIKey()
 				newHash := sha256.Sum256([]byte(newSecret))
 				if newHash != s.lastHash {
-					log.Info().Msgf("discovered new secret %s", redactSecret(newSecret))
+					log.Info().Str("secret", redactSecret(newSecret)).Msg("discovered new secret")
 					s.lastHash = newHash
 				}
 			}
