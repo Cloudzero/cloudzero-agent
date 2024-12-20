@@ -166,6 +166,16 @@ func TestCleanString(t *testing.T) {
 `,
 			expected: "foobar",
 		},
+		{
+			name:     "string with backslashes",
+			input:    "\\\"test-string\\",
+			expected: "test-string",
+		},
+		{
+			name:     "string with special characters in the middle",
+			input:    "^ test-$triñg-123 $",
+			expected: "test-$triñg-123",
+		},
 	}
 
 	for _, tt := range tests {

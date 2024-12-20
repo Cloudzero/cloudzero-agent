@@ -202,9 +202,35 @@ func (c *Files) Set(value string) error {
 	return nil
 }
 
+// cleanString trims non-alphanumeric characters from the beginning and end of a
+// string.
+//
+// The resulting string should have an alphanumeric character at the beginning
+// and end. If not alphanumeric characters are found, return an empty string.
 func cleanString(s string) string {
-	// clean unexpected characters from CloudAccountID
-	// should only be A-Z, a-z, 0-9 at beginning and end
-	s = strings.TrimSpace(s)
-	return strings.Trim(s, "\"'")
+	// Find first alphanumeric character from start
+	start := -1
+	for i, c := range s {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+			start = i
+			break
+		}
+	}
+
+	// if no alphanumeric characters found, return empty string
+	if start < 0 {
+		return ""
+	}
+
+	// Find last alphanumeric character from end
+	end := len(s)
+	for i := len(s) - 1; i >= 0; i-- {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+			end = i + 1
+			break
+		}
+	}
+
+	return s[start:end]
 }
