@@ -1,8 +1,7 @@
 # User Guide
 
-The Cloudzero Insights Controller 
-
+The Cloudzero Insights Controller
 
 ## Copyright
-© 2024 Cloudzero, Inc.
 
+© 2024 Cloudzero, Inc.

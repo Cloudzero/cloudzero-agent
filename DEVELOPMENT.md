@@ -11,18 +11,18 @@ Before getting started with the development of the CloudZero Insights Controller
 - [Protocol buffer](https://developers.google.com/protocol-buffers) compiler, `protoc`, [version 3](https://protobuf.dev/programming-guides/proto3).
 - **Go plugins** for the protocol compiler:
 
-    1. Install the protocol compiler plugins for Go using the following commands:
+  1. Install the protocol compiler plugins for Go using the following commands:
 
-        ```sh
-        $ go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-        $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
-        ```
+     ```sh
+     $ go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+     $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+     ```
 
-    2. Update your `PATH` so that the `protoc` compiler can find the plugins:
+  2. Update your `PATH` so that the `protoc` compiler can find the plugins:
 
-        ```sh
-        $ export PATH="$PATH:$(go env GOPATH)/bin"
-        ```
+     ```sh
+     $ export PATH="$PATH:$(go env GOPATH)/bin"
+     ```
 
 ## Development Quick Start
 
@@ -32,37 +32,37 @@ To quickly get started with the development of the CloudZero Insights Controller
 
 1. Clone the repository:
 
-     ```sh
-     $ git clone https://github.com/Cloudzero/cloudzero-insights-controller.git
-     ```
+   ```sh
+   $ git clone https://github.com/Cloudzero/cloudzero-insights-controller.git
+   ```
 
 2. Change to the project directory:
 
-     ```sh
-     $ cd cloudzero-insights-controller
-     ```
+   ```sh
+   $ cd cloudzero-insights-controller
+   ```
 
 ### 2. Building the Code
 
 1. Install the project dependencies:
 
-     ```sh
-     $ go mod download
-     ```
+   ```sh
+   $ go mod download
+   ```
 
 2. Generate the status protobuf definition package:
 
-     ```sh
-     $ make generate
-     ```
+   ```sh
+   $ make generate
+   ```
 
 3. Build the binary:
 
-     ```sh
-     $ make build
-     ```
+   ```sh
+   $ make build
+   ```
 
-### 3. Local Testing 
+### 3. Local Testing
 
 To run the go formatter, go linter, unit tests to verify code changes, use the following command:
 
@@ -86,12 +86,12 @@ act --container-architecture linux/arm64 -l
 
 ```sh
 $ act --container-architecture linux/arm64 -l
-Stage  Job ID   Job name  Workflow name   Workflow file        Events           
+Stage  Job ID   Job name  Workflow name   Workflow file        Events
 0      docker           docker           DockerBuild             docker-build.yml     push,pull_request,release
-0      build            build            GoTest                  golang-build.yml     push                     
-0      format           format           GoFmt                   golang-fmt.yml       push                     
-0      lint             lint             GoLint                  golang-lint.yml      push                     
-0      release-to-main  release-to-main  Manual Prepare Release  release-to-main.yml  workflow_dispatch       
+0      build            build            GoTest                  golang-build.yml     push
+0      format           format           GoFmt                   golang-fmt.yml       push
+0      lint             lint             GoLint                  golang-lint.yml      push
+0      release-to-main  release-to-main  Manual Prepare Release  release-to-main.yml  workflow_dispatch
 ```
 
 #### Linting a Workflow
@@ -118,6 +118,7 @@ For more examples, [see the README in the workflow directory](./.github/workflow
 Remember to refer to the available targets in the Makefile for other development tasks.
 
 ---
+
 # Release Process
 
 Publishing a new release can be accomplished by running the `Manual Prepare Release` workflow.
@@ -134,11 +135,12 @@ Next we can visit the release page, and locate the `pre-release` and `click the 
 ![](./docs/assets/release-2.png)
 
 Finally - we will publish the `draft-release`. Make sure you:
+
 1. Remove the `draft` checkbox
 2. Update _`Set as pre-release`_ to **`Set as the latest release`**
 
 ![](./docs/assets/release-3.png)
 
-When this is done, it will cause an automated release of teh `docker image` for the release value, and `latest` to be created in GHCR. 
+When this is done, it will cause an automated release of teh `docker image` for the release value, and `latest` to be created in GHCR.
 
 That's it, Happy coding!

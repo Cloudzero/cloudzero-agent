@@ -6,16 +6,16 @@ Reading and following these guidelines will help us make the contribution proces
 
 ## Quicklinks
 
-* [Code of Conduct](#code-of-conduct)
-* [Getting Started](#getting-started)
-    * [Issues](#issues)
-    * [Pull Requests](#pull-requests)
-* [Getting Help](#getting-help)
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+  - [Issues](#issues)
+  - [Pull Requests](#pull-requests)
+- [Getting Help](#getting-help)
 
 ## Code of Conduct
 
 We take our open source community seriously and hold ourselves and other contributors to high standards of communication.
-By participating and contributing to this project, you agree to uphold our 
+By participating and contributing to this project, you agree to uphold our
 [Code of Conduct](https://github.com/cloudzero/template-cloudzero-open-source/blob/master/CODE-OF-CONDUCT.md).
 
 ## Getting Started

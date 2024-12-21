@@ -9,7 +9,7 @@ This guide outlines the steps and best practices for managing releases in the re
 3. **Review and Merge**
 4. **Trigger Manual Release Workflow**
 5. **Obtain External Approvals**
-6. **Publish Release**, **IMPORANT as the release is published only as a `pre-release` due to actions workflow limitations_**
+6. **Publish Release**, **IMPORANT as the release is published only as a `pre-release` due to actions workflow limitations\_**
 
 ---
 
@@ -31,7 +31,7 @@ This guide outlines the steps and best practices for managing releases in the re
 
 - **Target Branch:** `develop`
 - **PR Title:** `Release X.X.X - [Brief Description]`
-  
+
 **Automations:**
 
 - Opening a PR will automatically notify the **Product Management (PM)** and **Documentation** teams for review.
@@ -45,7 +45,7 @@ This guide outlines the steps and best practices for managing releases in the re
 ### 4. Trigger the Manual Release Workflow
 
 - **Workflow Link:** [Manual Release Workflow](https://github.com/Cloudzero/cloudzero-insights-controller/actions/workflows/release-to-main.yml)
-  
+
 **Purpose:**
 
 - Ensures stakeholders review the functionality and public-facing documentation before publishing.
@@ -64,7 +64,7 @@ This guide outlines the steps and best practices for managing releases in the re
 - **Approval Process:**
   - Stakeholders review the functionality, documentation, and overall release readiness.
   - Upon satisfaction, stakeholders provide manual approval through the workflow interface.
-  
+
 **Note:** The release cannot proceed to publication without obtaining these external approvals.
 
 ### 6. Publish the Release
@@ -156,28 +156,34 @@ Copy and paste the following template to create your release notes. Replace plac
 > Brief description of the release.
 
 ### Upgrade Steps
-* [ACTION REQUIRED]
-* Detailed upgrade instructions or steps.
+
+- [ACTION REQUIRED]
+- Detailed upgrade instructions or steps.
 
 ### Breaking Changes
-* Description of breaking change 1.
-* Description of breaking change 2.
+
+- Description of breaking change 1.
+- Description of breaking change 2.
 
 ### New Features
-* **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
-* **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
+
+- **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
+- **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
 
 ### Bug Fixes
-* **Bug Fix Description:** Explanation of the issue and how it was resolved.
-* **Bug Fix Description:** Explanation of the issue and how it was resolved.
+
+- **Bug Fix Description:** Explanation of the issue and how it was resolved.
+- **Bug Fix Description:** Explanation of the issue and how it was resolved.
 
 ### Improvements
-* **Improvement Description:** Details about the enhancement.
-* **Improvement Description:** Details about the enhancement.
+
+- **Improvement Description:** Details about the enhancement.
+- **Improvement Description:** Details about the enhancement.
 
 ### Other Changes
-* **Change Description:** Brief explanation of the change.
-* **Change Description:** Brief explanation of the change.
+
+- **Change Description:** Brief explanation of the change.
+- **Change Description:** Brief explanation of the change.
 ```
 
 **Example:**
@@ -189,12 +195,12 @@ Copy and paste the following template to create your release notes. Replace plac
 
 ### Performance Improvements
 
-* **dependencies:** Bump dependencies to latest versions for improved security and performance. [4a4ee13](https://github.com/Cloudzero/cloudzero-insights-controller/commit/4a4ee13)
+- **dependencies:** Bump dependencies to latest versions for improved security and performance. [4a4ee13](https://github.com/Cloudzero/cloudzero-insights-controller/commit/4a4ee13)
 
 ### Other Changes
 
-* **chore(conventionalChangelog):** Add Conventional Changelog for automated release notes generation. [aafcdd9](https://github.com/Cloudzero/cloudzero-insights-controller/commit/aafcdd9)
-* **docs(CHANGELOG):** Add changelog documentation. [e2c7435](https://github.com/Cloudzero/cloudzero-insights-controller/commit/e2c7435)
+- **chore(conventionalChangelog):** Add Conventional Changelog for automated release notes generation. [aafcdd9](https://github.com/Cloudzero/cloudzero-insights-controller/commit/aafcdd9)
+- **docs(CHANGELOG):** Add changelog documentation. [e2c7435](https://github.com/Cloudzero/cloudzero-insights-controller/commit/e2c7435)
 ```
 
 ---
@@ -227,13 +233,16 @@ External approvals are a critical part of the release process to ensure that all
 ### Approval Workflow
 
 1. **Initiate Approval:**
+
    - After triggering the Manual Release workflow, stakeholders receive a notification to review the release.
 
 2. **Review Process:**
+
    - Stakeholders evaluate the functionality, documentation, and overall readiness of the release.
    - Any feedback or required changes are communicated back to the release manager or developer.
 
 3. **Provide Approval:**
+
    - Once satisfied, stakeholders provide manual approval within the workflow interface.
    - The release process proceeds to publication upon receiving all necessary approvals.
 

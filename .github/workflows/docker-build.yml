@@ -5,7 +5,7 @@ on:
       - develop
       - main
     tags:
-      - '*'
+      - "*"
   # tag is pr-<number>
   pull_request:
   release:
@@ -36,7 +36,7 @@ jobs:
       - name: SETUP - Checkout
         id: checkout_code
         uses: actions/checkout@v4
-        
+
       - # Install buildx for multi-platform builds
         name: SETUP - Docker Buildx
         id: install_buildx
@@ -108,7 +108,7 @@ jobs:
           file: ${{ env.CONTROLLER_DOCKERFILE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms:  ${{ env.PLATFORMS }}
+          platforms: ${{ env.PLATFORMS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -152,7 +152,7 @@ jobs:
               --user "${{ github.actor }}" \
               --pass-stdin
 
-      # Copy the image from the local registry 
+      # Copy the image from the local registry
       # to the production registry (retagging at the same time)
       # only allow on main, develop branches, or a version tag
       - name: PRODUCTION STEP - Publish Image to Production

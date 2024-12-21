@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (optional)'
+        description: "Version to release (optional)"
         required: false
-        default: ''
+        default: ""
 
 jobs:
   release-to-main:
@@ -22,8 +22,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}   # checkout the correct branch name
-          fetch-depth: 0                # fetch the whole repo history
+          ref: ${{ github.head_ref }} # checkout the correct branch name
+          fetch-depth: 0 # fetch the whole repo history
 
       - name: Fetch all branches
         run: git fetch --all
@@ -68,10 +68,10 @@ jobs:
         if: env.VERSION_PROVIDED != 'true'
         uses: anothrNick/github-tag-action@1.71.0
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            WITH_V: true
-            PRERELEASE: true
-            INITIAL_VERSION: ${{ env.LAST_TAG }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          PRERELEASE: true
+          INITIAL_VERSION: ${{ env.LAST_TAG }}
 
       - name: Set Final Release Version
         id: final_version
