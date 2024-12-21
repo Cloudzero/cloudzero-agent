@@ -1,0 +1,63 @@
+name: CI
+
+on: [push]
+
+jobs:
+  test: # Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install dependencies
+        run: |
+          go mod download
+      - name: Run go tests
+        run: |
+          go test -timeout 30s -race -cover ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+          args: --timeout 10m --config .golangci.yaml
+
+  format: # Format code and data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install gofumpt
+        run: go install mvdan.cc/gofumpt@latest
+      - name: Install prettier
+        run: npm install -g prettier
+      - name: Format code
+        run: make format
+      - name: Check file format
+        run: git diff --exit-code --color
+
+  tidy: # Run go mod tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run go mod tidy
+        run: go mod tidy
+      - name: Check for differences
+        run: git diff --exit-code --color
