@@ -3,6 +3,8 @@ go.work
 go.work.sum
 .tool-versions
 
+/local-config.mk
+
 # app configuration
 /.cloudzero-insights-controller.yaml
 

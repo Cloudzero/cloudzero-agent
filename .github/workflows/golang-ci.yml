@@ -26,11 +26,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.62.2
-          args: --timeout 10m --config .golangci.yaml
+      - name: Install golangci-lint
+        run: make install-tools-golangci-lint
+      - name: Run golangci-lint
+        run: make lint
 
   format: # Format code and data
     runs-on: ubuntu-latest
@@ -40,10 +39,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Install gofumpt
-        run: go install mvdan.cc/gofumpt@latest
-      - name: Install prettier
-        run: npm install -g prettier
+      - name: Install tools
+        run: make install-tools
       - name: Format code
         run: make format
       - name: Check file format
