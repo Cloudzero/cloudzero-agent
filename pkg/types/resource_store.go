@@ -7,6 +7,8 @@ import (
 	"context"
 )
 
+//go:generate mockgen -destination=mocks/resource_store_mock.go -package=mocks . ResourceStore
+
 type ResourceStore interface {
 	StorageCommon
 	Storage[ResourceTags, string]

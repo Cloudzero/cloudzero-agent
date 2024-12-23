@@ -140,35 +140,11 @@ deploy-test-app: ## Deploy the test app
 undeploy-test-app: ## Undeploy the test app
 	@bash scripts/undeploy-test-app.sh
 
+# ----------- CODE GENERATION ------------
 
-# ----------- MOCK GENERATION ------------
-# ----------- MOCK GENERATION ------------
-# Define the mockgen tool (ensure it's installed)
-MOCKGEN := go.uber.org/mock/mockgen@latest
-
-# Define directories
-TYPES_DIR := pkg/types
-MOCKS_DIR := $(TYPES_DIR)/mocks
-
-# Find all .go files in TYPES_DIR, excluding the mocks directory and test files
-SOURCE_FILES := $(wildcard $(TYPES_DIR)/*.go)
-SOURCE_FILES := $(filter-out $(MOCKS_DIR)/*.go, $(SOURCE_FILES))
-SOURCE_FILES := $(filter-out %_test.go, $(SOURCE_FILES))
-
-# Define mock destination files with _mock.go suffix
-MOCK_DEST_FILES := $(patsubst $(TYPES_DIR)/%.go, $(MOCKS_DIR)/%_mock.go, $(SOURCE_FILES))
-
-.PHONY: generate-mocks ## Generate mocks for all Go files in types directory
-generate-mocks: $(MOCK_DEST_FILES)
-
-# Pattern rule to generate a mock for each source file
-$(MOCKS_DIR)/%_mock.go: $(TYPES_DIR)/%.go | $(MOCKS_DIR)
-	@echo "Generating mock for $<"
-	@go run $(MOCKGEN) -source=$< -destination=$@ -package=mocks
-
-# Ensure the mocks directory exists
-$(MOCKS_DIR):
-	mkdir -p $(MOCKS_DIR)
+.PHONY: generate
+generate: ## (Re)generate generated code
+	@go generate ./...
 
 .PHONY: clean-mocks ## Delete all generated mocks
 clean-mocks:

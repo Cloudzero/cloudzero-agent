@@ -3,6 +3,8 @@
 
 package types
 
+//go:generate mockgen -destination=mocks/runnable_mock.go -package=mocks . Runnable
+
 type Runnable interface {
 	// Start starts the runnable.
 	Start() error

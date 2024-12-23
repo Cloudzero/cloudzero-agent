@@ -5,6 +5,8 @@ package types
 
 import "time"
 
+//go:generate mockgen -destination=mocks/time_provider_mock.go -package=mocks . TimeProvider
+
 type TimeProvider interface {
 	// GetCurrentTime returns the current time.
 	GetCurrentTime() time.Time

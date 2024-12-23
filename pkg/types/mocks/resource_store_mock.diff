@@ -1,0 +1,16 @@
+--- mocks/resource_store_mock.go
++++ mocks/resource_store_mock.go
+@@ -158,7 +158,12 @@ func (m *MockResourceStore) Tx(ctx context.Context, block func(context.Context)
+ 	m.ctrl.T.Helper()
+ 	ret := m.ctrl.Call(m, "Tx", ctx, block)
+ 	ret0, _ := ret[0].(error)
+-	return ret0
++	if ret0 != nil {
++		return ret0
++	}
++	// NOTE: Changed from mockgen-generated code to ensure we invoke the block function
++	// using resource_store_mock.diff
++	return block(ctx)
+ }
+ 
+ // Tx indicates an expected call of Tx.
