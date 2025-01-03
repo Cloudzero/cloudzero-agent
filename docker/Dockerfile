@@ -23,16 +23,8 @@ COPY . .
 ARG REVISION=unknown
 ARG TAG=unknown
 ARG BUILD_TIME=unknown
-# LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Tag=${TAG}"
-# CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-agent-validator
-# Build the Go binary
-RUN CGO_ENABLED=0 go build \
-    -mod=readonly \
-    -trimpath \
-    -ldflags="-s -w -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Tag=${TAG}" \
-    -tags 'netgo osusergo' \
-    -o /go/bin/cloudzero-agent-validator \
-    cmd/cloudzero-agent-validator/main.go
+RUN make build GO_BUILD_FLAGS="-tags 'netgo osusergo'" OUTPUT_BIN_DIR=/go/bin BUILD_TIME=${BUILD_TIME} REVISION=${REVISION} TAG=${TAG}
+RUN ls -rR /go/bin
 
 # Stage 2: Access current certs
 FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
@@ -60,6 +52,7 @@ VOLUME [ "/app/config" ]
 ENV PATH=/app:$PATH
 
 # Copy the Go binary from the builder stage
+COPY --from=builder /go/bin/cloudzero-agent-inspector /app/cloudzero-agent-inspector
 COPY --from=builder /go/bin/cloudzero-agent-validator /app/cloudzero-agent-validator
 
 # Allow the default ENTRYPOINT from busybox to be the default,
