@@ -13,6 +13,8 @@ The `Cloud Agent Validator` is a CLI utility designed to perform various validat
 
 This utility provides valuable information such as the `lifecycle stage`, enabling CloudZero to proactively engage with customers if an agent is experiencing issues reporting metrics. It also captures the versions of the chart and Prometheus agent, facilitating issue reproduction. Additionally, it reports check status results and error messages for failing checks, allowing Customer Success teams to quickly identify the root cause of any problems.
 
+This repository also contains another tool, `cloudzero-agent-inspector`. Its primary purpose is to help diagnose errors and misconfigurations, and present them in a user-friendly and actionable way.
+
 ## ⚡ Getting Started
 
 The easiest way to get started it by using the [cloudzero-agent helm chart](https://github.com/Cloudzero/cloudzero-charts). However if you'd like run the validator locally - this is also possible!

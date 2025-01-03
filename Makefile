@@ -10,6 +10,7 @@ REVISION ?= $(shell git rev-parse HEAD)
 TAG ?= dev-$(REVISION)
 
 # Directories
+OUTPUT_BIN_DIR ?= bin
 # Colors
 ERROR_COLOR = \033[1;31m
 INFO_COLOR = \033[1;32m
@@ -35,15 +36,31 @@ lint: ## Run the linter
 vet: ## Run go vet against code
 	@go vet ./...
 
-.PHONY: build
-build: ## Build the binary
+.PHONY: build-validator
+build-validator:
 	@mkdir -p bin
 	@CGO_ENABLED=0 go build \
 		-mod=readonly \
 		-trimpath \
 		-ldflags="-s -w -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Tag=${TAG}" \
-		-o bin/cloudzero-agent-validator \
-		cmd/cloudzero-agent-validator/main.go
+		${GO_BUILD_FLAGS} \
+		-o ${OUTPUT_BIN_DIR}/cloudzero-agent-validator \
+		./cmd/cloudzero-agent-validator/
+
+.PHONY: build-inspector
+build-inspector:
+	@mkdir -p bin
+	@CGO_ENABLED=0 go build \
+		-mod=readonly \
+		-trimpath \
+		-ldflags="-s -w -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Tag=${TAG}" \
+		${GO_BUILD_FLAGS} \
+		-o ${OUTPUT_BIN_DIR}/cloudzero-agent-inspector \
+		./cmd/cloudzero-agent-inspector/
+
+.PHONY: build
+build: ## Build the binaries
+build: build-validator build-inspector
 
 .PHONY: clean
 clean: ## Clean the binary
@@ -58,7 +75,7 @@ login: ## Docker login to GHCR
 	@echo $(GHCR_PAT) | $(CONTAINER_TOOL) login ghcr.io -u $(GHCR_USER) --password-stdin
 
 .PHONY: package
-package:  ## Builds the Docker image
+package:  ## Builds and pushes the Docker image
 ifeq ($(BUILDX_CONTAINER_EXISTS), 0)
 	@$(CONTAINER_TOOL) buildx create --name container --driver=docker-container --use
 endif
@@ -69,6 +86,19 @@ endif
 		--build-arg TAG=$(TAG) \
 		--build-arg BUILD_TIME=$(BUILD_TIME) \
 		--push -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
+
+.PHONY: package-build
+package-build:  ## Builds the Docker image
+ifeq ($(BUILDX_CONTAINER_EXISTS), 0)
+	@$(CONTAINER_TOOL) buildx create --name container --driver=docker-container --use
+endif
+	@$(CONTAINER_TOOL) buildx build \
+		--builder=container \
+		--platform linux/amd64,linux/arm64 \
+		--build-arg REVISION=$(REVISION) \
+		--build-arg TAG=$(TAG) \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		--load -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
 
 .PHONY: generate
 generate: ## Generate the status protobuf definition package
