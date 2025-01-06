@@ -28,7 +28,9 @@ import (
 
 func main() {
 	var configFiles config.Files
+	var scrape bool
 	flag.Var(&configFiles, "config", "Path to the configuration file(s)")
+	flag.BoolVar(&scrape, "scrape", false, "Enable scrape mode")
 	flag.Parse()
 
 	clock := &utils.Clock{}
@@ -85,21 +87,22 @@ func main() {
 	}
 	defer func() { _ = hk.Shutdown() }()
 
-	// error channel
-	errChan := make(chan error)
-
 	// setup k8s client
 	k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to build k8s client")
 	}
-	// create scraper
-	scraper := scraper.NewScraper(k8sClient, store, settings)
+
+	if scrape {
+		scraper.NewScraper(k8sClient, store, settings).Start(context.Background())
+		return
+	}
+
+	// error channel
+	errChan := make(chan error)
 
 	server := http.NewServer(settings,
-		[]http.RouteSegment{
-			{Route: "/scrape", Hook: handler.NewScraperHandler(scraper, settings)},
-		},
+		nil,
 		[]http.AdmissionRouteSegment{
 			{Route: "/validate/pod", Hook: handler.NewPodHandler(store, settings, errChan)},
 			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(store, settings, errChan)},
