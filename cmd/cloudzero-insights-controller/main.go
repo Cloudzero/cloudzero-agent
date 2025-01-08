@@ -95,6 +95,12 @@ func main() {
 
 	if scrape {
 		scraper.NewScraper(k8sClient, store, settings).Start(context.Background())
+
+		if err = dataPusher.Shutdown(); err != nil {
+			log.Err(err).Msg("failed to flush data")
+			os.Exit(1)
+		}
+
 		return
 	}
 
