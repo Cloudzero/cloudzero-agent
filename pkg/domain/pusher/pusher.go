@@ -178,35 +178,35 @@ func (h *MetricsPusher) ResetStats() {
 }
 
 func (h *MetricsPusher) Start() error {
-	// h.mu.Lock()
-	// defer h.mu.Unlock()
-	// if h.running {
-	// 	return nil
-	// }
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.running {
+		return nil
+	}
 
-	// ticker := time.NewTicker(h.sendInterval)
-	// go func() {
-	// 	defer ticker.Stop()
-	// 	defer close(h.done)
-	// 	h.ResetStats()
-	// 	defer func() {
-	// 		if r := recover(); r != nil {
-	// 			log.Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
-	// 		}
-	// 	}()
+	ticker := time.NewTicker(h.sendInterval)
+	go func() {
+		defer ticker.Stop()
+		defer close(h.done)
+		h.ResetStats()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
+			}
+		}()
 
-	// 	for {
-	// 		select {
-	// 		case <-h.ctx.Done():
-	// 			// ensure a final flush on shutdown
-	// 			h.Flush()
-	// 			h.running = false
-	// 			return
-	// 		case <-ticker.C:
-	// 			h.Flush()
-	// 		}
-	// 	}
-	// }()
+		for {
+			select {
+			case <-h.ctx.Done():
+				// ensure a final flush on shutdown
+				h.Flush()
+				h.running = false
+				return
+			case <-ticker.C:
+				h.Flush()
+			}
+		}
+	}()
 	h.running = true
 	return nil
 }
@@ -265,7 +265,8 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 }
 
 func (h *MetricsPusher) Flush() error {
-	// ctx = context.Background()
+	log.Info().Msg("Starting flush operation")
+	ctx := context.Background()
 	currentTime := h.clock.GetCurrentTime()
 	ctf := utils.FormatForStorage(currentTime)
 	whereClause := fmt.Sprintf(`
@@ -273,12 +274,13 @@ func (h *MetricsPusher) Flush() error {
 		OR
 		(sent_at IS NOT NULL AND record_updated > sent_at)
 		`, ctf)
-	found, err := h.store.FindAllBy(h.ctx, whereClause)
+	found, err := h.store.FindAllBy(ctx, whereClause)
 	if err != nil {
 		RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()
+		log.Err(err).Msg("Failed to find records to send")
 		return fmt.Errorf("failed to find records to send: %v", err)
 	}
-
+	log.Info().Int("count", len(found)).Msg("Found records to send")
 	totalSize := 0
 	batch := []*types.ResourceTags{}
 	completed := []*types.ResourceTags{}
