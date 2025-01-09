@@ -316,7 +316,6 @@ func (h *MetricsPusher) Flush() error {
 		if err := h.sendBatch(batch); err != nil {
 			log.Err(err).Msg("Failed to send partial batch")
 			return err
-
 		}
 		log.Debug().Int("count", len(batch)).Msg("Sent last batch")
 	}
