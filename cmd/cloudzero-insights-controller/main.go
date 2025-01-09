@@ -15,11 +15,11 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/backfiller"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/monitor"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/pusher"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/scraper"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
@@ -28,9 +28,9 @@ import (
 
 func main() {
 	var configFiles config.Files
-	var scrape bool
+	var backfill bool
 	flag.Var(&configFiles, "config", "Path to the configuration file(s)")
-	flag.BoolVar(&scrape, "scrape", false, "Enable scrape mode")
+	flag.BoolVar(&backfill, "backfill", false, "Enable backfill mode")
 	flag.Parse()
 
 	clock := &utils.Clock{}
@@ -93,8 +93,8 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to build k8s client")
 	}
 
-	if scrape {
-		scraper.NewScraper(k8sClient, store, settings).Start(context.Background())
+	if backfill {
+		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
 
 		if err = dataPusher.Shutdown(); err != nil {
 			log.Err(err).Msg("failed to flush data")

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates.
 // SPDX-License-Identifier: Apache-2.0
 
-package scraper_test
+package backfiller_test
 
 import (
 	"context"
@@ -22,16 +22,16 @@ import (
 	"k8s.io/client-go/util/homedir"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/backfiller"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/k8s"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/scraper"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
-// TestScraper_FakeK8s_Start tests the Scraper.Start method with various Kubernetes resources using a fake client.
-func TestScraper_FakeK8s_Start(t *testing.T) {
+// TestBackfiller_FakeK8s_Start tests the Backfiller.Start method with various Kubernetes resources using a fake client.
+func TestBackfiller_FakeK8s_Start(t *testing.T) {
 	ctx := context.Background()
 	settings := getDefaultSettings()
 
@@ -254,7 +254,7 @@ func TestScraper_FakeK8s_Start(t *testing.T) {
 			tc.expectations(mockStore)
 
 			clientset := fake.NewSimpleClientset(tc.setupObjects...)
-			s := scraper.NewScraper(clientset, mockStore, settings)
+			s := backfiller.NewBackfiller(clientset, mockStore, settings)
 			s.Start(ctx)
 		})
 	}
@@ -275,10 +275,10 @@ func TestScraper_FakeK8s_Start(t *testing.T) {
 		k8sClient, err := k8s.NewClient(kubeconfig)
 		require.NoError(t, err)
 
-		s := scraper.NewScraper(k8sClient, store, settings)
+		s := backfiller.NewBackfiller(k8sClient, store, settings)
 		s.Start(context.Background())
 
-		// Wait for scraper to process resources
+		// Wait for Backfiller to process resources
 		// Consider using synchronization mechanisms instead of sleep in real tests
 		time.Sleep(5 * time.Second)
 
@@ -288,7 +288,7 @@ func TestScraper_FakeK8s_Start(t *testing.T) {
 	})
 }
 
-// getDefaultSettings returns a default configuration settings for the scraper.
+// getDefaultSettings returns a default configuration settings for the Backfiller.
 func getDefaultSettings() *config.Settings {
 	return &config.Settings{
 		Filters: config.Filters{

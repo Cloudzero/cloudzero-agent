@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package scraper provides functionality to scrape Kubernetes resources and store them in a specified storage.
+// Package backfiller provides functionality to backfill Kubernetes resources and store them in a specified storage.
 // This package is designed to gather data from various Kubernetes resources such as namespaces, pods, deployments,
 // statefulsets, daemonsets, jobs, cronjobs, and nodes. The gathered data is then formatted and stored using a
 // resource store interface. This business logic layer is essential for maintaining an up-to-date inventory of
 // Kubernetes resources, which can be used for monitoring, auditing, and analysis purposes.
 //
-// The Scraper struct is the main component of this package, which is initialized with a Kubernetes client,
+// The Backfiller struct is the main component of this package, which is initialized with a Kubernetes client,
 // resource store, and configuration settings. The Start method begins the scraping process, iterating through
 // all namespaces and collecting data from the specified resources based on the provided filters.
 //
@@ -17,7 +17,7 @@
 // This package is valuable for organizations that need to keep track of their Kubernetes resources and ensure
 // that their inventory is always up-to-date. It provides a robust and flexible solution for scraping and storing
 // Kubernetes resource data.
-package scraper
+package backfiller
 
 import (
 	"context"
@@ -37,26 +37,26 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
-type Scraper struct {
+type Backfiller struct {
 	k8sClient kubernetes.Interface
 	settings  *config.Settings
 	store     types.ResourceStore
 }
 
-func NewScraper(k8sClient kubernetes.Interface, store types.ResourceStore, settings *config.Settings) *Scraper {
-	return &Scraper{
+func NewBackfiller(k8sClient kubernetes.Interface, store types.ResourceStore, settings *config.Settings) *Backfiller {
+	return &Backfiller{
 		k8sClient: k8sClient,
 		settings:  settings,
 		store:     store,
 	}
 }
 
-func (s *Scraper) Start(ctx context.Context) {
+func (s *Backfiller) Start(ctx context.Context) {
 	var _continue string
 	allNamespaces := []corev1.Namespace{}
 	log.Info().
 		Time("current_time", time.Now().UTC()).
-		Msg("Starting scrape of existing resources")
+		Msg("Starting backfill of existing resources")
 
 	// write all nodes in the cluster storage
 	s.writeNodes(ctx)
@@ -165,7 +165,7 @@ func (s *Scraper) Start(ctx context.Context) {
 			log.Info().
 				Time("current_time", time.Now().UTC()).
 				Int("namespaces_count", len(allNamespaces)).
-				Msg("Scrape operation completed")
+				Msg("Backfill operation completed")
 			break
 		}
 		_continue = namespaces.GetContinue()
@@ -211,7 +211,7 @@ func writeResources[T metav1.ListInterface](
 	}
 }
 
-func (s *Scraper) writeNodes(ctx context.Context) {
+func (s *Backfiller) writeNodes(ctx context.Context) {
 	// if nodes are not enabled, skip the work
 	if !s.settings.Filters.Labels.Resources.Nodes && !s.settings.Filters.Annotations.Resources.Nodes {
 		return
