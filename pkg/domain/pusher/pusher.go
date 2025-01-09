@@ -265,7 +265,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 }
 
 func (h *MetricsPusher) Flush() error {
-	log.Info().Msg("Starting flush operation")
+	log.Debug().Msg("Starting flush operation")
 	ctx := context.Background()
 	currentTime := h.clock.GetCurrentTime()
 	ctf := utils.FormatForStorage(currentTime)
@@ -280,18 +280,18 @@ func (h *MetricsPusher) Flush() error {
 		log.Err(err).Msg("Failed to find records to send")
 		return fmt.Errorf("failed to find records to send: %v", err)
 	}
-	log.Info().Int("count", len(found)).Msg("Found records to send")
+	log.Debug().Int("count", len(found)).Msg("Found records to send")
 	totalSize := 0
 	batch := []*types.ResourceTags{}
 	completed := []*types.ResourceTags{}
 	for len(found) > 0 {
 		next := found[0]
 		found = found[1:] // pop
-		namespace := "foo"
+		namespace := ""
 		if next.Namespace != nil {
 			namespace = *next.Namespace
 		}
-		log.Info().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
+		log.Debug().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
 		RemoteWriteBacklog.WithLabelValues(h.settings.RemoteWrite.Host).Set(float64(len(found)))
 
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
@@ -302,7 +302,6 @@ func (h *MetricsPusher) Flush() error {
 			}
 
 			// Reset totalSize and batch
-			log.Info().Int("count", len(batch)).Msg("Sent batch")
 			batch = []*types.ResourceTags{}
 			totalSize = 0
 		}
@@ -319,7 +318,7 @@ func (h *MetricsPusher) Flush() error {
 			return err
 
 		}
-		log.Info().Int("count", len(batch)).Msg("Sent last batch")
+		log.Debug().Int("count", len(batch)).Msg("Sent last batch")
 	}
 
 	if len(completed) > 0 {
@@ -422,7 +421,6 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 		defer cancel()
 
 		req, err = http.NewRequestWithContext(ctx, "POST", remoteWriteURL, bytes.NewBuffer(compressed))
-		// req, err = http.NewRequest("POST", remoteWriteURL, bytes.NewBuffer(compressed))
 		if err != nil {
 			return fmt.Errorf("error creating HTTP request: %v", err)
 		}
@@ -455,12 +453,9 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 				Msg("Received non-200 response, retrying...")
 		} else {
 			// If resp is nil, we can track it as a failure as well
-			log.Err(err).Bool("context_done", ctx.Err() != nil).Msg("no response recieved")
-			// log.Err(err).Msg("no response recieved")
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
 		}
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-
 		jitter := time.Duration(rand.Int63n(int64(time.Second)))
 		time.Sleep(backoff + jitter)
 	}
