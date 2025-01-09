@@ -125,6 +125,14 @@ The Remote Write Metrics track the status of information related to sending metr
 | `remote_write_records_processed_total`  | Total number of records successfully processed (sent and marked as sent_at).          |
 | `remote_write_db_failures_total`        | Total number of failures when updating sent_at for records in the database.           |
 
+### Storage Metrics
+
+| Metric Name                   | Description                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `storage_write_failure_total` | Total number of storage write failures. Labeled by resource_type, namespace, resource_name, and action. |
+
+This metric helps in monitoring and alerting on storage write failures, providing insights into the reliability and performance of the storage subsystem.
+
 ### HTTP Middleware Metrics
 
 As a service (admission controller), we use the following metrics to track incoming API invocations using our HTTP middleware:

@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -18,10 +19,31 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/core"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/sqlite"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+// remoteWriteStatsOnce is used to ensure that the initialization of remote write statistics
+// happens only once. This is useful to avoid race conditions and ensure thread-safe initialization
+// of metrics or other related resources.
+var (
+	remoteWriteStatsOnce sync.Once
+	StorageWriteFailures = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "storage_write_failure_total",
+			Help: "Total number of storage write failures.",
+		},
+		[]string{"resource_type", "namespace", "resource_name", "action"},
+	)
 )
 
 // NewInMemoryResourceRepository creates a new in-memory resource repository.
 func NewInMemoryResourceRepository(clock types.TimeProvider) (types.ResourceStore, error) {
+	remoteWriteStatsOnce.Do(func() {
+		prometheus.MustRegister(
+			StorageWriteFailures,
+		)
+	})
+
 	db, err := sqlite.NewSQLiteDriver(sqlite.MemorySharedCached)
 	if err != nil {
 		return nil, core.TranslateError(err)
@@ -70,11 +92,21 @@ func (r *resourceRepoImpl) Create(ctx context.Context, it *types.ResourceTags) e
 	it.ID = core.NewID()
 	ct := r.clock.GetCurrentTime()
 	it.RecordCreated, it.RecordUpdated = ct, ct
-	return core.TranslateError(
-		r.DB(ctx).Clauses(clause.OnConflict{
+
+	err := r.DB(ctx).
+		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
-		}).Create(it).Error,
-	)
+		}).Create(it).Error
+	if err != nil {
+		StorageWriteFailures.With(prometheus.Labels{
+			"action":        "create",
+			"resource_type": fmt.Sprintf("%d", it.Type),
+			"namespace":     *it.Namespace,
+			"name":          it.Name,
+		}).Inc()
+		return core.TranslateError(err)
+	}
+	return nil
 }
 
 // Delete removes a resource tag instance by its ID.
@@ -144,6 +176,12 @@ func (r *resourceRepoImpl) Update(ctx context.Context, it *types.ResourceTags) e
 	if err := r.DB(ctx).Model(it).
 		Where("id = ?", it.ID).
 		Updates(updates).Error; err != nil {
+		StorageWriteFailures.With(prometheus.Labels{
+			"action":        "update",
+			"resource_type": fmt.Sprintf("%d", it.Type),
+			"namespace":     *it.Namespace,
+			"name":          it.Name,
+		}).Inc()
 		return core.TranslateError(err)
 	}
 	return nil
