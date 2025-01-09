@@ -71,21 +71,36 @@ func main() {
 	if err = secretMon.Start(); err != nil {
 		log.Fatal().Err(err).Msg("failed to run secret monitor") //nolint:gocritic // It's okay if the `defer cancel()` doesn't run since we're exiting.
 	}
-	defer func() { _ = secretMon.Shutdown() }()
+	defer func() {
+		if innerErr := secretMon.Shutdown(); innerErr != nil {
+			log.Err(innerErr).Msg("failed to shut down secret monitor")
+		}
+	}()
 
 	// create remote metrics writer
 	dataPusher := pusher.New(ctx, store, clock, settings)
 	if err = dataPusher.Start(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start remote metrics writer")
 	}
-	defer func() { _ = dataPusher.Shutdown() }()
+	defer func() {
+		if innerErr := dataPusher.Shutdown(); innerErr != nil {
+			log.Err(innerErr).Msg("failed to flush data")
+			// Exit with a non-zero status code to indicate failure because we
+			// are potentially losing data.
+			os.Exit(1)
+		}
+	}()
 
 	// start the housekeeper to delete old data
 	hk := housekeeper.New(ctx, store, clock, settings)
 	if err = hk.Start(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start database housekeeper")
 	}
-	defer func() { _ = hk.Shutdown() }()
+	defer func() {
+		if innerErr := hk.Shutdown(); innerErr != nil {
+			log.Err(innerErr).Msg("failed to shut down database housekeeper")
+		}
+	}()
 
 	// setup k8s client
 	k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
@@ -95,12 +110,6 @@ func main() {
 
 	if backfill {
 		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
-
-		if err = dataPusher.Shutdown(); err != nil {
-			log.Err(err).Msg("failed to flush data")
-			os.Exit(1)
-		}
-
 		return
 	}
 
@@ -131,9 +140,6 @@ func main() {
 		if err := server.Shutdown(ctx); err != nil {
 			log.Err(err).Msg("Error shutting down server")
 		}
-
-		// Shutdown after disabling the exposed endpoints
-		_ = dataPusher.Shutdown() // flush database content to remote endpoint
 	}()
 
 	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {
