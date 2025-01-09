@@ -191,7 +191,7 @@ func (h *MetricsPusher) Start() error {
 		h.ResetStats()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Info().Interface("panic", r).Msg("Recovered from panic in stale data removal")
+				log.Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
 			}
 		}()
 
@@ -265,6 +265,8 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 }
 
 func (h *MetricsPusher) Flush() error {
+	log.Debug().Msg("Starting flush operation")
+	ctx := context.Background()
 	currentTime := h.clock.GetCurrentTime()
 	ctf := utils.FormatForStorage(currentTime)
 	whereClause := fmt.Sprintf(`
@@ -272,18 +274,24 @@ func (h *MetricsPusher) Flush() error {
 		OR
 		(sent_at IS NOT NULL AND record_updated > sent_at)
 		`, ctf)
-	found, err := h.store.FindAllBy(h.ctx, whereClause)
+	found, err := h.store.FindAllBy(ctx, whereClause)
 	if err != nil {
 		RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()
+		log.Err(err).Msg("Failed to find records to send")
 		return fmt.Errorf("failed to find records to send: %v", err)
 	}
-
+	log.Debug().Int("count", len(found)).Msg("Found records to send")
 	totalSize := 0
 	batch := []*types.ResourceTags{}
 	completed := []*types.ResourceTags{}
 	for len(found) > 0 {
 		next := found[0]
 		found = found[1:] // pop
+		namespace := ""
+		if next.Namespace != nil {
+			namespace = *next.Namespace
+		}
+		log.Debug().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
 		RemoteWriteBacklog.WithLabelValues(h.settings.RemoteWrite.Host).Set(float64(len(found)))
 
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
@@ -309,10 +317,13 @@ func (h *MetricsPusher) Flush() error {
 			log.Err(err).Msg("Failed to send partial batch")
 			return err
 		}
+		log.Debug().Int("count", len(batch)).Msg("Sent last batch")
 	}
 
 	if len(completed) > 0 {
-		if err := h.store.Tx(h.ctx, func(txCtx context.Context) error {
+		subCtx, cancel := context.WithTimeout(context.Background(), h.sendTimeout)
+		defer cancel()
+		if err := h.store.Tx(subCtx, func(txCtx context.Context) error {
 			for _, record := range completed {
 				record.SentAt = &currentTime
 				if err := h.store.Update(txCtx, record); err != nil {
@@ -405,7 +416,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 	var req *http.Request
 
 	for attempt := range h.maxRetries {
-		ctx, cancel := context.WithTimeout(h.ctx, h.sendTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), h.sendTimeout)
 		defer cancel()
 
 		req, err = http.NewRequestWithContext(ctx, "POST", remoteWriteURL, bytes.NewBuffer(compressed))
@@ -443,7 +454,6 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			// If resp is nil, we can track it as a failure as well
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
 		}
-
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 		jitter := time.Duration(rand.Int63n(int64(time.Second)))
 		time.Sleep(backoff + jitter)

@@ -83,6 +83,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to start remote metrics writer")
 	}
 	defer func() {
+		log.Debug().Msg("Starting main shutdown process")
 		if innerErr := dataPusher.Shutdown(); innerErr != nil {
 			log.Err(innerErr).Msg("failed to flush data")
 			// Exit with a non-zero status code to indicate failure because we

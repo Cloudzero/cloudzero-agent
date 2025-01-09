@@ -47,7 +47,7 @@ type RemoteWrite struct {
 	Host            string
 	MaxBytesPerSend int           `yaml:"max_bytes_per_send" default:"10000000" env:"MAX_BYTES_PER_SEND" env-description:"maximum bytes to send in a single request"`
 	SendInterval    time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
-	SendTimeout     time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
+	SendTimeout     time.Duration `yaml:"send_timeout" default:"30s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	MaxRetries      int           `yaml:"max_retries" default:"3" env:"MAX_RETRIES" env-description:"maximum number of retries"`
 }
 
