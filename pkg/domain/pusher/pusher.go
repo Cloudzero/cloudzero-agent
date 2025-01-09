@@ -178,35 +178,35 @@ func (h *MetricsPusher) ResetStats() {
 }
 
 func (h *MetricsPusher) Start() error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.running {
-		return nil
-	}
+	// h.mu.Lock()
+	// defer h.mu.Unlock()
+	// if h.running {
+	// 	return nil
+	// }
 
-	ticker := time.NewTicker(h.sendInterval)
-	go func() {
-		defer ticker.Stop()
-		defer close(h.done)
-		h.ResetStats()
-		defer func() {
-			if r := recover(); r != nil {
-				log.Info().Interface("panic", r).Msg("Recovered from panic in stale data removal")
-			}
-		}()
+	// ticker := time.NewTicker(h.sendInterval)
+	// go func() {
+	// 	defer ticker.Stop()
+	// 	defer close(h.done)
+	// 	h.ResetStats()
+	// 	defer func() {
+	// 		if r := recover(); r != nil {
+	// 			log.Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
+	// 		}
+	// 	}()
 
-		for {
-			select {
-			case <-h.ctx.Done():
-				// ensure a final flush on shutdown
-				h.Flush()
-				h.running = false
-				return
-			case <-ticker.C:
-				h.Flush()
-			}
-		}
-	}()
+	// 	for {
+	// 		select {
+	// 		case <-h.ctx.Done():
+	// 			// ensure a final flush on shutdown
+	// 			h.Flush()
+	// 			h.running = false
+	// 			return
+	// 		case <-ticker.C:
+	// 			h.Flush()
+	// 		}
+	// 	}
+	// }()
 	h.running = true
 	return nil
 }
@@ -265,6 +265,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 }
 
 func (h *MetricsPusher) Flush() error {
+	// ctx = context.Background()
 	currentTime := h.clock.GetCurrentTime()
 	ctf := utils.FormatForStorage(currentTime)
 	whereClause := fmt.Sprintf(`
@@ -284,6 +285,11 @@ func (h *MetricsPusher) Flush() error {
 	for len(found) > 0 {
 		next := found[0]
 		found = found[1:] // pop
+		namespace := "foo"
+		if next.Namespace != nil {
+			namespace = *next.Namespace
+		}
+		log.Info().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
 		RemoteWriteBacklog.WithLabelValues(h.settings.RemoteWrite.Host).Set(float64(len(found)))
 
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
@@ -294,6 +300,7 @@ func (h *MetricsPusher) Flush() error {
 			}
 
 			// Reset totalSize and batch
+			log.Info().Int("count", len(batch)).Msg("Sent batch")
 			batch = []*types.ResourceTags{}
 			totalSize = 0
 		}
@@ -308,11 +315,15 @@ func (h *MetricsPusher) Flush() error {
 		if err := h.sendBatch(batch); err != nil {
 			log.Err(err).Msg("Failed to send partial batch")
 			return err
+
 		}
+		log.Info().Int("count", len(batch)).Msg("Sent last batch")
 	}
 
 	if len(completed) > 0 {
-		if err := h.store.Tx(h.ctx, func(txCtx context.Context) error {
+		subCtx, cancel := context.WithTimeout(context.Background(), h.sendTimeout)
+		defer cancel()
+		if err := h.store.Tx(subCtx, func(txCtx context.Context) error {
 			for _, record := range completed {
 				record.SentAt = &currentTime
 				if err := h.store.Update(txCtx, record); err != nil {
@@ -405,10 +416,11 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 	var req *http.Request
 
 	for attempt := range h.maxRetries {
-		ctx, cancel := context.WithTimeout(h.ctx, h.sendTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), h.sendTimeout)
 		defer cancel()
 
 		req, err = http.NewRequestWithContext(ctx, "POST", remoteWriteURL, bytes.NewBuffer(compressed))
+		// req, err = http.NewRequest("POST", remoteWriteURL, bytes.NewBuffer(compressed))
 		if err != nil {
 			return fmt.Errorf("error creating HTTP request: %v", err)
 		}
@@ -441,10 +453,12 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 				Msg("Received non-200 response, retrying...")
 		} else {
 			// If resp is nil, we can track it as a failure as well
+			log.Err(err).Bool("context_done", ctx.Err() != nil).Msg("no response recieved")
+			// log.Err(err).Msg("no response recieved")
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
 		}
-
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+
 		jitter := time.Duration(rand.Int63n(int64(time.Second)))
 		time.Sleep(backoff + jitter)
 	}
