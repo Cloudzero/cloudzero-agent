@@ -1,22 +1,20 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package config contains a CLI for managing configuration files.
 package config
 
 import (
 	"context"
 	_ "embed"
-	"os"
 	"strings"
 	"text/template"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
 	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
 )
 
 //go:embed internal/scrape_config.tmpl
@@ -140,23 +138,4 @@ func Generate(data ScrapeConfigData) (string, error) {
 	}
 
 	return result.String(), nil
-}
-
-func getCurrentChartVersion() string {
-	if v, err := gh.GetLatestRelease("", build.AuthorName, build.ChartsRepo); err == nil {
-		return v
-	}
-	return "¯\\_(ツ)_/¯"
-}
-
-// homeDir returns the home directory for the current user
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
-}
-
-func getCurrentAgentVersion() string {
-	return "latest"
 }

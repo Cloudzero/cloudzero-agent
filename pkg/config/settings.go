@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package config contains configuration settings.
 package config
 
 import (
@@ -8,7 +9,6 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/pkg/errors"
 )
 
 type Settings struct {
@@ -29,12 +29,12 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		}
 
 		if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-			return nil, errors.Wrap(err, fmt.Sprintf("no config %s", cfgFile))
+			return nil, fmt.Errorf("no config file %s: %w", cfgFile, err)
 		}
 
 		err := cleanenv.ReadConfig(cfgFile, &cfg)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("config read %s", cfgFile))
+			return nil, fmt.Errorf("failed to read config from %s: %w", cfgFile, err)
 		}
 	}
 	return &cfg, nil

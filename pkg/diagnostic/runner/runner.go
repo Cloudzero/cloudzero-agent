@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package runner contains tools for running diagnostics.
 package runner
 
 import (
@@ -20,6 +21,7 @@ import (
 )
 
 type Engine interface {
+	// Run executes the engine
 	Run(context.Context) (status.Accessor, error)
 }
 
@@ -105,7 +107,6 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 
 	var wg sync.WaitGroup
 	for i, p := range r.plan {
-		p := p
 		wg.Add(1)
 		go func(wgi *sync.WaitGroup, p diagnostic.Provider, i int) {
 			defer wgi.Done()

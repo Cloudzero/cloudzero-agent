@@ -147,7 +147,7 @@ func (f *PlainTextFormatter) printPlain(b *bytes.Buffer, entry *logrus.Entry, ke
 ) {
 	levelText := strings.ToUpper(entry.Level.String())
 	if !f.DisableLevelTruncation && !f.PadLevelText {
-		levelText = levelText[0:4]
+		levelText = levelText[0:4] //nolint:revive // easy enough to understand
 	}
 	if f.PadLevelText {
 		// Generates the format string used in the next line, for example "%-6s" or "%-7s".
@@ -165,8 +165,8 @@ func (f *PlainTextFormatter) printPlain(b *bytes.Buffer, entry *logrus.Entry, ke
 
 	caller := ""
 	if entry.HasCaller() {
-		funcVal := fmt.Sprintf("%s()", entry.Caller.Function)
-		fileVal := fmt.Sprintf("%s:%d", entry.Caller.File, entry.Caller.Line)
+		funcVal := entry.Caller.Function + "()"
+		fileVal := entry.Caller.File + ":" + strconv.Itoa(entry.Caller.Line)
 
 		if f.CallerPrettyfier != nil {
 			funcVal, fileVal = f.CallerPrettyfier(entry.Caller)
@@ -218,7 +218,7 @@ func (f *PlainTextFormatter) needsQuoting(text string) bool {
 	return false
 }
 
-func (f *PlainTextFormatter) appendValue(b *bytes.Buffer, value interface{}) { //nolint:gofmt
+func (f *PlainTextFormatter) appendValue(b *bytes.Buffer, value interface{}) {
 	stringVal, ok := value.(string)
 	if !ok {
 		stringVal = fmt.Sprint(value)

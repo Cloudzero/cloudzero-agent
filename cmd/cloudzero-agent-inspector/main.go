@@ -23,13 +23,16 @@ type serverConfig struct {
 	logLevel       zerolog.Level
 }
 
+const (
+	httpServerReadHeaderTimeout = 15 * time.Second
+)
+
 func runServer(cfg *serverConfig) error {
 	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).Level(cfg.logLevel)
 
 	targetURL, err := url.Parse(cfg.destinationURL)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to parse target URL")
-		os.Exit(1)
+		return fmt.Errorf("failed to parse target URL: %w", err)
 	}
 
 	czInspector := inspector.New()
@@ -57,7 +60,7 @@ func runServer(cfg *serverConfig) error {
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.listenPort),
 		Handler:           proxy,
-		ReadHeaderTimeout: 15 * time.Second,
+		ReadHeaderTimeout: httpServerReadHeaderTimeout,
 	}
 
 	logger.Info().

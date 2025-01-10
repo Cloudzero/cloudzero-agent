@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package http contains utilities for making HTTP requests.
 package http
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -58,7 +58,7 @@ func Do(
 	if resp == nil {
 		if msg := classifyNetworkError(err); msg != "" {
 			logrus.WithError(err).WithField("message", msg).Error("network error")
-			return http.StatusInternalServerError, errors.Wrap(err, fmt.Sprintf("network error: %s", req.URL.String()))
+			return http.StatusInternalServerError, errors.Wrap(err, "network error: "+req.URL.String())
 		}
 		logrus.WithError(err).Error("Failed to make request")
 		return http.StatusInternalServerError, err

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package test implements utilities for testing.
 package test
 
 import (
@@ -60,7 +61,7 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	errMsg := fmt.Sprintf("Not Mocked - Unexpected Call: %s %s?%s", req.Method, req.URL.Path, req.URL.RawQuery)
 	return &http.Response{
-		StatusCode: 404,
+		StatusCode: http.StatusNotFound,
 		Body:       io.NopCloser(strings.NewReader(errMsg)),
 		Header:     make(http.Header),
 	}, nil

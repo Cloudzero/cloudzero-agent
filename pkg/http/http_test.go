@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	mockUrl = "http://example.com"
+	mockURL = "http://example.com"
 )
 
 func TestHTTP_Do(t *testing.T) {
@@ -31,7 +31,7 @@ func TestHTTP_Do(t *testing.T) {
 	mockClient.Expect("GET", "Hello World", net.StatusOK, nil)
 
 	httpClient := mockClient.HTTPClient()
-	code, err := http.Do(ctx, httpClient, net.MethodGet, headers, queryParams, mockUrl, nil)
+	code, err := http.Do(ctx, httpClient, net.MethodGet, headers, queryParams, mockURL, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, net.StatusOK, code)
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package catalog contains the registry of diagnostics.
 package catalog
 
 import (
@@ -20,8 +21,11 @@ import (
 )
 
 type Registry interface {
+	// Has checks if the specified diagnostic is registered
 	Has(id string) bool
+	// Get retrieves the diagnostic providers for the given IDs
 	Get(ids ...string) []diagnostic.Provider
+	// List returns the list of registered diagnostics
 	List() []string
 }
 

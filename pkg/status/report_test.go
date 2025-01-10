@@ -29,13 +29,12 @@ func TestStatus_NewBuilder(t *testing.T) {
 			})
 
 			builder.AddCheck(&status.StatusCheck{})
-			accessor := builder.(status.Accessor)
 
-			accessor.WriteToReport(func(s *status.ClusterStatus) {
+			builder.WriteToReport(func(s *status.ClusterStatus) {
 				s.State = status.StatusType_STATUS_TYPE_POD_STARTED
 			})
 
-			accessor.ReadFromReport(func(s *status.ClusterStatus) {
+			builder.ReadFromReport(func(s *status.ClusterStatus) {
 				assert.Equal(t, s.State, status.StatusType_STATUS_TYPE_POD_STARTED, "expected state to be STATUS_TYPE_POD_STARTED")
 				checkCount := len(s.Checks)
 				assert.Equal(t, checkCount, 1, "expected 1 check in report")

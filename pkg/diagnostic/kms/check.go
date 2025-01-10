@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package kms contains code for testing access the Kubernetes Management Service.
 package kms
 
 import (
@@ -68,7 +69,7 @@ var NewProvider = func(ctx context.Context, cfg *config.Settings, clientset ...k
 func (c *checker) Check(_ context.Context, client *http.Client, accessor status.Accessor) error {
 	var (
 		retriesRemaining = MaxRetry
-		endpointURL      = fmt.Sprintf("%s/metrics", c.cfg.Prometheus.KubeStateMetricsServiceEndpoint)
+		endpointURL      = c.cfg.Prometheus.KubeStateMetricsServiceEndpoint + "/metrics"
 	)
 
 	c.logger.Infof("Using endpoint URL: %s", endpointURL)
@@ -94,7 +95,7 @@ func (c *checker) Check(_ context.Context, client *http.Client, accessor status.
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			c.logger.Errorf("Failed to read metrics on attempt %d: %v", attempt, err)
-			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: fmt.Sprintf("Failed to read metrics: %s", err.Error())})
+			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticKMS, Passing: false, Error: "Failed to read metrics: " + err.Error()})
 			return nil
 		}
 

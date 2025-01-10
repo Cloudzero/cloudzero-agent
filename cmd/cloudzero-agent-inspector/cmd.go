@@ -12,10 +12,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	cliServerConfigListenPort      = 9376
+	cliServerConfigDestinationURL  = "https://api.cloudzero.com"
+	cliServerConfigLogLevelDefault = zerolog.InfoLevel
+)
+
 var cliServerConfig = serverConfig{
-	listenPort:     9376,
-	destinationURL: "https://api.cloudzero.com",
-	logLevel:       zerolog.InfoLevel,
+	listenPort:     cliServerConfigListenPort,
+	destinationURL: cliServerConfigDestinationURL,
+	logLevel:       cliServerConfigLogLevelDefault,
 }
 
 type zerologLevel struct{}
@@ -50,7 +56,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().Uint16VarP(&cliServerConfig.listenPort, "port", "p", 9376, "Port to listen on")
-	rootCmd.PersistentFlags().StringVarP(&cliServerConfig.destinationURL, "destination", "d", "https://api.cloudzero.com", "Destination URL to proxy requests to")
+	rootCmd.PersistentFlags().Uint16VarP(&cliServerConfig.listenPort, "port", "p", cliServerConfigListenPort, "Port to listen on")
+	rootCmd.PersistentFlags().StringVarP(&cliServerConfig.destinationURL, "destination", "d", cliServerConfigDestinationURL, "Destination URL to proxy requests to")
 	rootCmd.PersistentFlags().VarP(&cliParamLogLevel, "log-level", "l", "Log level (panic, fatal, error, warn, info, debug, trace)")
 }

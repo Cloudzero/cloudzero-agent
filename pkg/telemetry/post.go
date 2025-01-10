@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package telemetry contains code for posting telemetry data to the CloudZero API.
 package telemetry
 
 import (
@@ -8,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	net "net/http"
+	"strconv"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -38,15 +40,15 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	}
 
 	if accessor == nil {
-		return fmt.Errorf("nil accessor")
+		return errors.New("nil accessor")
 	}
 
 	if cfg.Cloudzero.Host == "" {
-		return fmt.Errorf("missing cloudzero host")
+		return errors.New("missing cloudzero host")
 	}
 
 	if cfg.Cloudzero.Credential == "" {
-		return fmt.Errorf("missing cloudzero api key")
+		return errors.New("missing cloudzero api key")
 	}
 
 	// quietly exit
@@ -64,7 +66,7 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	)
 	accessor.ReadFromReport(func(cs *pb.ClusterStatus) {
 		data, err = proto.Marshal(cs)
-		logrus.Infof("marshalled cluster status: %d bytes", len(data))
+		logrus.Info("marshalled cluster status: " + strconv.Itoa(len(data)) + " bytes")
 	})
 	if err != nil {
 		return err
@@ -82,7 +84,7 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	endpoint := fmt.Sprintf("%s%s", cfg.Cloudzero.Host, URLPath)
 	_, err = http.Do(ctx, client, net.MethodPost,
 		map[string]string{
-			http.HeaderAuthorization: fmt.Sprintf("Bearer %s", cfg.Cloudzero.Credential),
+			http.HeaderAuthorization: "Bearer " + cfg.Cloudzero.Credential,
 			http.HeaderContentType:   http.ContentTypeProtobuf,
 		},
 		map[string]string{

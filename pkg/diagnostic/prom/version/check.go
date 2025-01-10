@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package version contains a diagnostic provider for checking the Prometheus version.
 package version
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	net "net/http"
 	"os"
@@ -19,6 +21,10 @@ import (
 )
 
 const DiagnosticPrometheusVersion = config.DiagnosticPrometheusVersion
+
+const (
+	filePermExecutableMask = 0o111
+)
 
 type checker struct {
 	cfg    *config.Settings
@@ -62,14 +68,14 @@ func (c *checker) Check(ctx context.Context, _ *net.Client, accessor status.Acce
 func (c *checker) GetVersion(ctx context.Context) ([]byte, error) {
 	executable := c.cfg.Prometheus.Executable
 	if len(executable) == 0 {
-		return nil, fmt.Errorf("no prometheus binary available at configured location")
+		return nil, errors.New("no prometheus binary available at configured location")
 	}
 
 	fi, err := os.Stat(executable)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("prometheus executable not found: %w", err)
 	}
-	if fi.Mode()&0o111 == 0 {
+	if fi.Mode()&filePermExecutableMask == 0 {
 		return nil, fmt.Errorf("prometheus executable is not executable: %s", executable)
 	}
 

@@ -42,6 +42,21 @@ jobs:
       - name: Run golangci-lint
         run: make lint
 
+  # Run static analysis
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install tools
+        run: make install-tools
+      - name: Run static analysis
+        run: make analyze
+
   # Run govulncheck
   #
   # govulncheck checks for known vulnerabilities in Go dependencies. Typically

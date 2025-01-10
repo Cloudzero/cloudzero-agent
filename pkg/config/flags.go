@@ -3,10 +3,6 @@
 
 package config
 
-import (
-	"sync"
-)
-
 type Flags struct {
 	Mode  string
 	Stage string
@@ -14,11 +10,6 @@ type Flags struct {
 	EnvFile    string
 	ConfigFile string
 }
-
-var (
-	gInput Flags
-	once   sync.Once
-)
 
 const (
 	FlagEnvFile      = "env-file"

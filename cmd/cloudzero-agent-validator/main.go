@@ -57,7 +57,7 @@ func ctrlCHandler() context.Context {
 	go func() {
 		<-stopCh
 		cancel()
-		os.Exit(0)
+		os.Exit(0) //nolint:revive // need to verify that cancelling the context is sufficient to exit
 	}()
 	return ctx
 }

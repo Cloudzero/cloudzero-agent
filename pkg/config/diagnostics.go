@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DiagnosticAPIKey            string = "api_key_valid" //nolint:gosec
+	DiagnosticAPIKey            string = "api_key_valid" //nolint:gosec // false positive for G101: Potential hardcoded credentials
 	DiagnosticK8sVersion        string = "k8s_version"
 	DiagnosticEgressAccess      string = "egress_reachable"
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
