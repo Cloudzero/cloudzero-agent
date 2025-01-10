@@ -97,9 +97,9 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 	}
 
 	// Run steps in parallel
-	var (
-		errHistory = make([]error, len(r.plan))
-	)
+
+	errHistory := make([]error, len(r.plan))
+
 	var wg sync.WaitGroup
 	for i, p := range r.plan {
 		p := p
@@ -133,7 +133,7 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 
 // this function returns a function which will set an error code if necessary
 func processFailures(ctx context.Context, recorder status.Accessor, r *runner) func() {
-	var handleFailure = func() {}
+	handleFailure := func() {}
 	recorder.ReadFromReport(func(cs *status.ClusterStatus) {
 		if r.stage != config.ContextStageInit {
 			return

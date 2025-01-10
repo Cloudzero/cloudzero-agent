@@ -48,5 +48,4 @@ func TestChecker_CheckOK(t *testing.T) {
 			})
 		})
 	}
-
 }

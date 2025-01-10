@@ -34,5 +34,4 @@ func (c *checker) Check(_ context.Context, _ *net.Client, accessor status.Access
 		s.State = c.stage
 	})
 	return nil
-
 }

@@ -25,10 +25,12 @@ var listOfHeaderContainsToLog = []string{
 
 // This is a little ugly because Go doesn't support static maps. We have to
 // build them up in the init function.
-var headerExactToLog = map[string]bool{}
-var listOfHeaderExactToLog = []string{
-	"content-type",
-}
+var (
+	headerExactToLog       = map[string]bool{}
+	listOfHeaderExactToLog = []string{
+		"content-type",
+	}
+)
 
 // addCommonHeaders adds common headers, such as request-id, trace-id, etc., to the logger.
 func addCommonHeaders(logger zerolog.Logger, headers http.Header) zerolog.Logger {

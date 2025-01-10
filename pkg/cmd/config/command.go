@@ -19,9 +19,7 @@ import (
 //go:embed internal/scrape_config.tmpl
 var scrapeConfigTemplate string
 
-var (
-	configAlias = []string{"f"}
-)
+var configAlias = []string{"f"}
 
 type ScrapeConfigData struct {
 	Targets        []string

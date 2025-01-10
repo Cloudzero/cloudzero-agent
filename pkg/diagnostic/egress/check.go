@@ -32,7 +32,6 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 }
 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
-
 	// simple unuathenticated check for egress access
 	url := fmt.Sprintf("%s", c.cfg.Cloudzero.Host)
 	_, err := http.Do(ctx, client, net.MethodGet, nil, nil, url, nil)

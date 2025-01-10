@@ -142,8 +142,8 @@ func (f *PlainTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 func (f *PlainTextFormatter) printPlain(b *bytes.Buffer, entry *logrus.Entry, keys []string,
-	data logrus.Fields, timestampFormat string) {
-
+	data logrus.Fields, timestampFormat string,
+) {
 	levelText := strings.ToUpper(entry.Level.String())
 	if !f.DisableLevelTruncation && !f.PadLevelText {
 		levelText = levelText[0:4]

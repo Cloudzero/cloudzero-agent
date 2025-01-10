@@ -66,7 +66,7 @@ func (c *checker) GetVersion(ctx context.Context) ([]byte, error) {
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("prometheus executable not found: %w", err)
 	}
-	if fi.Mode()&0111 == 0 {
+	if fi.Mode()&0o111 == 0 {
 		return nil, fmt.Errorf("prometheus executable is not executable: %s", executable)
 	}
 

@@ -83,7 +83,7 @@ func NewLogger() *logrus.Logger {
 func LogToFile(file string) *logrus.Logger {
 	logger := NewLogger()
 	logger.Out = os.Stdout
-	if f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
+	if f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666); err == nil {
 		logger.Out = f
 	}
 	return logger

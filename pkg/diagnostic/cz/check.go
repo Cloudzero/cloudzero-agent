@@ -33,7 +33,6 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 }
 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
-
 	// Hit an authenticated API to verify the API token
 	url := fmt.Sprintf("%s/v2/insights", c.cfg.Cloudzero.Host)
 	_, err := http.Do(

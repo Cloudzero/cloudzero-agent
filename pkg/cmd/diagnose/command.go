@@ -21,9 +21,7 @@ const (
 	configFileDesc = "input " + config.FlagDescConfFile
 )
 
-var (
-	configAlias = []string{"f"}
-)
+var configAlias = []string{"f"}
 
 func NewCommand() *cli.Command {
 	cmd := &cli.Command{
