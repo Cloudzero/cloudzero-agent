@@ -35,6 +35,7 @@ linters:
     - stylecheck
     - goconst
     - gofmt
+    - goheader
     - tagliatelle
 
 linters-settings:
@@ -52,6 +53,10 @@ linters-settings:
         replacement: "any"
       - pattern: "a[b:len(a)]"
         replacement: "a[b:]"
+  goheader:
+    template: |-
+      SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+      SPDX-License-Identifier: Apache-2.0
   dupl:
     # Tokens count to trigger issue, Default: 150
     threshold: 100
