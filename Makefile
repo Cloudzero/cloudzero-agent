@@ -23,6 +23,7 @@ DOCKER ?= docker
 GO     ?= go
 GREP   ?= grep
 NPM    ?= npm
+PROTOC ?= protoc
 RM     ?= rm
 XARGS  ?= xargs
 
@@ -191,3 +192,11 @@ $(eval $(call generate-container-build-target,package-build,load))
 .PHONY: generate
 generate: ## (Re)generate generated code
 	@$(GO) generate ./...
+
+# We don't yet have a good way to install a specific version of protoc /
+# protoc-gen-go, so for now we'll keep this out of the automatic regeneration
+# path. If you want to regenerate it using the system protoc, manually remove
+# pkg/status/cluster_status.pb.go, then run `make generate`.
+generate: pkg/status/cluster_status.pb.go
+pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto
