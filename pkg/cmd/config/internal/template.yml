@@ -1,22 +1,22 @@
 versions:
-  chart_version: {{ .ChartVerson }}
-  agent_version: {{ .AgentVersion }}
+  chart_version: { { .ChartVerson } }
+  agent_version: { { .AgentVersion } }
 
 logging:
   level: info
   location: ./cloudzero-agent-validator.log
 
 deployment:
-  account_id:  {{ .AccountID }}
-  cluster_name:  {{ .ClusterName }}
-  region:  {{ .Region }}
+  account_id: { { .AccountID } }
+  cluster_name: { { .ClusterName } }
+  region: { { .Region } }
 
 cloudzero:
-  host:  {{ .CloudzeroHost }}
+  host: { { .CloudzeroHost } }
   credentials_file: /etc/config/prometheus/secrets/value
 
 prometheus:
-  kube_state_metrics_service_endpoint:  {{ .KubeStateMetricsURL }}
+  kube_state_metrics_service_endpoint: { { .KubeStateMetricsURL } }
   configurations:
     - /etc/config/prometheus/configmaps/prometheus.yml
 

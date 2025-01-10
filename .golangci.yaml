@@ -48,10 +48,10 @@ linters-settings:
     # https://pkg.go.dev/cmd/gofmt
     # Default: []
     rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
-      - pattern: 'a[b:len(a)]'
-        replacement: 'a[b:]'
+      - pattern: "interface{}"
+        replacement: "any"
+      - pattern: "a[b:len(a)]"
+        replacement: "a[b:]"
   dupl:
     # Tokens count to trigger issue, Default: 150
     threshold: 100
