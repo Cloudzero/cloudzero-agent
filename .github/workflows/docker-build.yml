@@ -5,7 +5,7 @@ on:
       - develop
       - main
     tags:
-      - '*'
+      - "*"
   # tag is pr-<number>
   pull_request:
   release:
@@ -36,7 +36,7 @@ jobs:
       - name: SETUP - Checkout
         id: checkout_code
         uses: actions/checkout@v4
-        
+
       - # Install buildx for multi-platform builds
         name: SETUP - Docker Buildx
         id: install_buildx
@@ -108,7 +108,7 @@ jobs:
           file: ${{ env.VALIDATOR_DOCKERFILE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms:  ${{ env.PLATFORMS }}
+          platforms: ${{ env.PLATFORMS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -126,11 +126,11 @@ jobs:
         uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          format: 'table'
-          exit-code: '1'
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
 
       ###########################################################################
       # PRODUCTION ONLY STEPS BEYOND THIS POINT
@@ -151,7 +151,7 @@ jobs:
               --user "${{ github.actor }}" \
               --pass-stdin
 
-      # Copy the image from the local registry 
+      # Copy the image from the local registry
       # to the production registry (retagging at the same time)
       # only allow on main, develop branches, or a version tag
       - name: PRODUCTION STEP - Publish Image to Production

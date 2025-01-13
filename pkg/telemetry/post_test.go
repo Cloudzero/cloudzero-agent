@@ -131,7 +131,6 @@ func TestPostStatus(t *testing.T) {
 			assert.Len(t, serverDecodedStatus.Checks, 2)
 		})
 	}
-
 }
 
 // Testing Helpers

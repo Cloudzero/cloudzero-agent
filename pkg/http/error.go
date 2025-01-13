@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package http
 
 import (
@@ -69,7 +72,7 @@ func classifyNetworkError(err error) string {
 	}
 
 	if cause, ok := cause.(syscall.Errno); ok {
-		if cause == 10061 || cause == syscall.ECONNREFUSED {
+		if cause == 10061 || cause == syscall.ECONNREFUSED { //nolint:revive // The source for 10061 is unknown
 			return "connection refused"
 		}
 	}

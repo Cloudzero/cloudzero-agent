@@ -16,8 +16,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}   # checkout the correct branch name
-          fetch-depth: 0                # fetch the whole repo history
+          ref: ${{ github.head_ref }} # checkout the correct branch name
+          fetch-depth: 0 # fetch the whole repo history
 
       - name: Fetch all branches
         run: git fetch --all
@@ -50,17 +50,17 @@ jobs:
 
       - name: RELEASE - Create new version
         id: version
-        # outputs 
+        # outputs
         # new_tag - The value of the newly created tag.
         # old_tag - The value of the last semantic version tag before the version bump. Empty if no version bump is performed.
         # tag - The value of the latest tag after running this action.
         # part - The part of version which was bumped.
         uses: anothrNick/github-tag-action@1.71.0
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            WITH_V: true
-            PRERELEASE: true
-            INITIAL_VERSION: ${{ env.LAST_TAG }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          PRERELEASE: true
+          INITIAL_VERSION: ${{ env.LAST_TAG }}
 
       - name: GET CHANGES
         id: get_changes

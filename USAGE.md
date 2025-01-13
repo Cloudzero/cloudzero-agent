@@ -19,6 +19,7 @@ cloudzero-agent-validator [global options] command [sub-command options]
 The Cloudzero Agent Validator supports the following top-level commands:
 
 ### `config`
+
 The `config` command provides configuration utility commands. Use the following syntax:
 
 ```sh
@@ -87,20 +88,21 @@ cloudzero-agent-validator diagnose post-start [command options]
 
 ##### `pre-stop`
 
-The `pre-stop` command runs pre-stop diagnostic tests.  This command is designed to be used in a `lifecycle.PreStop` pod lifecycle context of the Cloudzero-Agent chart. Use the following syntax:
+The `pre-stop` command runs pre-stop diagnostic tests. This command is designed to be used in a `lifecycle.PreStop` pod lifecycle context of the Cloudzero-Agent chart. Use the following syntax:
 
 ```sh
 cloudzero-agent-validator diagnose pre-stop [command options]
 ```
 
---- 
+---
 
 ## Global Options
+
 The Cloudzero Agent Validator supports the following global options:
 
 - `--help, -h`: Show help
 - `--version, -v`: Print the version
 
 ## Copyright
-© 2024 Cloudzero, Inc.
 
+© 2024 Cloudzero, Inc.

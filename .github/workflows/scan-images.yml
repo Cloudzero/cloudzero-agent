@@ -4,7 +4,7 @@ name: Scan Docker Image Tags
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 1 * *' # Runs at midnight UTC on the first day of every month
+    - cron: "0 0 1 * *" # Runs at midnight UTC on the first day of every month
 
 env:
   CRANE_VERSION: v0.6.0
@@ -29,7 +29,7 @@ jobs:
           # Convert to a JSON array of strings
           tags_array=$(echo "$filtered_tags" | jq -R -s -c 'split("\n")[:-1]')
           # Set the output for the matrix job
-          echo "tags_matrix=$(jq -cn --argjson environments "$tags_array" '{tag: $environments}')" >> $GITHUB_OUTPUT 
+          echo "tags_matrix=$(jq -cn --argjson environments "$tags_array" '{tag: $environments}')" >> $GITHUB_OUTPUT
 
   scan-job:
     needs: list-tags

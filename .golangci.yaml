@@ -3,10 +3,6 @@ run:
   timeout: 5m
   issues-exit-code: 2
   tests: false
-  skip-dirs:
-    - pkg/status
-    - .go
-    - .git
 
 output:
   print-issued-lines: false
@@ -19,42 +15,113 @@ linters:
   disable-all: true
 
   enable:
-    # bugs/error
-    - staticcheck
-    - revive
-    - govet
-    - errcheck
-    - gosec
-    - dupl
+    # Bugs & Errors
+    - copyloopvar # Detects places where loop variables are copied unnecessarily (in Go 1.22+)
+    - dupl # Detects duplicate code
+    - errcheck # Check for unexamined errors
+    - gosec # Check for security issues
+    - govet # Check for common Go mistakes
+    - nilnil # Detects return of nil errors and an invalid value
+    - paralleltest # Detects missing t.Parallel() calls in tests
+    - promlinter # Check Prometheus metrics names
+    - revive # Framework with many sub-linters
+    - sqlclosecheck # Check that SQL rows/statements are closed
+    - staticcheck # Subset of checks from the stand-along staticcheck tool
+    - tparallel # Finds incorrect usage of t.Parallel()
+    - zerologlint # Check for correct usage of zerolog
 
-    # performance
-    - gocritic
-    - prealloc
+    # Performance
+    - gocritic # An opinionated linter to enforce best practices
+    - prealloc # Find slice declarations that could be preallocated
+    - perfsprint # Check for usage of fmt.Sprintf that could be implemented with more efficient alternatives
 
-    # style, formatting
-    - stylecheck
-    - goconst
-    - gofmt
-    - tagliatelle
+    # Style & Formatting
+    - goconst # Find repeated strings that could be replaced by constants
+    - gofumpt # Aggressive formatter Go code
+    - goheader # Check for correct headers in source files
+    - intrange # Look for loops that could use the Go 1.22+ integer range syntax
+    - nolintlint # Ensure proper usage of nolint directives
+    - stylecheck # Check for style issues
+    - tagliatelle # Check for correct usage formatting of struct tags
 
 linters-settings:
+  #
+  # Bugs & Errors
+  #
+  dupl:
+    # Tokens count to trigger issue, Default: 150
+    threshold: 100
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
     # Such cases aren't reported by default.
     # Default: false
     check-type-assertions: true
-  gofmt:
+
+  # For a full list of Revive linters, see https://github.com/mgechev/revive
+  revive:
+    rules:
+      # Check for common mistaken usages of the sync/atomic package
+      - name: atomic
+      # Suggests using constant for magic numbers and string literals
+      - name: add-constant
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2,3"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
+      # Warns on malformed comments
+      - name: comment-spacings
+      # Warns on methods with names that differ only by capitalization
+      - name: confusing-naming
+      # Suggests to name potentially confusing function results
+      - name: confusing-results
+      # Warns on constant logical expressions
+      - name: constant-logical-expr
+      # context.Context should be the first argument of a function.
+      - name: context-as-argument
+      # Disallows the usage of basic types in context.WithValue.
+      - name: context-keys-type
+      # Spots potential dataraces
+      - name: datarace
+      # Looks for program exits in funcs other than main() or init()
+      - name: deep-exit
+      # Naming and commenting conventions on exported symbols.
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "disableStutteringCheck"
+          - "checkPublicInterface"
+          - "disableChecksOnFunctions"
+
+  #
+  # Performance
+  #
+
+  #
+  # Style & Formatting
+  #
+  gofumpt:
     # Apply the rewrite rules to the source before reformatting.
-    # https://pkg.go.dev/cmd/gofmt
+    # https://github.com/mvdan/gofumpt
     # Default: []
     rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
-      - pattern: 'a[b:len(a)]'
-        replacement: 'a[b:]'
-  dupl:
-    # Tokens count to trigger issue, Default: 150
-    threshold: 100
+      - pattern: "interface{}"
+        replacement: "any"
+      - pattern: "a[b:len(a)]"
+        replacement: "a[b:]"
+  goheader:
+    template: |-
+      SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+      SPDX-License-Identifier: Apache-2.0
+    exclude-dirs:
+      - pkg/types/mocks
+  nolintlint:
+    # Always require //nolint instead of // nolint
+    require-machine: true
+    # Always require //nolint:mylinter instead of just //nolint
+    require-specific: true
+    # Always require //nolint // my explanation instead of just //nolint
+    require-explanation: true
   tagliatelle:
     case:
       use-field-name: true
@@ -62,3 +129,13 @@ linters-settings:
         # Any struct tag type can be used.
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`.
         yaml: snake
+
+issues:
+  exclude-dirs:
+    - pkg/status
+    - .go
+    - .git
+  exclude-rules:
+    - path: pkg/types/mocks
+      linters:
+        - goheader

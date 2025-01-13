@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package config contains a diagnostic provider for checking the Prometheus configuration.
 package config
 
 import (
@@ -40,13 +44,13 @@ func (c *checker) Check(_ context.Context, _ *net.Client, accessor status.Access
 	for _, location := range c.cfg.Prometheus.Configurations {
 		if _, err := os.Stat(location); os.IsNotExist(err) {
 			accessor.AddCheck(
-				&status.StatusCheck{Name: DiagnosticScrapeConfig, Error: fmt.Sprintf("find scrape configuration failed: %s", location)})
+				&status.StatusCheck{Name: DiagnosticScrapeConfig, Error: "find scrape configuration failed: " + location})
 			continue
 		}
 		data, err := os.ReadFile(location)
 		if err != nil {
 			accessor.AddCheck(
-				&status.StatusCheck{Name: DiagnosticScrapeConfig, Error: fmt.Sprintf("failed to read: %s", location)})
+				&status.StatusCheck{Name: DiagnosticScrapeConfig, Error: "failed to read: " + location})
 			continue
 		}
 		accessor.WriteToReport(func(s *status.ClusterStatus) {

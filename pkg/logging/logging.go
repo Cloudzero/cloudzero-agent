@@ -1,5 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
+// Package logging contains utilities for logging.
 package logging
 
 import (
@@ -83,7 +85,8 @@ func NewLogger() *logrus.Logger {
 func LogToFile(file string) *logrus.Logger {
 	logger := NewLogger()
 	logger.Out = os.Stdout
-	if f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
+	const globalReadWriteFileMode os.FileMode = 0o666
+	if f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, globalReadWriteFileMode); err == nil {
 		logger.Out = f
 	}
 	return logger

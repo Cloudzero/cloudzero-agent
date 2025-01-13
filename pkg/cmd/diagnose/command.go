@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package diagnose contains a CLI for running diagnostics.
 package diagnose
 
 import (
@@ -21,9 +25,7 @@ const (
 	configFileDesc = "input " + config.FlagDescConfFile
 )
 
-var (
-	configAlias = []string{"f"}
-)
+var configAlias = []string{"f"}
 
 func NewCommand() *cli.Command {
 	cmd := &cli.Command{

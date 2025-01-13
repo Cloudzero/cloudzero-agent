@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+
+// Package cz contains code for checking a CloudZero API token.
 package cz
 
 import (
 	"context"
-	"fmt"
 	net "net/http"
 	"strings"
 
@@ -33,9 +34,8 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 }
 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
-
 	// Hit an authenticated API to verify the API token
-	url := fmt.Sprintf("%s/v2/insights", c.cfg.Cloudzero.Host)
+	url := c.cfg.Cloudzero.Host + "/v2/insights"
 	_, err := http.Do(
 		ctx, client, net.MethodGet,
 		map[string]string{

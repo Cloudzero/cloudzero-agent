@@ -1,10 +1,9 @@
 ---
 name: Report an issue
 about: Create a bug report to fix an existing issue.
-title: ''
-labels: ''
-assignees: ''
-
+title: ""
+labels: ""
+assignees: ""
 ---
 
 **Please do not report security vulnerabilities here**. Please disclose all security issues to [security@cloudzero.com](mailto:security@cloudzero.com).

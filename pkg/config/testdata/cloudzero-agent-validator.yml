@@ -26,7 +26,7 @@ prometheus:
     - kube_pod_labels
     - kube_pod_info
     - node_dmi_info
-  configurations: 
+  configurations:
     - prometheus.yml
 
 diagnostics:

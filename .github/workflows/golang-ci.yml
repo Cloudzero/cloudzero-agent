@@ -1,0 +1,112 @@
+name: CI
+
+on: [push]
+
+jobs:
+  # Run tests
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install dependencies
+        run: |
+          go mod download
+      - name: Run go tests
+        run: |
+          make test-integration
+
+  # Run golangci-lint
+  #
+  # golangci-lint is a linter for Go. It is a wrapper around a number of
+  # linters, and is the default linter for this project.
+  #
+  # Note that we intentionally do not use the golangci-lint GitHub Action here
+  # since there is a good chance it will get out of sync with the version used
+  # in the Makefile. By using the version in the Makefile we make it easy to
+  # make sure all developers are using the same version, and therefore finding
+  # the same issues.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install golangci-lint
+        run: make install-tools-golangci-lint
+      - name: Run golangci-lint
+        run: make lint
+
+  # Run static analysis
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install tools
+        run: make install-tools
+      - name: Run static analysis
+        run: make analyze
+
+  # Run govulncheck
+  #
+  # govulncheck checks for known vulnerabilities in Go dependencies. Typically
+  # it would make sense to run this in a separate pipeline, perhaps on a cron
+  # job, because if it fails it will potentially "break" the CI builds for
+  # issues unrelated to the commit in question. However, since govulncheck has
+  # an extremely low rate of false positives (it checks if the vulnerable code
+  # is actually used, as opposed to there just being a vulnerability somewhere
+  # in the dependency), I think it is appropriate to force us to fix issues it
+  # finds ASAP.
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: go.mod
+
+  # Format code and data
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install tools
+        run: make install-tools
+      - name: Format code
+        run: make format
+      - name: Check file format
+        run: git diff --exit-code --color
+
+  generate: # Generate code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install tools
+        run: make install-tools
+      - name: Generate code
+        run: make generate
+      - name: Check for modified files
+        run: git diff --exit-code --color
+      - name: Debug
+        run: git ls-files --others
+      - name: Check for untracked files
+        run: test -z "$(git ls-files --others --exclude-standard)"

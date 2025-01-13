@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -54,7 +57,7 @@ func ctrlCHandler() context.Context {
 	go func() {
 		<-stopCh
 		cancel()
-		os.Exit(0)
+		os.Exit(0) //nolint:revive // need to verify that cancelling the context is sufficient to exit
 	}()
 	return ctx
 }

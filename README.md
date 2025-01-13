@@ -1,6 +1,5 @@
 # CloudZero Agent Validator
 
-
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-agent-validator.svg)
@@ -22,6 +21,7 @@ The easiest way to get started it by using the [cloudzero-agent helm chart](http
 ### Installation
 
 If you are using docker, the easiest way to get started by running the following command:
+
 ```sh
 docker run -it --rm ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config generate
 ```
@@ -32,8 +32,8 @@ docker run -it --rm ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-
 mkdir config
 docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config generate -f /config/myconfig.yml --account 123456789 --cluster my-cluster-name --region us-east-1
 ```
-> You can now open `./config/myconfig.yml` and edit values as necessary for your cluster.
 
+> You can now open `./config/myconfig.yml` and edit values as necessary for your cluster.
 
 ### Run a command locally (not in-pod)
 
@@ -46,6 +46,7 @@ echo $CZ_API_KEY > config/credentials_file
 Replace the value `credentials_file: /etc/config/prometheus/secrets/value` with `credentials_file: /config/credentials_file` in `config/myconfig.yml`
 
 Now validate the configuration file:
+
 ```
 docker run -it --rm -v ./config:/config ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator:latest cloudzero-agent-validator config validate -f /config/myconfig.yml
 ```
