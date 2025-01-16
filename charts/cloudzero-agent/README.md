@@ -234,7 +234,7 @@ kube-state-metrics:
 
 ⚠️ Important: If you are running an existing `kube-state-metrics` instance, ensure that the labels you want to use are whitelisted. kube-state-metrics version 2.x and above will **_not_** export the `kube_pod_labels` metrics unless they are explicitly allowed. This prevents the use of those labels for cost allocation and other purposes. Make sure you have configured the labels at the appropriate level using the --metric-labels-allowlist parameter:
 
-> eg:  `- --metric-labels-allowlist=namespaces=[*],pods=[*],deployments=[app.kubernetes.io/*,k8s.*]`
+> eg:  `- --metric-labels-allowlist=pods=[*]`
 
 ## Dependencies
 
