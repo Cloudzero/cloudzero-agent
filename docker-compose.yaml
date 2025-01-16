@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   app:
@@ -9,7 +9,7 @@ services:
     entrypoint: /app/controller
     command: ["-config", "/config.yaml"]
     volumes:
-      - ./tests/integration/test-config.yaml:/config.yaml:ro 
+      - ./tests/integration/test-config.yaml:/config.yaml:ro
       - ./tests/integration/fake-api-key:/etc/config/secrets/fake-api-key:ro
     ports:
       - "8000:8000"

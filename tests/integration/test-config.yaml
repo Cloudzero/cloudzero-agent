@@ -25,8 +25,8 @@ filters:
   labels:
     enabled: true
     patterns:
-    - ^foo-label$
-    - ^bar-label$
+      - ^foo-label$
+      - ^bar-label$
     resources:
       cronjobs: false
       daemonsets: false
@@ -39,8 +39,8 @@ filters:
   annotations:
     enabled: true
     patterns:
-    - ^foo-annotation$
-    - ^bar-annotation$
+      - ^foo-annotation$
+      - ^bar-annotation$
     resources:
       cronjobs: false
       daemonsets: false

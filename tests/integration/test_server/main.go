@@ -44,7 +44,7 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := filepath.Join("/app/test-output", fmt.Sprintf("%d.json", time.Now().Unix()))
-	err = os.WriteFile(filePath, data, 0644)
+	err = os.WriteFile(filePath, data, 0o644)
 	if err != nil {
 		http.Error(w, "Failed to write file", http.StatusInternalServerError)
 		return
