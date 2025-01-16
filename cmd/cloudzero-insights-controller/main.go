@@ -104,6 +104,7 @@ func main() {
 	}()
 
 	if backfill {
+		log.Info().Msg("Starting backfill mode")
 		// setup k8s client
 		k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
 		if err != nil {

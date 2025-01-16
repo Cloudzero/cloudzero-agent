@@ -16,11 +16,8 @@ database:
   cleanup_interval: 3h
   batch_update_size: 500
 api_key_path: /etc/config/secrets/fake-api-key
-# certificate:
-#   key: /etc/certs/tls.key
-#   cert: /etc/certs/tls.crt
 server:
-  port: 8443
+  port: 8000
   read_timeout: 10s
   write_timeout: 10s
   idle_timeout: 120s
@@ -28,7 +25,8 @@ filters:
   labels:
     enabled: true
     patterns:
-    - .*
+    - ^foo-label$
+    - ^bar-label$
     resources:
       cronjobs: false
       daemonsets: false
@@ -42,6 +40,7 @@ filters:
     enabled: true
     patterns:
     - ^foo-annotation$
+    - ^bar-annotation$
     resources:
       cronjobs: false
       daemonsets: false
