@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/golang/snappy"
@@ -42,7 +43,7 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := filepath.Join("/app/test-output", filepath.Base(r.URL.Path)+".json")
-	err = ioutil.WriteFile(filePath, data, 0644)
+	err = os.WriteFile(filePath, data, 0644)
 	if err != nil {
 		http.Error(w, "Failed to write file", http.StatusInternalServerError)
 		return
