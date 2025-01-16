@@ -103,13 +103,12 @@ func main() {
 		}
 	}()
 
-	// setup k8s client
-	k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to build k8s client")
-	}
-
 	if backfill {
+		// setup k8s client
+		k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to build k8s client")
+		}
 		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
 		return
 	}

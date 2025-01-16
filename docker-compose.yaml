@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  app:
+    # build:
+    #   context: ./docker/  # Directory containing the Dockerfile
+    image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:0.1.1
+    container_name: insights-controller
+    entrypoint: /app/controller
+    command: ["-config", "/config.yaml"]
+    volumes:
+      - ./tests/integration/test-config.yaml:/config.yaml:ro 
+      - ./tests/integration/fake-api-key:/etc/config/secrets/fake-api-key:ro 
+    ports:
+      - "8000:8000"  # Expose the app on localhost:8000
+    networks:
+      - app-network
+
+  # nginx:
+  #   image: nginx:latest
+  #   container_name: nginx-container
+  #   ports:
+  #     - "8080:80"  # Expose nginx on localhost:8080
+  #   networks:
+  #     - app-network
+
+  # redis:
+  #   image: redis:latest
+  #   container_name: redis-container
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
