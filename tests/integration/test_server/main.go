@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+
+	"github.com/golang/snappy"
 )
 
 func main() {
@@ -21,11 +23,8 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	// if query.Get("cluster_name") == "" || query.Get("cloud_account_id") == "" || query.Get("region") == "" {
 	if query.Get("cluster_name") == "" || query.Get("cloud_account_id") == "" || query.Get("region") == "" {
-		// if query.Get("cluster_name") == "" {
-		errString := fmt.Sprintf("Missing required query parameters: cluster_name=%s, cloud_account_id=%s, region=%s", query.Get("cluster_name"), query.Get("cloud_account_id"), query.Get("region"))
-		http.Error(w, errString, http.StatusBadRequest)
+		http.Error(w, "Missing required query parameters", http.StatusBadRequest)
 		return
 	}
 
@@ -36,15 +35,14 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// data, err := snappy.Decode(nil, compressedData)
-	// if err != nil {
-	// 	http.Error(w, "Failed to uncompress data", http.StatusInternalServerError)
-	// 	return
-	// }
+	data, err := snappy.Decode(nil, compressedData)
+	if err != nil {
+		http.Error(w, "Failed to uncompress data", http.StatusInternalServerError)
+		return
+	}
 
 	filePath := filepath.Join("/app/test-output", filepath.Base(r.URL.Path)+".json")
-	err = ioutil.WriteFile(filePath, compressedData, 0644)
-	// err = ioutil.WriteFile(filePath, data, 0644)
+	err = ioutil.WriteFile(filePath, data, 0644)
 	if err != nil {
 		http.Error(w, "Failed to write file", http.StatusInternalServerError)
 		return

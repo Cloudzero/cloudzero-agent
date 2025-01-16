@@ -5,7 +5,6 @@ services:
     build:
       dockerfile: ./docker/Dockerfile
       context: .
-    # image: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller:0.1.1
     container_name: insights-controller
     entrypoint: /app/controller
     command: ["-config", "/config.yaml"]
@@ -19,7 +18,8 @@ services:
 
   mock-remote-write:
     build:
-      dockerfile: ./tests/integration/test_server/Dockerfile
+      dockerfile: Dockerfile
+      context: ./tests/integration/test_server/
       args:
         EXPOSED_PORT: 8081
     container_name: test-server
@@ -27,13 +27,6 @@ services:
       - "${EXPOSED_PORT}:8081"
     volumes:
       - ./tests/integration/test-output:/app/test-output
-    networks:
-      - app-network
-
-  testy:
-    image: ubuntu:latest
-    container_name: testy
-    command: ["bash", "-c", "apt-get update && apt-get install -y curl && tail -f /dev/null"]
     networks:
       - app-network
 
