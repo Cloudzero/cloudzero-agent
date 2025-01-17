@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: .
+    container_name: insights-controller
+    entrypoint: /app/controller
+    command: ["-config", "/config.yaml"]
+    volumes:
+      - ./tests/integration/test-config.yaml:/config.yaml:ro
+      - ./tests/integration/fake-api-key:/etc/config/secrets/fake-api-key:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+  mock-remote-write:
+    build:
+      dockerfile: Dockerfile
+      context: ./tests/integration/test_server/
+      args:
+        EXPOSED_PORT: 8081
+    container_name: test-server
+    ports:
+      - "${EXPOSED_PORT}:8081"
+    volumes:
+      - ./tests/integration/test-output:/app/test-output
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
