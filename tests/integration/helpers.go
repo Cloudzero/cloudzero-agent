@@ -40,7 +40,7 @@ func generateRequest(method, route, url string, req Request) (*http.Request, err
 
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-	if _, err := gz.Write(bodyBytes); err != nil {
+	if _, err = gz.Write(bodyBytes); err != nil {
 		return nil, fmt.Errorf("failed to compress body: %v", err)
 	}
 	if err := gz.Close(); err != nil {
@@ -90,7 +90,6 @@ func NewAdmissionRequest() []byte {
 		},
 	}
 
-	// Create an AdmissionReview
 	admissionReview := &v1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "admission.k8s.io/v1",
@@ -99,7 +98,6 @@ func NewAdmissionRequest() []byte {
 		Request: admissionRequest,
 	}
 
-	// Marshal the AdmissionReview to JSON
 	admissionReviewJSON, err := json.Marshal(admissionReview)
 	if err != nil {
 		fmt.Printf("Error marshaling AdmissionReview: %v\n", err)
