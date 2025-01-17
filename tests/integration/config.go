@@ -1,10 +1,14 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package integration
 
-// Constants for configuration values
+// Constants for config values
 const (
 	TestOutputDir = "./test-output"
 )
 
+// Constant test values
 const (
 	BaseURL          = "http://localhost:8000"
 	ValidClusterName = "integration-test-cluster"

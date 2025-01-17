@@ -1,14 +1,20 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIntegrationValidResponses(t *testing.T) {
@@ -21,11 +27,12 @@ func TestIntegrationValidResponses(t *testing.T) {
 		{
 			name: "Valid route request should return 200",
 			requests: []Request{
-				{QueryParams: map[string]string{
-					"cluster_name":     ValidClusterName,
-					"cloud_account_id": ValidAccountID,
-					"region":           ValidRegion,
-				}, Body: []byte{},
+				{
+					QueryParams: map[string]string{
+						"cluster_name":     ValidClusterName,
+						"cloud_account_id": ValidAccountID,
+						"region":           ValidRegion,
+					}, Body: []byte{},
 					Route:  PodRoute,
 					Method: http.MethodPost,
 				},
@@ -66,7 +73,23 @@ func TestIntegrationValidResponses(t *testing.T) {
 					}
 					t.Logf("Response body: %s", body)
 				}
-				time.Sleep(20 * time.Second)
+				time.Sleep(10 * time.Second)
+				filePath := filepath.Join(TestOutputDir, "output.json")
+				_, err = os.Stat(filePath)
+				assert.NoError(t, err)
+
+				file, err := os.Open(filePath)
+				if err != nil {
+					t.Fatalf("Failed to open file: %v", err)
+				}
+				defer file.Close()
+
+				content, err := io.ReadAll(file)
+				assert.NoError(t, err)
+
+				var result map[string]string
+				err = json.Unmarshal(content, &result)
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -96,7 +119,8 @@ func TestIntegrationInvalidResponses(t *testing.T) {
 			name:   "Invalid route request should return 404",
 			method: http.MethodPost,
 			requests: []Request{
-				{QueryParams: map[string]string{}, Body: []byte{},
+				{
+					QueryParams: map[string]string{}, Body: []byte{},
 					Route: "/invalid-route",
 				},
 			},
