@@ -5,7 +5,7 @@ host: mock-remote-write:8081
 logging:
   level: debug
 remote_write:
-  send_interval: 1m
+  send_interval: 5s
   max_bytes_per_send: 500000
   send_timeout: 1m
   max_retries: 3
