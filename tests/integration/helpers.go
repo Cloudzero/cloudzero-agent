@@ -29,7 +29,7 @@ type BodyParams struct {
 	ObjectName string
 }
 
-func generateRequest(method, route, url string, req Request) (*http.Request, error) {
+func GenerateRequest(method, route, url string, req Request) (*http.Request, error) {
 	query := "?"
 	for k, v := range req.QueryParams {
 		query += fmt.Sprintf("%s=%s&", k, v)

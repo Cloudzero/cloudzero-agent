@@ -53,8 +53,7 @@ func TestIntegrationValidResponses(t *testing.T) {
 				if admissionReq == nil {
 					t.Fatalf("Failed to create test admission request")
 				}
-				httpReq, err := generateRequest(req.Method, req.Route, BaseURL, Request{Body: admissionReq, QueryParams: req.QueryParams})
-
+				httpReq, err := GenerateRequest(req.Method, req.Route, BaseURL, Request{Body: admissionReq, QueryParams: req.QueryParams})
 				if err != nil {
 					t.Fatalf("Failed to generate request: %v", err)
 				}
@@ -140,8 +139,7 @@ func TestIntegrationInvalidResponses(t *testing.T) {
 				if foo == nil {
 					t.Fatalf("Failed to create fake request")
 				}
-				httpReq, err := generateRequest(req.Method, req.Route, BaseURL, Request{Body: foo, QueryParams: req.QueryParams})
-
+				httpReq, err := GenerateRequest(req.Method, req.Route, BaseURL, Request{Body: foo, QueryParams: req.QueryParams})
 				if err != nil {
 					t.Fatalf("Failed to generate request: %v", err)
 				}
