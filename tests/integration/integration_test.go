@@ -137,7 +137,8 @@ func TestIntegrationInvalidResponses(t *testing.T) {
 				if foo == nil {
 					t.Fatalf("Failed to create fake request")
 				}
-				httpReq, err := generateRequest("POST", "http://localhost:8000", Request{Body: foo, QueryParams: req.QueryParams})
+				// Use a value from the config package
+				httpReq, err := generateRequest(req.Method, BaseURL, Request{Body: foo, QueryParams: req.QueryParams})
 
 				if err != nil {
 					t.Fatalf("Failed to generate request: %v", err)
@@ -239,6 +240,14 @@ func TestIntegrationInvalidResponses(t *testing.T) {
 // 	}
 
 // 	httpReq, err := http.NewRequest(http.MethodPost, url+query, &buf)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to create request: %v", err)
+// 	}
+// 	httpReq.Header.Set("Content-Encoding", "gzip")
+
+// 	return httpReq, nil
+// }
+
 // 	if err != nil {
 // 		return nil, fmt.Errorf("failed to create request: %v", err)
 // 	}
