@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package integration
@@ -36,14 +36,14 @@ func generateRequest(method, route, url string, req Request) (*http.Request, err
 	}
 	query = query[:len(query)-1]
 
-	bodyBytes, err := json.Marshal(req.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal body: %v", err)
+	bodyBytes, jsonErr := json.Marshal(req.Body)
+	if jsonErr != nil {
+		return nil, fmt.Errorf("failed to marshal body: %v", jsonErr)
 	}
 
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-	if _, err = gz.Write(bodyBytes); err != nil {
+	if _, err := gz.Write(bodyBytes); err != nil {
 		return nil, fmt.Errorf("failed to compress body: %v", err)
 	}
 	if err := gz.Close(); err != nil {
