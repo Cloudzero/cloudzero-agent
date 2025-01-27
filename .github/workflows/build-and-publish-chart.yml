@@ -48,18 +48,20 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      # Step 4: Determine Version
-      - name: Get Github Tag Version
-        id: version
-        uses: flatherskevin/semver-action@v1
-        with:
-          incrementLevel: patch
-          source: tags
+      - name: Build Cloudzero Agent Dependencies
+        run: helm dependency update charts/cloudzero-agent/
 
-      - name: Determine Chart Version
+      - name: Package Cloudzero Agent Chart
+        run: helm package charts/cloudzero-agent/ --destination .deploy
+
+      # Step 4: Validate and Set Version
+      - name: Validate Input Version
         run: |
-          NEW_VERSION=${{ github.event.inputs.version || steps.version.outputs.nextVersion }}
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          if [[ -z "${{ github.event.inputs.version }}" ]]; then
+            echo "Version input is required."
+            exit 1
+          fi
+          echo "NEW_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Update Chart Version
         run: |
@@ -73,17 +75,9 @@ jobs:
             exit 1
           fi
 
-      - name: Build Dependencies
-        run: helm dependency update charts/cloudzero-agent/
-
       # Step 5: Package and Commit Chart
       - name: Package Chart
         run: helm package charts/cloudzero-agent/ --destination .deploy
-
-      - name: Get Main Changelog Beginning Hash
-        run: |
-          MAIN_PREV_COMMIT_HASH=$(git rev-parse HEAD)
-          echo "MAIN_PREV_COMMIT_HASH=${MAIN_PREV_COMMIT_HASH}" >> $GITHUB_ENV
 
       - name: Commit updated Chart.yaml
         run: |
@@ -93,15 +87,6 @@ jobs:
           COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
         continue-on-error: true
-
-      # Step 6: Generate Change Log
-      - name: Generate Change Log
-        id: get_changes
-        run: |
-          FROM=${{ env.MAIN_PREV_COMMIT_HASH }}
-          TO=$(git rev-parse --short HEAD)
-          CHANGES=$(git log ${FROM}..${TO} --oneline)
-          echo "::set-output name=changes::${CHANGES}"
 
       # Step 7: Handle Artifacts and Update Pages
       - name: Upload Chart as Artifact
