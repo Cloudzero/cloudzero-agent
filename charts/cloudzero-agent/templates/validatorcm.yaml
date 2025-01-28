@@ -33,9 +33,11 @@ data:
       {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
       kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
       {{- else }}
-      kube_state_metrics_service_endpoint: http://{{- if .Release.Name }}{{.Release.Name}}-{{- end }}kube-state-metrics:8080/
+      kube_state_metrics_service_endpoint: http://{{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
       {{- end }}
       executable: /bin/prometheus
+      kube_metrics:
+        {{- toYaml .Values.kubeMetrics | nindent 8 }}
       configurations:
         - /etc/prometheus/prometheus.yml
         - /etc/config/prometheus/configmaps/prometheus.yml

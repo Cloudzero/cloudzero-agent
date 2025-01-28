@@ -6,7 +6,8 @@ cloudAccountId: null
 clusterName: null
 # -- Region the cluster is running in.
 region: null
-# -- CloudZero API key. Required if useExistingSecret is false.
+
+# -- CloudZero API key. Required if existingSecretName is null.
 apiKey: null
 # -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
 existingSecretName: null
@@ -20,13 +21,102 @@ kubeMetrics:
   - kube_pod_container_resource_requests
   - kube_pod_labels
   - kube_pod_info
-  - node_dmi_info
 containerMetrics:
   - container_cpu_usage_seconds_total
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
-
+insightsMetrics:
+  - go_memstats_alloc_bytes
+  - go_memstats_heap_alloc_bytes
+  - go_memstats_heap_idle_bytes
+  - go_memstats_heap_inuse_bytes
+  - go_memstats_heap_objects
+  - go_memstats_last_gc_time_seconds
+  - go_memstats_alloc_bytes
+  - go_memstats_stack_inuse_bytes
+  - go_goroutines
+  - process_cpu_seconds_total
+  - process_max_fds
+  - process_open_fds
+  - process_resident_memory_bytes
+  - process_start_time_seconds
+  - process_virtual_memory_bytes
+  - process_virtual_memory_max_bytes
+  - remote_write_timeseries_total
+  - remote_write_response_codes_total
+  - remote_write_payload_size_bytes
+  - remote_write_failures_total
+  - remote_write_records_processed_total
+  - remote_write_db_failures_total
+  - http_requests_total
+  - storage_write_failure_total
+prometheusMetrics:
+  - go_memstats_alloc_bytes
+  - go_memstats_heap_alloc_bytes
+  - go_memstats_heap_idle_bytes
+  - go_memstats_heap_inuse_bytes
+  - go_memstats_heap_objects
+  - go_memstats_last_gc_time_seconds
+  - go_memstats_alloc_bytes
+  - go_memstats_stack_inuse_bytes
+  - go_goroutines
+  - process_cpu_seconds_total
+  - process_max_fds
+  - process_open_fds
+  - process_resident_memory_bytes
+  - process_start_time_seconds
+  - process_virtual_memory_bytes
+  - process_virtual_memory_max_bytes
+  - prometheus_agent_corruptions_total
+  - prometheus_api_remote_read_queries
+  - prometheus_http_requests_total
+  - prometheus_notifications_alertmanagers_discovered
+  - prometheus_notifications_dropped_total
+  - prometheus_remote_storage_bytes_total
+  - prometheus_remote_storage_histograms_failed_total
+  - prometheus_remote_storage_histograms_total
+  - prometheus_remote_storage_metadata_bytes_total
+  - prometheus_remote_storage_metadata_failed_total
+  - prometheus_remote_storage_metadata_retried_total
+  - prometheus_remote_storage_metadata_total
+  - prometheus_remote_storage_samples_dropped_total
+  - prometheus_remote_storage_samples_failed_total
+  - prometheus_remote_storage_samples_in_total
+  - prometheus_remote_storage_samples_total
+  - prometheus_remote_storage_shard_capacity
+  - prometheus_remote_storage_shards
+  - prometheus_remote_storage_shards_desired
+  - prometheus_remote_storage_shards_max
+  - prometheus_remote_storage_shards_min
+  - prometheus_sd_azure_cache_hit_total
+  - prometheus_sd_azure_failures_total
+  - prometheus_sd_discovered_targets
+  - prometheus_sd_dns_lookup_failures_total
+  - prometheus_sd_failed_configs
+  - prometheus_sd_file_read_errors_total
+  - prometheus_sd_file_scan_duration_seconds
+  - prometheus_sd_file_watcher_errors_total
+  - prometheus_sd_http_failures_total
+  - prometheus_sd_kubernetes_events_total
+  - prometheus_sd_kubernetes_http_request_duration_seconds
+  - prometheus_sd_kubernetes_http_request_total
+  - prometheus_sd_kubernetes_workqueue_depth
+  - prometheus_sd_kubernetes_workqueue_items_total
+  - prometheus_sd_kubernetes_workqueue_latency_seconds
+  - prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds
+  - prometheus_sd_kubernetes_workqueue_unfinished_work_seconds
+  - prometheus_sd_kubernetes_workqueue_work_duration_seconds
+  - prometheus_sd_received_updates_total
+  - prometheus_sd_updates_delayed_total
+  - prometheus_sd_updates_total
+  - prometheus_target_scrape_pool_reloads_failed_total
+  - prometheus_target_scrape_pool_reloads_total
+  - prometheus_target_scrape_pool_sync_total
+  - prometheus_target_scrape_pools_failed_total
+  - prometheus_target_scrape_pools_total
+  - prometheus_target_sync_failed_total
+  - prometheus_target_sync_length_seconds
 # -- Any items added to this array will be added to the metrics that are sent to CloudZero, in addition to the minimal labels that CloudZero requires.
 additionalMetricLabels: []
 
@@ -44,13 +134,69 @@ prometheusConfig:
     cadvisor:
       enabled: true
       scrapeInterval: 120s  # Scrape interval for nodesCadvisor job
+    # -- Enables the prometheus scrape job.
+    prometheus:
+      enabled: true
+      scrapeInterval: 120s  # Scrape interval for prometheus job
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 
-kube-state-metrics:
-  enabled: false
-  extraArgs:
-    - --metric-labels-allowlist=pods=[app.kubernetes.io/component]
+# General server settings that apply to both the prometheus agent server and the webhook server
+serverConfig:
+  # -- The agent will use this file path on the container filesystem to get the CZ API key.
+  containerSecretFilePath: /etc/config/secrets/
+  # -- The agent will look for a file with this name to get the CZ API key.
+  containerSecretFileName: value
+
+# -- The following settings are for the init-backfill-job, which is used to backfill data from the cluster to CloudZero.
+initBackfillJob:
+  # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
+  # imagePullSecrets: []
+  # image:
+  #   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+  #   tag: 0.1.1
+  #   pullPolicy: Always
+  enabled: true
+
+# -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
+# initScrapeJob:
+  # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
+  # imagePullSecrets: []
+  # image:
+  #   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+  #   tag: 0.1.1
+  #   pullPolicy: Always
+
+
+initCertJob:
+  enabled: true
+  # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
+  # imagePullSecrets: []
+  image:
+    repository: bitnami/kubectl
+    pullPolicy: Always
+    tag: "1.32.0"
+
+kubeStateMetrics:
+  enabled: true
+  image:
+    registry: registry.k8s.io
+    repository: kube-state-metrics/kube-state-metrics
+    tag: "v2.10.1"
+  nameOverride: "cloudzero-state-metrics"
+  # Disable CloudZero KSM as a Scrape Target since the service endpoint is explicitly defined
+  # by the Validators config file.
+  prometheusScrape: false
+  # Set a default port other than 8080 to avoid collisions with any existing KSM services.
+  service:
+    port: 8080
+
+  # -- Overriding static scrape target address for an existing KSM.
+  # -- Set to service <service-name>.<namespace>.svc.cluster.local:port if built-in is disabled (enable=false above)
+  # targetOverride: kube-state-metrics.monitors.svc.cluster.local:8080
+  # -- If targetOverride is set and kubeStateMetrics.enabled is true, it is likely that fullnameOverride below must be set as well.
+  # -- This should not be a common configuration
+  # fullnameOverride: "kube-state-metrics"
 
 # -- Annotations to be added to the Secret, if the chart is configured to create one
 secretAnnotations: {}
@@ -64,7 +210,7 @@ validator:
   name: env-validator
   image:
     repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
-    tag: 0.8.0
+    tag: 0.10.0
     digest:
     pullPolicy: Always
 
@@ -86,17 +232,12 @@ server:
       memory: 1024Mi
   deploymentAnnotations: {}
   podAnnotations: {}
-  configMapOverrideName: configuration
+  agentMode: true
   args:
   - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
   - --web.enable-lifecycle
   - --web.console.libraries=/etc/prometheus/console_libraries
   - --web.console.templates=/etc/prometheus/consoles
-  - --enable-feature=agent
-  # -- The agent will use this file path on the container filesystem to get the CZ API key.
-  containerSecretFilePath: /etc/config/prometheus/secrets/
-  # -- The agent will look for a file with this name to get the CZ API key.
-  containerSecretFileName: value
   persistentVolume:
     existingClaim: ""
     enabled: false
@@ -110,11 +251,125 @@ server:
   emptyDir:
     sizeLimit: 8Gi
 
-serviceAccounts:
+insightsController:
+  enabled: true
+  labels:
+    enabled: true
+    patterns:
+      - 'app.kubernetes.io/component'
+      # - '.*'
+    resources:
+      pods: true
+      namespaces: true
+      deployments: false
+      statefulsets: false
+      nodes: false
+      jobs: false
+      cronjobs: false
+      daemonsets: false
+  annotations:
+    enabled: false
+    patterns:
+      - '.*'
+    resources:
+      pods: true
+      namespaces: true
+      deployments: false
+      statefulsets: false
+      nodes: false
+      jobs: false
+      cronjobs: false
+      daemonsets: false
+  tls:
+    # -- If disabled, the insights controller will not mount a TLS certificate from a Secret, and the user is responsible for configuring a method of providing TLS information to the webhook-server container.
+    enabled: true
+    # -- If left as an empty string, the certificate will be generated by the chart. Otherwise, the provided value will be used.
+    crt: ""
+    # -- If left as an empty string, the certificate private key will be generated by the chart. Otherwise, the provided value will be used.
+    key: ""
+    secret:
+      # -- If set to true, a Secret will be created to store the TLS certificate and key.
+      create: true
+      # -- If set, the Secret will be created with this name. Otherwise, a default name will be generated.
+      name: ""
+    # -- The following TLS certificate information is for a self signed certificate. It is used as a default value for the validating admission webhook and the webhook server.
+    # -- This path determines the location within the container where the TLS certificate and key will be mounted.
+    mountPath: /etc/certs
+    # -- This is the caBundle used by the Validating Admission Webhook when sending requests to the webhook server. If left empty, the default self-signed certificate will be used.
+    # Set this value to an empty string if using cert-manager to manage the certificate instead. Otherwise, set this to the base64 encoded caBundle of the desired certificate.
+    caBundle: ""
+    # -- If enabled, the certificate will be managed by cert-manager, which must already be present in the cluster.
+    # If disabled, a default self-signed certificate will be used.
+    useCertManager: false
   server:
-    create: true
-    name: ""
+    name: webhook-server
+    replicaCount: 3
+    # -- Uncomment to use a specific imagePullSecrets; otherwise, the default top level imagePullSecrets is used.
+    # imagePullSecrets: []
+    image:
+      repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+      tag: 0.1.1
+      pullPolicy: Always
+    port: 8443
+    read_timeout: 10s
+    write_timeout: 10s
+    send_timeout: 1m
+    send_interval: 1m
+    idle_timeout: 120s
+    logging:
+      level: info
+    healthCheck:
+      enabled: true
+      path: /healthz
+      port: 8443
+      initialDelaySeconds: 15
+      periodSeconds: 20
+      timeoutSeconds: 3
+      successThreshold: 1
+      failureThreshold: 5
+  volumeMounts: []
+  volumes: []
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+  service:
+    port: 443
+  webhooks:
     annotations: {}
+    namespaceSelector: {}
+    configurations:
+      pods:
+        path: /validate/pod
+        apiGroups: ['""']
+      namespaces:
+        path: /validate/namespace
+        apiGroups: ['""']
+      deployments:
+        path: /validate/deployment
+        apiGroups: ["apps"]
+      statefulsets:
+        path: /validate/statefulset
+        apiGroups: ["apps"]
+      nodes:
+        path: /validate/node
+        apiGroups: ['""']
+      jobs:
+        path: /validate/job
+        apiGroups: ["batch"]
+      cronjobs:
+        path: /validate/cronjob
+        apiGroups: ["batch"]
+      daemonsets:
+        path: /validate/daemonset
+        apiGroups: ["apps"]
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
 
 rbac:
   create: true

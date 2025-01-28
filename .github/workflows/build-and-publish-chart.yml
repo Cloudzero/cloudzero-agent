@@ -137,4 +137,3 @@ jobs:
           make_latest: true
           target_commitish: ${{ env.COMMIT_HASH }}
           body_path: ${{ github.workspace }}/charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md
-

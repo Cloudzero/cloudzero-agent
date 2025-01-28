@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cloudzero-certificate
+description: Creates a TLS certificate to be used by the CloudZero Insights Controller
+type: application
+version: 0.1.0

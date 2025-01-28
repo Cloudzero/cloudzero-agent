@@ -1,0 +1,162 @@
+{{- if .Values.insightsController.enabled }}
+{{ $backFillValues := (include "cloudzero-agent.backFill" . | fromYaml) }}
+{{- if $backFillValues.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudzero-agent.initBackfillJobName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: {{ include "cloudzero-agent.initBackfillJobName" . }}
+      namespace: {{ .Release.Namespace }}
+      labels:
+        {{- include "cloudzero-agent.insightsController.initBackfillJob.matchLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      restartPolicy: OnFailure
+      {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: init-scrape
+          image: "{{ include  "cloudzero-agent.initBackfillJob.imageReference" . }}"
+          imagePullPolicy: {{ .Values.insightsController.server.image.pullPolicy }}
+          command:
+            - /app/controller
+          args:
+            - -config
+            - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
+            - -backfill
+          resources:
+            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+          volumeMounts:
+            - name: insights-server-config
+              mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}
+          {{- if or .Values.insightsController.volumeMounts .Values.insightsController.tls.enabled }}
+          {{- if or .Values.existingSecretName .Values.apiKey }}
+            - name: cloudzero-api-key
+              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+              subPath: ""
+              readOnly: true
+          {{- end }}
+            {{- with .Values.insightsController.volumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or .Values.insightsController.volumes .Values.insightsController.tls.enabled }}
+      volumes:
+        - name: insights-server-config
+          configMap:
+            name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+        {{- if .Values.insightsController.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "cloudzero-agent.tlsSecretName" . }}
+        {{- end }}
+        {{- if or .Values.existingSecretName .Values.apiKey }}
+        - name: cloudzero-api-key
+          secret:
+            secretName: {{ include "cloudzero-agent.secretName" . }}
+        {{- end }}
+        {{- with .Values.insightsController.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.insightsController.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.insightsController.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.insightsController.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- if and .Values.insightsController.tls.secret.create (not .Values.insightsController.tls.useCertManager) .Values.initCertJob.enabled (not .Values.insightsController.tls.crt) (not .Values.insightsController.tls.key) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudzero-agent.initCertJobName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: {{ include "cloudzero-agent.initCertJobName" . }}
+      labels:
+        {{- include "cloudzero-agent.insightsController.initCertJob.matchLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      restartPolicy: Never
+      {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: init-cert
+          image: {{ .Values.initCertJob.image.repository }}:{{ .Values.initCertJob.image.tag }}
+          command: ["/bin/bash", "-c"]
+          workingDir: /var/tmp
+          args:
+            - |
+              #!/bin/bash
+              set -e
+
+              {{- if not .Values.insightsController.tls.useCertManager }}
+              # Determine if the ValidatingWebhookConfiguration resources already have caBundle information
+              MISSING_CA_BUNDLE=false
+              {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
+              {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
+              {{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
+              CA_BUNDLE=$(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}')
+              if [[ -z "$CA_BUNDLE" ]]; then
+                  MISSING_CA_BUNDLE=true
+              fi
+              {{- end }}
+              {{- end }}
+
+              SECRET_NAME={{ include "cloudzero-agent.tlsSecretName" . }}
+              NAMESPACE={{ .Release.Namespace }}
+
+              EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}')
+              EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}')
+
+              # Check if the TLS Secret already has certificate information
+              if [[ -z "$TLS_CRT" ]] || [[ -z "$TLS_KEY" ]] || [[ $MISSING_CA_BUNDLE == "true" ]]; then
+                  echo "The TLS Secret and/or at least one webhook configuration contains empty certificate information. Creating a new certificate..."
+              else
+                  echo "The TLS Secret and all webhook configurations contain non-empty certificate information. Will not create a new certificate and will not patch resources."
+                  exit 0
+              fi
+
+              # Generate self-signed certificate and private key
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN={{ include "cloudzero-agent.serviceName" . }}" -addext "subjectAltName = DNS:{{ include "cloudzero-agent.serviceName" . }}.default.svc"
+              
+              # Base64 encode the certificate
+              export CA_BUNDLE=$(cat tls.crt | base64 | tr -d '\n')
+              export TLS_CRT=$(cat tls.crt | base64 | tr -d '\n')
+              export TLS_KEY=$(cat tls.key | base64 | tr -d '\n')
+
+              # Update the TLS Secret with the certificate and key
+              kubectl patch secret $SECRET_NAME \
+                  -p '{"data": {"ca.crt": "'"$TLS_CRT"'", "tls.crt": "'"$TLS_CRT"'", "tls.key": "'"$TLS_KEY"'"}}'
+
+              {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
+              {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
+              {{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
+              # Patch the ValidatingWebhookConfiguration {{ $webhookName }} with the caBundle
+              kubectl patch validatingwebhookconfiguration  {{ $webhookName }} \
+                --type='json' \
+                -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
+              {{- end }}
+              {{- end }}
+              {{- else }}
+              echo "The useCertManager flag is set to true. Skipping certificate generation and patching of resources."
+              {{- end }}
+              exit 0
+{{- end }}
+{{- end }}

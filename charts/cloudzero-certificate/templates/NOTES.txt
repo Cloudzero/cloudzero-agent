@@ -1,0 +1,11 @@
+Get the caBundle value by running:
+
+CA_BUNDLE=$(kubectl get secret -n {{ .Release.Namespace }} {{ include "cloudzero-certificate.secretName" . }} -o jsonpath='{.data.ca\.crt}')
+
+This value should be used in the cloudzero-agent helm chart as shown:
+
+```
+insightsController:
+  webhooks:
+    caBundle: $CA_BUNDLE
+```

@@ -1,0 +1,13 @@
+cloudzeroAgentReleaseName: null
+
+nameOverride: ""
+fullnameOverride: ""
+
+secret:
+  name: ""
+
+serviceAccount:
+  name: ""
+
+role:
+  name: ""

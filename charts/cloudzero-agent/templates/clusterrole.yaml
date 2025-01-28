@@ -7,9 +7,27 @@ metadata:
   name: {{ include "cloudzero-agent.clusterRoleName" . }}
 rules:
   - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+      - "statefulsets"
+      - "daemonsets"
+    verbs:
+      - "get"
+      - "list"
+  - apiGroups:
+      - "batch"
+    resources:
+      - "jobs"
+      - "cronjobs"
+    verbs:
+      - "get"
+      - "list"
+  - apiGroups:
       - ""
     resources:
       - endpoints
+      - namespaces
       - nodes
       - nodes/proxy
       - nodes/metrics
@@ -19,6 +37,28 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    resourceNames:
+      - {{ include "cloudzero-agent.tlsSecretName" . }}
+    verbs:
+      - get
+      - list
+      - patch
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - "validatingwebhookconfigurations"
+    resourceNames:
+    {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
+      - {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}-{{ $configType }}
+    {{- end }}
+    verbs:
+      - get
+      - list
+      - patch
   - apiGroups:
       - "extensions"
       - "networking.k8s.io"

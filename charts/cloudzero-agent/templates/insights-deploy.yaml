@@ -1,0 +1,131 @@
+{{- if .Values.insightsController.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+{{- if .Values.insightsController.server.deploymentAnnotations }}
+  annotations:
+    {{- toYaml .Values.insightsController.server.deploymentAnnotations | nindent 4 }}
+{{- end }}
+  name: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.insightsController.server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.insightsController.server.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "cloudzero-agent.insightsController.labels" . | nindent 8 }}
+        {{- with .Values.insightsController.server.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: webhook-server
+                topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: webhook-server
+          image: "{{ .Values.insightsController.server.image.repository }}:{{ .Values.insightsController.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.insightsController.server.image.pullPolicy }}
+          command:
+            - /app/controller
+          args:
+            - -config
+            - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
+          ports:
+            - containerPort: 8443
+          resources:
+            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+          volumeMounts:
+            - name: insights-server-config
+              mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}
+          {{- if or .Values.insightsController.volumeMounts .Values.insightsController.tls.enabled }}
+            {{- if .Values.insightsController.tls.enabled }}
+            - name: tls-certs
+              mountPath: {{ .Values.insightsController.tls.mountPath }}
+              readOnly: true
+            {{- end }}
+          {{- if or .Values.existingSecretName .Values.apiKey }}
+            - name: cloudzero-api-key
+              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+              subPath: ""
+              readOnly: true
+          {{- end }}
+            {{- with .Values.insightsController.volumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.insightsController.server.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: {{ .Values.insightsController.server.healthCheck.path }}
+              port: {{ .Values.insightsController.server.healthCheck.port }}
+            initialDelaySeconds: {{ .Values.insightsController.server.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.insightsController.server.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.insightsController.server.healthCheck.timeoutSeconds }}
+            successThreshold: {{ .Values.insightsController.server.healthCheck.successThreshold }}
+            failureThreshold: {{ .Values.insightsController.server.healthCheck.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: {{ .Values.insightsController.server.healthCheck.path }}
+              port: {{ .Values.insightsController.server.healthCheck.port }}
+            initialDelaySeconds: {{ .Values.insightsController.server.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.insightsController.server.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.insightsController.server.healthCheck.timeoutSeconds }}
+            successThreshold: {{ .Values.insightsController.server.healthCheck.successThreshold }}
+            failureThreshold: {{ .Values.insightsController.server.healthCheck.failureThreshold }}
+          {{- end }}
+      {{- if or .Values.insightsController.volumes .Values.insightsController.tls.enabled }}
+      volumes:
+        - name: insights-server-config
+          configMap:
+            name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+        {{- if .Values.insightsController.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "cloudzero-agent.tlsSecretName" . }}
+        {{- end }}
+        {{- if or .Values.existingSecretName .Values.apiKey }}
+        - name: cloudzero-api-key
+          secret:
+            secretName: {{ include "cloudzero-agent.secretName" . }}
+        {{- end }}
+        {{- with .Values.insightsController.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.insightsController.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.insightsController.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.insightsController.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

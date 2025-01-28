@@ -29,7 +29,7 @@ spec:
 {{- if .Values.server.priorityClassName }}
       priorityClassName: "{{ .Values.server.priorityClassName }}"
 {{- end }}
-      serviceAccountName: {{ template "cloudzero-agent.serviceAccountName.server" . }}
+      serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
         - name: {{ .Values.validator.name }}
           image: "{{ .Values.validator.image.repository }}:{{ .Values.validator.image.tag }}"
@@ -41,7 +41,7 @@ spec:
           volumeMounts:
           {{- if or .Values.existingSecretName .Values.apiKey }}
             - name: cloudzero-api-key
-              mountPath: {{ .Values.server.containerSecretFilePath }}
+              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
               subPath: ""
               readOnly: true
           {{- end }}
@@ -95,7 +95,10 @@ spec:
                   - -c
                   - /check/app/cloudzero-agent-validator d pre-stop -f /check/app/config/validator.yml
           args:
-        {{ toYaml .Values.server.args | nindent 12}}
+            {{ toYaml .Values.server.args | nindent 12}}
+            {{- if .Values.server.agentMode }}
+            - --enable-feature=agent
+            {{- end }}
           ports:
             - containerPort: 9090
           readinessProbe:
@@ -134,7 +137,7 @@ spec:
               mountPath: /check/app/config/
           {{- if or .Values.existingSecretName .Values.apiKey }}
             - name: cloudzero-api-key
-              mountPath: {{ .Values.server.containerSecretFilePath }}
+              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
               subPath: ""
               readOnly: true
           {{- end }}
@@ -144,10 +147,7 @@ spec:
         runAsGroup: 65534
         fsGroup: 65534
       dnsPolicy: ClusterFirst
-    {{- if .Values.imagePullSecrets }}
-      imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 8 }}
-    {{- end }}
+      {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
     {{- if .Values.server.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.server.nodeSelector | indent 8 }}

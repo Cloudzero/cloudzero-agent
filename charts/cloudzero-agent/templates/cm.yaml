@@ -18,8 +18,7 @@ data:
       scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
     scrape_configs:
       {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
-      - job_name: cloudzero-service-endpoints # kube_*, node_* metrics
-        honor_labels: true
+      - job_name: static-kube-state-metrics
         honor_timestamps: true
         track_timestamps_staleness: false
         scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
@@ -34,38 +33,6 @@ data:
         follow_redirects: true
         enable_http2: true
         relabel_configs:
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-          separator: ;
-          regex: "true"
-          replacement: $1
-          action: keep
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape_slow]
-          separator: ;
-          regex: "true"
-          replacement: $1
-          action: drop
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
-          separator: ;
-          regex: (https?)
-          target_label: __scheme__
-          replacement: $1
-          action: replace
-        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-          separator: ;
-          regex: (.+)
-          target_label: __metrics_path__
-          replacement: $1
-          action: replace
-        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-          separator: ;
-          regex: (.+?)(?::\d+)?;(\d+)
-          target_label: __address__
-          replacement: $1:$2
-          action: replace
-        - separator: ;
-          regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-          replacement: __param_$1
-          action: labelmap
         - separator: ;
           regex: __meta_kubernetes_service_label_(.+)
           replacement: $1
@@ -92,13 +59,13 @@ data:
         - source_labels: [__name__]
           regex: "^({{ join "|" .Values.kubeMetrics }})$"
           action: keep
-        - action: labelkeep
-          regex: "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
-        kubernetes_sd_configs:
-        - role: endpoints
-          kubeconfig_file: ""
-          follow_redirects: true
-          enable_http2: true
+        - separator: ;
+          regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+          replacement: $1
+          action: labelkeep
+        static_configs:
+        - targets:
+            - {{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
       {{- end }}
       {{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
@@ -151,11 +118,46 @@ data:
           kubeconfig_file: ""
           follow_redirects: true
           enable_http2: true
-    {{- end }}
-    {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
-    {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
-    {{- end}}
-    {{- end}}
+      {{- end }}
+      {{- if .Values.insightsController.enabled }}
+      - job_name: cloudzero-insights-controller-job
+        metrics_path: /metrics
+        scheme: https
+        enable_compression: true
+        tls_config:
+          insecure_skip_verify: true
+        follow_redirects: true
+        enable_http2: true
+        kubernetes_sd_configs:
+          - role: endpoints
+            kubeconfig_file: ""
+            follow_redirects: true
+            enable_http2: true
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_endpoints_name]
+            action: keep
+            regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^({{ join "|" .Values.insightsMetrics }})$"
+            action: keep
+      {{- end }}
+      {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
+      - job_name: static-prometheus
+        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
+        static_configs:
+          - targets:
+              - localhost:9090
+        metrics_path: /metrics
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^({{ join "|" .Values.prometheusMetrics }})$"
+            action: keep
+      {{- end }}
+      {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
+      {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
+      {{- end}}
+  {{- end}}
     remote_write:
       - url: 'https://{{ include "cloudzero-agent.cleanString" .Values.host }}/v1/container-metrics?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
         authorization:
@@ -166,3 +168,67 @@ data:
             action: keep
         metadata_config:
           send: false
+
+{{- if .Values.insightsController.enabled }}
+{{- with .Values.insightsController }}
+{{- if not (and .labels.enabled .labels.patterns) }}
+{{- $msg := "\n\nThe required field(s) 'insightsController.labels.enabled' and/or 'insightsController.labels.patterns' is not set! See the README.md for more information." }}
+{{- $enabledMsg:=""}}
+{{- $patternMsg:=""}}
+{{- if not .labels.enabled  }}
+{{- $enabledMsg = "Ensure that 'insightsController.labels.enabled' is a boolean (true or false). Set 'true' to enable exporting labels."}}
+{{- end }}
+{{- if not .labels.patterns }}
+{{- $patternMsg = "The required field 'labels.patterns' is not set or set incorrectly. It must be an array of regular expressions that match label keys to be exported."}}
+{{- end }}
+{{- fail (printf "\n %s \n %s \n %s" $msg $enabledMsg $patternMsg) }}
+{{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+  {{- with .Values.prometheusConfig.configMapAnnotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  server-config.yaml: |-
+    cloud_account_id: {{ .Values.cloudAccountId }}
+    region: {{ .Values.region }}
+    cluster_name: {{ .Values.clusterName }}
+    host: {{ .Values.host }}
+    logging:
+      level: {{ .Values.insightsController.server.logging.level }}
+    remote_write:
+      send_interval: {{ .Values.insightsController.server.send_interval }}
+      max_bytes_per_send: 500000
+      send_timeout: {{ .Values.insightsController.server.send_timeout }}
+      max_retries: 3
+    k8s_client:
+      timeout: 30s
+    database:
+      retention_time: 24h
+      cleanup_interval: 3h
+      batch_update_size: 500
+    api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
+    {{- with .Values.insightsController }}
+    certificate:
+      key: {{ .tls.mountPath }}/tls.key
+      cert: {{ .tls.mountPath }}/tls.crt
+    server:
+      port: {{ .server.port }}
+      read_timeout: {{ .server.read_timeout }}
+      write_timeout: {{ .server.write_timeout }}
+      idle_timeout: {{ .server.idle_timeout }}
+    {{- end }}
+    filters:
+      labels:
+        {{- .Values.insightsController.labels | toYaml | nindent 8 }}
+      annotations:
+        {{- .Values.insightsController.annotations | toYaml | nindent 8 }}
+{{- end }}

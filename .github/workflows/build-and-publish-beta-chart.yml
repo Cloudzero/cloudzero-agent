@@ -5,9 +5,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to use for the release (beta suffix will be automatically appended (e.g. "0.0.1" + "-beta"))'
-        required: false
-        default: ''
+        description: 'Version to use for the release. Must contain "beta" (e.g. "0.0.1-beta").'
+        required: true
       branch:
         description: 'Branch to use for the release'
         required: true
@@ -42,21 +41,24 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Build Dependencies
+      - name: Build Cloudzero Agent Dependencies
         run: helm dependency update charts/cloudzero-agent/
 
-      # Step 3: Determine Version
-      - name: Get Github Tag Version
-        id: version
-        uses: flatherskevin/semver-action@v1
-        with:
-          incrementLevel: patch
-          source: tags
+      - name: Package Cloudzero Agent Chart
+        run: helm package charts/cloudzero-agent/ --destination .deploy
 
-      - name: Determine Chart Version
+      # Step 3: Validate and Set Version
+      - name: Validate Input Version
         run: |
-          NEW_VERSION=${{ github.event.inputs.version || steps.version.outputs.nextVersion }}
-          echo "NEW_VERSION=$NEW_VERSION-beta" >> $GITHUB_ENV
+          if [[ -z "${{ github.event.inputs.version }}" ]]; then
+            echo "Version input is required."
+            exit 1
+          fi
+          if [[ "${{ github.event.inputs.version }}" != *"beta"* ]]; then
+            echo "Version must contain 'beta'. Provided version: ${{ github.event.inputs.version }}"
+            exit 1
+          fi
+          echo "NEW_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Update Chart Version
         run: |
@@ -65,14 +67,15 @@ jobs:
 
       - name: Validate Release Notes are Present
         run: |
-          if [ ! -f "docs/releases/${{ env.NEW_VERSION }}.md" ]; then
+          if [ ! -f "charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md" ]; then
             echo "Release notes for ${{ env.NEW_VERSION }} are missing. Please create a release notes file at docs/releases/${{ env.NEW_VERSION }}.md"
             exit 1
           fi
 
       # Step 4: Package and Commit Chart
       - name: Package Chart
-        run: helm package charts/cloudzero-agent/ --destination .deploy
+        run: |
+          helm package charts/cloudzero-agent/ --destination .deploy
 
       - name: Commit updated Chart.yaml
         run: |
@@ -84,7 +87,7 @@ jobs:
         continue-on-error: true
 
       # Step 7: Handle Artifacts and Update Pages
-      - name: Upload Chart as Artifact
+      - name: Upload Cloudzero Agent Chart as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: agent-chart
@@ -105,7 +108,6 @@ jobs:
 
       - name: Save Index in GH Pages
         run: |
-          # copy the new chart and index.yaml
           git add beta
           git commit -m "Updating ${{ env.NEW_VERSION }} Index"
           git push origin gh-pages
@@ -117,12 +119,11 @@ jobs:
           rm -fr .deploy charts/cloudzero-agent/charts
           git reset --hard 
           # now checkout docs from main
-          git checkout main -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
+          git checkout ${{ github.event.inputs.branch }} -- charts/cloudzero-agent/docs charts/cloudzero-agent/README.md README.md
           git add README.md charts/cloudzero-agent/docs charts/cloudzero-agent/README.md
           git commit -m "Update docs for ${{ env.NEW_VERSION }}"
           git push origin gh-pages
         continue-on-error: true
-
 
       # Step 5: Create GitHub Release
       - name: Create Release
@@ -133,4 +134,4 @@ jobs:
           files: .deploy/cloudzero-agent-${{ env.NEW_VERSION }}.tgz
           make_latest: false
           target_commitish: ${{ env.COMMIT_HASH }}
-          body_path: ${{ github.workspace }}/docs/releases/${{ env.NEW_VERSION }}.md
+          body_path: ${{ github.workspace }}/charts/cloudzero-agent/docs/releases/${{ env.NEW_VERSION }}.md

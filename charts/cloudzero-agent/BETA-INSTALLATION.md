@@ -39,14 +39,7 @@ There are two ways to install a beta version of the chart:
 This method installs the latest beta version available.
 
 ```sh
-helm install <RELEASE_NAME> cloudzero-beta/cloudzero-agent \
-    --devel \
-    --set existingSecretName=<NAME_OF_SECRET> \
-    --set clusterName=<CLUSTER_NAME> \
-    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
-    --set region=<REGION> \
-    --set kube-state-metrics.enabled=<true|false> \
-    --create-namespace
+helm install <RELEASE_NAME> cloudzero-beta/cloudzero-agent -n <NAMESPACE> --create-namespace -f configuration.example.yaml --devel
 ```
 
 - The `--devel` flag allows Helm to consider beta versions when resolving the chart version.
@@ -57,17 +50,10 @@ helm install <RELEASE_NAME> cloudzero-beta/cloudzero-agent \
 If you want to install a specific beta version, specify it using the `--version` flag:
 
 ```sh
-helm install <RELEASE_NAME> cloudzero-beta/cloudzero-agent \
-    --version <CHART_VERSION> \
-    --set existingSecretName=<NAME_OF_SECRET> \
-    --set clusterName=<CLUSTER_NAME> \
-    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
-    --set region=<REGION> \
-    --set kube-state-metrics.enabled=<true|false> \
-    --create-namespace
+helm install <RELEASE_NAME> cloudzero-beta/cloudzero-agent -n <NAMESPACE> --create-namespace -f configuration.example.yaml --version <CHART_VERSION>
 ```
 
-- Replace `<CHART_VERSION>` with the specific beta version (e.g., `0.0.29-beta`).
+- Replace `<CHART_VERSION>` with the specific beta version (e.g., `1.0.0-beta`).
 - This method does not require the `--devel` flag since you are explicitly specifying the version.
 
 ## Listing All Available Versions
