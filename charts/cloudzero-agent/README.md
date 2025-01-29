@@ -29,7 +29,7 @@ For an optimal installation experience, we recommend the following:
 >
 > **Recommendations:**
 > * Configure additional labels to align with your organization's FinOps tagging practices.
-* Review the [Labels and Annotations](#labels-and-annotations) section for guidance on exposing an expanded set of labels or annotations to meet your organization’s specific requirements.
+> * Review the [Labels and Annotations](#labels-and-annotations) section for guidance on exposing an expanded set of labels or annotations to meet your organization’s specific requirements.
 
 #### 1. Add CloudZero Helm Repository
 Refer to the [`helm repo`](https://helm.sh/docs/helm/helm_repo/) documentation for command details. To use a beta version, refer to the [beta installation document](./BETA-INSTALLATION.md) for the appropriate channel.
@@ -84,6 +84,12 @@ insightsController:
     resources:
       pods: true
       namespaces: true
+      deployments: true
+      statefulsets: true
+      nodes: true
+      jobs: true
+      cronjobs: true
+      daemonsets: true
   annotations:
     # -- By default, the gathering of annotations is not enabled. To enable, set this field to true
     enabled: false
@@ -125,36 +131,7 @@ There are several mandatory values that must be specified for the chart to insta
 | existingSecretName| string | `nil`                 | Name of the secret that contains the CloudZero API key. Required if not providing the API key via `apiKey`.             |
 | region            | string | `nil`                 | Region where the cluster is running (e.g., `us-east-1`, `eastus`). For more information, see AWS or Azure documentation. |
 
-#### Overriding Default Values
-
-Default values are specified in the chart's `values.yaml` file. If you need to change any of these values, it is recommended to create a `values-override.yaml` file for the changes.
-
-##### Using the `--values` Flag
-
-You can use the `--values` (or short form `-f`) flag in your Helm commands to override values in the chart with a new file. Specify the name of the file after the `--values` flag:
-
-```console
-helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
-    -f values-override.yaml
-```
-
-Ensure `values-override.yaml` contains only the values you wish to override from `values.yaml`.
-
-> Note it is possible to save values for different environments, or based on other criteria into separate values files and multiple files using the `-f` helm parameters.
-
-##### Using the `--set` Flag
-
-You can use the `--set` flag in Helm commands to directly set or override specific values from `values.yaml`. Use dot notation to specify nested values:
-
-```console
-helm install <RELEASE_NAME> cloudzero/cloudzero-agent \
-    --set existingSecretName=<NAME_OF_SECRET> \
-    --set clusterName=<CLUSTER_NAME> \
-    --set-string cloudAccountId=<CLOUD_ACCOUNT_ID> \
-    --set region=<REGION> \
-    --set server.resources.limits.memory=2048Mi \
-    -f values-override.yaml
-```
+> It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
 
 ### Labels and Annotations
 
