@@ -35,8 +35,8 @@ var _ types.Runnable = (*MetricShipper)(nil)
 
 // Status represents the current status of the MetricShipper.
 type Status struct {
-	ShippableFiles int    `json:"shippable_files"`
-	ShippedFiles   uint64 `json:"shipped_files"`
+	ShippableFiles int    `json:"shippableFiles"`
+	ShippedFiles   uint64 `json:"shippedFiles"`
 }
 
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
@@ -217,7 +217,7 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 
 	// Parse the response
 	var respData struct {
-		URLs []string `json:"urls"`
+		URLs []string `json:"urls"` //nolint:tagliatelle // lol it wants "urLs". Nope.
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
