@@ -2,8 +2,10 @@ package types
 
 import "github.com/wagoodman/go-partybus"
 
-type Event = partybus.Event
-type Subscription = partybus.Subscription
+type (
+	Event        = partybus.Event
+	Subscription = partybus.Subscription
+)
 
 type Bus interface {
 	Subscribe() *Subscription

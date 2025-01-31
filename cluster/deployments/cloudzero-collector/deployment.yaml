@@ -96,7 +96,7 @@ spec:
               cpu: "1000m"
         - name: temp-shell
           image: busybox
-          command: ["sleep", "36000"]  # Keeps the pod running
+          command: ["sleep", "36000"] # Keeps the pod running
           volumeMounts:
             - name: secret-volume
               mountPath: /cloudzero/secret

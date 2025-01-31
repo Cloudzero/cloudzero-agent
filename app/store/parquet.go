@@ -45,7 +45,7 @@ func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 		settings.MaxRecords = DEFAULT_ROW_LIMIT
 	}
 	if _, err := os.Stat(settings.StoragePath); os.IsNotExist(err) {
-		if err := os.MkdirAll(settings.StoragePath, 0755); err != nil {
+		if err := os.MkdirAll(settings.StoragePath, 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 	}

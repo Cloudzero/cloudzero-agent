@@ -44,7 +44,6 @@ func (a *ShipperAPI) Routes() *chi.Mux {
 func (a *ShipperAPI) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	stats, err := a.shipper.GetStatus()
-
 	if err != nil {
 		request.Reply(r, w, err, http.StatusInternalServerError)
 		return

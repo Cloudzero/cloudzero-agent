@@ -8,13 +8,13 @@
 
 This repository contains several applications to support Kubernetes integration with the CloudZero platform, including:
 
-* *CloudZero Insights Controller* - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis.
-* *CloudZero Collector* - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
-* *CloudZero Shipper* - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
+- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis.
+- _CloudZero Collector_ - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
+- _CloudZero Shipper_ - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
 
 ## ⚡ Getting Started With CloudZero Insights Controller
 
-The easiest way to get started with the *CloudZero Insights Controller* is by using the `cloudzero-agent` Helm chart from the [cloudzero-charts repository](https://github.com/Cloudzero/cloudzero-charts).
+The easiest way to get started with the _CloudZero Insights Controller_ is by using the `cloudzero-agent` Helm chart from the [cloudzero-charts repository](https://github.com/Cloudzero/cloudzero-charts).
 
 ### Installation
 
@@ -162,43 +162,42 @@ To allow the operator to securely access AWS Secrets Manager, we'll use IAM Role
 
 1. **Build the Container Images**
 
-    ```bash
-    make package
-    ```
+   ```bash
+   make package
+   ```
 
 2. **Make the `cloudzero` namespace**
 
-    ```bash
-    kubectl apply  -f cluster/deployments/namespace.yml
-    ```
+   ```bash
+   kubectl apply  -f cluster/deployments/namespace.yml
+   ```
 
 3. **Deploy the External Secret Store**
 
-    ```bash
-    kubectl apply  -f cluster/deployments/cloudzero-secrets/secretstore.yaml
-    ```
+   ```bash
+   kubectl apply  -f cluster/deployments/cloudzero-secrets/secretstore.yaml
+   ```
 
 4. **Add the External Secret**
 
-    ```bash
-    kubectl apply  -f cluster/deployments/cloudzero-secrets/externalsecret.yaml
-    ```
+   ```bash
+   kubectl apply  -f cluster/deployments/cloudzero-secrets/externalsecret.yaml
+   ```
 
 5. **Deploy Collector Application Set**
 
-    ```bash
-    kubectl apply -f cluster/deployments/cloudzero-collector/config.yaml \
-                  -f cluster/deployments/cloudzero-collector/deployment.yaml
-    ```
-
+   ```bash
+   kubectl apply -f cluster/deployments/cloudzero-collector/config.yaml \
+                 -f cluster/deployments/cloudzero-collector/deployment.yaml
+   ```
 
 ### **Step 6: Deploy Federated Cloudzero Agent**
 
-1. **Deploy the  Federated Cloudzero Agent**
+1. **Deploy the Federated Cloudzero Agent**
 
-    ```bash
-    kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
-    ```
+   ```bash
+   kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
+   ```
 
 ---
 
@@ -210,17 +209,17 @@ To monitor the data directory, you must deploy a `debug` container as follows:
 
 1. **Deploy a debug container**
 
-    ```bash
-    kubectl apply  -f cluster/deployments/debug/deployment.yaml
-    ```
+   ```bash
+   kubectl apply  -f cluster/deployments/debug/deployment.yaml
+   ```
 
 2. **Attach to the shell of the debug container**
 
-    ```bash
-    kubectl exec -it temp-shell -- /bin/sh
-    ```
+   ```bash
+   kubectl exec -it temp-shell -- /bin/sh
+   ```
 
-    To inspect the data directory, `cd /cloudzero/data`
+   To inspect the data directory, `cd /cloudzero/data`
 
 ---
 
@@ -236,12 +235,12 @@ eksctl delete cluster -f cluster/cluster.yaml --disable-nodegroup-eviction
 
 This project provides a collector application, written in golang, which provides two applications:
 
-* `Collector` - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
-* `Shipper` - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
+- `Collector` - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
+- `Shipper` - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
 
 ## Message Format
 
-The output of the *CloudZero Insights Controller* application is a JSON object that represents `cloudzero` metrics, which is POSTed to the CloudZero remote write API. The format of these objects is based on the Prometheus `Timeseries` protobuf message, defined [here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130). Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
+The output of the _CloudZero Insights Controller_ application is a JSON object that represents `cloudzero` metrics, which is POSTed to the CloudZero remote write API. The format of these objects is based on the Prometheus `Timeseries` protobuf message, defined [here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130). Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
 
 There are four kinds of objects that can be sent:
 

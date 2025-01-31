@@ -44,7 +44,6 @@ type MetricCollector struct {
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
 func NewMetricCollector(s *config.Settings, a types.Appendable) *MetricCollector {
-
 	if s.Cloudzero.RotateInterval <= 0 {
 		s.Cloudzero.RotateInterval = 10 * time.Minute
 	}

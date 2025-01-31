@@ -6,7 +6,7 @@ spec:
   containers:
     - name: temp-shell
       image: busybox
-      command: ["sleep", "36000"]  # Keeps the pod running
+      command: ["sleep", "36000"] # Keeps the pod running
       volumeMounts:
         - name: secret-volume
           mountPath: /cloudzero/secret
@@ -17,5 +17,5 @@ spec:
         secretName: cloudzero-secret-api-key
     - name: persistent-storage
       mountPath: /cloudzero/data
-    
+
   restartPolicy: Never

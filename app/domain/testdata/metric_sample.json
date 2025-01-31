@@ -2,21 +2,23 @@
   "timeseries": [
     {
       "labels": [
-        { "name": "__name__", "value": "container_network_transmit_bytes_total" },
+        {
+          "name": "__name__",
+          "value": "container_network_transmit_bytes_total"
+        },
         { "name": "namespace", "value": "kube-system" }
       ],
-      "samples": [
-        { "value": 446.0, "timestamp": "1730858398500" }
-      ]
+      "samples": [{ "value": 446.0, "timestamp": "1730858398500" }]
     },
     {
       "labels": [
-        { "name": "__name__", "value": "container_network_receive_bytes_total" },
+        {
+          "name": "__name__",
+          "value": "container_network_receive_bytes_total"
+        },
         { "name": "namespace", "value": "kube-system" }
       ],
-      "samples": [
-        { "value": null, "timestamp": "1730858398500" }
-      ]
+      "samples": [{ "value": null, "timestamp": "1730858398500" }]
     }
   ]
 }

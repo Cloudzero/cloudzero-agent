@@ -48,7 +48,7 @@ func TestSecretMonitor_Start_FileNotExist(t *testing.T) {
 func TestSecretMonitor_Start(t *testing.T) {
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "secret.txt")
-	err := os.WriteFile(tempFile, []byte("initial content"), 0644)
+	err := os.WriteFile(tempFile, []byte("initial content"), 0o644)
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,7 +70,7 @@ func TestSecretMonitor_Start(t *testing.T) {
 	defer monitor.Close()
 
 	// Simulate a file write event
-	err = os.WriteFile(tempFile, []byte("new content"), 0644)
+	err = os.WriteFile(tempFile, []byte("new content"), 0o644)
 	assert.NoError(t, err)
 
 	// Give some time for the event to be processed
@@ -93,7 +93,7 @@ func TestSecretMonitor_Start_FileRename(t *testing.T) {
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "secret.txt")
 	newTempFile := filepath.Join(tempDir, "renamed_secret.txt")
-	err := os.WriteFile(tempFile, []byte("initial content"), 0644)
+	err := os.WriteFile(tempFile, []byte("initial content"), 0o644)
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -133,7 +133,7 @@ func TestSecretMonitor_Start_FileRename(t *testing.T) {
 func TestSecretMonitor_Start_FileDeleted(t *testing.T) {
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "secret.txt")
-	err := os.WriteFile(tempFile, []byte("initial content"), 0644)
+	err := os.WriteFile(tempFile, []byte("initial content"), 0o644)
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -193,7 +193,7 @@ func TestSecretMonitor_Start_Directory(t *testing.T) {
 
 	// Create a new file in the directory to simulate a create event
 
-	err = os.WriteFile(newTempFile, []byte("new content"), 0644)
+	err = os.WriteFile(newTempFile, []byte("new content"), 0o644)
 	assert.NoError(t, err)
 
 	// Give some time for the event to be processed
