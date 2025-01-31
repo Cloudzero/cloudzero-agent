@@ -4,6 +4,8 @@
 package types
 
 type Runnable interface {
+	// Run starts the runnable.
 	Run() error
+	// Shutdown stops the runnable.
 	Shutdown() error
 }

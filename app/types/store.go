@@ -26,10 +26,12 @@ type Appendable interface {
 }
 
 type AppendableFiles interface {
+	// GetFiles returns the list of files in the store.
 	GetFiles() ([]string, error)
 }
 
 type AppendableReader interface {
+	// All retrieves all metrics.
 	All(context.Context, string) (MetricRange, error)
 }
 

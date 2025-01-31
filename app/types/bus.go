@@ -11,8 +11,11 @@ type (
 )
 
 type Bus interface {
+	// Subscribe returns a new subscription to the bus.
 	Subscribe() *Subscription
+	// Unsubscribe removes a subscription from the bus.
 	Unsubscribe(*Subscription) error
+	// Publish sends an event to the bus.
 	Publish(event Event)
 }
 
