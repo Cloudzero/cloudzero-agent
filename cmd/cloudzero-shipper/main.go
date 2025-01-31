@@ -58,7 +58,10 @@ func main() {
 		return
 	}
 
-	go HandleShutdownEvents()
+	go func() {
+		HandleShutdownEvents()
+		os.Exit(0)
+	}()
 
 	// Create the shipper and start in a thread
 	domain := domain.NewMetricShipper(ctx, settings, appendable)
@@ -88,5 +91,4 @@ func HandleShutdownEvents() {
 	<-signalChan
 
 	log.Info().Msg("Service stopping")
-	os.Exit(0)
 }

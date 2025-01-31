@@ -43,7 +43,10 @@ func main() {
 	ctx := context.Background()
 
 	// Handle shutdown events gracefully
-	go HandleShutdownEvents(appendable)
+	go func() {
+		HandleShutdownEvents(appendable)
+		os.Exit(0)
+	}()
 
 	// create the metric collector service interface
 	domain := domain.NewMetricCollector(settings, appendable)
@@ -62,5 +65,4 @@ func HandleShutdownEvents(appendable types.Appendable) {
 
 	log.Info().Msg("Service stopping")
 	appendable.Flush()
-	os.Exit(0)
 }
