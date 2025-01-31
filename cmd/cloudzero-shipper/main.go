@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	var exitCode int = 0
 	var configFile string
 	flag.StringVar(&configFile, "config", configFile, "Path to the configuration file")
 	flag.Parse()
@@ -52,7 +53,9 @@ func main() {
 		}
 	}()
 	if err := monitor.Run(); err != nil {
-		log.Fatal().Err(err).Msg("failed to run secret monitor")
+		log.Err(err).Msg("failed to run secret monitor")
+		exitCode = 1
+		return
 	}
 
 	go HandleShutdownEvents()
@@ -73,6 +76,10 @@ func main() {
 	log.Info().Msg("Starting service")
 	server.New(build.Version(), handlers.NewShipperAPI("/", domain)).Run(context.Background())
 	log.Info().Msg("Service stopping")
+
+	defer func() {
+		os.Exit(exitCode)
+	}()
 }
 
 func HandleShutdownEvents() {
