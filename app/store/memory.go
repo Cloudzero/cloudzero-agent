@@ -59,7 +59,7 @@ func (m *MemoryStore) Get(ctx context.Context, id string) (*types.Metric, error)
 
 func (m *MemoryStore) Put(ctx context.Context, metrics ...types.Metric) error {
 	for _, metric := range metrics {
-		m.storage[metric.Id] = metric
+		m.storage[metric.ID] = metric
 	}
 	return nil
 }

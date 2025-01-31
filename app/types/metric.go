@@ -31,7 +31,7 @@ type InputData struct {
 }
 
 type Metric struct {
-	Id             string            `json:"id"         parquet:"-"`
+	ID             string            `json:"id"         parquet:"-"`
 	ClusterName    string            `json:"cluster_name" parquet:"cluster_name"`
 	CloudAccountID string            `json:"cloud_account_id" parquet:"cloud_account_id"`
 	OrganizationID string            `json:"organization_id" parquet:"organization_id"`
@@ -57,7 +57,7 @@ func NewMetric(orgID, cloudAccountID, clusterName, name string, timeStamp int64,
 	day := GetDay(t)
 	hour := GetHour(t)
 	return Metric{
-		Id:             uuid.New().String(),
+		ID:             uuid.New().String(),
 		OrganizationID: orgID,
 		CloudAccountID: cloudAccountID,
 		ClusterName:    clusterName,

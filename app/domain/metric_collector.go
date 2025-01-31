@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	ErrJsonUnmarshal    = errors.New("failed to parse metric from request body")
-	ErrMetricIdMismatch = errors.New("metric ID in path does not match product ID in body")
+	ErrJSONUnmarshal    = errors.New("failed to parse metric from request body")
+	ErrMetricIDMismatch = errors.New("metric ID in path does not match product ID in body")
 )
 
 const (
@@ -89,12 +89,12 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	case v1ContentType:
 		metrics, err = d.DecodeV1(decompressed)
 		if err != nil {
-			return nil, ErrJsonUnmarshal
+			return nil, ErrJSONUnmarshal
 		}
 	case v2ContentType:
 		metrics, stats, err = d.DecodeV2(decompressed)
 		if err != nil {
-			return &remote.WriteResponseStats{}, ErrJsonUnmarshal
+			return &remote.WriteResponseStats{}, ErrJSONUnmarshal
 		}
 	default:
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)

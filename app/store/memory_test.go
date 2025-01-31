@@ -26,8 +26,8 @@ func TestMemoryStore_All(t *testing.T) {
 	})
 
 	t.Run("with metrics in the store", func(t *testing.T) {
-		memoryStore.Put(ctx, types.Metric{Id: "1", Name: "metric1"})
-		memoryStore.Put(ctx, types.Metric{Id: "2", Name: "metric2"})
+		memoryStore.Put(ctx, types.Metric{ID: "1", Name: "metric1"})
+		memoryStore.Put(ctx, types.Metric{ID: "2", Name: "metric2"})
 
 		metricRange, err := memoryStore.All(ctx, nil)
 		assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestMemoryStore_Get(t *testing.T) {
 	})
 
 	t.Run("with an existing metric", func(t *testing.T) {
-		expectedMetric := types.Metric{Id: "1", Name: "metric1"}
+		expectedMetric := types.Metric{ID: "1", Name: "metric1"}
 		memoryStore.Put(ctx, expectedMetric)
 
 		metric, err := memoryStore.Get(ctx, "1")
@@ -69,7 +69,7 @@ func TestMemoryStore_Delete(t *testing.T) {
 	})
 
 	t.Run("with an existing metric", func(t *testing.T) {
-		memoryStore.Put(ctx, types.Metric{Id: "1", Name: "metric1"})
+		memoryStore.Put(ctx, types.Metric{ID: "1", Name: "metric1"})
 
 		err := memoryStore.Delete(ctx, "1")
 		assert.NoError(t, err)

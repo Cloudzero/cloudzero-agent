@@ -119,7 +119,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURLs, err := shipper.AllocatePresignedURLs(2)
@@ -162,7 +162,7 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURL, err := shipper.AllocatePresignedURLs(1)
@@ -192,7 +192,7 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURL, err := shipper.AllocatePresignedURLs(1)
@@ -223,7 +223,7 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURL, err := shipper.AllocatePresignedURLs(1)
@@ -253,7 +253,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURL, err := shipper.AllocatePresignedURLs(1)
@@ -294,7 +294,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	presignedURL, err := shipper.AllocatePresignedURLs(1)
@@ -321,7 +321,7 @@ func TestUploadFile_Success(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
 	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
@@ -355,7 +355,7 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
 	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
@@ -412,7 +412,7 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	settings := setupSettings(mockURL)
 
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
-	shipper.HttpClient.Transport = mockRoundTripper
+	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
 	tempFile, err := os.CreateTemp("", "testfile-*.tgz")

@@ -19,7 +19,7 @@ func TestNewMetric(t *testing.T) {
 
 	metric := types.NewMetric("org", "cloudaccount", "cluster", name, timeStamp, labels, value)
 
-	assert.NotEmpty(t, metric.Id)
+	assert.NotEmpty(t, metric.ID)
 	assert.Equal(t, name, metric.Name)
 	assert.NotZero(t, metric.CreatedAt)
 	assert.Equal(t, timeStamp, metric.TimeStamp)

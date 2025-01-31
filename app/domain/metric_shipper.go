@@ -47,7 +47,7 @@ type MetricShipper struct {
 	// Internal fields
 	ctx          context.Context
 	cancel       context.CancelFunc
-	HttpClient   *http.Client
+	HTTPClient   *http.Client
 	shippedFiles uint64 // Counter for shipped files
 }
 
@@ -65,7 +65,7 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, f types.Appendabl
 		lister:     f,
 		ctx:        ctx,
 		cancel:     cancel,
-		HttpClient: httpClient,
+		HTTPClient: httpClient,
 	}
 }
 
@@ -198,7 +198,7 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 	log.Info().Msgf("Requesting %d presigned URLs from %s with key %s", count, req.URL.String(), m.setting.GetAPIKey())
 
 	// Send the request
-	resp, err := m.HttpClient.Do(req)
+	resp, err := m.HTTPClient.Do(req)
 	if err != nil {
 		log.Error().Err(err).Msg("HTTP request failed")
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
@@ -256,7 +256,7 @@ func (m *MetricShipper) UploadFile(presignedURL, filePath string) error {
 	}
 
 	// Send the request
-	resp, err := m.HttpClient.Do(req)
+	resp, err := m.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("file upload HTTP request failed: %w", err)
 	}

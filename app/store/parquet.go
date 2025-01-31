@@ -21,13 +21,13 @@ import (
 )
 
 const (
-	// DEFAULT_ROW_LIMIT results in approximately 25MB files
+	// DefaultRowLimit results in approximately 25MB files
 	// BEFORE  001 ls -lah
 	// -rw-r--r--  1 joe.barnett  staff    94M Nov 10 13:02 metrics_1731254556187_1731254557963.parquet
 	// AFTER 001 ls -lah
 	// total 52792
 	// -rw-r--r--  1 joe.barnett  staff    25M Nov 10 13:03 metrics_1731254556187_1731254557963.parquet.tgz
-	DEFAULT_ROW_LIMIT = 1_000_000
+	DefaultRowLimit = 1_000_000
 )
 
 type ParquetStore struct {
@@ -45,7 +45,7 @@ type ParquetStore struct {
 // NewParquetStore initializes a ParquetStore with a directory path and row limit
 func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 	if settings.MaxRecords <= 0 {
-		settings.MaxRecords = DEFAULT_ROW_LIMIT
+		settings.MaxRecords = DefaultRowLimit
 	}
 	if _, err := os.Stat(settings.StoragePath); os.IsNotExist(err) {
 		if err := os.MkdirAll(settings.StoragePath, 0o755); err != nil {

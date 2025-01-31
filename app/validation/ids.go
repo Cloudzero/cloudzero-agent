@@ -37,7 +37,7 @@ func ValidateCloudAccountID(cloudAccountID string) (string, error) {
 		if isValidCloudAccountID(cleanedAccountID) {
 			return cleanedAccountID, nil
 		} else {
-			message := "Invalid format for 'cloud_account_id', can only include alphanumeric and hyphen characters."
+			message := "invalid format for 'cloud_account_id', can only include alphanumeric and hyphen characters"
 			return "", errors.New(message)
 		}
 	}
@@ -59,8 +59,8 @@ func isValidClusterName(clusterName string) bool {
 // It returns an error if the clusterName does not meet the format requirements.
 func ValidateClusterName(clusterName string) error {
 	if !isValidClusterName(clusterName) {
-		message := "Invalid format for 'cluster_name', can only include alphanumeric and hyphen characters, " +
-			"must begin and end with an alphanumeric, and contain no more than 253 characters."
+		message := "invalid format for 'cluster_name', can only include alphanumeric and hyphen characters, " +
+			"must begin and end with an alphanumeric, and contain no more than 253 characters"
 		return errors.New(message)
 	}
 	return nil
