@@ -46,7 +46,11 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize secret monitor")
 	}
-	defer monitor.Shutdown()
+	defer func() {
+		if err := monitor.Shutdown(); err != nil {
+			log.Err(err).Msg("failed to shutdown secret monitor")
+		}
+	}()
 	if err := monitor.Run(); err != nil {
 		log.Fatal().Err(err).Msg("failed to run secret monitor")
 	}
@@ -55,8 +59,16 @@ func main() {
 
 	// Create the shipper and start in a thread
 	domain := domain.NewMetricShipper(ctx, settings, appendable)
-	defer domain.Shutdown()
-	go domain.Run()
+	defer func() {
+		if err := domain.Shutdown(); err != nil {
+			log.Err(err).Msg("failed to shutdown metric shipper")
+		}
+	}()
+	go func() {
+		if err := domain.Run(); err != nil {
+			log.Err(err).Msg("failed to run metric shipper")
+		}
+	}()
 
 	log.Info().Msg("Starting service")
 	server.New(build.Version(), handlers.NewShipperAPI("/", domain)).Run(context.Background())

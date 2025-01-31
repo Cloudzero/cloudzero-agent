@@ -91,7 +91,10 @@ func (m *MetricShipper) Run() error {
 
 		case sig := <-sigChan:
 			log.Info().Msgf("Received signal %s. Initiating shutdown.", sig)
-			m.Shutdown()
+			err := m.Shutdown()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to shutdown shipper service")
+			}
 			return nil
 
 		case <-ticker.C:

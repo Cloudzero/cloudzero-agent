@@ -50,7 +50,11 @@ func (s *secretsMonitor) Run() error {
 				s.running = false
 				return
 			case <-ticker.C:
-				s.settings.SetAPIKey()
+				err := s.settings.SetAPIKey()
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to set API key")
+					continue
+				}
 				newSecret := s.settings.GetAPIKey()
 				newHash := sha256.Sum256([]byte(newSecret))
 				if newHash != s.lastHash {
