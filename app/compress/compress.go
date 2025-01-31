@@ -20,7 +20,7 @@ func File(srcFilePath string) (*string, error) {
 	// Get file info to retrieve the file name and size
 	info, err := os.Stat(srcFilePath)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // we should probably revisit this API at some point, but not today
 	}
 
 	// Read the file to be compressed
@@ -28,7 +28,7 @@ func File(srcFilePath string) (*string, error) {
 	if err != nil {
 		// may not be an error in a scaled case
 		log.Warn().Err(err).Msgf("failed to open file: %s", srcFilePath)
-		return nil, nil
+		return nil, nil //nolint:nilnil // we should probably revisit this API at some point, but not today
 	}
 	defer srcFile.Close()
 

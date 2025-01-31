@@ -51,7 +51,7 @@ func (m *MemoryStore) All(ctx context.Context, next *string) (types.MetricRange,
 func (m *MemoryStore) Get(ctx context.Context, id string) (*types.Metric, error) {
 	p, ok := m.storage[id]
 	if !ok {
-		return nil, nil
+		return nil, nil //nolint:nilnil // we should probably revisit this API at some point, but not today
 	}
 
 	return &p, nil
