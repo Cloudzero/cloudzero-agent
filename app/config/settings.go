@@ -179,7 +179,7 @@ func (s *Settings) SetAPIKey() error {
 		return errors.Wrap(err, "failed to get absolute path")
 	}
 
-	if _, err := os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
+	if _, err = os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
 		return fmt.Errorf("API key file %s not found", apiKeyPathLocation)
 	}
 	apiKey, err := os.ReadFile(s.Cloudzero.APIKeyPath)
