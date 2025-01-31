@@ -16,6 +16,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	DefaultCZHost             = "api.cloudzero.com"
+	DefaultCZSendInterval     = 10 * time.Minute
+	DefaultCZSendTimeout      = 10 * time.Second
+	DefaultCZRotateInterval   = 10 * time.Minute
+	DefaultDatabaseMaxRecords = 1_000_000
+	DefaultServerPort         = 8080
+	DefaultServerMode         = "http"
+)
+
 type Settings struct {
 	// Core Settings
 	OrganizationID string `yaml:"organization_id" env:"ORGANIZATION_ID" env-description:"organization ID"`
@@ -124,7 +134,7 @@ func (s *Settings) Validate() error {
 
 func (d *Database) Validate() error {
 	if d.MaxRecords <= 0 {
-		d.MaxRecords = 1000000
+		d.MaxRecords = DefaultDatabaseMaxRecords
 	}
 	if _, err := os.Stat(d.StoragePath); os.IsNotExist(err) {
 		return errors.Wrap(err, "database storage path does not exist")
@@ -134,26 +144,26 @@ func (d *Database) Validate() error {
 
 func (s *Server) Validate() error {
 	if s.Mode == "" {
-		s.Mode = "http"
+		s.Mode = DefaultServerMode
 	}
 	if s.Port == 0 {
-		s.Port = 8080
+		s.Port = DefaultServerPort
 	}
 	return nil
 }
 
 func (c *Cloudzero) Validate() error {
 	if c.Host == "" {
-		c.Host = "api.cloudzero.com"
+		c.Host = DefaultCZHost
 	}
 	if c.SendInterval <= 0 {
-		c.SendInterval = 10 * time.Minute
+		c.SendInterval = DefaultCZSendInterval
 	}
 	if c.SendTimeout <= 0 {
-		c.SendTimeout = 10 * time.Second
+		c.SendTimeout = DefaultCZSendTimeout
 	}
 	if c.RotateInterval <= 0 {
-		c.RotateInterval = 10 * time.Minute
+		c.RotateInterval = DefaultCZRotateInterval
 	}
 	if c.APIKeyPath == "" {
 		return errors.New("API key path is empty")

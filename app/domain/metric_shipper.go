@@ -25,6 +25,11 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
+const (
+	shipperWorkerCount = 10
+	expirationTime     = 3600
+)
+
 var (
 	ErrUnauthorized = errors.New("unauthorized request - possible invalid API key")
 	ErrNoURLs       = errors.New("no presigned URLs returned")
@@ -125,7 +130,7 @@ func (m *MetricShipper) GetStatus() (Status, error) {
 
 // performShipping encapsulates the steps to ship existing .tgz files and new metrics.
 func (m *MetricShipper) performShipping() error {
-	pm := parallel.New(10)
+	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
 	// Process new files in parallel
@@ -189,7 +194,7 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 	// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 	q := req.URL.Query()
 	q.Add("count", strconv.Itoa(count))
-	q.Add("expiration", strconv.Itoa(3600))
+	q.Add("expiration", strconv.Itoa(expirationTime))
 	q.Add("cloud_account_id", m.setting.CloudAccountID)
 	q.Add("region", m.setting.Region)
 	q.Add("cluster_name", m.setting.ClusterName)

@@ -48,7 +48,7 @@ type MetricCollector struct {
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
 func NewMetricCollector(s *config.Settings, a types.Appendable) *MetricCollector {
 	if s.Cloudzero.RotateInterval <= 0 {
-		s.Cloudzero.RotateInterval = 10 * time.Minute
+		s.Cloudzero.RotateInterval = config.DefaultCZRotateInterval
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -167,6 +167,10 @@ func parseProtoMsg(contentType string) (string, error) {
 	return string(prom.RemoteWriteProtoMsgV1), nil
 }
 
+func formatFloat(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64) //nolint:revive // a constant here would be somewhat silly
+}
+
 // DecodeV1 decompresses and decodes a Protobuf v1 WriteRequest, then converts it to a slice of Metric structs.
 func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 	// Parse Protobuf v1 WriteRequest
@@ -199,7 +203,7 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 				metricName,
 				sample.Timestamp,
 				labelsMap,
-				strconv.FormatFloat(sample.Value, 'f', -1, 64),
+				formatFloat(sample.Value),
 			))
 		}
 	}
@@ -244,7 +248,7 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 				Name:      metricName,
 				TimeStamp: sample.Timestamp,
 				Labels:    labelsMap,
-				Value:     strconv.FormatFloat(sample.Value, 'f', -1, 64),
+				Value:     formatFloat(sample.Value),
 			}
 			metrics = append(metrics, metric)
 			stats.Samples++

@@ -52,7 +52,8 @@ func ValidateCloudAccountID(cloudAccountID string) (string, error) {
 // - Begin and end with an alphanumeric character.
 // - Be no more than 253 characters long.
 func isValidClusterName(clusterName string) bool {
-	return validClusterName.MatchString(clusterName) && len(clusterName) <= 253
+	const maxLength = 253
+	return validClusterName.MatchString(clusterName) && len(clusterName) <= maxLength
 }
 
 // ValidateClusterName validates the cluster_name.
