@@ -228,7 +228,7 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 			nameIdx := ts.LabelsRefs[i]
 			valueIdx := ts.LabelsRefs[i+1]
 			if int(nameIdx) >= len(writeReq.Symbols) || int(valueIdx) >= len(writeReq.Symbols) {
-				return nil, &remote.WriteResponseStats{}, fmt.Errorf("invalid label reference indices")
+				return nil, &remote.WriteResponseStats{}, errors.New("invalid label reference indices")
 			}
 			labelName := writeReq.Symbols[nameIdx]
 			labelValue := writeReq.Symbols[valueIdx]

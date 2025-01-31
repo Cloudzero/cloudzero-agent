@@ -63,12 +63,12 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		}
 
 		if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-			return nil, errors.Wrap(err, fmt.Sprintf("no config %s", cfgFile))
+			return nil, fmt.Errorf("no config %s", cfgFile)
 		}
 
 		err := cleanenv.ReadConfig(cfgFile, &cfg)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("config read %s", cfgFile))
+			return nil, fmt.Errorf("config read %s: %w", cfgFile, err)
 		}
 	}
 
@@ -180,7 +180,7 @@ func (s *Settings) SetAPIKey() error {
 	}
 
 	if _, err := os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
-		return errors.Wrap(err, fmt.Sprintf("API key file %s not found", apiKeyPathLocation))
+		return fmt.Errorf("API key file %s not found", apiKeyPathLocation)
 	}
 	apiKey, err := os.ReadFile(s.Cloudzero.APIKeyPath)
 	if err != nil {
@@ -198,7 +198,7 @@ func (s *Settings) SetRemoteUploadAPI() error {
 	if s.Cloudzero.Host == "" {
 		return errors.New("host is empty")
 	}
-	baseURL, err := url.Parse(fmt.Sprintf("https://%s", s.Cloudzero.Host))
+	baseURL, err := url.Parse("https://" + s.Cloudzero.Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse host")
 	}

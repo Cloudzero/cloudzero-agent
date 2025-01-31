@@ -6,7 +6,6 @@ package domain
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
 	"sync"
 	"time"
 
@@ -67,7 +66,7 @@ func (s *secretsMonitor) Run() error {
 
 func redactSecret(secret string) string {
 	if len(secret) > 2 {
-		return fmt.Sprintf("%s***", secret[:2])
+		return secret[:2] + "***"
 	}
 	return "*****"
 }

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -180,12 +181,12 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 
 	// Set necessary headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("%s", m.setting.GetAPIKey()))
+	req.Header.Set("Authorization", m.setting.GetAPIKey())
 
 	// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 	q := req.URL.Query()
-	q.Add("count", fmt.Sprintf("%d", count))
-	q.Add("expiration", fmt.Sprintf("%d", 3600))
+	q.Add("count", strconv.Itoa(count))
+	q.Add("expiration", strconv.Itoa(3600))
 	q.Add("cloud_account_id", m.setting.CloudAccountID)
 	q.Add("region", m.setting.Region)
 	q.Add("cluster_name", m.setting.ClusterName)
