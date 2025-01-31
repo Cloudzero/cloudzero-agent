@@ -224,7 +224,7 @@ undeploy-test-app: ## Undeploy the test app
 # ----------- CODE GENERATION ------------
 
 MAINTAINER_CLEANFILES += \
-	$(wildcard cloudzero-insights-controller/pkg/types/mocks/*_mock.go) \
+	$(wildcard pkg/types/mocks/*_mock.go) \
 	$(NULL)
 
 .PHONY: generate
