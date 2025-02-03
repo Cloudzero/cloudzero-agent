@@ -24,14 +24,21 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 var DefaultRefreshInterval = 1 * time.Minute
 
+// MonitoredAPIKey is an interface that allows the API key to be monitored.
+type MonitoredAPIKey interface {
+	// GetAPIKey returns the current API key.
+	GetAPIKey() string
+	// SetAPIKey refreshes the API key.
+	SetAPIKey() error
+}
+
 type secretsMonitor struct {
-	settings    *config.Settings
+	settings    MonitoredAPIKey
 	originalCtx context.Context
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -41,7 +48,7 @@ type secretsMonitor struct {
 	done        chan struct{}
 }
 
-func NewSecretMonitor(ctx context.Context, settings *config.Settings) types.Runnable {
+func NewSecretMonitor(ctx context.Context, settings MonitoredAPIKey) types.Runnable {
 	newCtx, cancel := context.WithCancel(ctx)
 	return &secretsMonitor{
 		settings:    settings,
