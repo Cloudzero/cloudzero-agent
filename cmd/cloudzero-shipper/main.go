@@ -18,6 +18,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/monitor"
 )
 
 func main() {
@@ -43,16 +44,13 @@ func main() {
 	ctx := context.Background()
 
 	// Start a monitor that can pickup secrets changes and update the settings
-	monitor, err := domain.NewSecretMonitor(ctx, settings)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize secret monitor")
-	}
+	monitor := monitor.NewSecretMonitor(ctx, settings)
 	defer func() {
 		if err := monitor.Shutdown(); err != nil {
 			log.Err(err).Msg("failed to shutdown secret monitor")
 		}
 	}()
-	if err := monitor.Run(); err != nil {
+	if err := monitor.Start(); err != nil {
 		log.Err(err).Msg("failed to run secret monitor")
 		exitCode = 1
 		return

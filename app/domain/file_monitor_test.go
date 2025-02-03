@@ -196,6 +196,13 @@ func TestSecretMonitor_Start_Directory(t *testing.T) {
 	err = os.WriteFile(newTempFile, []byte("new content"), 0o644)
 	assert.NoError(t, err)
 
+	mockBus.On("Publish", types.Event{
+		Type: domain.FileChanged,
+		Value: types.FileChanged{
+			Name: newTempFile,
+		},
+	}).Return()
+
 	// Give some time for the event to be processed
 	time.Sleep(100 * time.Millisecond)
 

@@ -31,19 +31,19 @@ type InputData struct {
 }
 
 type Metric struct {
-	ID             string            `json:"id"         parquet:"-"`
-	ClusterName    string            `json:"cluster_name" parquet:"cluster_name"`         //nolint:tagliatelle // we should keep these consistent
+	ID             string            `json:"id"               parquet:"-"`
+	ClusterName    string            `json:"cluster_name"     parquet:"cluster_name"`     //nolint:tagliatelle // we should keep these consistent
 	CloudAccountID string            `json:"cloud_account_id" parquet:"cloud_account_id"` //nolint:tagliatelle // we should keep these consistent
-	OrganizationID string            `json:"organization_id" parquet:"organization_id"`   //nolint:tagliatelle // we should keep these consistent
-	Year           string            `json:"year" parquet:"year"`
-	Month          string            `json:"month" parquet:"month"`
-	Day            string            `json:"day" parquet:"day"`
-	Hour           string            `json:"hour" parquet:"hour"`
-	Name           string            `json:"name"       parquet:"name"`
-	CreatedAt      int64             `json:"created_at" parquet:"create_at,timestamp(microsecond)"` //nolint:tagliatelle // we should keep these consistent
-	TimeStamp      int64             `json:"timestamp"  parquet:"timestamp,timestamp(microsecond)"` //nolint:tagliatelle // "timestamp" is one word, tagliatelle wants timeStamp.
-	Labels         map[string]string `json:"labels"     parquet:"labels"`
-	Value          string            `json:"value"      parquet:"value"`
+	OrganizationID string            `json:"organization_id"  parquet:"organization_id"`  //nolint:tagliatelle // we should keep these consistent
+	Year           string            `json:"year"             parquet:"year"`
+	Month          string            `json:"month"            parquet:"month"`
+	Day            string            `json:"day"              parquet:"day"`
+	Hour           string            `json:"hour"             parquet:"hour"`
+	Name           string            `json:"name"             parquet:"name"`
+	CreatedAt      int64             `json:"created_at"       parquet:"create_at,timestamp(microsecond)"` //nolint:tagliatelle // we should keep these consistent
+	TimeStamp      int64             `json:"timestamp"        parquet:"timestamp,timestamp(microsecond)"` //nolint:tagliatelle // "timestamp" is one word, tagliatelle wants timeStamp.
+	Labels         map[string]string `json:"labels"           parquet:"labels"`
+	Value          string            `json:"value"            parquet:"value"`
 }
 
 func NewMetric(orgID, cloudAccountID, clusterName, name string, timeStamp int64, labels map[string]string, value string) Metric {
