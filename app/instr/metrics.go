@@ -1,10 +1,11 @@
-package metrics
+package instr
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -26,16 +27,17 @@ Sources:
 
 */
 
-const OtelMeterName = "github.com/Cloudzero/cloudzero-insights-controller"
+const OTEL_SCOPE_NAME = "github.com/Cloudzero/cloudzero-insights-controller"
+const OTEL_SCOPE_VERSION = "0.0.1-dev1"
 
 var (
 	initOnce sync.Once
 	provider *api.MeterProvider
 
 	// testing metric
-	testHistogram metric.Float64Histogram
+	testCounter metric.Int64Counter
 
-	// START - define metrics
+	// START - define metrics -------------
 
 	// the total number of requests we have posting to the remote write endpoint
 	RemoteWriteRequestCount metric.Int64Counter
@@ -46,14 +48,15 @@ var (
 	// status code counts broken down with whatever is labeled on metric post time
 	RemoteWriteStatusCodes metric.Int64Counter
 
-	// total size of a payload written to the remote write endpoint. This includes the prom-formatted metrics
-	RemoteWritePayloadSizeBytes metric.Float64Histogram
+	// total size of a payload written to the remote write endpoint.
+	RemoteWritePayloadSizeBytes metric.Int64Histogram
 
 	// total number of failures on the remote write endpoint
 	RemoteWriteFailures metric.Int64Counter
 )
 
 func init() {
+	// extra insurance that the particular init function is only ran ONCE
 	initOnce.Do(func() {
 		if err := _init(); err != nil {
 			log.Fatalf("Failed to setup otel metrics: %s", err.Error())
@@ -72,15 +75,26 @@ func _init() error {
 	provider = api.NewMeterProvider(api.WithReader(exporter))
 	otel.SetMeterProvider(provider)
 
-	// initialize the metrics we want to track
-	meter := provider.Meter(OtelMeterName)
+	// read environment to get the scope name and version
+	name := os.Getenv("OTEL_SCOPE_NAME")
+	if name == "" {
+		name = OTEL_SCOPE_NAME
+	}
+	version := os.Getenv("OTEL_SCOPE_VERSION")
+	if version == "" {
+		version = OTEL_SCOPE_VERSION
+	}
 
-	testHistogram, err = meter.Float64Histogram("test_histogram")
+	// initialize the metrics we want to track
+	meter := provider.Meter(name, metric.WithInstrumentationVersion(version))
+
+	testCounter, err = meter.Int64Counter("test_counter")
 	if err != nil {
 		return err
 	}
 
-	// START - initialize all metrics
+	// START - initialize all metrics -----------------
+
 	RemoteWriteRequestCount, err = meter.Int64Counter(
 		"remote_write_request_total",
 		metric.WithDescription("Total number of write attempts against the write endpoint"),
@@ -92,6 +106,7 @@ func _init() error {
 	RemoteWriteRequestDurationSeconds, err = meter.Float64Histogram(
 		"remote_write_request_duration",
 		metric.WithDescription("Duration of requests to the remote write endpoint"),
+		metric.WithUnit("s"),
 		metric.WithExplicitBucketBoundaries(prom.DefBuckets...),
 	)
 	if err != nil {
@@ -106,9 +121,10 @@ func _init() error {
 		return err
 	}
 
-	RemoteWritePayloadSizeBytes, err = meter.Float64Histogram(
-		"rmeote_write_payload_size_bytes",
+	RemoteWritePayloadSizeBytes, err = meter.Int64Histogram(
+		"remote_write_payload_size_bytes",
 		metric.WithDescription("Payload size posted to the remote write endpoint"),
+		metric.WithUnit("byte"),
 		metric.WithExplicitBucketBoundaries(prom.ExponentialBuckets(256, 2, 10)...),
 	)
 	if err != nil {
@@ -132,11 +148,11 @@ func Handler() http.Handler {
 }
 
 // Usually do not need to call this, but may prove useful in specific scenarios
-func Flush() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func Flush(ctx context.Context) error {
+	c, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	if err := provider.ForceFlush(ctx); err != nil {
+	if err := provider.ForceFlush(c); err != nil {
 		return fmt.Errorf("error flushing metrics: %w", err)
 	}
 	return nil
