@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -40,6 +41,7 @@ func TestPutMetrics(t *testing.T) {
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
+		require.NoError(t, err)
 		stats, err := d.PutMetrics(ctx, "application/x-protobuf", "snappy", payload)
 		assert.NoError(t, err)
 		assert.Nil(t, stats)

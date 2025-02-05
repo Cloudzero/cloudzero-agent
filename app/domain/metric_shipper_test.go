@@ -122,7 +122,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURLs, err := shipper.AllocatePresignedURLs(2)
+	presignedURLs, err := shipper.AllocatePresignedURLs([]string{"file1", "file2"})
 
 	// Verify
 	assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestAllocatePresignedURL_NoFiles(t *testing.T) {
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
 
 	// Execute
-	presignedURLs, err := shipper.AllocatePresignedURLs(0)
+	presignedURLs, err := shipper.AllocatePresignedURLs([]string{})
 
 	// Verify
 	assert.NoError(t, err)
@@ -165,7 +165,7 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
@@ -195,7 +195,7 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
@@ -226,7 +226,7 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
@@ -256,7 +256,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
@@ -274,7 +274,7 @@ func TestAllocatePresignedURL_RequestCreationError(t *testing.T) {
 	shipper := domain.NewMetricShipper(context.Background(), settings, nil)
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
@@ -297,7 +297,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(1)
+	presignedURL, err := shipper.AllocatePresignedURLs([]string{"file1"})
 
 	// Verify
 	assert.Error(t, err)
