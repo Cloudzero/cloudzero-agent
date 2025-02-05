@@ -28,7 +28,7 @@ jobs:
           go-version-file: go.mod
       - name: Install golangci-lint
         run: make install-tools-golangci-lint
-      - name: Run golangci-lint
+      - name: Run linters
         run: make lint
 
   govulncheck: # Run govulncheck

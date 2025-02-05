@@ -230,3 +230,10 @@ MAINTAINER_CLEANFILES += \
 .PHONY: generate
 generate: ## (Re)generate generated code
 	@$(GO) generate ./...
+
+# ----------- HELM ------------
+
+lint: lint-helm
+.PHONY: lint-helm
+lint-helm: ## Lint the helm chart
+	@helm lint ./helm/
