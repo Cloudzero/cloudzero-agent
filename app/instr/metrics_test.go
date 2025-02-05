@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package instr
@@ -17,14 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "test_prom_metric",
-			Help: "used for running basic prometheus tests",
-		},
-		[]string{"name"},
-	)
+var testMetric = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "test_prom_metric",
+		Help: "used for running basic prometheus tests",
+	},
+	[]string{"name"},
 )
 
 // resets all of the sync counters
