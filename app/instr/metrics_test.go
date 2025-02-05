@@ -82,6 +82,23 @@ func TestPrometheusMetricsRegistry(t *testing.T) {
 		require.NotContains(t, string(body), "test_prom_metric")
 	})
 
+	t.Run("TestInternalRegistryNoGoMetrics", func(t *testing.T) {
+		defer _testResentSync()
+		p, err := NewPrometheusMetrics(
+			WithPromMetrics(testMetric),
+			WithNoGoMetrics(),
+		)
+		require.NoError(t, err)
+		defer p.clearRegistry()
+
+		srv := httptest.NewServer(p.Handler()) // internal handler
+		defer srv.Close()
+
+		testMetric.WithLabelValues("test").Inc()
+		body := _testSendPromRequest(t, srv.URL)
+		require.NotContains(t, string(body), "go_gc_duration_seconds")
+	})
+
 	// use default registry
 	t.Run("TestDefaultRegistry", func(t *testing.T) {
 		defer _testResentSync()
