@@ -17,7 +17,7 @@ var (
 type PrometheusMetrics struct {
 	registry    *prometheus.Registry
 	metrics     *[]prometheus.Collector
-	noGometrics bool
+	noGoMetrics bool
 }
 
 type PrometheusMetricsOpt func(*PrometheusMetrics)
@@ -42,7 +42,7 @@ func WithDefaultRegistry() PrometheusMetricsOpt {
 
 func WithNoGoMetrics() PrometheusMetricsOpt {
 	return func(p *PrometheusMetrics) {
-		p.noGometrics = true
+		p.noGoMetrics = true
 	}
 }
 
@@ -64,7 +64,7 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 			p.registry = prometheus.NewRegistry()
 
 			// if using the default register, include the default go metrics as well if applicable
-			if !p.noGometrics {
+			if !p.noGoMetrics {
 				p.registry.Register(collectors.NewGoCollector())
 				p.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 			}
