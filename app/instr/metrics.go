@@ -1,9 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package instr
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -13,9 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	registerOnce sync.Once
-)
+var registerOnce sync.Once
 
 type PrometheusMetrics struct {
 	registry    *prometheus.Registry
@@ -23,29 +22,37 @@ type PrometheusMetrics struct {
 	noGoMetrics bool
 }
 
-type PrometheusMetricsOpt func(*PrometheusMetrics)
+type PrometheusMetricsOpt func(*PrometheusMetrics) error
 
 func WithPromMetrics(m ...prometheus.Collector) PrometheusMetricsOpt {
-	return func(p *PrometheusMetrics) {
+	return func(p *PrometheusMetrics) error {
 		p.metrics = &m
+		return nil
 	}
 }
 
 func WithCustomRegistry(registry *prometheus.Registry) PrometheusMetricsOpt {
-	return func(p *PrometheusMetrics) {
+	return func(p *PrometheusMetrics) error {
 		p.registry = registry
+		return nil
 	}
 }
 
 func WithDefaultRegistry() PrometheusMetricsOpt {
-	return func(p *PrometheusMetrics) {
-		p.registry = prometheus.DefaultRegisterer.(*prometheus.Registry)
+	return func(p *PrometheusMetrics) error {
+		registry, ok := prometheus.DefaultRegisterer.(*prometheus.Registry)
+		if !ok {
+			return errors.New("failed to cast the default prometheus register")
+		}
+		p.registry = registry
+		return nil
 	}
 }
 
 func WithNoGoMetrics() PrometheusMetricsOpt {
-	return func(p *PrometheusMetrics) {
+	return func(p *PrometheusMetrics) error {
 		p.noGoMetrics = true
+		return nil
 	}
 }
 
@@ -56,7 +63,9 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 
 	// apply the options
 	for _, item := range opts {
-		item(p)
+		if err := item(p); err != nil {
+			return nil, fmt.Errorf("failed to apply an option: %w", err)
+		}
 	}
 
 	// register the metrics
@@ -68,8 +77,14 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 
 			// if using the default register, include the default go metrics as well if applicable
 			if !p.noGoMetrics {
-				p.registry.Register(collectors.NewGoCollector())
-				p.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+				if err := p.registry.Register(collectors.NewGoCollector()); err != nil {
+					registerErr = fmt.Errorf("failed to register the go collector: %w", err)
+					return
+				}
+				if err := p.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})); err != nil {
+					registerErr = fmt.Errorf("failed to register the process collector: %w", err)
+					return
+				}
 			}
 		}
 
