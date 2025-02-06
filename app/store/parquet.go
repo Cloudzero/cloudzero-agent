@@ -105,11 +105,11 @@ func (p *ParquetStore) Put(ctx context.Context, metrics ...types.Metric) error {
 	// If row count exceeds the limit, flush and create a new active file
 	if p.rowCount >= p.rowLimit {
 		if err := p.flushUnlocked(); err != nil {
-			log.Error().Err(err).Msg("failed to flush writer")
+			log.Ctx(ctx).Error().Err(err).Msg("failed to flush writer")
 			return err
 		}
 		if err := p.newFileWriter(); err != nil {
-			log.Error().Err(err).Msg("failed to create new file writer")
+			log.Ctx(ctx).Error().Err(err).Msg("failed to create new file writer")
 			return err
 		}
 	}
@@ -121,11 +121,11 @@ func (p *ParquetStore) Flush() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if err := p.flushUnlocked(); err != nil {
-		log.Error().Err(err).Msg("failed to flush writer")
+		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to flush writer")
 		return err
 	}
 	if err := p.newFileWriter(); err != nil {
-		log.Error().Err(err).Msg("failed to create new file writer")
+		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to create new file writer")
 		return err
 	}
 	return nil

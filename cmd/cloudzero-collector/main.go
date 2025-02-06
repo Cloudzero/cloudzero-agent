@@ -6,11 +6,13 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/go-obvious/server"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -35,16 +37,26 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load settings")
 	}
 
-	appendable, err := store.NewParquetStore(settings.Database)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize database")
+	ctx := context.Background()
+	var logger zerolog.Logger
+	{
+		logLevel, parseErr := zerolog.ParseLevel(settings.Logging.Level)
+		if parseErr != nil {
+			log.Fatal().Err(parseErr).Msg("failed to parse log level")
+		}
+		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
+		ctx = logger.WithContext(ctx)
+		zerolog.DefaultContextLogger = &logger
 	}
 
-	ctx := context.Background()
+	appendable, err := store.NewParquetStore(settings.Database)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize database")
+	}
 
 	// Handle shutdown events gracefully
 	go func() {
-		HandleShutdownEvents(appendable)
+		HandleShutdownEvents(ctx, appendable)
 		os.Exit(0)
 	}()
 
@@ -52,17 +64,35 @@ func main() {
 	domain := domain.NewMetricCollector(settings, appendable)
 	defer domain.Close()
 
+	loggerMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestLogger := log.Ctx(r.Context()).With().
+				Str("path", r.URL.Path).
+				Str("method", r.Method).
+				Str("remote_addr", r.RemoteAddr).
+				Logger()
+
+			requestLogger.Trace().Msg("received request")
+
+			next.ServeHTTP(w, r.WithContext(requestLogger.WithContext(r.Context())))
+		})
+	}
+
 	// Expose the service
-	log.Info().Msg("Starting service")
-	server.New(build.Version(), handlers.NewRemoteWriteAPI("/metrics", domain)).Run(ctx)
-	log.Info().Msg("Service stopping")
+	logger.Info().Msg("Starting service")
+	server.New(
+		build.Version(),
+		[]server.Middleware{loggerMiddleware},
+		handlers.NewRemoteWriteAPI("/metrics", domain),
+	).Run(ctx)
+	logger.Info().Msg("Service stopping")
 }
 
-func HandleShutdownEvents(appendable types.Appendable) {
+func HandleShutdownEvents(ctx context.Context, appendable types.Appendable) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 
-	log.Info().Msg("Service stopping")
+	log.Ctx(ctx).Info().Msg("Service stopping")
 	appendable.Flush()
 }

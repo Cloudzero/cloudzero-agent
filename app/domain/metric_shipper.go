@@ -86,25 +86,25 @@ func (m *MetricShipper) Run() error {
 	ticker := time.NewTicker(m.setting.Cloudzero.SendInterval)
 	defer ticker.Stop()
 
-	log.Info().Msg("Shipper service starting")
+	log.Ctx(m.ctx).Info().Msg("Shipper service starting")
 
 	for {
 		select {
 		case <-m.ctx.Done():
-			log.Info().Msg("Shipper service stopping")
+			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
 			return nil
 
 		case sig := <-sigChan:
-			log.Info().Msgf("Received signal %s. Initiating shutdown.", sig)
+			log.Ctx(m.ctx).Info().Msgf("Received signal %s. Initiating shutdown.", sig)
 			err := m.Shutdown()
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to shutdown shipper service")
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to shutdown shipper service")
 			}
 			return nil
 
 		case <-ticker.C:
 			if err := m.performShipping(); err != nil {
-				log.Error().Err(err).Msg("Failed to ship metrics")
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to ship metrics")
 			}
 		}
 	}
@@ -160,7 +160,7 @@ func (m *MetricShipper) performShipping() error {
 
 			// Delete the local file after successful upload
 			if err := os.Remove(filePath); err != nil {
-				log.Error().Err(err).Msgf("Failed to delete local file %s", filePath)
+				log.Ctx(m.ctx).Error().Err(err).Msgf("Failed to delete local file %s", filePath)
 				return nil
 			}
 
@@ -200,12 +200,12 @@ func (m *MetricShipper) AllocatePresignedURLs(count int) ([]string, error) {
 	q.Add("cluster_name", m.setting.ClusterName)
 	req.URL.RawQuery = q.Encode()
 
-	log.Info().Msgf("Requesting %d presigned URLs from %s with key %s", count, req.URL.String(), m.setting.GetAPIKey())
+	log.Ctx(m.ctx).Info().Msgf("Requesting %d presigned URLs from %s with key %s", count, req.URL.String(), m.setting.GetAPIKey())
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("HTTP request failed")
+		log.Ctx(m.ctx).Error().Err(err).Msg("HTTP request failed")
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()

@@ -11,6 +11,7 @@ import (
 	"github.com/go-obvious/server"
 	"github.com/go-obvious/server/api"
 	"github.com/go-obvious/server/request"
+	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/validation"
@@ -48,17 +49,24 @@ func (a *RemoteWriteAPI) Routes() *chi.Mux {
 	return r
 }
 
+func logErrorReply(r *http.Request, w http.ResponseWriter, data string, statusCode int) {
+	log.Ctx(r.Context()).Error().Msg(data)
+	request.Reply(r, w, data, statusCode)
+}
+
 func (a *RemoteWriteAPI) PostMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	defer r.Body.Close()
 	contentLen := r.ContentLength
 
 	if contentLen <= 0 {
-		request.Reply(r, w, "empty body", http.StatusOK)
+		logErrorReply(r, w, "empty body", http.StatusOK)
 		return
 	}
 
 	if contentLen > MaxPayloadSize {
-		request.Reply(r, w, "too big", http.StatusOK)
+		logErrorReply(r, w, "too big", http.StatusOK)
 		return
 	}
 
@@ -84,12 +92,14 @@ func (a *RemoteWriteAPI) PostMetrics(w http.ResponseWriter, r *http.Request) {
 	encodingType := r.Header.Get("Content-Encoding")
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Ctx(ctx).Err(err).Msg("failed to read request body")
+		request.Reply(r, w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
 
 	stats, err := a.metrics.PutMetrics(r.Context(), contentType, encodingType, data)
 	if err != nil {
+		log.Ctx(ctx).Err(err).Msg("failed to put metrics")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
