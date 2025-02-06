@@ -4,22 +4,19 @@
 package handlers
 
 import (
-	"net/http"
-
 	"github.com/go-chi/chi"
 	"github.com/go-obvious/server"
 	"github.com/go-obvious/server/api"
-	"github.com/go-obvious/server/request"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 )
 
 type ShipperAPI struct {
 	api.Service
-	shipper *domain.MetricShipper
+	shipper *shipper.MetricShipper
 }
 
-func NewShipperAPI(base string, d *domain.MetricShipper) *ShipperAPI {
+func NewShipperAPI(base string, d *shipper.MetricShipper) *ShipperAPI {
 	a := &ShipperAPI{
 		shipper: d,
 		Service: api.Service{
@@ -40,17 +37,6 @@ func (a *ShipperAPI) Register(app server.Server) error {
 
 func (a *ShipperAPI) Routes() *chi.Mux {
 	r := chi.NewRouter()
-	r.Get("/", a.GetMetrics)
+	r.Get("/metrics", a.shipper.GetMetricHandler().ServeHTTP)
 	return r
-}
-
-func (a *ShipperAPI) GetMetrics(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	stats, err := a.shipper.GetStatus()
-	if err != nil {
-		request.Reply(r, w, err, http.StatusInternalServerError)
-		return
-	}
-
-	request.Reply(r, w, stats, http.StatusNoContent)
 }

@@ -1,0 +1,97 @@
+package shipper
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+
+	"github.com/rs/zerolog/log"
+)
+
+type PresignedUrlPayload struct {
+	Files []*File `json:"files"`
+}
+
+type PresignedURLResponse struct {
+	URLs []string `json:"urls"` //nolint:tagliatelle // lol it wants "urLs". Nope.
+}
+
+func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
+	uploadEndpoint := m.setting.Cloudzero.Host
+	if len(files) == 0 {
+		return nil, nil
+	}
+
+	// create the http request body
+	body := PresignedUrlPayload{Files: files}
+
+	// marshal to json
+	enc, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode the body into json: %w", err)
+	}
+
+	// Create a new HTTP request
+	req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint, bytes.NewBuffer(enc))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Set necessary headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", m.setting.GetAPIKey())
+
+	// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
+	q := req.URL.Query()
+	q.Add("count", strconv.Itoa(len(files)))
+	q.Add("expiration", strconv.Itoa(expirationTime))
+	q.Add("cloud_account_id", m.setting.CloudAccountID)
+	q.Add("cluster_name", m.setting.ClusterName)
+	q.Add("region", m.setting.Region)
+	req.URL.RawQuery = q.Encode()
+
+	log.Info().Msgf("Requesting %d presigned URLs from %s with key %s", len(files), req.URL.String(), m.setting.GetAPIKey())
+
+	// Send the request
+	resp, err := m.HTTPClient.Do(req)
+	if err != nil {
+		log.Error().Err(err).Msg("HTTP request failed")
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, ErrUnauthorized
+	}
+
+	// Check for HTTP errors
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Parse the response
+	var response PresignedURLResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// validation
+	if len(response.URLs) == 0 {
+		return nil, ErrNoURLs
+	}
+	if len(response.URLs) != len(files) {
+		return nil, fmt.Errorf("the length of the response did not match the request! files (%d) != urls (%d)", len(files), len(response.URLs))
+	}
+
+	// append the pre-signed urls to the original files array,
+	// assuming order preservation in the downstream
+	for index, item := range response.URLs {
+		files[index].PresignedURL = item
+	}
+
+	return files, nil
+}
