@@ -202,6 +202,9 @@ kubeStateMetrics:
 secretAnnotations: {}
 imagePullSecrets: []
 
+scheme: https
+endpoint: /v1/container-metrics
+
 # environment validator image allows for CI to use a different image in testing
 validator:
   serviceEndpoints:
