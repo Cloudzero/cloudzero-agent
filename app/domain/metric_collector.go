@@ -183,12 +183,15 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 	var metrics []types.Metric
 	for _, ts := range writeReq.Timeseries {
 		labelsMap := make(map[string]string)
-		var metricName string
+		var metricName, nodeName string
 
 		for _, label := range ts.Labels {
 			labelsMap[label.Name] = label.Value
-			if label.Name == "__name__" {
+			switch label.Name {
+			case "__name__":
 				metricName = label.Value
+			case "node":
+				nodeName = label.Value
 			}
 		}
 
@@ -201,6 +204,7 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 				d.settings.CloudAccountID,
 				d.settings.ClusterName,
 				metricName,
+				nodeName,
 				sample.Timestamp,
 				labelsMap,
 				formatFloat(sample.Value),
