@@ -63,6 +63,17 @@ make undeploy-test-app
 
 ## DEPLOY QUICK START
 
+The commands below assume several environment variables are set:
+
+- `CZ_DEV_API_TOKEN` - the API token for the CloudZero development environment
+- `AWS_REGION` - the AWS region to use (e.g., us-east-1)
+- `AWS_ACCOUNT_ID` - the AWS account ID to use (e.g., 123456789012). `aws sts get-caller-identity` can be used to find this easily.
+- `EKS_CLUSTER_NAME` - the name of the EKS cluster to use (e.g., `my-cluster`). See [CloudZero's internal documentation](https://cloudzero.atlassian.net/wiki/spaces/ENG/pages/3817930756/Creating+an+Cluster+using+EKS) for information about our naming convention.
+- `KUBE_NAMESPACE` - the Kubernetes namespace to use (e.g., `default`)
+- `GITHUB_USERNAME` - your GitHub username
+- `GITHUB_TOKEN` - a personal access token with read access to the repository on GitHub
+- `GITHUB_EMAIL` - your GitHub email address
+
 ### **Step 1: Create an Amazon EKS Cluster**
 
 We'll use `eksctl` to create a new EKS cluster.
@@ -70,7 +81,16 @@ We'll use `eksctl` to create a new EKS cluster.
 Run the following command to create the cluster:
 
 ```bash
-eksctl create cluster -f cluster/cluster.yaml
+eksctl create cluster \
+  --name "$EKS_CLUSTER_NAME" \
+  --region "$AWS_REGION" \
+  --with-oidc \
+  --nodegroup-name ng-1 \
+  --node-type t3.small \
+  --nodes 2 \
+  --nodes-min 2 \
+  --nodes-max 8 \
+  --node-ami-family Bottlerocket
 ```
 
 > **Note**: This process may take several minutes to complete. Once finished, `kubectl` will be configured to interact with your new cluster.
@@ -105,13 +125,10 @@ We'll create a secret in AWS Secrets Manager that we want to sync to Kubernetes.
 
    ```bash
    aws secretsmanager create-secret \
-     --region us-east-2 \
-     --name 'dev/cloudzero-secret-api-key' \
+     --region "$AWS_REGION" \
+     --name "dev/cloudzero-secret-api-key-$EKS_CLUSTER_NAME" \
      --secret-string "{\"apiToken\":\"$CZ_DEV_API_TOKEN\"}"
    ```
-
-   > **Note**:
-   > Replace `$CZ_API_TOKEN` with your actual API token or ensure that the `CZ_API_TOKEN` environment variable is set.
 
 ---
 
@@ -124,7 +141,7 @@ To allow the operator to securely access AWS Secrets Manager, we'll use IAM Role
    If you haven't enabled the OIDC provider for your cluster, run:
 
    ```bash
-   eksctl utils associate-iam-oidc-provider --cluster aws-cirrus-jb-cluster --approve
+   eksctl utils associate-iam-oidc-provider --cluster "$EKS_CLUSTER_NAME" --approve
    ```
 
 2. **Create the IAM Policy**
@@ -141,19 +158,21 @@ To allow the operator to securely access AWS Secrets Manager, we'll use IAM Role
 
    ```bash
    eksctl create iamserviceaccount \
-     --name external-secrets-irsa \
-     --namespace default \
-     --cluster aws-cirrus-jb-cluster \
-     --role-name external-secrets-irsa-role \
-     --attach-policy-arn arn:aws:iam::975482786146:policy/ExternalSecretsPolicy \
+     --name external-secrets-irsa-"$EKS_CLUSTER_NAME" \
+     --namespace $KUBE_NAMESPACE \
+     --cluster "$EKS_CLUSTER_NAME" \
+     --role-name external-secrets-irsa-role-"$EKS_CLUSTER_NAME" \
+     --attach-policy-arn arn:aws:iam::"$AWS_ACCOUNT_ID":policy/ExternalSecretsPolicy \
      --approve \
      --override-existing-serviceaccounts
    ```
 
+Note that internally this will create a CloudFormation stack with the name "external-secrets-irsa-role-$EKS_CLUSTER_NAME". If you need to update this command for whatever reason and try again, you'll need to delete the stack first.
+
 4. **Verify the Service Account Creation**
 
    ```bash
-   kubectl get serviceaccount external-secrets-irsa -n default -o yaml
+   kubectl get serviceaccount external-secrets-irsa-"$EKS_CLUSTER_NAME" -n $KUBE_NAMESPACE -o yaml
    ```
 
 ---
@@ -169,26 +188,53 @@ To allow the operator to securely access AWS Secrets Manager, we'll use IAM Role
 2. **Make the `cloudzero` namespace**
 
    ```bash
-   kubectl apply  -f cluster/deployments/namespace.yml
+   kubectl create namespace $KUBE_NAMESPACE
    ```
 
-3. **Deploy the External Secret Store**
+3. **Configure a secret so EKS can pull from GHCR**
+
+   Since this repo is currently private, you'll need to configure a secret so EKS can pull from GHCR.
+
+   First, you'll need to generate a personal access token with read access to the repository on GitHub.
+
+   Once you have your PAT, create a secret in the cluster for it:
 
    ```bash
-   kubectl apply  -f cluster/deployments/cloudzero-secrets/secretstore.yaml
+   kubectl create secret docker-registry ghcr-secret \
+     -n $KUBE_NAMESPACE \
+     --docker-server=ghcr.io \
+     --docker-username=$GITHUB_USERNAME \
+     --docker-password=$GITHUB_TOKEN \
+     --docker-email=$GITHUB_EMAIL
    ```
 
-4. **Add the External Secret**
+4. **Deploy the Development Helm Chart**
 
-   ```bash
-   kubectl apply  -f cluster/deployments/cloudzero-secrets/externalsecret.yaml
+   There is a helm chart in the `helm` directory that can be used to deploy the collector and shipper with relative ease.
+
+   First, you'll want to create an overrides.yaml file that looks something like this (but with your own data):
+
+   ```yaml
+   imagePullSecrets:
+     - name: ghcr-secret
+
+   clusterName: eks-test-cirrus-evan
+   cloudZero:
+     organizationId: 80cab1b4-1e7e-49da-90b9-644a1d90af9b
+   csp:
+     region: us-east-1
+     accountId: "975482786146"
+
+   image:
+     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+     tag: dev-58222f7abd1a22aa0e15fd0b5e87cf59c4f8ff91
+     pullPolicy: Always
    ```
 
-5. **Deploy Collector Application Set**
+   Then, you can deploy the helm chart with the following command:
 
    ```bash
-   kubectl apply -f cluster/deployments/cloudzero-collector/config.yaml \
-                 -f cluster/deployments/cloudzero-collector/deployment.yaml
+   helm install -n $KUBE_NAMESPACE cz-controller ./helm -f overrides.yaml
    ```
 
 ### **Step 6: Deploy Federated Cloudzero Agent**

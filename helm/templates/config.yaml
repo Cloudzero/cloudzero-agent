@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  namespace: default
-  name: cloudzero-collector-config
+  name: {{ include "helm.fullname" . }}
+  namespace: {{ .Release.Namespace }}
 data:
   config.yml: |-
-    organization_id: 3e0e0d25-b482-4e61-aa52-9994b2dcd51e
-    cloud_account_id: 975482786146
-    region: us-west-2
-    cluster_name: aws-cirrus-jb-cluster
+    organization_id: "{{ .Values.cloudZero.organizationId }}"
+    cloud_account_id: "{{ .Values.csp.accountId }}"
+    region: "{{ .Values.csp.region }}"
+    cluster_name: "{{ .Values.clusterName }}"
 
     server:
       mode: http

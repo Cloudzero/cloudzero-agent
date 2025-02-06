@@ -1,9 +1,8 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: default
-  name: collector
+  name: {{ include "helm.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: collector
 spec:
@@ -16,13 +15,22 @@ spec:
       labels:
         app: collector
     spec:
+      imagePullSecrets: {{ include "toList" .Values.imagePullSecrets }}
+      initContainers:
+        - name: wait-for-secret
+          image: busybox
+          command: ['sh', '-c', 'until test -f /cloudzero/secret/apiToken; do echo "waiting for secret"; sleep 2; done']
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
       containers:
         - name: collector
-          image: ghcr.io/josephbarnett/hexigon/collector:latest
-          imagePullPolicy: Always
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8080
-          command: ["/cloudzero/app", "-config", "/cloudzero/config/config.yml"]
+          command: ["/app/cloudzero-collector", "-config", "/cloudzero/config/config.yml"]
           env:
             - name: SERVER_PORT
               value: "8080"
@@ -58,9 +66,9 @@ spec:
               cpu: "1000m"
 
         - name: shipper
-          image: ghcr.io/josephbarnett/hexigon/shipper:latest
-          imagePullPolicy: Always
-          command: ["/cloudzero/app", "-config", "/cloudzero/config/config.yml"]
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/cloudzero-shipper", "-config", "/cloudzero/config/config.yml"]
           env:
             - name: SERVER_PORT
               value: "8081"
@@ -110,25 +118,9 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-            name: cloudzero-collector-config
+            name: "{{ include "helm.fullname" . }}"
         - name: secret-volume
           secret:
-            secretName: cloudzero-secret-api-key
+            secretName: "{{ include "helm.fullname" . }}"
         - name: persistent-storage
           emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: default
-  name: collector
-  labels:
-    app: collector
-spec:
-  selector:
-    app: collector
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
-  type: ClusterIP
