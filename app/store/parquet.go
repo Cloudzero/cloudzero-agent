@@ -14,6 +14,7 @@ import (
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 	"github.com/parquet-go/parquet-go"
+	"github.com/parquet-go/parquet-go/compress/brotli"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -77,7 +78,10 @@ func (p *ParquetStore) newFileWriter() error {
 	writer := parquet.NewGenericWriter[types.Metric](
 		file,
 		parquet.SchemaOf(new(types.Metric)),
-		parquet.Compression(&parquet.Snappy),
+		parquet.Compression(&brotli.Codec{
+			Quality: 8,
+			LGWin:   brotli.DefaultLGWin,
+		}),
 	)
 
 	p.rowCount = 0
