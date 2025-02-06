@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package shipper
 
 import (
@@ -11,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type PresignedUrlPayload struct {
+type PresignedURLPayload struct {
 	Files []*File `json:"files"`
 }
 
@@ -26,7 +29,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	}
 
 	// create the http request body
-	body := PresignedUrlPayload{Files: files}
+	body := PresignedURLPayload{Files: files}
 
 	// marshal to json
 	enc, err := json.Marshal(body)

@@ -44,13 +44,13 @@ func main() {
 	ctx := context.Background()
 
 	// Start a monitor that can pickup secrets changes and update the settings
-	monitor := monitor.NewSecretMonitor(ctx, settings)
+	m := monitor.NewSecretMonitor(ctx, settings)
 	defer func() {
-		if err := monitor.Shutdown(); err != nil {
+		if err = m.Shutdown(); err != nil {
 			log.Err(err).Msg("failed to shutdown secret monitor")
 		}
 	}()
-	if err := monitor.Start(); err != nil {
+	if err = m.Start(); err != nil {
 		log.Err(err).Msg("failed to run secret monitor")
 		exitCode = 1
 		return

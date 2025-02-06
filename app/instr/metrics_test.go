@@ -101,7 +101,7 @@ func TestPrometheusMetricsRegistry(t *testing.T) {
 	t.Run("TestDefaultRegistry", func(t *testing.T) {
 		defer _testResentSync()
 		p, err := NewPrometheusMetrics(
-			WithDefaultRegistry(),
+			WithGlobalRegistry(),
 			WithPromMetrics(testMetric),
 		)
 		require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestPrometheusMetricsRegistry(t *testing.T) {
 	t.Run("TestDefaultRegistryDefaultHandler", func(t *testing.T) {
 		defer _testResentSync()
 		p, err := NewPrometheusMetrics(
-			WithDefaultRegistry(),
+			WithGlobalRegistry(),
 			WithPromMetrics(testMetric),
 		)
 		require.NoError(t, err)

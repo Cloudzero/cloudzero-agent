@@ -66,7 +66,7 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	var (
 		metrics      []types.Metric
 		stats        *remote.WriteResponseStats
-		decompressed []byte = body
+		decompressed = body
 		err          error
 	)
 

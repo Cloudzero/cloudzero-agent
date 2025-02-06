@@ -17,9 +17,11 @@ import (
 var registerOnce sync.Once
 
 type PrometheusMetrics struct {
-	registry    *prometheus.Registry
-	metrics     *[]prometheus.Collector
-	noGoMetrics bool
+	registry *prometheus.Registry
+	metrics  *[]prometheus.Collector
+
+	globalRegistry bool
+	noGoMetrics    bool
 }
 
 type PrometheusMetricsOpt func(*PrometheusMetrics) error
@@ -38,13 +40,14 @@ func WithCustomRegistry(registry *prometheus.Registry) PrometheusMetricsOpt {
 	}
 }
 
-func WithDefaultRegistry() PrometheusMetricsOpt {
+func WithGlobalRegistry() PrometheusMetricsOpt {
 	return func(p *PrometheusMetrics) error {
 		registry, ok := prometheus.DefaultRegisterer.(*prometheus.Registry)
 		if !ok {
 			return errors.New("failed to cast the default prometheus register")
 		}
 		p.registry = registry
+		p.globalRegistry = true
 		return nil
 	}
 }
@@ -69,8 +72,7 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 	}
 
 	// register the metrics
-	var registerErr error
-	registerOnce.Do(func() {
+	register := func() error {
 		// apply a default internal registry if none set
 		if p.registry == nil {
 			p.registry = prometheus.NewRegistry()
@@ -78,19 +80,27 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 			// if using the default register, include the default go metrics as well if applicable
 			if !p.noGoMetrics {
 				if err := p.registry.Register(collectors.NewGoCollector()); err != nil {
-					registerErr = fmt.Errorf("failed to register the go collector: %w", err)
-					return
+					return fmt.Errorf("failed to register the go collector: %w", err)
 				}
 				if err := p.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})); err != nil {
-					registerErr = fmt.Errorf("failed to register the process collector: %w", err)
-					return
+					return fmt.Errorf("failed to register the process collector: %w", err)
 				}
 			}
 		}
 
 		// register all the user-defined metrics
-		registerErr = p.register()
-	})
+		return p.register()
+	}
+
+	// if in a global registry, we only want to add these metrics once
+	var registerErr error
+	if p.globalRegistry {
+		registerOnce.Do(func() {
+			registerErr = register()
+		})
+	} else {
+		registerErr = register()
+	}
 	if registerErr != nil {
 		return nil, registerErr
 	}
