@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
 	go.uber.org/mock v0.5.0
-	google.golang.org/protobuf v1.36.2
+	google.golang.org/protobuf v1.36.5
 	honnef.co/go/tools v0.5.1
 	k8s.io/api v0.32.0
 	k8s.io/apimachinery v0.32.0
