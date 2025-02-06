@@ -135,13 +135,18 @@ analyze: ## Run static analysis
 .PHONY: build
 build: ## Build the binaries
 
+ifeq ($(ENABLE_ZIG),true)
+CCTARGET  ?= "zig cc  -target $(TARGETARCH)-$(TARGETOS)"
+CXXTARGET ?= "zig c++ -target $(TARGETARCH)-$(TARGETOS)"
+endif
+
 define generate-go-command-target
 .PHONY: build-$1
 build: build-$1
 build-$1:
 	mkdir -p bin && \
-	TARGETOS=$(TARGETOS) TARGETARCH=$(TARGETARCH) \
-	ENABLE_ZIG=true \
+	GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) \
+	CCTARGET=$(CCTARGET) CXXTARGET=$(CXXTARGET) \
 	go build \
 		-mod=readonly \
 		-trimpath \
