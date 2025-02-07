@@ -125,17 +125,9 @@ func (f *File) MarkUploaded() error {
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
 func (m *MetricShipper) Upload(file *File) error {
-	// Open the file to upload
-	osFile, err := os.Open(file.ReferenceID)
+	data, err := file.ReadFile()
 	if err != nil {
-		return fmt.Errorf("failed to open file for upload: %w", err)
-	}
-	defer osFile.Close()
-
-	// read file content into buffer
-	data, err := io.ReadAll(osFile)
-	if err != nil {
-		return fmt.Errorf("failed to read file content: %w", err)
+		return fmt.Errorf("failed to get the file data: %w", err)
 	}
 
 	// Create a unique context with a timeout for the upload

@@ -26,11 +26,30 @@ type MockFileReader struct {
 	ReadErr error
 }
 
-func NewMockFileReader(data []byte, openErr error, readErr error) *MockFileReader {
-	fr := &MockFileReader{
-		Data:    data,
-		OpenErr: openErr,
-		ReadErr: readErr,
+type MockFileReaderOpt = func(fr *MockFileReader)
+
+func WithMockFileReaderData(data []byte) MockFileReaderOpt {
+	return func(fr *MockFileReader) {
+		fr.Data = data
+	}
+}
+
+func WithMockFileReaderFileOpenError(err error) MockFileReaderOpt {
+	return func(fr *MockFileReader) {
+		fr.OpenErr = err
+	}
+}
+
+func WithMockFileReaderFileReadError(err error) MockFileReaderOpt {
+	return func(fr *MockFileReader) {
+		fr.ReadErr = err
+	}
+}
+
+func NewMockFileReader(opts ...MockFileReaderOpt) *MockFileReader {
+	fr := &MockFileReader{}
+	for _, opt := range opts {
+		opt(fr)
 	}
 	return fr
 }
