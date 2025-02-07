@@ -96,5 +96,13 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 		files[index].PresignedURL = item
 	}
 
+	// TODO -- check for replay requests
+
+	// check the metadata header
+
+	// write into a []string of reference ids
+
+	// save the reference ids to disk in a file
+
 	return files, nil
 }

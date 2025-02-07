@@ -6,31 +6,125 @@ package shipper
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
 
+type FileOpt func(f *File)
+
+func WithPath(path string) FileOpt {
+	return func(f *File) {
+		f.ReferenceID = path
+	}
+}
+
+func WithPresignedUrl(url string) FileOpt {
+	return func(f *File) {
+		f.PresignedURL = url
+	}
+}
+
+func WithFileReader(fileReader FileReader) FileOpt {
+	return func(f *File) {
+		f.fileReader = fileReader
+	}
+}
+
 type File struct {
 	ReferenceID  string `json:"reference_id"` //nolint:tagliatelle // endstream api accepts cammel case
 	PresignedURL string `json:"-"`            //nolint:tagliatelle // ignore this property when marshalling to json
+	SHA256       string `json:"sha256"`
+	SizeBytes    int64  `json:"size_bytes"`
+
+	fileReader FileReader
+	file       *os.File
+	data       []byte
 }
 
-func NewFileFromPath(path string) *File {
-	return &File{ReferenceID: path}
+func NewFile(opts ...FileOpt) (*File, error) {
+	f := &File{}
+
+	// apply the options
+	for _, item := range opts {
+		item(f)
+	}
+
+	// set a default file reader
+	if f.fileReader == nil {
+		f.fileReader = &OSFileReader{}
+	}
+
+	// internal operations
+	data, err := f.ReadFile()
+	if err != nil {
+		return nil, err
+	}
+	f.SHA256 = fmt.Sprintf("%x", sha256.Sum256(data))
+	f.SizeBytes = int64(len(data))
+
+	return f, nil
 }
 
-func NewFilesFromPaths(paths []string) []*File {
+func NewFilesFromPaths(paths []string, opts ...FileOpt) ([]*File, error) {
 	files := make([]*File, 0)
 	for _, path := range paths {
-		files = append(files, NewFileFromPath(path))
+		allOpts := make([]FileOpt, 0)
+		allOpts = append(allOpts, WithPath(path))
+		allOpts = append(allOpts, opts...)
+		f, err := NewFile(allOpts...)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, f)
 	}
-	return files
+	return files, nil
 }
 
-// UploadFile uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) UploadFile(file *File) error {
+func (f *File) GetFile() (*os.File, error) {
+	if f.file == nil {
+		// open the file
+		osFile, err := f.fileReader.Open(f.ReferenceID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open the file: %w", err)
+		}
+		f.file = osFile
+	}
+
+	return f.file, nil
+}
+
+func (f *File) ReadFile() ([]byte, error) {
+	if f.data == nil {
+		osFile, err := f.GetFile()
+		if err != nil {
+			return nil, err
+		}
+
+		// read file content into buffer
+		data, err := f.fileReader.Read(osFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file content: %w", err)
+		}
+
+		f.data = data
+	}
+
+	return f.data, nil
+}
+
+func (f *File) MarkUploaded() error {
+	if err := os.Rename(f.ReferenceID, fmt.Sprintf("%s.uploaded", f.ReferenceID)); err != nil {
+		return fmt.Errorf("failed to rename the file: %s", err)
+	}
+
+	return nil
+}
+
+// Upload uploads the specified file to S3 using the provided presigned URL.
+func (m *MetricShipper) Upload(file *File) error {
 	// Open the file to upload
 	osFile, err := os.Open(file.ReferenceID)
 	if err != nil {

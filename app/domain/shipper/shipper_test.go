@@ -134,7 +134,9 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1", "file2"}))
+	files, err := NewFilesFromPaths([]string{"file1", "file2"})
+	require.NoError(t, err)
+	files, err = shipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	presignedURLs := make([]string, len(files))
@@ -154,7 +156,7 @@ func TestAllocatePresignedURL_NoFiles(t *testing.T) {
 	require.NoError(t, err)
 
 	// Execute
-	presignedURLs, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{}))
+	presignedURLs, err := shipper.AllocatePresignedURLs([]*File{})
 
 	// Verify
 	assert.NoError(t, err)
@@ -184,7 +186,9 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -215,7 +219,9 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -247,7 +253,9 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -278,7 +286,9 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -297,7 +307,9 @@ func TestAllocatePresignedURL_RequestCreationError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -321,7 +333,9 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURL, err := shipper.AllocatePresignedURLs(NewFilesFromPaths([]string{"file1"}))
+	files, err := NewFilesFromPaths([]string{"file1"})
+	require.NoError(t, err)
+	presignedURL, err := shipper.AllocatePresignedURLs(files)
 
 	// Verify
 	assert.Error(t, err)
@@ -359,11 +373,11 @@ func TestUploadFile_Success(t *testing.T) {
 	tempFile.Close()
 
 	// create the file obj
-	file := NewFileFromPath(tempFile.Name())
-	file.PresignedURL = mockURL
+	file, err := NewFile(WithPath(tempFile.Name()), WithPresignedUrl(mockURL))
+	require.NoError(t, err)
 
 	// Execute
-	err = shipper.UploadFile(file)
+	err = shipper.Upload(file)
 
 	// Verify
 	assert.NoError(t, err)
@@ -397,11 +411,11 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file := NewFileFromPath(tempFile.Name())
-	file.PresignedURL = mockURL
+	file, err := NewFile(WithPath(tempFile.Name()), WithPresignedUrl(mockURL))
+	require.NoError(t, err)
 
 	// Execute
-	err = shipper.UploadFile(file)
+	err = shipper.Upload(file)
 
 	// Verify
 	assert.Error(t, err)
@@ -427,11 +441,11 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file := NewFileFromPath(tempFile.Name())
-	file.PresignedURL = mockURL
+	file, err := NewFile(WithPath(tempFile.Name()), WithPresignedUrl(mockURL))
+	require.NoError(t, err)
 
 	// Execute
-	err = shipper.UploadFile(file)
+	err = shipper.Upload(file)
 
 	// Verify
 	assert.Error(t, err)
@@ -462,11 +476,11 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file := NewFileFromPath(tempFile.Name())
-	file.PresignedURL = mockURL
+	file, err := NewFile(WithPath(tempFile.Name()), WithPresignedUrl(mockURL))
+	require.NoError(t, err)
 
 	// Execute
-	err = shipper.UploadFile(file)
+	err = shipper.Upload(file)
 
 	// Verify
 	assert.Error(t, err)
@@ -482,10 +496,11 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-existent file path
-	nonExistentFile := NewFileFromPath("/path/to/nonexistent/file.tgz")
+	nonExistentFile, err := NewFile(WithPath("/path/to/nonexistent/file.tgz"))
+	require.NoError(t, err)
 
 	// Execute
-	err = shipper.UploadFile(nonExistentFile)
+	err = shipper.Upload(nonExistentFile)
 
 	// Verify
 	assert.Error(t, err)

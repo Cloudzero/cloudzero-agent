@@ -103,8 +103,14 @@ func (m *MetricShipper) Run() error {
 			return nil
 
 		case <-ticker.C:
+			// run the base request
 			if err := m.Ship(); err != nil {
 				log.Error().Err(err).Msg("Failed to ship metrics")
+			}
+
+			// run the replay request
+			if err := m.RunReplay(); err != nil {
+				return fmt.Errorf("failed to run the replay request: %w", err)
 			}
 		}
 	}
@@ -121,13 +127,41 @@ func (m *MetricShipper) Ship() error {
 	}
 
 	// create the files object
-	files := NewFilesFromPaths(paths)
+	files, err := NewFilesFromPaths(paths) // TODO -- replace with builder
+	if err != nil {
+		return fmt.Errorf("failed to create the files; %w", err)
+	}
 	if len(files) == 0 {
 		return nil
 	}
 
+	// handle the file request
+	return m.HandleRequest(files)
+}
+
+func (s *MetricShipper) RunReplay() error {
+	// TODO
+
+	// read the reference ids from the file
+
+	// write into a list of files
+
+	// run the `HandleRequest` function
+
+	// read the replay request
+	return fmt.Errorf("UNIMPLEMENTED")
+}
+
+// Takes in a list of files and runs them through the following:
+// - Generate presigned URL
+// - Upload to the remote API
+// - Rename the file to indicate upload
+func (m *MetricShipper) HandleRequest(files []*File) error {
+	pm := parallel.New(shipperWorkerCount)
+	defer pm.Close()
+
 	// Assign pre-signed urls to each of the file references
-	files, err = m.AllocatePresignedURLs(files)
+	files, err := m.AllocatePresignedURLs(files)
 	if err != nil {
 		return fmt.Errorf("failed to allocate presigned URLs: %w", err)
 	}
@@ -136,11 +170,14 @@ func (m *MetricShipper) Ship() error {
 	for _, file := range files {
 		fn := func() error {
 			// Upload the file
-			if err := m.UploadFile(file); err != nil {
+			if err := m.Upload(file); err != nil {
 				return fmt.Errorf("failed to upload %s: %w", file.ReferenceID, err)
 			}
 
-			// TODO - mark the file as uploaded
+			// mark the file as uploaded
+			if err := file.MarkUploaded(); err != nil {
+				return fmt.Errorf("failed to mark the file as uploaded: %w", err)
+			}
 
 			atomic.AddUint64(&m.shippedFiles, 1)
 			return nil
