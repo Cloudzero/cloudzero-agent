@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,21 +16,19 @@ import (
 
 type FileOpt func(f *File)
 
-func WithPath(path string) FileOpt {
-	return func(f *File) {
-		f.ReferenceID = path
-	}
-}
-
-func WithPresignedUrl(url string) FileOpt {
+// Pass in a pre-made pre-signed url.
+func FileWithPresignedUrl(url string) FileOpt {
 	return func(f *File) {
 		f.PresignedURL = url
 	}
 }
 
-func WithFileReader(fileReader FileReader) FileOpt {
+// If set to true, the file will be opened on initialization.
+// This opening will set the sha and size fields of the file,
+// in addition to ensuring at initialization time that this file exists.
+func FileWithoutLazyLoad(lazy bool) FileOpt {
 	return func(f *File) {
-		f.fileReader = fileReader
+		f.notLazy = lazy
 	}
 }
 
@@ -39,54 +38,56 @@ type File struct {
 	SHA256       string `json:"sha256"`
 	SizeBytes    int64  `json:"size_bytes"`
 
-	fileReader FileReader
-	file       *os.File
-	data       []byte
+	file *os.File
+	data []byte
+
+	notLazy bool
 }
 
-func NewFile(opts ...FileOpt) (*File, error) {
-	f := &File{}
+// Creates a new `File` with an optional list of `FileOpt`.
+func NewFile(path string, opts ...FileOpt) (*File, error) {
+	f := &File{ReferenceID: path}
+	if f.ReferenceID == "" {
+		return nil, errors.New("an empty path is not valid")
+	}
 
 	// apply the options
 	for _, item := range opts {
 		item(f)
 	}
 
-	// set a default file reader
-	if f.fileReader == nil {
-		f.fileReader = &OSFileReader{}
+	// set the internal state of the file
+	if f.notLazy {
+		if _, err := f.ReadFile(); err != nil {
+			return nil, err
+		}
 	}
-
-	// internal operations
-	data, err := f.ReadFile()
-	if err != nil {
-		return nil, err
-	}
-	f.SHA256 = fmt.Sprintf("%x", sha256.Sum256(data))
-	f.SizeBytes = int64(len(data))
 
 	return f, nil
 }
 
+// Convenience function to create multiple `File` objects from a list of file paths
+// The `FileOpt`s passed in `opts` will be applied to ALL files created.
 func NewFilesFromPaths(paths []string, opts ...FileOpt) ([]*File, error) {
 	files := make([]*File, 0)
 	for _, path := range paths {
-		allOpts := make([]FileOpt, 0)
-		allOpts = append(allOpts, WithPath(path))
-		allOpts = append(allOpts, opts...)
-		f, err := NewFile(allOpts...)
+		f, err := NewFile(path, opts...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("issue creating file from path '%s': %w", path, err)
 		}
 		files = append(files, f)
 	}
 	return files, nil
 }
 
+// Opens the file from the filesystem path: `ReferenceID`
+// Gives an `os.File` mount for this file
+// This will cache the result if called multiple times.
+// To clear the cached read value, call `f.Clear()`.
 func (f *File) GetFile() (*os.File, error) {
 	if f.file == nil {
 		// open the file
-		osFile, err := f.fileReader.Open(f.ReferenceID)
+		osFile, err := os.Open(f.ReferenceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open the file: %w", err)
 		}
@@ -96,6 +97,9 @@ func (f *File) GetFile() (*os.File, error) {
 	return f.file, nil
 }
 
+// Read the file as defined from the filesystem path `ReferenceID`
+// This will cache the result if called multiple times.
+// To clear the cached read value, call `f.Clear()`.
 func (f *File) ReadFile() ([]byte, error) {
 	if f.data == nil {
 		osFile, err := f.GetFile()
@@ -104,17 +108,31 @@ func (f *File) ReadFile() ([]byte, error) {
 		}
 
 		// read file content into buffer
-		data, err := f.fileReader.Read(osFile)
+		data, err := io.ReadAll(osFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file content: %w", err)
 		}
 
 		f.data = data
+
+		// set internal state of the file
+		f.SHA256 = fmt.Sprintf("%x", sha256.Sum256(data))
+		f.SizeBytes = int64(len(data))
 	}
 
 	return f.data, nil
 }
 
+// Reset the internal state of the file
+// This will NOT reset the `ReferenceID` or the `PresignedURL`
+func (f *File) Clear() {
+	f.SHA256 = ""
+	f.SizeBytes = 0
+	f.file = nil
+	f.data = nil
+}
+
+// Mark a file as successfully uploaded
 func (f *File) MarkUploaded() error {
 	if err := os.Rename(f.ReferenceID, fmt.Sprintf("%s.uploaded", f.ReferenceID)); err != nil {
 		return fmt.Errorf("failed to rename the file: %s", err)
