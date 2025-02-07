@@ -86,26 +86,26 @@ func (m *MetricShipper) Run() error {
 	ticker := time.NewTicker(m.setting.Cloudzero.SendInterval)
 	defer ticker.Stop()
 
-	log.Info().Msg("Shipper service starting")
+	log.Ctx(m.ctx).Info().Msg("Shipper service starting")
 
 	for {
 		select {
 		case <-m.ctx.Done():
-			log.Info().Msg("Shipper service stopping")
+			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
 			return nil
 
 		case sig := <-sigChan:
-			log.Info().Msgf("Received signal %s. Initiating shutdown.", sig)
+			log.Ctx(m.ctx).Info().Msgf("Received signal %s. Initiating shutdown.", sig)
 			err := m.Shutdown()
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to shutdown shipper service")
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to shutdown shipper service")
 			}
 			return nil
 
 		case <-ticker.C:
 			// run the base request
 			if err := m.Ship(); err != nil {
-				log.Error().Err(err).Msg("Failed to ship metrics")
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to ship metrics")
 			}
 
 			// run the replay request
