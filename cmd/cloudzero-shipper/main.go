@@ -81,7 +81,7 @@ func main() {
 	}()
 
 	log.Info().Msg("Starting service")
-	server.New(build.Version(), handlers.NewShipperAPI("/", domain)).Run(context.Background())
+	server.New(build.Version(), nil, handlers.NewShipperAPI("/", domain)).Run(context.Background())
 	log.Info().Msg("Service stopping")
 
 	defer func() {

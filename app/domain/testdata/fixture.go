@@ -1,6 +1,7 @@
 package testdata
 
 import (
+	"context"
 	"fmt"
 	"math"
 
@@ -199,7 +200,7 @@ func BuildWriteRequest(
 		droppedSamples, droppedExemplars, droppedHistograms := BuildTimeSeries(timeSeries, filter)
 
 	if droppedSamples > 0 || droppedExemplars > 0 || droppedHistograms > 0 {
-		log.Debug().
+		log.Ctx(context.TODO()).Debug().
 			Str("message", "dropped data due to their age").
 			Int("droppedSamples", droppedSamples).
 			Int("droppedExemplars", droppedExemplars).
@@ -247,7 +248,7 @@ func BuildV2WriteRequest(
 	highest, lowest, timeSeries, droppedSamples, droppedExemplars, droppedHistograms := BuildV2TimeSeries(samples, filter)
 
 	if droppedSamples > 0 || droppedExemplars > 0 || droppedHistograms > 0 {
-		log.Debug().
+		log.Ctx(context.TODO()).Debug().
 			Str("message", "dropped data due to their age").
 			Int("droppedSamples", droppedSamples).
 			Int("droppedExemplars", droppedExemplars).

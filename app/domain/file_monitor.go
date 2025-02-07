@@ -133,7 +133,7 @@ func (m *FileMonitor) Start() {
 
 			case _, ok := <-m.watcher.Errors:
 				if !ok {
-					log.Error().Msgf("error watching file %s - stopping watcher", m.filePath)
+					log.Ctx(m.ctx).Error().Msgf("error watching file %s - stopping watcher", m.filePath)
 					m.cancel()
 				}
 			}

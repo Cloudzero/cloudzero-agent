@@ -95,6 +95,12 @@ eksctl create cluster \
 
 > **Note**: This process may take several minutes to complete. Once finished, `kubectl` will be configured to interact with your new cluster.
 
+Once that is finished, you'll want to connect `kubectl` to your new cluster:
+
+```bash
+aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+```
+
 ---
 
 ### **Step 2: Install External Secrets Operator**

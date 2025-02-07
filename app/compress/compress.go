@@ -6,6 +6,7 @@ package compress
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -27,7 +28,7 @@ func File(srcFilePath string) (*string, error) {
 	srcFile, err := os.Open(srcFilePath)
 	if err != nil {
 		// may not be an error in a scaled case
-		log.Warn().Err(err).Msgf("failed to open file: %s", srcFilePath)
+		log.Ctx(context.TODO()).Warn().Err(err).Msgf("failed to open file: %s", srcFilePath)
 		return nil, nil //nolint:nilnil // we should probably revisit this API at some point, but not today
 	}
 	defer srcFile.Close()

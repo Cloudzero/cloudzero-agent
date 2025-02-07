@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.35.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-chi/chi v4.1.2+incompatible
-	github.com/go-obvious/server v0.1.6
+	github.com/go-obvious/server v0.1.7
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v0.0.4
 	github.com/google/uuid v1.6.0
@@ -137,7 +137,7 @@ require (
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.61.0
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.36.3
 	gopkg.in/inf.v0 v0.9.1 // indirect

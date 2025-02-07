@@ -126,14 +126,14 @@ func (d *MetricCollector) rotateCachePeriodically(ctx context.Context) {
 		case <-ticker.C:
 			flushCtx, cancel := context.WithTimeout(ctx, d.settings.Cloudzero.RotateInterval)
 			if err := d.Flush(flushCtx); err != nil {
-				log.Err(err).Msg("Error during flush")
+				log.Ctx(ctx).Err(err).Msg("Error during flush")
 			}
 			cancel()
 		case <-ctx.Done():
 			// Perform a final flush before exiting
 			// flushCtx, cancel := context.WithTimeout(context.Background(), d.flushInterval)
 			// if err := d.Flush(flushCtx); err != nil {
-			// 	log.Err(err).Msg("Error during final flush")
+			// 	log.Ctx(ctx).Err(err).Msg("Error during final flush")
 			// }
 			// cancel()
 			return
