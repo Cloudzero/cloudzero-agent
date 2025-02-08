@@ -115,7 +115,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	mockURL := "https://example.com/upload"
 	expectedURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 
-	mockResponseBody := `{"urls": ["` + expectedURL + `", "` + expectedURL + `"]}`
+	mockResponseBody := `{"file1": "` + expectedURL + `", "file2": "` + expectedURL + `"}`
 
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
@@ -267,7 +267,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := `{"urls": []}`
+	mockResponseBody := `{}`
 
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
