@@ -373,7 +373,7 @@ func TestUploadFile_Success(t *testing.T) {
 	tempFile.Close()
 
 	// create the file obj
-	file, err := NewFile(tempFile.Name(), FileWithPresignedUrl(mockURL))
+	file, err := NewFile(tempFile.Name(), FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -411,7 +411,7 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := NewFile(tempFile.Name(), FileWithPresignedUrl(mockURL))
+	file, err := NewFile(tempFile.Name(), FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -441,7 +441,7 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := NewFile(tempFile.Name(), FileWithPresignedUrl(mockURL))
+	file, err := NewFile(tempFile.Name(), FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -476,7 +476,7 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := NewFile(tempFile.Name(), FileWithPresignedUrl(mockURL))
+	file, err := NewFile(tempFile.Name(), FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -496,7 +496,7 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-existent file path
-	file, err := NewFile("/path/to/nonexistent/file.tgz", FileWithPresignedUrl(mockURL))
+	file, err := NewFile("/path/to/nonexistent/file.tgz", FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// read the file

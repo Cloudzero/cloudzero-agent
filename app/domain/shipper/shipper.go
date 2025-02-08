@@ -139,7 +139,7 @@ func (m *MetricShipper) Ship() error {
 	return m.HandleRequest(files)
 }
 
-func (s *MetricShipper) RunReplay() error {
+func (m *MetricShipper) RunReplay() error {
 	// TODO
 
 	// read the reference ids from the file
@@ -149,7 +149,7 @@ func (s *MetricShipper) RunReplay() error {
 	// run the `HandleRequest` function
 
 	// read the replay request
-	return fmt.Errorf("UNIMPLEMENTED")
+	return errors.New("UNIMPLEMENTED")
 }
 
 // Takes in a list of files and runs them through the following:

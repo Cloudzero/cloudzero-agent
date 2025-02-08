@@ -17,7 +17,7 @@ import (
 type FileOpt func(f *File)
 
 // Pass in a pre-made pre-signed url.
-func FileWithPresignedUrl(url string) FileOpt {
+func FileWithPresignedURL(url string) FileOpt {
 	return func(f *File) {
 		f.PresignedURL = url
 	}
@@ -36,7 +36,7 @@ type File struct {
 	ReferenceID  string `json:"reference_id"` //nolint:tagliatelle // endstream api accepts cammel case
 	PresignedURL string `json:"-"`            //nolint:tagliatelle // ignore this property when marshalling to json
 	SHA256       string `json:"sha256"`
-	SizeBytes    int64  `json:"size_bytes"`
+	SizeBytes    int64  `json:"size_bytes"` //nolint:tagliatelle // endstream api accepts cammel case
 
 	file *os.File
 	data []byte
@@ -134,7 +134,7 @@ func (f *File) Clear() {
 
 // Mark a file as successfully uploaded
 func (f *File) MarkUploaded() error {
-	if err := os.Rename(f.ReferenceID, fmt.Sprintf("%s.uploaded", f.ReferenceID)); err != nil {
+	if err := os.Rename(f.ReferenceID, f.ReferenceID+".uploaded"); err != nil {
 		return fmt.Errorf("failed to rename the file: %s", err)
 	}
 

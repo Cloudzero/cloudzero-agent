@@ -18,18 +18,24 @@ type PresignedURLPayload struct {
 	Files []*File `json:"files"`
 }
 
-type PresignedURLResponse struct {
-	URLs []string `json:"urls"` //nolint:tagliatelle // lol it wants "urLs". Nope.
-}
-
+// Allocates a set of pre-signed urls for the passed file objects
+// The passed `files` argument will be modified to add the `PresignedURL` field
+// You can opt to consume the return value or allow for implicit modification.
 func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
-	uploadEndpoint := m.setting.Cloudzero.Host
+	uploadEndpoint := m.setting.Cloudzero.Host + "/upload"
 	if len(files) == 0 {
 		return nil, nil
 	}
 
 	// create the http request body
-	body := PresignedURLPayload{Files: files}
+	refids := make([]string, len(files))
+	for i, item := range files {
+		refids[i] = item.ReferenceID
+	}
+	body := map[string][]string{"reference_ids": refids}
+
+	// TODO -- allow for body to used nested structure defined by `File` type
+	// body := PresignedURLPayload{Files: files}
 
 	// marshal to json
 	enc, err := json.Marshal(body)
@@ -77,23 +83,37 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	}
 
 	// Parse the response
-	var response PresignedURLResponse
+	var response map[string]string // map of: {ReferenceId: PresignedURL}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	fmt.Println(response)
+
 	// validation
-	if len(response.URLs) == 0 {
+	if len(response) == 0 {
 		return nil, ErrNoURLs
 	}
-	if len(response.URLs) != len(files) {
-		return nil, fmt.Errorf("the length of the response did not match the request! files (%d) != urls (%d)", len(files), len(response.URLs))
+
+	// create a map of {ReferenceId: File} to match api response
+	fileMap := make(map[string]*File)
+	for _, item := range files {
+		fileMap[item.ReferenceID] = item
 	}
 
-	// append the pre-signed urls to the original files array,
-	// assuming order preservation in the downstream
-	for index, item := range response.URLs {
-		files[index].PresignedURL = item
+	// ensure the same length
+	if len(response) != len(fileMap) {
+		return nil, fmt.Errorf("the length of the response did not match the request! files (%d) != urls (%d)", len(fileMap), len(response))
+	}
+
+	// set the pre-signed url value of the file and recompose the list
+	// setting this value on the file reference will affect the base list
+	// so we do not need to re-create the list and can simply return the list
+	// passed as an argument
+	for refid, url := range response {
+		if file, ok := fileMap[refid]; ok {
+			file.PresignedURL = url
+		}
 	}
 
 	// TODO -- check for replay requests
