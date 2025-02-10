@@ -124,6 +124,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 			metric := types.NewMetric(
 				"org", "cloudaccount", "cluster",
 				id,
+				"node1",
 				time.Now().Unix(),
 				map[string]string{"label": id},
 				value,
