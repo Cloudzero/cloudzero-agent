@@ -200,7 +200,7 @@ func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]
 	// but may add overhead. Need more testing to see if this would be valuable
 	for {
 		// read in chunks
-		files, err := handle.ReadDir(10000)
+		files, err := handle.ReadDir(1000)
 
 		// if the directory is empty, skip
 		if err == io.EOF {
