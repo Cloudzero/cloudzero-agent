@@ -13,14 +13,16 @@ import (
 
 func TestNewMetric(t *testing.T) {
 	name := "test_metric"
+	nodeName := "node-1"
 	timeStamp := time.Now().UnixMilli()
 	labels := map[string]string{"env": "test"}
 	value := "123.45"
 
-	metric := types.NewMetric("org", "cloudaccount", "cluster", name, timeStamp, labels, value)
+	metric := types.NewMetric("org", "cloudaccount", "cluster", name, nodeName, timeStamp, labels, value)
 
 	assert.NotEmpty(t, metric.ID)
 	assert.Equal(t, name, metric.Name)
+	assert.Equal(t, nodeName, metric.NodeName)
 	assert.NotZero(t, metric.CreatedAt)
 	assert.Equal(t, timeStamp, metric.TimeStamp)
 	assert.Equal(t, labels, metric.Labels)
@@ -29,8 +31,8 @@ func TestNewMetric(t *testing.T) {
 
 func TestMetricRange(t *testing.T) {
 	metrics := []types.Metric{
-		types.NewMetric("org", "cloudaccount", "cluster", "metric1", time.Now().UnixMilli(), map[string]string{"env": "test"}, "123.45"),
-		types.NewMetric("org", "cloudaccount", "cluster", "metric2", time.Now().UnixMilli(), map[string]string{"env": "prod"}, "678.90"),
+		types.NewMetric("org", "cloudaccount", "cluster", "metric1", "node1", time.Now().UnixMilli(), map[string]string{"env": "test"}, "123.45"),
+		types.NewMetric("org", "cloudaccount", "cluster", "metric2", "node1", time.Now().UnixMilli(), map[string]string{"env": "prod"}, "678.90"),
 	}
 	next := "next_token"
 
@@ -42,6 +44,8 @@ func TestMetricRange(t *testing.T) {
 	assert.Len(t, metricRange.Metrics, 2)
 	assert.Equal(t, "metric1", metricRange.Metrics[0].Name)
 	assert.Equal(t, "metric2", metricRange.Metrics[1].Name)
+	assert.Equal(t, "node1", metricRange.Metrics[0].NodeName)
+	assert.Equal(t, "node1", metricRange.Metrics[1].NodeName)
 	assert.NotNil(t, metricRange.Next)
 	assert.Equal(t, next, *metricRange.Next)
 }
