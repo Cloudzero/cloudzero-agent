@@ -156,7 +156,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 		require.NoError(t, err)
 
 		// move the files to a different directory
-		err = os.Mkdir(filepath.Join(dirPath, "uploaded"), 0755)
+		err = os.Mkdir(filepath.Join(dirPath, "uploaded"), 0o755)
 		require.NoError(t, err)
 		for _, file := range files {
 			newPath := filepath.Join(filepath.Dir(file), "uploaded", filepath.Base(file))

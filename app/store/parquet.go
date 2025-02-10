@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	directoryMode = 0o755
-	batchSize     = 1000
+	directoryMode     = 0o755
+	batchSize         = 1000
+	fileReadBatchSize = 1000
 )
 
 type ParquetStore struct {
@@ -200,7 +201,7 @@ func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]
 	// but may add overhead. Need more testing to see if this would be valuable
 	for {
 		// read in chunks
-		files, err := handle.ReadDir(1000)
+		files, err := handle.ReadDir(fileReadBatchSize)
 
 		// if the directory is empty, skip
 		if err == io.EOF {
@@ -225,7 +226,6 @@ func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]
 	}
 
 	return matches, nil
-
 }
 
 // All retrieves all metrics from uncompacted .parquet files, excluding the active and compressed files.
