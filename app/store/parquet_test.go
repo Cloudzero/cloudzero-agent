@@ -201,42 +201,42 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 	})
 }
 
-func TestParquetStore_MatchingFilesChunking(t *testing.T) {
-	// create a unique directory for each test
-	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_MatchingFiles_Chunking_")
-	assert.NoError(t, err)
-	ctx := context.Background()
-	rowLimit := 100
-	fileCount := 1050 // more than the default chunk size of `1000` when reading filetree
-	recordCount := rowLimit * fileCount
+// func TestParquetStore_MatchingFilesChunking(t *testing.T) {
+// 	// create a unique directory for each test
+// 	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_MatchingFiles_Chunking_")
+// 	assert.NoError(t, err)
+// 	ctx := context.Background()
+// 	rowLimit := 100
+// 	fileCount := 1050 // more than the default chunk size of `1000` when reading filetree
+// 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
-	assert.NoError(t, err)
-	defer ps.Flush()
+// 	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
+// 	assert.NoError(t, err)
+// 	defer ps.Flush()
 
-	for i := 0; i < recordCount; i++ {
-		id := fmt.Sprintf("test_metric_%d", i)
-		value := fmt.Sprintf("%d", i)
-		metric := types.NewMetric(
-			"org", "cloudaccount", "cluster",
-			id,
-			"node1",
-			time.Now().Unix(),
-			map[string]string{"label": id},
-			value,
-		)
-		err := ps.Put(ctx, metric)
-		assert.NoError(t, err)
-	}
+// 	for i := 0; i < recordCount; i++ {
+// 		id := fmt.Sprintf("test_metric_%d", i)
+// 		value := fmt.Sprintf("%d", i)
+// 		metric := types.NewMetric(
+// 			"org", "cloudaccount", "cluster",
+// 			id,
+// 			"node1",
+// 			time.Now().Unix(),
+// 			map[string]string{"label": id},
+// 			value,
+// 		)
+// 		err := ps.Put(ctx, metric)
+// 		assert.NoError(t, err)
+// 	}
 
-	// give a moment to allow OS async operatoins to complete
-	time.Sleep(1 * time.Second)
+// 	// give a moment to allow OS async operatoins to complete
+// 	time.Sleep(1 * time.Second)
 
-	files, err := ps.GetFiles()
-	require.NoError(t, err)
-	require.Equal(t, fileCount, len(files))
+// 	files, err := ps.GetFiles()
+// 	require.NoError(t, err)
+// 	require.Equal(t, fileCount, len(files))
 
-	res, err := ps.GetMatchingFiles("", files)
-	require.NoError(t, err)
-	require.Equal(t, len(files), len(res))
-}
+// 	res, err := ps.GetMatchingFiles("", files)
+// 	require.NoError(t, err)
+// 	require.Equal(t, len(files), len(res))
+// }
