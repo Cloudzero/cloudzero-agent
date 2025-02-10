@@ -99,8 +99,8 @@ func main() {
 func HandleShutdownEvents(ctx context.Context, appendable types.Appendable) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	<-signalChan
+	sig := <-signalChan
 
-	log.Ctx(ctx).Info().Msg("Service stopping")
+	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
 	appendable.Flush()
 }
