@@ -104,19 +104,19 @@ func (m *MetricShipper) Run() error {
 
 		case <-ticker.C:
 			// run the base request
-			if err := m.Ship(); err != nil {
+			if err := m.ProcessNewFiles(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to ship metrics")
 			}
 
 			// run the replay request
-			if err := m.RunReplay(); err != nil {
+			if err := m.ProcessReplayRequest(); err != nil {
 				return fmt.Errorf("failed to run the replay request: %w", err)
 			}
 		}
 	}
 }
 
-func (m *MetricShipper) Ship() error {
+func (m *MetricShipper) ProcessNewFiles() error {
 	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
@@ -139,7 +139,7 @@ func (m *MetricShipper) Ship() error {
 	return m.HandleRequest(files)
 }
 
-func (m *MetricShipper) RunReplay() error {
+func (m *MetricShipper) ProcessReplayRequest() error {
 	// TODO
 
 	// read the reference ids from the file
@@ -175,7 +175,7 @@ func (m *MetricShipper) HandleRequest(files []*File) error {
 			}
 
 			// mark the file as uploaded
-			if err := file.MarkUploaded(); err != nil {
+			if err := m.MarkFileUploaded(file); err != nil {
 				return fmt.Errorf("failed to mark the file as uploaded: %w", err)
 			}
 

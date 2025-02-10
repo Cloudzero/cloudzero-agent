@@ -64,6 +64,7 @@ func TestParquetStore_Flush(t *testing.T) {
 func TestParquetStore_Compact(t *testing.T) {
 	// create a unique directory for each test
 	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_Compact_")
+	assert.NoError(t, err)
 	ctx := context.Background()
 	rowLimit := 100
 	fileCount := 3

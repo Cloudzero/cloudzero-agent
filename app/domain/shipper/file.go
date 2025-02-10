@@ -12,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type FileOpt func(f *File)
@@ -132,13 +134,19 @@ func (f *File) Clear() {
 	f.data = nil
 }
 
-// Mark a file as successfully uploaded
-func (f *File) MarkUploaded() error {
-	if err := os.Rename(f.ReferenceID, f.ReferenceID+".uploaded"); err != nil {
-		return fmt.Errorf("failed to rename the file: %s", err)
-	}
+// Get name of this file on disk
+func (f *File) Filename() string {
+	return filepath.Base(f.ReferenceID)
+}
 
-	return nil
+// Get the root location of this file on disk
+func (f *File) Filepath() string {
+	return filepath.Dir(f.ReferenceID)
+}
+
+// Get the full location of this file on disk
+func (f *File) Location() string {
+	return filepath.Join(f.Filepath(), f.Filename())
 }
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
@@ -169,6 +177,28 @@ func (m *MetricShipper) Upload(file *File) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
+}
+
+func (m *MetricShipper) MarkFileUploaded(file *File) error {
+	// if the filepath already contains the uploaded location,
+	// then ignore this entry
+	if strings.Contains(file.ReferenceID, m.setting.Database.StorageUploadSubpath) {
+		return nil
+	}
+
+	// get the file segments
+	fn := filepath.Base(file.ReferenceID)
+	fp := filepath.Dir(file.ReferenceID)
+
+	// compose the new path
+	new := filepath.Join(fp, m.setting.Database.StorageUploadSubpath, fn)
+
+	// rename the file (IS ATOMIC)
+	if err := os.Rename(file.ReferenceID, new); err != nil {
+		return fmt.Errorf("failed to move the file to the uploaded directory: %s", err)
 	}
 
 	return nil

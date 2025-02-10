@@ -46,9 +46,10 @@ type Logging struct {
 }
 
 type Database struct {
-	StoragePath string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
-	MaxRecords  int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
-	Compress    bool   `yaml:"compress" default:"true" env:"DATABASE_COMPRESS" env-description:"compress database files"`
+	StoragePath          string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
+	StorageUploadSubpath string `yaml:"storage_upload_subpath" default:"uploaded" env:"DATABASE_STORAGE_UPLOAD_SUBPATH" env-description:"subpath inside of 'storage_path' on where to store uploaded files"`
+	MaxRecords           int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
+	Compress             bool   `yaml:"compress" default:"true" env:"DATABASE_COMPRESS" env-description:"compress database files"`
 }
 
 type Server struct {
