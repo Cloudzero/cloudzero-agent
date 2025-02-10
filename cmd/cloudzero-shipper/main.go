@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/go-obvious/server"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -36,28 +37,38 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load settings")
 	}
 
-	appendable, err := store.NewParquetStore(settings.Database)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize database")
+	ctx := context.Background()
+	var logger zerolog.Logger
+	{
+		logLevel, parseErr := zerolog.ParseLevel(settings.Logging.Level)
+		if parseErr != nil {
+			log.Fatal().Err(parseErr).Msg("failed to parse log level")
+		}
+		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
+		ctx = logger.WithContext(ctx)
+		zerolog.DefaultContextLogger = &logger
 	}
 
-	ctx := context.Background()
+	appendable, err := store.NewParquetStore(settings.Database)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize database")
+	}
 
 	// Start a monitor that can pickup secrets changes and update the settings
 	m := monitor.NewSecretMonitor(ctx, settings)
 	defer func() {
 		if err = m.Shutdown(); err != nil {
-			log.Err(err).Msg("failed to shutdown secret monitor")
+			logger.Err(err).Msg("failed to shutdown secret monitor")
 		}
 	}()
 	if err = m.Start(); err != nil {
-		log.Err(err).Msg("failed to run secret monitor")
+		logger.Err(err).Msg("failed to run secret monitor")
 		exitCode = 1
 		return
 	}
 
 	go func() {
-		HandleShutdownEvents()
+		HandleShutdownEvents(ctx)
 		os.Exit(0)
 	}()
 
@@ -71,34 +82,34 @@ func main() {
 
 	defer func() {
 		if err := domain.Shutdown(); err != nil {
-			log.Err(err).Msg("failed to shutdown metric shipper")
+			logger.Err(err).Msg("failed to shutdown metric shipper")
 		}
 	}()
 	go func() {
 		if err := domain.Run(); err != nil {
-			log.Err(err).Msg("failed to run metric shipper")
+			logger.Err(err).Msg("failed to run metric shipper")
 		}
 	}()
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Panic().Interface("panic", r).Msg("application panicked, exiting")
+			logger.Panic().Interface("panic", r).Msg("application panicked, exiting")
 		}
 	}()
 
-	log.Info().Msg("Starting service")
+	logger.Info().Msg("Starting service")
 	server.New(build.Version(), nil, handlers.NewShipperAPI("/", domain)).Run(context.Background())
-	log.Info().Msg("Service stopping")
+	logger.Info().Msg("Service stopping")
 
 	defer func() {
 		os.Exit(exitCode)
 	}()
 }
 
-func HandleShutdownEvents() {
+func HandleShutdownEvents(ctx context.Context) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-signalChan
 
-	log.Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
+	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
 }
