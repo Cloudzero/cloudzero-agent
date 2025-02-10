@@ -191,7 +191,6 @@ ifeq ($(BUILDX_CONTAINER_EXISTS), 0)
 	@$(CONTAINER_TOOL) buildx create --name container --driver=docker-container --use
 endif
 	@$(CONTAINER_TOOL) buildx build \
-		--builder=container \
 		--progress=plain \
 		--platform linux/amd64,linux/arm64 \
 		--build-arg REVISION=$(REVISION) \

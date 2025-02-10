@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
-	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
@@ -44,13 +44,13 @@ func main() {
 	ctx := context.Background()
 
 	// Start a monitor that can pickup secrets changes and update the settings
-	monitor := monitor.NewSecretMonitor(ctx, settings)
+	m := monitor.NewSecretMonitor(ctx, settings)
 	defer func() {
-		if err := monitor.Shutdown(); err != nil {
+		if err = m.Shutdown(); err != nil {
 			log.Err(err).Msg("failed to shutdown secret monitor")
 		}
 	}()
-	if err := monitor.Start(); err != nil {
+	if err = m.Start(); err != nil {
 		log.Err(err).Msg("failed to run secret monitor")
 		exitCode = 1
 		return
@@ -62,7 +62,13 @@ func main() {
 	}()
 
 	// Create the shipper and start in a thread
-	domain := domain.NewMetricShipper(ctx, settings, appendable)
+	domain, err := shipper.NewMetricShipper(ctx, settings, appendable)
+	if err != nil {
+		log.Err(err).Msg("failed to create the metric shipper")
+		exitCode = 1
+		return
+	}
+
 	defer func() {
 		if err := domain.Shutdown(); err != nil {
 			log.Err(err).Msg("failed to shutdown metric shipper")
