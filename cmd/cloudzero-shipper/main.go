@@ -80,6 +80,12 @@ func main() {
 		}
 	}()
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Panic().Interface("panic", r).Msg("application panicked, exiting")
+		}
+	}()
+
 	log.Info().Msg("Starting service")
 	server.New(build.Version(), nil, handlers.NewShipperAPI("/", domain)).Run(context.Background())
 	log.Info().Msg("Service stopping")

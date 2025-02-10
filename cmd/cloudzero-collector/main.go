@@ -53,6 +53,14 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
+	defer func() {
+		if innerErr := appendable.Flush(); innerErr != nil {
+			logger.Err(innerErr).Msg("failed to flush Parquet store")
+		}
+		if r := recover(); r != nil {
+			logger.Panic().Interface("panic", r).Msg("application panicked, exiting")
+		}
+	}()
 
 	// Handle shutdown events gracefully
 	go func() {
