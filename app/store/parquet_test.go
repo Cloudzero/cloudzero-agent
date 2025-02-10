@@ -106,7 +106,7 @@ func TestParquetStore_Compact(t *testing.T) {
 
 func TestParquetStore_MatchingFiles(t *testing.T) {
 	// create a unique directory for each test
-	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_Compact_")
+	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_MatchingFiles_")
 	assert.NoError(t, err)
 	ctx := context.Background()
 	rowLimit := 100
@@ -203,7 +203,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 
 func TestParquetStore_MatchingFilesChunking(t *testing.T) {
 	// create a unique directory for each test
-	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_Compact_")
+	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_MatchingFiles_Chunking_")
 	assert.NoError(t, err)
 	ctx := context.Background()
 	rowLimit := 100
