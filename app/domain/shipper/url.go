@@ -15,7 +15,13 @@ import (
 )
 
 type PresignedURLPayload struct {
-	Files []*File `json:"files"`
+	Files []*PresignedURLPayloadFile `json:"files"`
+}
+
+type PresignedURLPayloadFile struct {
+	ReferenceID string `json:"reference_id"`
+	SHA256      string `json:"sha_256"`
+	Size        int64  `json:"size"`
 }
 
 // Allocates a set of pre-signed urls for the passed file objects
@@ -27,15 +33,26 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 		return nil, nil
 	}
 
-	// create the http request body
-	refids := make([]string, len(files))
-	for i, item := range files {
-		refids[i] = item.ReferenceID
+	// create the payload with the files
+	bodyFiles := make([]*PresignedURLPayloadFile, len(files))
+	for i, file := range files {
+		sha, err := file.SHA256()
+		if err != nil {
+			return nil, err
+		}
+		size, err := file.Size()
+		if err != nil {
+			return nil, err
+		}
+		bodyFiles[i] = &PresignedURLPayloadFile{
+			ReferenceID: file.ReferenceID,
+			SHA256:      sha,
+			Size:        size,
+		}
 	}
-	body := map[string][]string{"reference_ids": refids}
 
-	// TODO -- allow for body to used nested structure defined by `File` type
-	// body := PresignedURLPayload{Files: files}
+	// create the http request body
+	body := PresignedURLPayload{Files: bodyFiles}
 
 	// marshal to json
 	enc, err := json.Marshal(body)
@@ -87,8 +104,6 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-
-	fmt.Println(response)
 
 	// validation
 	if len(response) == 0 {

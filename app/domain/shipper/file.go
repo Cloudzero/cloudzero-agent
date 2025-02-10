@@ -148,3 +148,21 @@ func (f *File) Filepath() string {
 func (f *File) Location() string {
 	return filepath.Join(f.Filepath(), f.Filename())
 }
+
+func (f *File) SHA256() (string, error) {
+	if f.sha256 == "" {
+		if _, err := f.ReadFile(); err != nil {
+			return "", err
+		}
+	}
+	return f.sha256, nil
+}
+
+func (f *File) Size() (int64, error) {
+	if f.size == 0 {
+		if _, err := f.ReadFile(); err != nil {
+			return 0, err
+		}
+	}
+	return f.size, nil
+}
