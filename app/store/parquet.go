@@ -201,6 +201,13 @@ func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]
 	for {
 		// read in chunks
 		files, err := handle.ReadDir(10000)
+
+		// if the directory is empty, skip
+		if err == io.EOF {
+			break
+		}
+
+		// check for actual error
 		if err != nil {
 			return nil, fmt.Errorf("failed to read the directory: %w", err)
 		}
