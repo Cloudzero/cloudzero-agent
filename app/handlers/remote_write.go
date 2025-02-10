@@ -14,7 +14,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
-	"github.com/cloudzero/cloudzero-insights-controller/app/validation"
 )
 
 const MaxPayloadSize = 16 * 1024 * 1024
@@ -67,24 +66,6 @@ func (a *RemoteWriteAPI) PostMetrics(w http.ResponseWriter, r *http.Request) {
 
 	if contentLen > MaxPayloadSize {
 		logErrorReply(r, w, "too big", http.StatusOK)
-		return
-	}
-
-	organizationID := r.Header.Get("organization_id")
-	if organizationID == "" {
-		request.Reply(r, w, "organization_id is required", http.StatusBadRequest)
-		return
-	}
-
-	clusterName := request.QS(r, "cluster_name")
-	if err := validation.ValidateClusterName(clusterName); err != nil {
-		request.Reply(r, w, "cluster_name is required", http.StatusBadRequest)
-		return
-	}
-
-	cleanAccountID, err := validation.ValidateCloudAccountID(request.QS(r, "cloud_account_id"))
-	if err != nil || cleanAccountID == "" {
-		request.Reply(r, w, "cloud_account_id is required", http.StatusBadRequest)
 		return
 	}
 
