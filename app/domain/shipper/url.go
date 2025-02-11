@@ -19,9 +19,9 @@ type PresignedURLPayload struct {
 }
 
 type PresignedURLPayloadFile struct {
-	ReferenceID string `json:"reference_id"`
-	SHA256      string `json:"sha_256"`
-	Size        int64  `json:"size"`
+	ReferenceID string `json:"reference_id"`      //nolint:tagliatelle // downstream expects cammel case
+	SHA256      string `json:"sha_256,omitempty"` //nolint:tagliatelle // downstream expects cammel case
+	Size        int64  `json:"size,omitempty"`
 }
 
 // Allocates a set of pre-signed urls for the passed file objects
@@ -36,18 +36,8 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	// create the payload with the files
 	bodyFiles := make([]*PresignedURLPayloadFile, len(files))
 	for i, file := range files {
-		sha, err := file.SHA256()
-		if err != nil {
-			return nil, err
-		}
-		size, err := file.Size()
-		if err != nil {
-			return nil, err
-		}
 		bodyFiles[i] = &PresignedURLPayloadFile{
 			ReferenceID: file.ReferenceID,
-			SHA256:      sha,
-			Size:        size,
 		}
 	}
 

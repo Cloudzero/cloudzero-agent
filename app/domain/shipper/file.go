@@ -44,10 +44,11 @@ type File struct {
 
 // Creates a new `File` with an optional list of `FileOpt`.
 func NewFile(path string, opts ...FileOpt) (*File, error) {
-	f := &File{ReferenceID: path}
-	if f.ReferenceID == "" {
+	if path == "" {
 		return nil, errors.New("an empty path is not valid")
 	}
+
+	f := &File{ReferenceID: path}
 
 	// apply the options
 	for _, item := range opts {
