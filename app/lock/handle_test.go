@@ -1,6 +1,7 @@
 package lock
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func TestLock_Handle_FileBasic(t *testing.T) {
 
 	// check executed state
 	executed := false
-	err := LockFile(filePath, func() error {
+	err := LockFile(context.Background(), filePath, func() error {
 		executed = true
 		return nil
 	})
@@ -54,7 +55,7 @@ func TestLock_Handle_DirBasic(t *testing.T) {
 
 	// check executed state
 	executed := false
-	err := LockDir(dirPath, func() error {
+	err := LockDir(context.Background(), dirPath, func() error {
 		executed = true
 		return nil
 	})
@@ -72,7 +73,7 @@ func TestLock_Handle_FileErrorPropagation(t *testing.T) {
 
 	// ensure error propigation through the function works
 	expectedErr := errors.New("test error")
-	err := LockFile(filePath, func() error {
+	err := LockFile(context.Background(), filePath, func() error {
 		return expectedErr
 	})
 	require.Equal(t, expectedErr, err)
@@ -88,7 +89,7 @@ func TestLock_Handle_DirErrorPropagation(t *testing.T) {
 
 	// ensure error propigation through the function works
 	expectedErr := errors.New("dir test error")
-	err := LockDir(dirPath, func() error {
+	err := LockDir(context.Background(), dirPath, func() error {
 		return expectedErr
 	})
 	require.Equal(t, expectedErr, err)
@@ -112,7 +113,7 @@ func TestLock_Handle_ConcurrentLockFile(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := LockFile(filePath, func() error {
+			err := LockFile(context.Background(), filePath, func() error {
 				// when seen, add to the atomic counter
 				count := atomic.AddInt32(&concurrentCount, 1)
 				for {
@@ -154,7 +155,7 @@ func TestLock_Handle_ConcurrentLockDir(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := LockDir(dirPath, func() error {
+			err := LockDir(context.Background(), dirPath, func() error {
 				// when seen, add to the atomic counter
 				count := atomic.AddInt32(&concurrentCount, 1)
 				for {

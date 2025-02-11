@@ -8,16 +8,16 @@ import (
 
 // `LockFile` acquires a lock for the specified file, executes the function, then releases the lock.
 // The lock file is created in the same directory as `${filepath}.lock`
-func LockFile(filePath string, fn func() error) error {
+func LockFile(ctx context.Context, filePath string, fn func() error) error {
 	lockPath := getFileLockPath(filePath)
-	return withLock(lockPath, fn)
+	return withLock(ctx, lockPath, fn)
 }
 
 // `LockDir` acquires a lock for the specified directory, executes the function, then releases the lock.
 // The lock file is created within the target directory as `.dir.lock`.
-func LockDir(dirPath string, fn func() error) error {
+func LockDir(ctx context.Context, dirPath string, fn func() error) error {
 	lockPath := getDirLockPath(dirPath)
-	return withLock(lockPath, fn)
+	return withLock(ctx, lockPath, fn)
 }
 
 // get a file lock
@@ -33,9 +33,9 @@ func getDirLockPath(dirPath string) string {
 }
 
 // withLock handles the common locking logic using the FileLock type
-func withLock(lockPath string, fn func() error) error {
+func withLock(ctx context.Context, lockPath string, fn func() error) error {
 	// get the lock
-	fl := NewFileLock(context.Background(), lockPath)
+	fl := NewFileLock(ctx, lockPath)
 	err := fl.Acquire()
 	if err != nil {
 		return fmt.Errorf("failed to aquire the lock: %w", err)
