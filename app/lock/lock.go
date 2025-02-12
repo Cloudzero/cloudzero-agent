@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package lock
 
 import (
@@ -11,6 +14,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	lockFilePermissions = 0o644
 )
 
 var (
@@ -116,15 +123,15 @@ func (fl *FileLock) Acquire() error {
 		}
 
 		// create lock file atomically
-		file, err := os.OpenFile(fl.path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(fl.path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, lockFilePermissions)
 		if err == nil {
 			// aquired the lock
 
 			// write to the lock file
-			if err := fl.writeLock(file); err != nil {
+			if err2 := fl.writeLock(file); err2 != nil {
 				file.Close()
 				os.Remove(fl.path)
-				return err
+				return err2
 			}
 			file.Close()
 
@@ -199,7 +206,7 @@ func (fl *FileLock) refreshLock(ctx context.Context) {
 		case <-ticker.C:
 			if err := fl.updateLock(); err != nil {
 				// if failing to update the lock, release it so we do not lock here
-				fl.Release()
+				_ = fl.Release()
 				return
 			}
 		case <-ctx.Done():
@@ -217,7 +224,7 @@ func (fl *FileLock) updateLock() error {
 	defer os.Remove(tempFile.Name())
 
 	// write to the temporary file
-	if err := fl.writeLock(tempFile); err != nil {
+	if err = fl.writeLock(tempFile); err != nil {
 		return fmt.Errorf("failed to write temp lock: %w", err)
 	}
 	tempFile.Close()

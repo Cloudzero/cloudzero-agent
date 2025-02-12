@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package shipper
 
 import (
@@ -10,16 +13,20 @@ import (
 	"github.com/go-obvious/timestamp"
 )
 
+const (
+	replayFilePermissions = 0o755
+)
+
 type ReplayRequest struct {
 	Filepath     string   `json:"filepath"`
-	ReferenceIDs []string `json:"referenceIds"`
+	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
 }
 
 // Saves a reply-request from the remote to disk to be picked up on next iteration
 func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) {
 	// create the directory if needed
 	replayDir := m.GetReplayRequestDir()
-	if err := os.MkdirAll(replayDir, 0755); err != nil {
+	if err := os.MkdirAll(replayDir, replayFilePermissions); err != nil {
 		return nil, fmt.Errorf("failed to create the replay request directory: %w", err)
 	}
 
@@ -42,7 +49,7 @@ func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) 
 		}
 
 		// write the file
-		return os.WriteFile(filename, enc, 0755)
+		return os.WriteFile(filename, enc, replayFilePermissions)
 	}); err != nil {
 		return nil, err
 	}
@@ -54,7 +61,7 @@ func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) 
 func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 	// create the directory if needed
 	replayDir := m.GetReplayRequestDir()
-	if err := os.MkdirAll(replayDir, 0755); err != nil {
+	if err := os.MkdirAll(replayDir, replayFilePermissions); err != nil {
 		return nil, fmt.Errorf("failed to create the replay request directory: %w", err)
 	}
 

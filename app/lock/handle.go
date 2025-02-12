@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package lock
 
 import (
@@ -43,7 +46,9 @@ func withLock(ctx context.Context, lockPath string, fn func() error) error {
 
 	// run the user defined function
 	if err := fn(); err != nil {
-		fl.Release()
+		if err2 := fl.Release(); err2 != nil {
+			return fmt.Errorf("failed to release the lock in the error context: %w - %w", err, err2)
+		}
 		return err
 	}
 

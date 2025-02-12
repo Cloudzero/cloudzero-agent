@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package lock
 
 import (
@@ -18,7 +21,7 @@ func createTestFile(t *testing.T) string {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "testfile")
 	require.NotEmpty(t, filePath)
-	err := os.WriteFile(filePath, []byte("content"), 0644)
+	err := os.WriteFile(filePath, []byte("content"), 0o644)
 	require.NoError(t, err)
 	return filePath
 }
@@ -27,7 +30,7 @@ func createTestDir(t *testing.T) string {
 	tmpDir := t.TempDir()
 	dirPath := filepath.Join(tmpDir, "testdir")
 	require.NotEmpty(t, dirPath)
-	err := os.Mkdir(dirPath, 0755)
+	err := os.Mkdir(dirPath, 0o755)
 	require.NoError(t, err)
 	return dirPath
 }

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package lock
 
 import (
@@ -268,7 +271,7 @@ func writeLockFile(t *testing.T, path string, content lockContent) {
 	if err != nil {
 		t.Fatalf("Failed to marshal test lock: %v", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("Failed to write test lock: %v", err)
 	}
 }
