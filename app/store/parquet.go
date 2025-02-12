@@ -39,6 +39,9 @@ type ParquetStore struct {
 	mu             sync.Mutex
 }
 
+// Just to make sure ParquetStore implements the AppendableFiles interface
+var _ types.AppendableFiles = (*ParquetStore)(nil)
+
 // NewParquetStore initializes a ParquetStore with a directory path and row limit
 func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 	if settings.MaxRecords <= 0 {
@@ -180,10 +183,10 @@ func (p *ParquetStore) GetFiles() ([]string, error) {
 
 // Gets a list of files that match a predefined list of target files from a specific
 // subdirectory.
-func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]string, error) {
+func (p *ParquetStore) GetMatching(loc string, targets []string) ([]string, error) {
 	// create a lookup table of the targets to search for
-	targetMap := make(map[string]any, len(targetFiles))
-	for _, item := range targetFiles {
+	targetMap := make(map[string]any, len(targets))
+	for _, item := range targets {
 		targetMap[filepath.Base(item)] = struct{}{}
 	}
 
@@ -191,7 +194,7 @@ func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]
 	var matches []string
 
 	// open a pointer to the directory requested
-	handle, err := os.Open(filepath.Join(p.dirPath, subdir))
+	handle, err := os.Open(filepath.Join(p.dirPath, loc))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the directory: %w", err)
 	}

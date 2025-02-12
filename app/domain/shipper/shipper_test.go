@@ -30,6 +30,11 @@ func (m *MockAppendableFiles) GetFiles() ([]string, error) {
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]string, error) {
+	args := m.Called(loc, requests)
+	return args.Get(0).([]string), args.Error(1)
+}
+
 // MockRoundTripper is a mock implementation of http.RoundTripper
 type MockRoundTripper struct {
 	mockResponse *http.Response
@@ -50,7 +55,8 @@ func setupSettings(mockURL string) *config.Settings {
 			SendTimeout: 30,
 		},
 		Database: config.Database{
-			StoragePath: "/tmp/storage",
+			StoragePath:          "/tmp/storage",
+			StorageUploadSubpath: "uploaded",
 		},
 	}
 }
@@ -528,8 +534,6 @@ func TestAbandonFiles_Success(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := NewFilesFromPaths([]string{"file1", "file2"})
-	require.NoError(t, err)
-	err = shipper.AbandonFiles(files, "file not found")
+	err = shipper.AbandonFiles([]string{"file1", "file2"}, "file not found")
 	require.NoError(t, err)
 }
