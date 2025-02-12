@@ -4,12 +4,16 @@
 package shipper
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -104,19 +108,19 @@ func (m *MetricShipper) Run() error {
 
 		case <-ticker.C:
 			// run the base request
-			if err := m.Ship(); err != nil {
+			if err := m.ProcessNewFiles(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to ship metrics")
 			}
 
 			// run the replay request
-			if err := m.RunReplay(); err != nil {
+			if err := m.ProcessReplayRequest(); err != nil {
 				return fmt.Errorf("failed to run the replay request: %w", err)
 			}
 		}
 	}
 }
 
-func (m *MetricShipper) Ship() error {
+func (m *MetricShipper) ProcessNewFiles() error {
 	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
@@ -139,7 +143,7 @@ func (m *MetricShipper) Ship() error {
 	return m.HandleRequest(files)
 }
 
-func (m *MetricShipper) RunReplay() error {
+func (m *MetricShipper) ProcessReplayRequest() error {
 	// TODO
 
 	// read the reference ids from the file
@@ -175,7 +179,7 @@ func (m *MetricShipper) HandleRequest(files []*File) error {
 			}
 
 			// mark the file as uploaded
-			if err := file.MarkUploaded(); err != nil {
+			if err := m.MarkFileUploaded(file); err != nil {
 				return fmt.Errorf("failed to mark the file as uploaded: %w", err)
 			}
 
@@ -183,6 +187,57 @@ func (m *MetricShipper) HandleRequest(files []*File) error {
 			return nil
 		}
 		pm.Run(fn, waiter)
+	}
+
+	return nil
+}
+
+// Upload uploads the specified file to S3 using the provided presigned URL.
+func (m *MetricShipper) Upload(file *File) error {
+	data, err := file.ReadFile()
+	if err != nil {
+		return fmt.Errorf("failed to get the file data: %w", err)
+	}
+
+	// Create a unique context with a timeout for the upload
+	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
+	defer cancel()
+
+	// Create a new HTTP PUT request with the file as the body
+	req, err := http.NewRequestWithContext(ctx, "PUT", file.PresignedURL, bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("failed to create upload HTTP request: %w", err)
+	}
+
+	// Send the request
+	resp, err := m.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("file upload HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for successful upload
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
+}
+
+func (m *MetricShipper) MarkFileUploaded(file *File) error {
+	// if the filepath already contains the uploaded location,
+	// then ignore this entry
+	if strings.Contains(file.ReferenceID, m.setting.Database.StorageUploadSubpath) {
+		return nil
+	}
+
+	// compose the new path
+	new := filepath.Join(file.Filepath(), m.setting.Database.StorageUploadSubpath, file.Filename())
+
+	// rename the file (IS ATOMIC)
+	if err := os.Rename(file.ReferenceID, new); err != nil {
+		return fmt.Errorf("failed to move the file to the uploaded directory: %s", err)
 	}
 
 	return nil

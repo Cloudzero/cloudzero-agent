@@ -4,14 +4,12 @@
 package shipper
 
 import (
-	"bytes"
-	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
+	"path/filepath"
 )
 
 type FileOpt func(f *File)
@@ -35,21 +33,22 @@ func FileWithoutLazyLoad(lazy bool) FileOpt {
 type File struct {
 	ReferenceID  string `json:"reference_id"` //nolint:tagliatelle // endstream api accepts cammel case
 	PresignedURL string `json:"-"`            //nolint:tagliatelle // ignore this property when marshalling to json
-	SHA256       string `json:"sha256"`
-	SizeBytes    int64  `json:"size_bytes"` //nolint:tagliatelle // endstream api accepts cammel case
 
-	file *os.File
-	data []byte
+	file   *os.File
+	data   []byte
+	sha256 string
+	size   int64
 
 	notLazy bool
 }
 
 // Creates a new `File` with an optional list of `FileOpt`.
 func NewFile(path string, opts ...FileOpt) (*File, error) {
-	f := &File{ReferenceID: path}
-	if f.ReferenceID == "" {
+	if path == "" {
 		return nil, errors.New("an empty path is not valid")
 	}
+
+	f := &File{ReferenceID: path}
 
 	// apply the options
 	for _, item := range opts {
@@ -116,8 +115,12 @@ func (f *File) ReadFile() ([]byte, error) {
 		f.data = data
 
 		// set internal state of the file
-		f.SHA256 = fmt.Sprintf("%x", sha256.Sum256(data))
-		f.SizeBytes = int64(len(data))
+		stat, err := osFile.Stat()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the internal stat of the file: %w", err)
+		}
+		f.sha256 = fmt.Sprintf("%x", sha256.Sum256(data))
+		f.size = stat.Size()
 	}
 
 	return f.data, nil
@@ -126,50 +129,41 @@ func (f *File) ReadFile() ([]byte, error) {
 // Reset the internal state of the file
 // This will NOT reset the `ReferenceID` or the `PresignedURL`
 func (f *File) Clear() {
-	f.SHA256 = ""
-	f.SizeBytes = 0
 	f.file = nil
 	f.data = nil
+	f.sha256 = ""
+	f.size = 0
 }
 
-// Mark a file as successfully uploaded
-func (f *File) MarkUploaded() error {
-	if err := os.Rename(f.ReferenceID, f.ReferenceID+".uploaded"); err != nil {
-		return fmt.Errorf("failed to rename the file: %s", err)
-	}
-
-	return nil
+// Get name of this file on disk
+func (f *File) Filename() string {
+	return filepath.Base(f.ReferenceID)
 }
 
-// Upload uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) Upload(file *File) error {
-	data, err := file.ReadFile()
-	if err != nil {
-		return fmt.Errorf("failed to get the file data: %w", err)
+// Get the root location of this file on disk
+func (f *File) Filepath() string {
+	return filepath.Dir(f.ReferenceID)
+}
+
+// Get the full location of this file on disk
+func (f *File) Location() string {
+	return filepath.Join(f.Filepath(), f.Filename())
+}
+
+func (f *File) SHA256() (string, error) {
+	if f.sha256 == "" {
+		if _, err := f.ReadFile(); err != nil {
+			return "", err
+		}
 	}
+	return f.sha256, nil
+}
 
-	// Create a unique context with a timeout for the upload
-	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
-	defer cancel()
-
-	// Create a new HTTP PUT request with the file as the body
-	req, err := http.NewRequestWithContext(ctx, "PUT", file.PresignedURL, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("failed to create upload HTTP request: %w", err)
+func (f *File) Size() (int64, error) {
+	if f.size == 0 {
+		if _, err := f.ReadFile(); err != nil {
+			return 0, err
+		}
 	}
-
-	// Send the request
-	resp, err := m.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("file upload HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check for successful upload
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return nil
+	return f.size, nil
 }

@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	directoryMode = 0o755
-	batchSize     = 1000
+	directoryMode     = 0o755
+	batchSize         = 1000
+	fileReadBatchSize = 1000
 )
 
 type ParquetStore struct {
@@ -175,6 +176,56 @@ func (p *ParquetStore) Pending() int {
 func (p *ParquetStore) GetFiles() ([]string, error) {
 	pattern := filepath.Join(p.dirPath, "metrics_*_*.parquet")
 	return filepath.Glob(pattern)
+}
+
+// Gets a list of files that match a predefined list of target files from a specific
+// subdirectory.
+func (p *ParquetStore) GetMatchingFiles(subdir string, targetFiles []string) ([]string, error) {
+	// create a lookup table of the targets to search for
+	targetMap := make(map[string]any, len(targetFiles))
+	for _, item := range targetFiles {
+		targetMap[filepath.Base(item)] = struct{}{}
+	}
+
+	// store list of all found paths that match the requested targets
+	var matches []string
+
+	// open a pointer to the directory requested
+	handle, err := os.Open(filepath.Join(p.dirPath, subdir))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open the directory: %w", err)
+	}
+	defer handle.Close()
+
+	// TODO -- could pontentially run in a go-routine if enough files
+	// but may add overhead. Need more testing to see if this would be valuable
+	for {
+		// read in chunks
+		files, err := handle.ReadDir(fileReadBatchSize)
+
+		// if the directory is empty, skip
+		if err == io.EOF {
+			break
+		}
+
+		// check for actual error
+		if err != nil {
+			return nil, fmt.Errorf("failed to read the directory: %w", err)
+		}
+
+		// check for matches
+		for _, file := range files {
+			if _, exists := targetMap[file.Name()]; exists {
+				matches = append(matches, file.Name())
+			}
+		}
+
+		if len(files) == 0 {
+			break
+		}
+	}
+
+	return matches, nil
 }
 
 // All retrieves all metrics from uncompacted .parquet files, excluding the active and compressed files.
