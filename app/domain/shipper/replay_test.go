@@ -1,11 +1,9 @@
 package shipper
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -80,21 +78,14 @@ func TestShiper_ReplayRequestRun(t *testing.T) {
 
 	// create the mock response body
 	mockResponseBody := make(map[string]string)
-
 	for _, item := range files {
 		mockResponseBody[item.ReferenceID] = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?signature=abc123", item.ReferenceID)
 	}
-	enc, err := json.Marshal(mockResponseBody)
-	require.NoError(t, err)
-
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBuffer(enc)),
-	}
 
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	// create the settings
@@ -119,6 +110,7 @@ func TestShiper_ReplayRequestRun(t *testing.T) {
 	requests, err := shipper.GetActiveReplayRequests()
 	require.NoError(t, err)
 	require.NotEmpty(t, requests)
+
 	// process the active replay requests
 	err = shipper.ProcessReplayRequests()
 	require.NoError(t, err)

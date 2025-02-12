@@ -6,6 +6,7 @@ package shipper
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -37,12 +38,20 @@ func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]stri
 
 // MockRoundTripper is a mock implementation of http.RoundTripper
 type MockRoundTripper struct {
-	mockResponse *http.Response
-	mockError    error
+	status           int
+	mockResponseBody any
+	mockError        error
 }
 
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return m.mockResponse, m.mockError
+	enc, err := json.Marshal(m.mockResponseBody)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBuffer(enc)),
+	}, m.mockError
 }
 
 func setupSettings(mockURL string) *config.Settings {
@@ -123,14 +132,10 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 
 	mockResponseBody := `{"file1": "` + expectedURL + `", "file2": "` + expectedURL + `"}`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -175,14 +180,10 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 
 	mockResponseBody := `{"error": "invalid request"}`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusBadRequest,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusBadRequest,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -208,14 +209,10 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 
 	mockResponseBody := `{"error": "invalid request"}`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusUnauthorized,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusUnauthorized,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -242,14 +239,10 @@ func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
 	// Malformed JSON
 	mockResponseBody := `{"urls": ["https://s3.amazonaws.com/bucket/file.tgz"`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -275,14 +268,10 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 
 	mockResponseBody := `{}`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -328,8 +317,8 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	mockURL := "https://example.com/upload"
 
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: nil,
-		mockError:    errors.New("network error"),
+		mockResponseBody: nil,
+		mockError:        errors.New("network error"),
 	}
 
 	settings := setupSettings(mockURL)
@@ -353,13 +342,10 @@ func TestUploadFile_Success(t *testing.T) {
 	// Setup
 	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBufferString("")),
-	}
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: "",
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -392,13 +378,11 @@ func TestUploadFile_Success(t *testing.T) {
 func TestUploadFile_HTTPError(t *testing.T) {
 	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 	mockResponseBody := "Bad Request"
-	mockResponse := &http.Response{
-		StatusCode: http.StatusBadRequest,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
+
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusBadRequest,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -462,8 +446,8 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	// Setup
 	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: nil,
-		mockError:    errors.New("network error"),
+		mockResponseBody: nil,
+		mockError:        errors.New("network error"),
 	}
 
 	settings := setupSettings(mockURL)
@@ -517,14 +501,10 @@ func TestAbandonFiles_Success(t *testing.T) {
 
 	mockResponseBody := `{"message": "Abandon request processed successfully"}`
 
-	mockResponse := &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
-	}
-
 	mockRoundTripper := &MockRoundTripper{
-		mockResponse: mockResponse,
-		mockError:    nil,
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
 	}
 
 	settings := setupSettings(mockURL)
