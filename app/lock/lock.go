@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,9 +19,11 @@ var (
 	ErrLockLost            = errors.New("lock lost")
 	ErrLockAcquire         = errors.New("failed to acquire lock")
 	ErrLockCorrup          = errors.New("corrupt lock file")
+	ErrMaxRetryExceeded    = errors.New("failed to aquire lock, max retries exceeded")
 	DefautlStaleTimeout    = time.Millisecond * 500
 	DefaultRefreshInterval = time.Millisecond * 200
 	DefaultRetryInterval   = 1 * time.Second
+	DefaultMaxRetry        = 5
 )
 
 type FileLock struct {
@@ -28,6 +31,7 @@ type FileLock struct {
 	staleTimeout    time.Duration
 	refreshInterval time.Duration
 	retryInterval   time.Duration
+	maxRetry        int
 
 	hostname string
 	pid      int
@@ -56,6 +60,18 @@ func WithRefreshInterval(interval time.Duration) FileLockOption {
 	}
 }
 
+func WithMaxRetry(retry int) FileLockOption {
+	return func(fl *FileLock) {
+		fl.maxRetry = retry
+	}
+}
+
+func WithNoMaxRetry() FileLockOption {
+	return func(fl *FileLock) {
+		fl.maxRetry = math.MaxInt
+	}
+}
+
 type lockContent struct {
 	Hostname  string    `json:"hostname"`
 	PID       int       `json:"pid"`
@@ -72,6 +88,7 @@ func NewFileLock(ctx context.Context, path string, opts ...FileLockOption) *File
 		staleTimeout:    DefautlStaleTimeout,
 		refreshInterval: DefaultRefreshInterval,
 		retryInterval:   DefaultRetryInterval,
+		maxRetry:        DefaultMaxRetry,
 		hostname:        hostname,
 		pid:             pid,
 		ctx:             ctx,
@@ -89,7 +106,15 @@ func (fl *FileLock) Acquire() error {
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
 
+	// track retry count
+	retry := 0
+
 	for {
+		// break if max retry is met
+		if retry > fl.maxRetry {
+			return ErrMaxRetryExceeded
+		}
+
 		// create lock file atomically
 		file, err := os.OpenFile(fl.path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 		if err == nil {
@@ -120,6 +145,8 @@ func (fl *FileLock) Acquire() error {
 
 			// count corrupt files as valid, so wait for lock to expire
 			if strings.Contains(err.Error(), ErrLockCorrup.Error()) {
+				// lock file valid
+				retry += 1
 				time.Sleep(fl.retryInterval)
 				continue
 			}
@@ -130,6 +157,8 @@ func (fl *FileLock) Acquire() error {
 
 		// check validity of the local lock file
 		if time.Since(current.Timestamp) < fl.staleTimeout {
+			// lock file valid
+			retry += 1
 			time.Sleep(fl.retryInterval)
 			continue
 		}

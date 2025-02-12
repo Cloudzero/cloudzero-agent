@@ -224,6 +224,30 @@ func TestLock_FileLossDetection(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestLock_MaxRetry(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	lockPath := filepath.Join(tempDir, "loss.lock")
+
+	fl1 := NewFileLock(context.Background(), lockPath)
+	fl2 := NewFileLock(
+		context.Background(),
+		lockPath,
+		WithRefreshInterval(time.Millisecond*200),
+		WithMaxRetry(0), // only will try once
+	)
+
+	// aquire the lock
+	err := fl1.Acquire()
+	require.NoError(t, err)
+	defer fl1.Release()
+
+	// aquire from fl2, this should fail
+	err = fl2.Acquire()
+	require.Error(t, err)
+	require.Equal(t, ErrMaxRetryExceeded, err)
+}
+
 // ---
 // Helper functions
 // ---
