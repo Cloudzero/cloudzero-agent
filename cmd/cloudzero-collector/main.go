@@ -53,6 +53,14 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
+	defer func() {
+		if innerErr := appendable.Flush(); innerErr != nil {
+			logger.Err(innerErr).Msg("failed to flush Parquet store")
+		}
+		if r := recover(); r != nil {
+			logger.Panic().Interface("panic", r).Msg("application panicked, exiting")
+		}
+	}()
 
 	// Handle shutdown events gracefully
 	go func() {
@@ -91,8 +99,8 @@ func main() {
 func HandleShutdownEvents(ctx context.Context, appendable types.Appendable) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	<-signalChan
+	sig := <-signalChan
 
-	log.Ctx(ctx).Info().Msg("Service stopping")
+	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
 	appendable.Flush()
 }
