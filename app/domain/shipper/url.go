@@ -6,6 +6,7 @@ package shipper
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,35 +15,39 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type PresignedURLPayload struct {
-	Files []*PresignedURLPayloadFile `json:"files"`
+type PresignedURLAPIPayload struct {
+	Files []*PresignedURLAPIPayloadFile `json:"files"`
 }
 
-type PresignedURLPayloadFile struct {
+type PresignedURLAPIPayloadFile struct {
 	ReferenceID string `json:"reference_id"`      //nolint:tagliatelle // downstream expects cammel case
 	SHA256      string `json:"sha_256,omitempty"` //nolint:tagliatelle // downstream expects cammel case
 	Size        int64  `json:"size,omitempty"`
+}
+
+type AbandonAPIPayloadFile struct {
+	ReferenceID string `json:"reference_id"` //nolint:tagliatelle // downstream expects cammel case
+	Reason      string `json:"reason"`
 }
 
 // Allocates a set of pre-signed urls for the passed file objects
 // The passed `files` argument will be modified to add the `PresignedURL` field
 // You can opt to consume the return value or allow for implicit modification.
 func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
-	uploadEndpoint := m.setting.Cloudzero.Host + "/upload"
 	if len(files) == 0 {
 		return nil, nil
 	}
 
 	// create the payload with the files
-	bodyFiles := make([]*PresignedURLPayloadFile, len(files))
+	bodyFiles := make([]*PresignedURLAPIPayloadFile, len(files))
 	for i, file := range files {
-		bodyFiles[i] = &PresignedURLPayloadFile{
+		bodyFiles[i] = &PresignedURLAPIPayloadFile{
 			ReferenceID: file.ReferenceID,
 		}
 	}
 
 	// create the http request body
-	body := PresignedURLPayload{Files: bodyFiles}
+	body := PresignedURLAPIPayload{Files: bodyFiles}
 
 	// marshal to json
 	enc, err := json.Marshal(body)
@@ -51,6 +56,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	}
 
 	// Create a new HTTP request
+	uploadEndpoint := m.setting.Cloudzero.Host + "/upload"
 	req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint, bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -69,7 +75,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	q.Add("region", m.setting.Region)
 	req.URL.RawQuery = q.Encode()
 
-	log.Info().Msgf("Requesting %d presigned URLs from %s with key %s", len(files), req.URL.String(), m.setting.GetAPIKey())
+	log.Info().Msgf("Requesting %d presigned URLs from '%s' with key '%s'", len(files), req.URL.String(), m.setting.GetAPIKey())
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)
@@ -130,4 +136,64 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	// save the reference ids to disk in a file
 
 	return files, nil
+}
+
+// sends an abandon request for a list of files with a given reason
+func (m *MetricShipper) AbandonFiles(files []*File, reason string) error {
+	if len(files) == 0 {
+		return errors.New("cannot send in an empty slice")
+	}
+
+	// create the body
+	body := make([]*AbandonAPIPayloadFile, len(files))
+	for i, item := range files {
+		body[i] = &AbandonAPIPayloadFile{
+			ReferenceID: item.ReferenceID,
+			Reason:      reason,
+		}
+	}
+
+	// serialize the body
+	enc, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to encode the body: %w", err)
+	}
+
+	// Create a new HTTP request
+	abandonEndpoint := m.setting.Cloudzero.Host + "/abandon"
+	req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint, bytes.NewBuffer(enc))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
+	q := req.URL.Query()
+	q.Add("count", strconv.Itoa(len(files)))
+	q.Add("cluster_name", m.setting.ClusterName)
+	q.Add("cloud_account_id", m.setting.CloudAccountID)
+	q.Add("region", m.setting.Region)
+	req.URL.RawQuery = q.Encode()
+
+	log.Info().Msgf("Abandoning %d files from %s", len(files), req.URL.String())
+
+	// Send the request
+	resp, err := m.HTTPClient.Do(req)
+	if err != nil {
+		log.Error().Err(err).Msg("HTTP request failed")
+		return fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return ErrUnauthorized
+	}
+
+	// Check for HTTP errors
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// success
+	return nil
 }
