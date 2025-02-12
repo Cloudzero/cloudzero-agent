@@ -134,7 +134,7 @@ spec:
               fi
 
               # Generate self-signed certificate and private key
-              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN={{ include "cloudzero-agent.serviceName" . }}" -addext "subjectAltName = DNS:{{ include "cloudzero-agent.serviceName" . }}.default.svc"
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN={{ include "cloudzero-agent.serviceName" . }}" -addext "subjectAltName = DNS:{{ include "cloudzero-agent.serviceName" . }}.{{ .Release.Namespace }}.svc"
               
               # Base64 encode the certificate
               export CA_BUNDLE=$(cat tls.crt | base64 | tr -d '\n')
