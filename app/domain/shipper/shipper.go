@@ -146,11 +146,19 @@ func (m *MetricShipper) ProcessNewFiles() error {
 func (m *MetricShipper) ProcessReplayRequest() error {
 	// TODO
 
-	// read the reference ids from the file
+	// read the requested reference ids from the file
 
-	// write into a list of files
+	// fetch the new files that match these ids
 
-	// run the `HandleRequest` function
+	// fetch the already uploaded files that match these ids
+
+	// compare the results and discover which files were not found
+
+	// send abandon requests for the non-found files
+
+	// write the remaining files into a file array
+
+	// run the `HandleRequest` function for these files
 
 	// read the replay request
 	return errors.New("UNIMPLEMENTED")
@@ -241,6 +249,10 @@ func (m *MetricShipper) MarkFileUploaded(file *File) error {
 	}
 
 	return nil
+}
+
+func (m *MetricShipper) GetReplayRequestDir() string {
+	return filepath.Join(m.setting.Database.StoragePath, "replay")
 }
 
 // Shutdown gracefully stops the MetricShipper service.

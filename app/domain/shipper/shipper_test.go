@@ -504,3 +504,32 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to open the file")
 }
+
+func TestAbandonFiles_Success(t *testing.T) {
+	// Setup
+	mockURL := "https://example.com"
+
+	mockResponseBody := `{"message": "Abandon request processed successfully"}`
+
+	mockResponse := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(mockResponseBody)),
+	}
+
+	mockRoundTripper := &MockRoundTripper{
+		mockResponse: mockResponse,
+		mockError:    nil,
+	}
+
+	settings := setupSettings(mockURL)
+
+	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	require.NoError(t, err)
+	shipper.HTTPClient.Transport = mockRoundTripper
+
+	// Execute
+	files, err := NewFilesFromPaths([]string{"file1", "file2"})
+	require.NoError(t, err)
+	err = shipper.AbandonFiles(files, "file not found")
+	require.NoError(t, err)
+}
