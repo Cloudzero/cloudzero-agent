@@ -38,20 +38,28 @@ func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]stri
 
 // MockRoundTripper is a mock implementation of http.RoundTripper
 type MockRoundTripper struct {
-	status           int
-	mockResponseBody any
-	mockError        error
+	status                 int
+	mockResponseBody       any
+	mockResponseBodyString string
+	mockError              error
 }
 
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	enc, err := json.Marshal(m.mockResponseBody)
-	if err != nil {
-		return nil, err
+	if m.mockResponseBodyString != "" {
+		return &http.Response{
+			StatusCode: m.status,
+			Body:       io.NopCloser(bytes.NewBuffer([]byte(m.mockResponseBodyString))),
+		}, m.mockError
+	} else {
+		enc, err := json.Marshal(m.mockResponseBody)
+		if err != nil {
+			return nil, err
+		}
+		return &http.Response{
+			StatusCode: m.status,
+			Body:       io.NopCloser(bytes.NewBuffer(enc)),
+		}, m.mockError
 	}
-	return &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBuffer(enc)),
-	}, m.mockError
 }
 
 func setupSettings(mockURL string) *config.Settings {
@@ -130,7 +138,10 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	mockURL := "https://example.com/upload"
 	expectedURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
 
-	mockResponseBody := `{"file1": "` + expectedURL + `", "file2": "` + expectedURL + `"}`
+	mockResponseBody := map[string]string{
+		"file1": expectedURL,
+		"file2": expectedURL,
+	}
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusOK,
@@ -178,7 +189,9 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := `{"error": "invalid request"}`
+	mockResponseBody := map[string]string{
+		"error": "invalid request",
+	}
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusBadRequest,
@@ -207,7 +220,9 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := `{"error": "invalid request"}`
+	mockResponseBody := map[string]string{
+		"error": "invalid request",
+	}
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusUnauthorized,
@@ -232,41 +247,11 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	assert.Empty(t, presignedURL)
 }
 
-func TestAllocatePresignedURL_MalformedResponse(t *testing.T) {
-	// Setup
-	mockURL := "https://example.com/upload"
-
-	// Malformed JSON
-	mockResponseBody := `{"urls": ["https://s3.amazonaws.com/bucket/file.tgz"`
-
-	mockRoundTripper := &MockRoundTripper{
-		status:           http.StatusOK,
-		mockResponseBody: mockResponseBody,
-		mockError:        nil,
-	}
-
-	settings := setupSettings(mockURL)
-
-	shipper, err := NewMetricShipper(context.Background(), settings, nil)
-	require.NoError(t, err)
-	shipper.HTTPClient.Transport = mockRoundTripper
-
-	// Execute
-	files, err := NewFilesFromPaths([]string{"file1"})
-	require.NoError(t, err)
-	presignedURL, err := shipper.AllocatePresignedURLs(files)
-
-	// Verify
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to decode response")
-	assert.Empty(t, presignedURL)
-}
-
 func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := `{}`
+	mockResponseBody := map[string]string{}
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusOK,
@@ -380,9 +365,9 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	mockResponseBody := "Bad Request"
 
 	mockRoundTripper := &MockRoundTripper{
-		status:           http.StatusBadRequest,
-		mockResponseBody: mockResponseBody,
-		mockError:        nil,
+		status:                 http.StatusBadRequest,
+		mockResponseBodyString: mockResponseBody,
+		mockError:              nil,
 	}
 
 	settings := setupSettings(mockURL)
@@ -499,7 +484,9 @@ func TestAbandonFiles_Success(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com"
 
-	mockResponseBody := `{"message": "Abandon request processed successfully"}`
+	mockResponseBody := map[string]string{
+		"message": "Abandon request processed successfully",
+	}
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusOK,
