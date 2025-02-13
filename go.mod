@@ -17,8 +17,8 @@ require (
 	go.uber.org/mock v0.5.0
 	google.golang.org/protobuf v1.36.2
 	honnef.co/go/tools v0.5.1
-	k8s.io/api v0.32.0
-	k8s.io/apimachinery v0.32.0
+	k8s.io/api v0.32.2
+	k8s.io/apimachinery v0.32.2
 	k8s.io/client-go v0.32.0
 	mvdan.cc/gofumpt v0.7.0
 )
