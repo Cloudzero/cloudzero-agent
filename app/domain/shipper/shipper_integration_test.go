@@ -38,7 +38,34 @@ func TestShipper_Integration_InvalidApiKey(t *testing.T) {
 	require.Equal(t, ErrUnauthorized, err)
 }
 
-func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {}
+func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// setup env
+	apiKey, exists := os.LookupEnv("CLOUDZERO_DEV_API_KEY")
+	require.True(t, exists)
+	tmpDir := t.TempDir()
+
+	// create the shipper
+	settings := setupSettingsIntegration(t, tmpDir, apiKey)
+	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	require.NoError(t, err)
+
+	// create some test files to simulate resource tracking
+	files := createTestFiles(t, tmpDir, 5)
+
+	// get the presigned URLs
+	files2, err := shipper.AllocatePresignedURLs(files)
+	require.NoError(t, err)
+
+	// validate the pre-signed urls exist
+	require.Equal(t, len(files), len(files2))
+	for _, file := range files2 {
+		require.NotEmpty(t, file.PresignedURL)
+	}
+}
 
 func TestShipper_Integration_ExpiredPresignedURL(t *testing.T) {}
 
