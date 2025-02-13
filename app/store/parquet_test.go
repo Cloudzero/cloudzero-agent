@@ -145,7 +145,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 3, len(files))
 
-		files, err = ps.GetMatchingFiles("", []string{})
+		files, err = ps.GetMatching("", []string{})
 		require.NoError(t, err)
 		require.Empty(t, files)
 	})
@@ -165,12 +165,12 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 		}
 
 		// ensure the root is empty
-		res, err := ps.GetMatchingFiles("", files)
+		res, err := ps.GetMatching("", files)
 		require.NoError(t, err)
 		require.Empty(t, res)
 
 		// ensure the new directory is not empty
-		res, err = ps.GetMatchingFiles("uploaded", files)
+		res, err = ps.GetMatching("uploaded", files)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(res))
 
@@ -195,7 +195,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 		}
 
 		// ensure that even with bad paths only the filename is used
-		res, err := ps.GetMatchingFiles("", newIds)
+		res, err := ps.GetMatching("", newIds)
 		require.NoError(t, err)
 		require.Equal(t, len(files), len(res))
 	})

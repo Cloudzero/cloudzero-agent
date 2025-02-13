@@ -28,6 +28,7 @@ import (
 const (
 	shipperWorkerCount = 10
 	expirationTime     = 3600
+	replaySubdirName   = "replay"
 )
 
 var (
@@ -113,8 +114,8 @@ func (m *MetricShipper) Run() error {
 			}
 
 			// run the replay request
-			if err := m.ProcessReplayRequest(); err != nil {
-				return fmt.Errorf("failed to run the replay request: %w", err)
+			if err := m.ProcessReplayRequests(); err != nil {
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to process replay requests")
 			}
 		}
 	}
@@ -143,25 +144,86 @@ func (m *MetricShipper) ProcessNewFiles() error {
 	return m.HandleRequest(files)
 }
 
-func (m *MetricShipper) ProcessReplayRequest() error {
-	// TODO
+func (m *MetricShipper) ProcessReplayRequests() error {
+	// read all valid replay request files
+	requests, err := m.GetActiveReplayRequests()
+	if err != nil {
+		return fmt.Errorf("failed to get replay requests: %w", err)
+	}
 
-	// read the requested reference ids from the file
+	// handle all valid replay requests
+	for _, rr := range requests {
+		if err := m.HandleReplayRequest(rr); err != nil {
+			return fmt.Errorf("failed to process replay request '%s': %w", rr.Filepath, err)
+		}
+	}
 
+	return nil
+}
+
+func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	// fetch the new files that match these ids
+	new, err := m.lister.GetMatching("", rr.ReferenceIDs)
+	if err != nil {
+		return fmt.Errorf("failed to get matching new files: %w", err)
+	}
 
 	// fetch the already uploaded files that match these ids
+	uploaded, err := m.lister.GetMatching(m.setting.Database.StorageUploadSubpath, rr.ReferenceIDs)
+	if err != nil {
+		return fmt.Errorf("failed to get matching uploaded files: %w", err)
+	}
+
+	// combine found ids into a map
+	found := make(map[string]*File) // {ReferenceID: File}
+	for _, item := range new {
+		file, err := NewFile(filepath.Join(m.setting.Database.StoragePath, filepath.Base(item)))
+		if err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
+		found[filepath.Base(item)] = file
+	}
+	for _, item := range uploaded {
+		file, err := NewFile(filepath.Join(m.GetUploadedDir(), filepath.Base(item)))
+		if err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
+		found[filepath.Base(item)] = file
+	}
 
 	// compare the results and discover which files were not found
+	missing := make([]string, 0)
+	valid := make([]*File, 0)
+	for _, item := range rr.ReferenceIDs {
+		file, exists := found[filepath.Base(item)]
+		if exists {
+			valid = append(valid, file)
+		} else {
+			missing = append(missing, filepath.Base(item))
+		}
+	}
+
+	log.Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, len(valid), len(rr.ReferenceIDs))
 
 	// send abandon requests for the non-found files
-
-	// write the remaining files into a file array
+	if len(missing) > 0 {
+		log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, len(missing))
+		if err := m.AbandonFiles(missing, "not found"); err != nil {
+			return fmt.Errorf("failed to send the abandon file request: %w", err)
+		}
+	}
 
 	// run the `HandleRequest` function for these files
+	if err := m.HandleRequest(valid); err != nil {
+		return fmt.Errorf("failed to upload replay request files: %w", err)
+	}
 
-	// read the replay request
-	return errors.New("UNIMPLEMENTED")
+	// delete the replay request
+	if err := os.Remove(rr.Filepath); err != nil {
+		return fmt.Errorf("failed to delete the replay request file: %w", err)
+	}
+
+	return nil
 }
 
 // Takes in a list of files and runs them through the following:
@@ -234,25 +296,39 @@ func (m *MetricShipper) Upload(file *File) error {
 }
 
 func (m *MetricShipper) MarkFileUploaded(file *File) error {
+	// create the uploaded dir if needed
+	uploadDir := m.GetUploadedDir()
+	if err := os.MkdirAll(uploadDir, replayFilePermissions); err != nil {
+		return fmt.Errorf("failed to create the upload directory: %w", err)
+	}
+
 	// if the filepath already contains the uploaded location,
 	// then ignore this entry
-	if strings.Contains(file.ReferenceID, m.setting.Database.StorageUploadSubpath) {
+	if strings.Contains(file.Filepath(), m.setting.Database.StorageUploadSubpath) {
 		return nil
 	}
 
 	// compose the new path
-	new := filepath.Join(file.Filepath(), m.setting.Database.StorageUploadSubpath, file.Filename())
+	new := filepath.Join(uploadDir, file.Filename())
 
 	// rename the file (IS ATOMIC)
-	if err := os.Rename(file.ReferenceID, new); err != nil {
+	if err := os.Rename(file.location, new); err != nil {
 		return fmt.Errorf("failed to move the file to the uploaded directory: %s", err)
 	}
 
 	return nil
 }
 
+func (m *MetricShipper) GetBaseDir() string {
+	return m.setting.Database.StoragePath
+}
+
 func (m *MetricShipper) GetReplayRequestDir() string {
-	return filepath.Join(m.setting.Database.StoragePath, "replay")
+	return filepath.Join(m.GetBaseDir(), replaySubdirName)
+}
+
+func (m *MetricShipper) GetUploadedDir() string {
+	return filepath.Join(m.GetBaseDir(), m.setting.Database.StorageUploadSubpath)
 }
 
 // Shutdown gracefully stops the MetricShipper service.

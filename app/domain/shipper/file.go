@@ -34,11 +34,13 @@ type File struct {
 	ReferenceID  string `json:"reference_id"` //nolint:tagliatelle // endstream api accepts cammel case
 	PresignedURL string `json:"-"`            //nolint:tagliatelle // ignore this property when marshalling to json
 
-	file   *os.File
-	data   []byte
-	sha256 string
-	size   int64
+	location string   // location on the disk of the file, since ReferenceID is JUST the filename
+	file     *os.File // pointer to the file on disk. Can be null, use getter
+	data     []byte   // data of the read file stored in memory. Can be null, use getter
+	sha256   string   // sha256 of the `data` byte array. Can be empty, use getter
+	size     int64    // size of the byte array. Can be 0, use getter
 
+	// internal options
 	notLazy bool
 }
 
@@ -48,7 +50,10 @@ func NewFile(path string, opts ...FileOpt) (*File, error) {
 		return nil, errors.New("an empty path is not valid")
 	}
 
-	f := &File{ReferenceID: path}
+	f := &File{
+		ReferenceID: filepath.Base(path),
+		location:    path,
+	}
 
 	// apply the options
 	for _, item := range opts {
@@ -86,7 +91,7 @@ func NewFilesFromPaths(paths []string, opts ...FileOpt) ([]*File, error) {
 func (f *File) GetFile() (*os.File, error) {
 	if f.file == nil {
 		// open the file
-		osFile, err := os.Open(f.ReferenceID)
+		osFile, err := os.Open(f.location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open the file: %w", err)
 		}
@@ -137,12 +142,12 @@ func (f *File) Clear() {
 
 // Get name of this file on disk
 func (f *File) Filename() string {
-	return filepath.Base(f.ReferenceID)
+	return filepath.Base(f.location)
 }
 
 // Get the root location of this file on disk
 func (f *File) Filepath() string {
-	return filepath.Dir(f.ReferenceID)
+	return filepath.Dir(f.location)
 }
 
 // Get the full location of this file on disk

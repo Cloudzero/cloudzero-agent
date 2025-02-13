@@ -28,6 +28,9 @@ type Appendable interface {
 type AppendableFiles interface {
 	// GetFiles returns the list of files in the store.
 	GetFiles() ([]string, error)
+
+	// `GetMatching` searches inside a `loc` for all matching `targets`
+	GetMatching(loc string, targets []string) ([]string, error)
 }
 
 type AppendableReader interface {

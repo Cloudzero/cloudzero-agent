@@ -139,16 +139,16 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 }
 
 // sends an abandon request for a list of files with a given reason
-func (m *MetricShipper) AbandonFiles(files []*File, reason string) error {
-	if len(files) == 0 {
+func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error {
+	if len(referenceIDs) == 0 {
 		return errors.New("cannot send in an empty slice")
 	}
 
 	// create the body
-	body := make([]*AbandonAPIPayloadFile, len(files))
-	for i, item := range files {
+	body := make([]*AbandonAPIPayloadFile, len(referenceIDs))
+	for i, item := range referenceIDs {
 		body[i] = &AbandonAPIPayloadFile{
-			ReferenceID: item.ReferenceID,
+			ReferenceID: item,
 			Reason:      reason,
 		}
 	}
@@ -168,13 +168,13 @@ func (m *MetricShipper) AbandonFiles(files []*File, reason string) error {
 
 	// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 	q := req.URL.Query()
-	q.Add("count", strconv.Itoa(len(files)))
+	q.Add("count", strconv.Itoa(len(referenceIDs)))
 	q.Add("cluster_name", m.setting.ClusterName)
 	q.Add("cloud_account_id", m.setting.CloudAccountID)
 	q.Add("region", m.setting.Region)
 	req.URL.RawQuery = q.Encode()
 
-	log.Info().Msgf("Abandoning %d files from %s", len(files), req.URL.String())
+	log.Info().Msgf("Abandoning %d files from %s", len(referenceIDs), req.URL.String())
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)
