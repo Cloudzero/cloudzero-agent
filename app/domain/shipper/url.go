@@ -160,21 +160,29 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 	}
 
 	// Create a new HTTP request
-	abandonEndpoint := m.setting.Cloudzero.Host + "/abandon"
-	req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint, bytes.NewBuffer(enc))
+	abandonEndpoint, err := m.setting.GetRemoteApiBase()
+	if err != nil {
+		return fmt.Errorf("failed to get the abandon endpoint: %w", err)
+	}
+	abandonEndpoint.Path += "/abandon"
+	req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
+	// Set necessary headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", m.setting.GetAPIKey())
+
 	// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 	q := req.URL.Query()
 	q.Add("count", strconv.Itoa(len(referenceIDs)))
-	q.Add("cluster_name", m.setting.ClusterName)
-	q.Add("cloud_account_id", m.setting.CloudAccountID)
-	q.Add("region", m.setting.Region)
+	// q.Add("cluster_name", m.setting.ClusterName)
+	// q.Add("cloud_account_id", m.setting.CloudAccountID)
+	// q.Add("region", m.setting.Region)
 	req.URL.RawQuery = q.Encode()
 
-	log.Info().Msgf("Abandoning %d files from %s", len(referenceIDs), req.URL.String())
+	log.Info().Msgf("Abandoning %d files from '%s'", len(referenceIDs), req.URL.String())
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)
