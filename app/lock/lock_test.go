@@ -38,6 +38,30 @@ func TestLock_AcquireAndRelease(t *testing.T) {
 	// ensure the file was removed
 	_, err = os.Stat(lockPath)
 	require.Contains(t, err.Error(), "no such file or directory")
+
+	// ensure that creating the same lock file again does not interfere
+	fl2 := NewFileLock(context.Background(), lockPath)
+	err = fl2.Acquire()
+	require.NoError(t, err)
+	_, err = os.Stat(lockPath)
+	require.NoError(t, err)
+	err = fl2.Release()
+	require.NoError(t, err)
+	_, err = os.Stat(lockPath)
+	require.Contains(t, err.Error(), "no such file or directory")
+}
+
+func TestLock_NonExistentDirectory(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	lockPath := filepath.Join(tempDir, "unknown", "test.lock")
+
+	fl := NewFileLock(context.Background(), lockPath)
+
+	// aquire
+	err := fl.Acquire()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
 }
 
 func TestLock_ConcurrentAccess(t *testing.T) {

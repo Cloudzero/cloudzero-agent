@@ -13,10 +13,6 @@ import (
 	"github.com/go-obvious/timestamp"
 )
 
-const (
-	replayFilePermissions = 0o755
-)
-
 type ReplayRequest struct {
 	Filepath     string   `json:"filepath"`
 	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
@@ -26,7 +22,7 @@ type ReplayRequest struct {
 func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) {
 	// create the directory if needed
 	replayDir := m.GetReplayRequestDir()
-	if err := os.MkdirAll(replayDir, replayFilePermissions); err != nil {
+	if err := os.MkdirAll(replayDir, filePermissions); err != nil {
 		return nil, fmt.Errorf("failed to create the replay request directory: %w", err)
 	}
 
@@ -46,7 +42,7 @@ func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) 
 	}
 
 	// write the file
-	if err := os.WriteFile(rr.Filepath, enc, replayFilePermissions); err != nil {
+	if err := os.WriteFile(rr.Filepath, enc, filePermissions); err != nil {
 		return nil, fmt.Errorf("failed to write the replay request to file: %w", err)
 	}
 
@@ -57,7 +53,7 @@ func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) 
 func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 	// create the directory if needed
 	replayDir := m.GetReplayRequestDir()
-	if err := os.MkdirAll(replayDir, replayFilePermissions); err != nil {
+	if err := os.MkdirAll(replayDir, filePermissions); err != nil {
 		return nil, fmt.Errorf("failed to create the replay request directory: %w", err)
 	}
 

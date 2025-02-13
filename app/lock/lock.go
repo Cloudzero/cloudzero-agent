@@ -34,7 +34,7 @@ var (
 )
 
 type FileLock struct {
-	path            string
+	filepath        string
 	staleTimeout    time.Duration
 	refreshInterval time.Duration
 	retryInterval   time.Duration
@@ -85,13 +85,13 @@ type lockContent struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func NewFileLock(ctx context.Context, path string, opts ...FileLockOption) *FileLock {
+func NewFileLock(ctx context.Context, filepath string, opts ...FileLockOption) *FileLock {
 	hostname, _ := os.Hostname()
 	pid := os.Getpid()
 
 	// create with defaults
 	fl := &FileLock{
-		path:            path,
+		filepath:        filepath,
 		staleTimeout:    DefautlStaleTimeout,
 		refreshInterval: DefaultRefreshInterval,
 		retryInterval:   DefaultRetryInterval,
@@ -113,69 +113,80 @@ func (fl *FileLock) Acquire() error {
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
 
+	// ensure the directory exists
+	_, err := os.ReadDir(filepath.Dir(fl.filepath))
+	if os.IsNotExist(err) {
+		return err
+	}
+
 	// track retry count
 	retry := 0
 
 	for {
-		// break if max retry is met
-		if retry > fl.maxRetry {
-			return ErrMaxRetryExceeded
-		}
+		select {
+		case <-fl.ctx.Done():
+			return fmt.Errorf("%w: context cancelled", ErrLockAcquire)
+		default:
+			// break if max retry is met
+			if retry > fl.maxRetry {
+				return ErrMaxRetryExceeded
+			}
 
-		// create lock file atomically
-		file, err := os.OpenFile(fl.path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, lockFilePermissions)
-		if err == nil {
-			// aquired the lock
+			// create lock file atomically
+			file, err := os.OpenFile(fl.filepath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, lockFilePermissions)
+			if err == nil {
+				// aquired the lock
 
-			// write to the lock file
-			if err2 := fl.writeLock(file); err2 != nil {
+				// write to the lock file
+				if err2 := fl.writeLock(file); err2 != nil {
+					file.Close()
+					os.Remove(fl.filepath)
+					return err2
+				}
 				file.Close()
-				os.Remove(fl.path)
-				return err2
-			}
-			file.Close()
 
-			// start background refresh
-			ctx, cancel := context.WithCancel(fl.ctx)
-			fl.cancel = cancel
-			go fl.refreshLock(ctx)
-			return nil
-		}
-
-		// check the existing lock file
-		current, err := fl.readLockContent()
-		if err != nil {
-			// lock was removed, retry
-			if os.IsNotExist(err) {
-				continue
+				// start background refresh
+				ctx, cancel := context.WithCancel(fl.ctx)
+				fl.cancel = cancel
+				go fl.refreshLock(ctx)
+				return nil
 			}
 
-			// count corrupt files as valid, so wait for lock to expire
-			if strings.Contains(err.Error(), ErrLockCorrup.Error()) {
+			// check the existing lock file
+			current, err := fl.readLockContent()
+			if err != nil {
+				// lock was removed, retry
+				if os.IsNotExist(err) {
+					continue
+				}
+
+				// count corrupt files as valid, so wait for lock to expire
+				if strings.Contains(err.Error(), ErrLockCorrup.Error()) {
+					// lock file valid
+					retry += 1
+					time.Sleep(fl.retryInterval)
+					continue
+				}
+
+				// unknown issue getting the lock file
+				return fmt.Errorf("%w: %v", ErrLockAcquire, err)
+			}
+
+			// check validity of the local lock file
+			if time.Since(current.Timestamp) < fl.staleTimeout {
 				// lock file valid
 				retry += 1
 				time.Sleep(fl.retryInterval)
 				continue
 			}
 
-			// unknown issue getting the lock file
-			return fmt.Errorf("%w: %v", ErrLockAcquire, err)
-		}
-
-		// check validity of the local lock file
-		if time.Since(current.Timestamp) < fl.staleTimeout {
-			// lock file valid
-			retry += 1
-			time.Sleep(fl.retryInterval)
-			continue
-		}
-
-		// stale lock file, remove and retry
-		if err := os.Remove(fl.path); err != nil {
-			if os.IsNotExist(err) {
-				continue
+			// stale lock file, remove and retry
+			if err := os.Remove(fl.filepath); err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return fmt.Errorf("%w: failed to remove stale lock: %v", ErrLockAcquire, err)
 			}
-			return fmt.Errorf("%w: failed to remove stale lock: %v", ErrLockAcquire, err)
 		}
 	}
 }
@@ -191,7 +202,7 @@ func (fl *FileLock) Release() error {
 	}
 
 	// remove the file
-	if err := os.Remove(fl.path); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(fl.filepath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to release lock: %w", err)
 	}
 	return nil
@@ -217,7 +228,7 @@ func (fl *FileLock) refreshLock(ctx context.Context) {
 
 func (fl *FileLock) updateLock() error {
 	// use file renames to give atomic operations
-	tempFile, err := os.CreateTemp(filepath.Dir(fl.path), "lock-*.tmp")
+	tempFile, err := os.CreateTemp(filepath.Dir(fl.filepath), "lock-*.tmp")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -239,7 +250,7 @@ func (fl *FileLock) updateLock() error {
 	}
 
 	// replace the current lock file data atomically
-	if err := os.Rename(tempFile.Name(), fl.path); err != nil {
+	if err := os.Rename(tempFile.Name(), fl.filepath); err != nil {
 		return fmt.Errorf("failed to atomically update lock: %w", err)
 	}
 
@@ -247,7 +258,7 @@ func (fl *FileLock) updateLock() error {
 }
 
 func (fl *FileLock) readLockContent() (*lockContent, error) {
-	data, err := os.ReadFile(fl.path)
+	data, err := os.ReadFile(fl.filepath)
 	if err != nil {
 		return nil, err
 	}

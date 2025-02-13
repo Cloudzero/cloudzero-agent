@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -69,7 +70,7 @@ func setupSettings(mockURL string) *config.Settings {
 		Region:         "us-east-1",
 		Cloudzero: config.Cloudzero{
 			Host:        mockURL,
-			SendTimeout: 30,
+			SendTimeout: time.Millisecond * 100,
 		},
 		Database: config.Database{
 			StoragePath:          "/tmp/storage",
@@ -78,28 +79,68 @@ func setupSettings(mockURL string) *config.Settings {
 	}
 }
 
-func TestPerformShipping(t *testing.T) {
-	ctx := context.Background()
-	settings := &config.Settings{
-		Cloudzero: config.Cloudzero{
-			SendTimeout:  10,
-			SendInterval: 1,
-			Host:         "http://example.com",
-		},
-		Database: config.Database{
-			StoragePath: t.TempDir(),
-		},
-	}
+func captureOutput(f func()) (string, string) {
+	// save original
+	oldOut := os.Stdout
+	oldErr := os.Stderr
 
-	mockFiles := &MockAppendableFiles{}
-	mockFiles.On("GetFiles").Return([]string{}, nil)
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	shipper, err := NewMetricShipper(ctx, settings, mockFiles)
-	require.NoError(t, err)
-	shipper.Run()
-	shipper.Shutdown()
-	mockFiles.AssertExpectations(t)
+	// create out pipes
+	rOut, wOut, _ := os.Pipe()
+	rErr, wErr, _ := os.Pipe()
+
+	// redirect stdout and stderr
+	os.Stdout = wOut
+	os.Stderr = wErr
+
+	// fun the passed test func
+	f()
+
+	// restore
+	os.Stdout = oldOut
+	os.Stderr = oldErr
+
+	// read output
+	wOut.Close()
+	wErr.Close()
+
+	// write into buf
+	var outBuf, errBuf bytes.Buffer
+	io.Copy(&outBuf, rOut)
+	io.Copy(&errBuf, rErr)
+
+	return outBuf.String(), errBuf.String()
+}
+
+func TestPerformShipping(t *testing.T) {
+	stdout, _ := captureOutput(func() {
+		logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+		ctx := logger.WithContext(context.Background())
+		settings := &config.Settings{
+			Cloudzero: config.Cloudzero{
+				SendTimeout:  10,
+				SendInterval: time.Second,
+				Host:         "http://example.com",
+			},
+			Database: config.Database{
+				StoragePath: t.TempDir(),
+			},
+		}
+
+		mockFiles := &MockAppendableFiles{}
+		mockFiles.On("GetFiles").Return([]string{}, nil)
+		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*1500)
+		defer cancel()
+		shipper, err := NewMetricShipper(ctx, settings, mockFiles)
+		require.NoError(t, err)
+		err = shipper.Run()
+		require.NoError(t, err)
+		err = shipper.Shutdown()
+		require.NoError(t, err)
+		mockFiles.AssertExpectations(t)
+	})
+
+	// ensure no errors when running
+	require.NotContains(t, stdout, `"level":"error"`)
 }
 
 func TestGetMetrics(t *testing.T) {
