@@ -32,7 +32,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
-func TestIntegration(t *testing.T) {
+func Test_Integration(t *testing.T) {
 	settings := &config.Settings{}
 
 	clock := utils.Clock{}
@@ -135,7 +135,7 @@ func createAPIKeyFile(t *testing.T, apiKeyContent string) string {
 	return apiKeyFile.Name()
 }
 
-func TestRemoteWrite(t *testing.T) {
+func Test_Integration_RemoteWrite(t *testing.T) {
 	apiKeyPath := createAPIKeyFile(t, os.Getenv("CLOUDZERO_DEV_API_KEY"))
 
 	// Set up the configuration settings directly
