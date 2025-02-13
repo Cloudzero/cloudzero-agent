@@ -66,7 +66,7 @@ type Cloudzero struct {
 	Host           string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
 	apiKey         string        // Set after reading keypath
 
-	host string // cached value of `Host` since it is overriden in initalization
+	_host string // cached value of `Host` since it is overriden in initalization
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
@@ -212,7 +212,7 @@ func (s *Settings) SetRemoteUploadAPI() error {
 	if s.Cloudzero.Host == "" {
 		return errors.New("host is empty")
 	}
-	s.Cloudzero.host = s.Cloudzero.Host // cache value to use later
+	s.Cloudzero._host = s.Cloudzero.Host // cache value to use later
 	baseURL, err := url.Parse("https://" + s.Cloudzero.Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse host")
@@ -234,14 +234,14 @@ func (s *Settings) SetRemoteUploadAPI() error {
 
 // Sanitizes the input host from the config, and returns a standard
 // `url.URL` type to build the query from
-func (s *Settings) GetRemoteApiBase() (*url.URL, error) {
-	if s.Cloudzero.host == "" {
-		s.Cloudzero.host = s.Cloudzero.Host
+func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
+	if s.Cloudzero._host == "" {
+		s.Cloudzero._host = s.Cloudzero.Host
 	}
 
 	// format the host to a standardized format
-	val := s.Cloudzero.host
-	if !strings.Contains(s.Cloudzero.host, "://") {
+	val := s.Cloudzero._host
+	if !strings.Contains(s.Cloudzero._host, "://") {
 		val = "http://" + val
 	}
 

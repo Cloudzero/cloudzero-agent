@@ -160,7 +160,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 	}
 
 	// Create a new HTTP request
-	abandonEndpoint, err := m.setting.GetRemoteApiBase()
+	abandonEndpoint, err := m.setting.GetRemoteAPIBase()
 	if err != nil {
 		return fmt.Errorf("failed to get the abandon endpoint: %w", err)
 	}
