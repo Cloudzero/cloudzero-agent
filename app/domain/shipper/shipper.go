@@ -20,6 +20,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
+	"github.com/cloudzero/cloudzero-insights-controller/app/lock"
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
@@ -29,6 +30,8 @@ const (
 	shipperWorkerCount = 10
 	expirationTime     = 3600
 	replaySubdirName   = "replay"
+	filePermissions    = 0o755
+	lockMaxRetry       = 60
 )
 
 var (
@@ -122,6 +125,27 @@ func (m *MetricShipper) Run() error {
 }
 
 func (m *MetricShipper) ProcessNewFiles() error {
+	// ensure the directory is created
+	if err := os.MkdirAll(m.GetBaseDir(), filePermissions); err != nil {
+		return fmt.Errorf("failed to create the base file directory: %w", err)
+	}
+
+	// lock the base dir for the duration of the new file handling
+	l := lock.NewFileLock(
+		m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
+		lock.WithStaleTimeout(time.Second*30), // detects stale timeout
+		lock.WithRefreshInterval(time.Second*5),
+		lock.WithMaxRetry(lockMaxRetry), // 5 min wait
+	)
+	if err := l.Acquire(); err != nil {
+		return fmt.Errorf("failed to aquire the lock: %w", err)
+	}
+	defer func() {
+		if err := l.Release(); err != nil {
+			log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+		}
+	}()
+
 	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
@@ -145,6 +169,27 @@ func (m *MetricShipper) ProcessNewFiles() error {
 }
 
 func (m *MetricShipper) ProcessReplayRequests() error {
+	// ensure the directory is created
+	if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
+		return fmt.Errorf("failed to create the replay request file directory: %w", err)
+	}
+
+	// lock the replay request dir for the duration of the replay request processing
+	l := lock.NewFileLock(
+		m.ctx, filepath.Join(m.GetReplayRequestDir(), ".lock"),
+		lock.WithStaleTimeout(time.Second*30), // detects stale timeout
+		lock.WithRefreshInterval(time.Second*5),
+		lock.WithMaxRetry(lockMaxRetry), // 5 min wait
+	)
+	if err := l.Acquire(); err != nil {
+		return fmt.Errorf("failed to aquire the lock: %w", err)
+	}
+	defer func() {
+		if err := l.Release(); err != nil {
+			log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+		}
+	}()
+
 	// read all valid replay request files
 	requests, err := m.GetActiveReplayRequests()
 	if err != nil {
@@ -298,7 +343,7 @@ func (m *MetricShipper) Upload(file *File) error {
 func (m *MetricShipper) MarkFileUploaded(file *File) error {
 	// create the uploaded dir if needed
 	uploadDir := m.GetUploadedDir()
-	if err := os.MkdirAll(uploadDir, replayFilePermissions); err != nil {
+	if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
 		return fmt.Errorf("failed to create the upload directory: %w", err)
 	}
 

@@ -7,7 +7,6 @@ run:
 output:
   print-issued-lines: false
   print-linter-name: true
-  uniq-by-line: false
   path-prefix: ""
   sort-results: true
 
@@ -106,6 +105,7 @@ linters-settings:
         yaml: snake
 
 issues:
+  uniq-by-line: false
   exclude-dirs:
     - pkg/status
     - .go

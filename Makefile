@@ -100,7 +100,7 @@ install-tools-node:
 
 # golangci-lint is intentionally not installed via tools.go; see
 # https://golangci-lint.run/welcome/install/#install-from-sources for details.
-GOLANGCI_LINT_VERSION ?= v1.62.2
+GOLANGCI_LINT_VERSION ?= v1.64.4
 .PHONY: install-tools-golangci-lint
 install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
