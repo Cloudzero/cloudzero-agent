@@ -6,7 +6,7 @@ metadata:
   annotations:
     {{- toYaml .Values.insightsController.server.deploymentAnnotations | nindent 4 }}
 {{- end }}
-  name: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}
+  name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}

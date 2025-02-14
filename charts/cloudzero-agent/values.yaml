@@ -176,6 +176,11 @@ initCertJob:
     repository: bitnami/kubectl
     pullPolicy: Always
     tag: "1.32.0"
+  rbac:
+    create: true
+    serviceAccountName: ""
+    clusterRoleName: ""
+    clusterRoleBindingName: ""
 
 kubeStateMetrics:
   enabled: true

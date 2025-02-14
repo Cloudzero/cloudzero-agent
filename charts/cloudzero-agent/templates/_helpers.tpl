@@ -107,6 +107,30 @@ Create the name of the service account to use for the server component
 {{- end -}}
 
 {{/*
+Create the name of the service account to use for the init-cert Job
+*/}}
+{{- define "cloudzero-agent.initCertJob.serviceAccountName" -}}
+{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{ .Values.initCertJob.rbac.serviceAccountName | default $defaultName }}
+{{- end -}}
+
+{{/*
+Create the name of the ClusterRole to use for the init-cert Job
+*/}}
+{{- define "cloudzero-agent.initCertJob.clusterRoleName" -}}
+{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{ .Values.initCertJob.rbac.clusterRoleName | default $defaultName }}
+{{- end -}}
+
+{{/*
+Create the name of the ClusterRoleBinding to use for the init-cert Job
+*/}}
+{{- define "cloudzero-agent.initCertJob.clusterRoleBindingName" -}}
+{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{ .Values.initCertJob.rbac.clusterRoleBinding | default $defaultName }}
+{{- end -}}
+
+{{/*
 Create a fully qualified Prometheus server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
@@ -317,6 +341,13 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/*
+Name for the webhook server Deployment
+*/}}
+{{- define "cloudzero-agent.insightsController.deploymentName" -}}
+{{- include "cloudzero-agent.insightsController.server.webhookFullname" . }}
+{{- end }}
+
+{{/*
 Name for the webhook server service
 */}}
 {{- define "cloudzero-agent.serviceName" -}}
@@ -362,14 +393,15 @@ Name for the backfill job resource
 {{- define "cloudzero-agent.initBackfillJobName" -}}
 {{- $name := printf "%s-backfill-%s" .Release.Name .Chart.Version }}
 {{- $imageRef := splitList ":" (include  "cloudzero-agent.initBackfillJob.imageReference" .) | last }}
-{{- printf "%s-%s" $name ($imageRef | trunc 8) | trunc 63 | replace "." "-" }}
+{{- printf "%s-%s" $name ($imageRef | trunc 6) | trunc 61 | replace "." "-" -}}
 {{- end }}
 
 {{/*
-Name for the certificate init job resource
+Name for the certificate init job resource. Should be a new name each installation/upgrade.
 */}}
 {{- define "cloudzero-agent.initCertJobName" -}}
-{{- printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .) }}
+{{- $name := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .) | trunc 60) -}}
+{{- $name -}}-{{ .Release.Revision | default (randAlpha 5) }}
 {{- end }}
 
 {{/*

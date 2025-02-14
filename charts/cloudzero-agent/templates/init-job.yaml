@@ -9,6 +9,7 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
+  ttlSecondsAfterFinished: 60
   template:
     metadata:
       name: {{ include "cloudzero-agent.initBackfillJobName" . }}
@@ -87,13 +88,14 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       name: {{ include "cloudzero-agent.initCertJobName" . }}
       labels:
         {{- include "cloudzero-agent.insightsController.initCertJob.matchLabels" . | nindent 8 }}
     spec:
-      serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
       containers:
@@ -126,8 +128,8 @@ spec:
               EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}')
 
               # Check if the TLS Secret already has certificate information
-              if [[ -z "$TLS_CRT" ]] || [[ -z "$TLS_KEY" ]] || [[ $MISSING_CA_BUNDLE == "true" ]]; then
-                  echo "The TLS Secret and/or at least one webhook configuration contains empty certificate information. Creating a new certificate..."
+              if [[ -z "$EXISTING_TLS_CRT" ]] || [[ -z "$EXISTING_TLS_KEY" ]] || [[ $MISSING_CA_BUNDLE == "true" ]] ; then
+                  echo "The TLS Secret and/or at least one webhook configuration contains empty certificate information, or forceInit is enabled. Creating a new certificate..."
               else
                   echo "The TLS Secret and all webhook configurations contain non-empty certificate information. Will not create a new certificate and will not patch resources."
                   exit 0
@@ -154,6 +156,8 @@ spec:
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
               {{- end }}
               {{- end }}
+              # Now that the secret and webhook configuration are updated, roll the webhook-server pods to pick up the new certificate
+              kubectl rollout restart deployment -n {{ .Release.Namespace }} {{ include "cloudzero-agent.insightsController.deploymentName" . }}
               {{- else }}
               echo "The useCertManager flag is set to true. Skipping certificate generation and patching of resources."
               {{- end }}
