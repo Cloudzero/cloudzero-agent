@@ -159,7 +159,11 @@ data:
       {{- end}}
   {{- end}}
     remote_write:
+      {{ if .Values.aggregator.enabled }}
+      - url: 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/metrics'
+      {{ else }}
       - url: '{{ .Values.scheme }}://{{ include "cloudzero-agent.cleanString" .Values.host }}{{ .Values.endpoint }}?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
+      {{ end }}
         authorization:
           credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
         write_relabel_configs:
@@ -232,3 +236,33 @@ data:
       annotations:
         {{- .Values.insightsController.annotations | toYaml | nindent 8 }}
 {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  config.yml: |-
+    cloud_account_id: "{{ .Values.cloudAccountId }}"
+    region: "{{ .Values.region }}"
+    cluster_name: "{{ .Values.clusterName }}"
+
+    server:
+      mode: http
+      port: {{ .Values.aggregator.collector.port }}
+
+    logging:
+      level: "{{ .Values.aggregator.logging.level }}"
+
+    database:
+      storage_path: {{ .Values.aggregator.mountRoot }}/data
+      max_records: 1000000
+      compression_level: 8
+
+    cloudzero:
+      api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
+      send_interval: 1m
+      send_timeout: 10s
+      rotate_interval: 30m
+      host: {{ .Values.host }}

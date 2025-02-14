@@ -222,6 +222,15 @@ app.kubernetes.io/component: {{ include "cloudzero-agent.initCertJobName" . }}
 {{- end -}}
 
 {{/*
+Create common matchLabels for aggregator
+*/}}
+{{- define "cloudzero-agent.aggregator.matchLabels" -}}
+app.kubernetes.io/component: aggregator
+app.kubernetes.io/name: {{ include "cloudzero-agent.aggregator.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{/*
 imagePullSecrets for the insights controller webhook server
 */}}
 {{- define "cloudzero-agent.insightsController.server.imagePullSecrets" -}}
@@ -299,6 +308,16 @@ Service selector labels
 {{ include "cloudzero-agent.common.metaLabels" . }}
 {{- end -}}
 
+{{- define "cloudzero-agent.aggregator.selectorLabels" -}}
+{{ include "cloudzero-agent.common.matchLabels" . }}
+{{ include "cloudzero-agent.aggregator.matchLabels" . }}
+{{- end }}
+
+{{- define "cloudzero-agent.aggregator.labels" -}}
+{{ include "cloudzero-agent.aggregator.matchLabels" . }}
+{{ include "cloudzero-agent.common.metaLabels" . }}
+{{- end -}}
+
 {{/*
 Create a fully qualified webhook server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
@@ -333,6 +352,10 @@ Name for the validating webhook configuration resource
 
 {{ define "cloudzero-agent.webhookConfigMapName" -}}
 {{ .Values.insightsController.ConfigMapNameOverride | default (printf "%s-webhook-configuration" .Release.Name) }}
+{{- end}}
+
+{{ define "cloudzero-agent.aggregator.name" -}}
+{{ .Values.aggregator.name | default (printf "%s-aggregator" .Release.Name) }}
 {{- end}}
 
 {{/*
@@ -401,3 +424,14 @@ Name for the secret holding TLS certificates
 {{- .Values.insightsController.tls.secret.name | default (printf "%s-tls" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) }}
 {{- end }}
 
+{{/*
+Volume mount for the API key
+*/}}
+{{- define "cloudzero-agent.apiKeyVolumeMount" -}}
+{{- if or .Values.existingSecretName .Values.apiKey -}}
+- name: cloudzero-api-key
+  mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+  subPath: ""
+  readOnly: true
+{{- end }}
+{{- end }}

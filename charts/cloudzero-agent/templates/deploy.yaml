@@ -39,12 +39,7 @@ spec:
             - -c
             - cp -r /app /checks/bin/ && cloudzero-agent-validator d pre-start -f /checks/config/validator.yml
           volumeMounts:
-          {{- if or .Values.existingSecretName .Values.apiKey }}
-            - name: cloudzero-api-key
-              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
-              subPath: ""
-              readOnly: true
-          {{- end }}
+          {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
               mountPath: /checks/bin/
             - name: validator-config-volume
@@ -135,12 +130,8 @@ spec:
               mountPath: /check/
             - name: validator-config-volume
               mountPath: /check/app/config/
-          {{- if or .Values.existingSecretName .Values.apiKey }}
-            - name: cloudzero-api-key
-              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
-              subPath: ""
-              readOnly: true
-          {{- end }}
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
@@ -189,5 +180,5 @@ spec:
             sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
           {{- else }}
             {}
-          {{- end -}}
-        {{- end -}}
+          {{- end }}
+        {{- end }}
