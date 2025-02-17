@@ -131,6 +131,17 @@ Create the name of the ClusterRoleBinding to use for the init-cert Job
 {{- end -}}
 
 {{/*
+init-cert Job annotations
+*/}}
+{{- define "cloudzero-agent.initCertJob.annotations" -}}
+{{- if .Values.initCertJob.annotations -}}
+annotations:
+  {{- toYaml .Values.initCertJob.annotations | nindent 2 -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
 Create a fully qualified Prometheus server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
@@ -397,11 +408,22 @@ Name for the backfill job resource
 {{- end }}
 
 {{/*
+initBackfillJob Job annotations
+*/}}
+{{- define "cloudzero-agent.initBackfillJob.annotations" -}}
+{{- if .Values.initBackfillJob.annotations -}}
+annotations:
+  {{- toYaml .Values.initBackfillJob.annotations | nindent 2 -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Name for the certificate init job resource. Should be a new name each installation/upgrade.
 */}}
 {{- define "cloudzero-agent.initCertJobName" -}}
-{{- $name := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .) | trunc 60) -}}
-{{- $name -}}-{{ .Release.Revision | default (randAlpha 5) }}
+{{ $version := .Chart.Version | replace "." "-" }}
+{{- $name := (printf "%s-init-cert-%s" (include "cloudzero-agent.insightsController.server.webhookFullname" .) $version | trunc 60) -}}
+{{- $name -}}-{{ .Release.Revision }}
 {{- end }}
 
 {{/*
