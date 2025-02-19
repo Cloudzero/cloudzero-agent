@@ -21,12 +21,12 @@ func main() {
 	inputFile := os.Args[1]
 	outputFile := os.Args[2]
 
-	input, err := shipper.NewFile(inputFile)
+	input, err := shipper.NewMetricFile(inputFile)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create input file")
 	}
 
-	parquetData, err := input.ReadFile()
+	parquetData, err := input.ReadAll()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to read input file")
 	}

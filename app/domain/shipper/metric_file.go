@@ -11,25 +11,27 @@ import (
 	"path/filepath"
 )
 
-type FileOpt func(f *File)
+// MetricFileOpt is the type for options which modify a `MetricFile`.
+type MetricFileOpt func(f *MetricFile)
 
-// Pass in a pre-made pre-signed url.
-func FileWithPresignedURL(url string) FileOpt {
-	return func(f *File) {
+// MetricFileWithPresignedURL passes in a pre-made pre-signed url.
+func MetricFileWithPresignedURL(url string) MetricFileOpt {
+	return func(f *MetricFile) {
 		f.PresignedURL = url
 	}
 }
 
-// If set to true, the file will be opened on initialization.
-// This opening will set the sha and size fields of the file,
-// in addition to ensuring at initialization time that this file exists.
-func FileWithoutLazyLoad(lazy bool) FileOpt {
-	return func(f *File) {
+// MetricFileWithoutLazyLoad sets the `notLazy` flag to true. If set to true,
+// the file will be opened on initialization. This opening will set the sha and
+// size fields of the file, in addition to ensuring at initialization time that
+// this file exists.
+func MetricFileWithoutLazyLoad(lazy bool) MetricFileOpt {
+	return func(f *MetricFile) {
 		f.notLazy = lazy
 	}
 }
 
-type File struct {
+type MetricFile struct {
 	ReferenceID  string `json:"reference_id"` //nolint:tagliatelle // endstream api accepts cammel case
 	PresignedURL string `json:"-"`            //nolint:tagliatelle // ignore this property when marshalling to json
 
@@ -42,13 +44,13 @@ type File struct {
 	notLazy bool
 }
 
-// Creates a new `File` with an optional list of `FileOpt`.
-func NewFile(path string, opts ...FileOpt) (*File, error) {
+// NewMetricFile reates a new `File` with an optional list of `FileOpt`.
+func NewMetricFile(path string, opts ...MetricFileOpt) (*MetricFile, error) {
 	if path == "" {
 		return nil, errors.New("an empty path is not valid")
 	}
 
-	f := &File{
+	f := &MetricFile{
 		ReferenceID: filepath.Base(path),
 		location:    path,
 	}
@@ -60,7 +62,7 @@ func NewFile(path string, opts ...FileOpt) (*File, error) {
 
 	// set the internal state of the file
 	if f.notLazy {
-		if _, err := f.ReadFile(); err != nil {
+		if _, err := f.ReadAll(); err != nil {
 			return nil, err
 		}
 	}
@@ -68,12 +70,12 @@ func NewFile(path string, opts ...FileOpt) (*File, error) {
 	return f, nil
 }
 
-// Convenience function to create multiple `File` objects from a list of file paths
-// The `FileOpt`s passed in `opts` will be applied to ALL files created.
-func NewFilesFromPaths(paths []string, opts ...FileOpt) ([]*File, error) {
-	files := make([]*File, 0)
+// NewMetricFilesFromPaths creates multiple `MetricFile` objects from a list of file paths
+// The `MetricFileOpt`s passed in `opts` will be applied to ALL files created.
+func NewMetricFilesFromPaths(paths []string, opts ...MetricFileOpt) ([]*MetricFile, error) {
+	files := make([]*MetricFile, 0)
 	for _, path := range paths {
-		f, err := NewFile(path, opts...)
+		f, err := NewMetricFile(path, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("issue creating file from path '%s': %w", path, err)
 		}
@@ -86,7 +88,7 @@ func NewFilesFromPaths(paths []string, opts ...FileOpt) ([]*File, error) {
 // Gives an `os.File` mount for this file
 // This will cache the result if called multiple times.
 // To clear the cached read value, call `f.Clear()`.
-func (f *File) GetFile() (*os.File, error) {
+func (f *MetricFile) File() (*os.File, error) {
 	if f.file == nil {
 		// open the file
 		osFile, err := os.Open(f.location)
@@ -99,13 +101,12 @@ func (f *File) GetFile() (*os.File, error) {
 	return f.file, nil
 }
 
-// ReadFile loads the file as defined from the filesystem path `ReferenceID`
-// into memory, transcoding to Parquet in the process. This will cache the
-// result if called multiple times. To clear the cached read value, call
-// `f.Clear()`.
-func (f *File) ReadFile() ([]byte, error) {
+// ReadAll loads the file as defined from the filesystem path `ReferenceID` into
+// memory, transcoding to Parquet in the process. This will cache the result if
+// called multiple times. To clear the cached read value, call `f.Clear()`.
+func (f *MetricFile) ReadAll() ([]byte, error) {
 	if f.data == nil {
-		osFile, err := f.GetFile()
+		osFile, err := f.File()
 		if err != nil {
 			return nil, err
 		}
@@ -124,32 +125,33 @@ func (f *File) ReadFile() ([]byte, error) {
 	return f.data, nil
 }
 
-// Reset the internal state of the file
+// Clear resets the internal state of the file
 // This will NOT reset the `ReferenceID` or the `PresignedURL`
-func (f *File) Clear() {
+func (f *MetricFile) Clear() {
 	f.file = nil
 	f.data = nil
 	f.size = 0
 }
 
-// Get name of this file on disk
-func (f *File) Filename() string {
+// Filename get name of this file on disk
+func (f *MetricFile) Filename() string {
 	return filepath.Base(f.location)
 }
 
-// Get the root location of this file on disk
-func (f *File) Filepath() string {
+// Filepath gets the root location of this file on disk
+func (f *MetricFile) Filepath() string {
 	return filepath.Dir(f.location)
 }
 
-// Get the full location of this file on disk
-func (f *File) Location() string {
+// Location gets the full location of this file on disk
+func (f *MetricFile) Location() string {
 	return filepath.Join(f.Filepath(), f.Filename())
 }
 
-func (f *File) Size() (int64, error) {
+// Size gets the size of the file on disk
+func (f *MetricFile) Size() (int64, error) {
 	if f.size == 0 {
-		if _, err := f.ReadFile(); err != nil {
+		if _, err := f.ReadAll(); err != nil {
 			return 0, err
 		}
 	}

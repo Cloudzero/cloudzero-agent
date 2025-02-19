@@ -130,9 +130,9 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	require.Empty(t, replays)
 }
 
-func createTestFiles(t *testing.T, dir string, n int) []*shipper.File {
+func createTestFiles(t *testing.T, dir string, n int) []*shipper.MetricFile {
 	// create some test files to simulate resource tracking
-	files := make([]*shipper.File, 0, n)
+	files := make([]*shipper.MetricFile, 0, n)
 	for i := range n {
 		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.json.br", i))
 		require.NoError(t, err)
@@ -140,7 +140,7 @@ func createTestFiles(t *testing.T, dir string, n int) []*shipper.File {
 		_, err = tempFile.Write(compressedTestMetrics())
 		require.NoError(t, err)
 
-		file, err := shipper.NewFile(tempFile.Name())
+		file, err := shipper.NewMetricFile(tempFile.Name())
 		require.NoError(t, err)
 
 		files = append(files, file)

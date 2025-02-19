@@ -33,7 +33,7 @@ type AbandonAPIPayloadFile struct {
 // Allocates a set of pre-signed urls for the passed file objects
 // The passed `files` argument will be modified to add the `PresignedURL` field
 // You can opt to consume the return value or allow for implicit modification.
-func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
+func (m *MetricShipper) AllocatePresignedURLs(files []*MetricFile) ([]*MetricFile, error) {
 	if len(files) == 0 {
 		return nil, nil
 	}
@@ -107,7 +107,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 	}
 
 	// create a map of {ReferenceId: File} to match api response
-	fileMap := make(map[string]*File)
+	fileMap := make(map[string]*MetricFile)
 	for _, item := range files {
 		fileMap[item.ReferenceID] = item
 	}

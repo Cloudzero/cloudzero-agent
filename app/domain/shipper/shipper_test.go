@@ -198,7 +198,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1", "file2"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1", "file2"})
 	require.NoError(t, err)
 	files, err = metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestAllocatePresignedURL_NoFiles(t *testing.T) {
 	require.NoError(t, err)
 
 	// Execute
-	presignedURLs, err := metricShipper.AllocatePresignedURLs([]*shipper.File{})
+	presignedURLs, err := metricShipper.AllocatePresignedURLs([]*shipper.MetricFile{})
 
 	// Verify
 	assert.NoError(t, err)
@@ -248,7 +248,7 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1"})
 	require.NoError(t, err)
 	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
 
@@ -279,7 +279,7 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1"})
 	require.NoError(t, err)
 	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
 
@@ -308,7 +308,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1"})
 	require.NoError(t, err)
 	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
 
@@ -329,7 +329,7 @@ func TestAllocatePresignedURL_RequestCreationError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1"})
 	require.NoError(t, err)
 	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
 
@@ -355,7 +355,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	files, err := shipper.NewFilesFromPaths([]string{"file1"})
+	files, err := shipper.NewMetricFilesFromPaths([]string{"file1"})
 	require.NoError(t, err)
 	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
 
@@ -392,7 +392,7 @@ func TestUploadFile_Success(t *testing.T) {
 	tempFile.Close()
 
 	// create the file obj
-	file, err := shipper.NewFile(tempFile.Name(), shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewMetricFile(tempFile.Name(), shipper.MetricFileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -428,7 +428,7 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := shipper.NewFile(tempFile.Name(), shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewMetricFile(tempFile.Name(), shipper.MetricFileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -458,7 +458,7 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := shipper.NewFile(tempFile.Name(), shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewMetricFile(tempFile.Name(), shipper.MetricFileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -493,7 +493,7 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	file, err := shipper.NewFile(tempFile.Name(), shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewMetricFile(tempFile.Name(), shipper.MetricFileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// Execute
@@ -513,11 +513,11 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-existent file path
-	file, err := shipper.NewFile("/path/to/nonexistent/file.json.br", shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewMetricFile("/path/to/nonexistent/file.json.br", shipper.MetricFileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// read the file
-	_, err = file.ReadFile()
+	_, err = file.ReadAll()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to open the file")
 }
