@@ -67,6 +67,8 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	}
 }
 
+func TestShipper_Integration_UploadToS3(t *testing.T) {}
+
 func TestShipper_Integration_ExpiredPresignedURL(t *testing.T) {}
 
 func TestShipper_Integration_ReplayRequest(t *testing.T) {}

@@ -30,7 +30,8 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	// save the request
-	rr, err := shipper.SaveReplayRequest(referenceIDs)
+	rr := &ReplayRequest{ReferenceIDs: referenceIDs}
+	err = shipper.SaveReplayRequest(rr)
 	require.NoError(t, err)
 	require.NotNil(t, rr)
 
@@ -103,7 +104,7 @@ func TestShiper_ReplayRequestRun(t *testing.T) {
 	shipper.HTTPClient.Transport = mockRoundTripper
 
 	// save the replay request
-	_, err = shipper.SaveReplayRequest(refIDs)
+	err = shipper.SaveReplayRequest(&ReplayRequest{ReferenceIDs: refIDs})
 	require.NoError(t, err)
 
 	// ensure the replay request can be found
