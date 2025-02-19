@@ -132,14 +132,17 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 
 func createTestFiles(t *testing.T, dir string, n int) []*shipper.File {
 	// create some test files to simulate resource tracking
-	files := make([]*shipper.File, 0)
+	files := make([]*shipper.File, 0, n)
 	for i := range n {
-		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.parquet", i))
+		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.json.br", i))
 		require.NoError(t, err)
-		_, err = tempFile.WriteString(fmt.Sprintf("This is some test data - %d", n))
+
+		_, err = tempFile.Write(compressedTestMetrics())
 		require.NoError(t, err)
+
 		file, err := shipper.NewFile(tempFile.Name())
 		require.NoError(t, err)
+
 		files = append(files, file)
 	}
 	return files

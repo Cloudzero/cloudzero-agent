@@ -178,7 +178,7 @@ func TestGetMetrics(t *testing.T) {
 func TestAllocatePresignedURL_Success(t *testing.T) {
 	// Setup
 	mockURL := "https://example.com/upload"
-	expectedURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
+	expectedURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 
 	mockResponseBody := map[string]string{
 		"file1": expectedURL,
@@ -367,7 +367,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 
 func TestUploadFile_Success(t *testing.T) {
 	// Setup
-	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
+	mockURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusOK,
@@ -382,12 +382,12 @@ func TestUploadFile_Success(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
+	tempFile, err := os.CreateTemp("", "testfile-*.json.br")
 	assert.NoError(t, err)
 	defer os.Remove(tempFile.Name())
 
 	// Write some data to the file
-	_, err = tempFile.WriteString("test data")
+	_, err = tempFile.Write(compressedTestMetrics())
 	assert.NoError(t, err)
 	tempFile.Close()
 
@@ -403,7 +403,7 @@ func TestUploadFile_Success(t *testing.T) {
 }
 
 func TestUploadFile_HTTPError(t *testing.T) {
-	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
+	mockURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 	mockResponseBody := "Bad Request"
 
 	mockRoundTripper := &MockRoundTripper{
@@ -419,12 +419,12 @@ func TestUploadFile_HTTPError(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
+	tempFile, err := os.CreateTemp("", "testfile-*.json.br")
 	assert.NoError(t, err)
 	defer os.Remove(tempFile.Name())
 
 	// Write some data to the file
-	_, err = tempFile.WriteString("test data")
+	_, err = tempFile.Write(compressedTestMetrics())
 	assert.NoError(t, err)
 	tempFile.Close()
 
@@ -449,12 +449,12 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
+	tempFile, err := os.CreateTemp("", "testfile-*.json.br")
 	assert.NoError(t, err)
 	defer os.Remove(tempFile.Name())
 
 	// Write some data to the file
-	_, err = tempFile.WriteString("test data")
+	_, err = tempFile.Write(compressedTestMetrics())
 	assert.NoError(t, err)
 	tempFile.Close()
 
@@ -471,7 +471,7 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 
 func TestUploadFile_HTTPClientError(t *testing.T) {
 	// Setup
-	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
+	mockURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 	mockRoundTripper := &MockRoundTripper{
 		mockResponseBody: nil,
 		mockError:        errors.New("network error"),
@@ -484,12 +484,12 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "testfile-*.tgz")
+	tempFile, err := os.CreateTemp("", "testfile-*.json.br")
 	assert.NoError(t, err)
 	defer os.Remove(tempFile.Name())
 
 	// Write some data to the file
-	_, err = tempFile.WriteString("test data")
+	_, err = tempFile.Write(compressedTestMetrics())
 	assert.NoError(t, err)
 	tempFile.Close()
 
@@ -505,7 +505,7 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 
 func TestUploadFile_FileOpenError(t *testing.T) {
 	// Setup
-	mockURL := "https://s3.amazonaws.com/bucket/file.tgz?signature=abc123"
+	mockURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 
 	settings := setupSettings(mockURL)
 
@@ -513,7 +513,7 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-existent file path
-	file, err := shipper.NewFile("/path/to/nonexistent/file.tgz", shipper.FileWithPresignedURL(mockURL))
+	file, err := shipper.NewFile("/path/to/nonexistent/file.json.br", shipper.FileWithPresignedURL(mockURL))
 	require.NoError(t, err)
 
 	// read the file

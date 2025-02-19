@@ -308,8 +308,8 @@ func (m *MetricShipper) HandleRequest(files []*File) error {
 }
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) Upload(file *File) error {
-	data, err := file.ReadFile()
+func (m *MetricShipper) Upload(file *MetricFile) error {
+	data, err := file.ReadAll()
 	if err != nil {
 		return fmt.Errorf("failed to get the file data: %w", err)
 	}

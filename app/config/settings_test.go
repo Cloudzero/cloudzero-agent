@@ -62,9 +62,9 @@ func TestSettings_Validate(t *testing.T) {
 					Port: 8080,
 				},
 				Database: config.Database{
-					StoragePath: "testdata",
-					MaxRecords:  1000000,
-					Compress:    true,
+					StoragePath:      "testdata",
+					MaxRecords:       1000000,
+					CompressionLevel: 7,
 				},
 				Cloudzero: config.Cloudzero{
 					APIKeyPath:   "testdata/api_key.txt",
@@ -149,9 +149,9 @@ func TestDatabase_Validate(t *testing.T) {
 		{
 			name: "valid database settings",
 			database: config.Database{
-				StoragePath: "testdata",
-				MaxRecords:  1000000,
-				Compress:    true,
+				StoragePath:      "testdata",
+				MaxRecords:       1000000,
+				CompressionLevel: 7,
 			},
 			wantErr: false,
 		},

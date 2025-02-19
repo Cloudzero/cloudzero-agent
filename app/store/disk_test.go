@@ -18,11 +18,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParquetStore_PutAndPending(t *testing.T) {
+func TestDiskStore_PutAndPending(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 10
 
-	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -42,11 +42,11 @@ func TestParquetStore_PutAndPending(t *testing.T) {
 	assert.Equal(t, 5, ps.Pending())
 }
 
-func TestParquetStore_Flush(t *testing.T) {
+func TestDiskStore_Flush(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 5
 
-	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
 	assert.NoError(t, err)
 
 	// Add metrics and verify they are pending
@@ -63,16 +63,16 @@ func TestParquetStore_Flush(t *testing.T) {
 	assert.Equal(t, 0, ps.Pending())
 }
 
-func TestParquetStore_Compact(t *testing.T) {
+func TestDiskStore_Compact(t *testing.T) {
 	// create a unique directory for each test
-	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_Compact_")
+	dirPath, err := os.MkdirTemp(t.TempDir(), "TestDiskStore_Compact_")
 	assert.NoError(t, err)
 	ctx := context.Background()
 	rowLimit := 100
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -104,16 +104,16 @@ func TestParquetStore_Compact(t *testing.T) {
 	}
 }
 
-func TestParquetStore_MatchingFiles(t *testing.T) {
+func TestDiskStore_MatchingFiles(t *testing.T) {
 	// create a unique directory for each test
-	dirPath, err := os.MkdirTemp(t.TempDir(), "TestParquetStore_MatchingFiles_")
+	dirPath, err := os.MkdirTemp(t.TempDir(), "TestDiskStore_MatchingFiles_")
 	assert.NoError(t, err)
 	ctx := context.Background()
 	rowLimit := 100
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewParquetStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -140,7 +140,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 	addRecords()
 
 	// `GetMatchingFiles` must not return any files when no targets are defined
-	t.Run("TestParquetStore_MatchingFiles_EmptyTargetFiles", func(t *testing.T) {
+	t.Run("TestDiskStore_MatchingFiles_EmptyTargetFiles", func(t *testing.T) {
 		files, err := ps.GetFiles()
 		require.NoError(t, err)
 		require.Equal(t, 3, len(files))
@@ -151,7 +151,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 	})
 
 	// the `GetMatchingFiles` must respect the split between directories
-	t.Run("TestParquetStore_MatchingFiles_EnsureSubdirectorySplit", func(t *testing.T) {
+	t.Run("TestDiskStore_MatchingFiles_EnsureSubdirectorySplit", func(t *testing.T) {
 		files, err := ps.GetFiles()
 		require.NoError(t, err)
 
@@ -184,7 +184,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 	})
 
 	// `GetMatchingFiles` must ONLY use the filename as the id, and ignore the rest of the path
-	t.Run("TestParquetStore_MatchingFiles_EnsureIgnoreFullPath", func(t *testing.T) {
+	t.Run("TestDiskStore_MatchingFiles_EnsureIgnoreFullPath", func(t *testing.T) {
 		files, err := ps.GetFiles()
 		require.NoError(t, err)
 

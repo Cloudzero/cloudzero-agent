@@ -4,7 +4,6 @@
 package shipper
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -37,7 +36,6 @@ type File struct {
 	location string   // location on the disk of the file, since ReferenceID is JUST the filename
 	file     *os.File // pointer to the file on disk. Can be null, use getter
 	data     []byte   // data of the read file stored in memory. Can be null, use getter
-	sha256   string   // sha256 of the `data` byte array. Can be empty, use getter
 	size     int64    // size of the byte array. Can be 0, use getter
 
 	// internal options
@@ -101,9 +99,10 @@ func (f *File) GetFile() (*os.File, error) {
 	return f.file, nil
 }
 
-// Read the file as defined from the filesystem path `ReferenceID`
-// This will cache the result if called multiple times.
-// To clear the cached read value, call `f.Clear()`.
+// ReadFile loads the file as defined from the filesystem path `ReferenceID`
+// into memory, transcoding to Parquet in the process. This will cache the
+// result if called multiple times. To clear the cached read value, call
+// `f.Clear()`.
 func (f *File) ReadFile() ([]byte, error) {
 	if f.data == nil {
 		osFile, err := f.GetFile()
@@ -111,21 +110,15 @@ func (f *File) ReadFile() ([]byte, error) {
 			return nil, err
 		}
 
-		// read file content into buffer
-		data, err := io.ReadAll(osFile)
+		parquetStream := NewParquetStreamer(osFile)
+		defer parquetStream.Close()
+
+		f.data, err = io.ReadAll(parquetStream)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read file content: %w", err)
+			return nil, err
 		}
 
-		f.data = data
-
-		// set internal state of the file
-		stat, err := osFile.Stat()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get the internal stat of the file: %w", err)
-		}
-		f.sha256 = fmt.Sprintf("%x", sha256.Sum256(data))
-		f.size = stat.Size()
+		f.size = int64(len(f.data))
 	}
 
 	return f.data, nil
@@ -136,7 +129,6 @@ func (f *File) ReadFile() ([]byte, error) {
 func (f *File) Clear() {
 	f.file = nil
 	f.data = nil
-	f.sha256 = ""
 	f.size = 0
 }
 
@@ -153,15 +145,6 @@ func (f *File) Filepath() string {
 // Get the full location of this file on disk
 func (f *File) Location() string {
 	return filepath.Join(f.Filepath(), f.Filename())
-}
-
-func (f *File) SHA256() (string, error) {
-	if f.sha256 == "" {
-		if _, err := f.ReadFile(); err != nil {
-			return "", err
-		}
-	}
-	return f.sha256, nil
 }
 
 func (f *File) Size() (int64, error) {
