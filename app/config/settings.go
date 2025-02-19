@@ -29,7 +29,6 @@ const (
 
 type Settings struct {
 	// Core Settings
-	OrganizationID string `yaml:"organization_id" env:"ORGANIZATION_ID" env-description:"organization ID"`
 	CloudAccountID string `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
 	Region         string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
 	ClusterName    string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
@@ -102,11 +101,6 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 }
 
 func (s *Settings) Validate() error {
-	// Cleanup and validate settings
-	s.OrganizationID = strings.TrimSpace(s.OrganizationID)
-	if s.OrganizationID == "" {
-		return errors.New("Organization ID is empty")
-	}
 	// Cleanup and validate settings
 	s.CloudAccountID = strings.TrimSpace(s.CloudAccountID)
 	if s.CloudAccountID == "" {

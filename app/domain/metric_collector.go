@@ -200,7 +200,6 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 				continue
 			}
 			metrics = append(metrics, types.NewMetric(
-				d.settings.OrganizationID,
 				d.settings.CloudAccountID,
 				d.settings.ClusterName,
 				metricName,
@@ -249,10 +248,10 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 		// Process samples
 		for _, sample := range ts.Samples {
 			metric := types.Metric{
-				Name:      metricName,
-				TimeStamp: sample.Timestamp,
-				Labels:    labelsMap,
-				Value:     formatFloat(sample.Value),
+				MetricName: metricName,
+				TimeStamp:  sample.Timestamp,
+				Labels:     labelsMap,
+				Value:      formatFloat(sample.Value),
 			}
 			metrics = append(metrics, metric)
 			stats.Samples++

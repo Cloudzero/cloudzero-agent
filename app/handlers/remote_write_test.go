@@ -27,7 +27,6 @@ func createRequest(method, url string, body io.Reader) *http.Request {
 	req, _ := http.NewRequest(method, url, body)
 	req.Header.Set("Content-Type", "application/x-protobuf")
 	req.Header.Set("Content-Encoding", "snappy")
-	req.Header.Set("organization_id", "testorg")
 	return req
 }
 
@@ -38,7 +37,6 @@ func TestRemoteWriteMethods(t *testing.T) {
 	storage := mocks.NewMockStore(ctrl)
 
 	cfg := config.Settings{
-		OrganizationID: "testorg",
 		CloudAccountID: "123456789012",
 		Region:         "us-west-2",
 		ClusterName:    "testcluster",

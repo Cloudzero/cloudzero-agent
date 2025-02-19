@@ -5,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   config.yml: |-
-    organization_id: "{{ .Values.cloudZero.organizationId }}"
     cloud_account_id: "{{ .Values.csp.accountId }}"
     region: "{{ .Values.csp.region }}"
     cluster_name: "{{ .Values.clusterName }}"

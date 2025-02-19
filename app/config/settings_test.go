@@ -54,7 +54,6 @@ func TestSettings_Validate(t *testing.T) {
 		{
 			name: "valid settings",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "123456789012",
 				Region:         "us-east-1",
 				ClusterName:    "test-cluster",
@@ -77,19 +76,8 @@ func TestSettings_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "empty org ID",
-			settings: config.Settings{
-				OrganizationID: "",
-				CloudAccountID: "123456789012",
-				Region:         "us-east-1",
-				ClusterName:    "test-cluster",
-			},
-			wantErr: true,
-		},
-		{
 			name: "empty cloud account ID",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "",
 				Region:         "us-east-1",
 				ClusterName:    "test-cluster",
@@ -99,7 +87,6 @@ func TestSettings_Validate(t *testing.T) {
 		{
 			name: "empty region",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "123456789012",
 				Region:         "",
 				ClusterName:    "test-cluster",
@@ -109,7 +96,6 @@ func TestSettings_Validate(t *testing.T) {
 		{
 			name: "empty cluster name",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "123456789012",
 				Region:         "us-east-1",
 				ClusterName:    "",
@@ -119,7 +105,6 @@ func TestSettings_Validate(t *testing.T) {
 		{
 			name: "invalid database storage path",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "123456789012",
 				Region:         "us-east-1",
 				ClusterName:    "test-cluster",
@@ -132,7 +117,6 @@ func TestSettings_Validate(t *testing.T) {
 		{
 			name: "invalid API key path",
 			settings: config.Settings{
-				OrganizationID: "testorg",
 				CloudAccountID: "123456789012",
 				Region:         "us-east-1",
 				ClusterName:    "test-cluster",

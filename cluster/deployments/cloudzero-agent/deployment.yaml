@@ -120,8 +120,6 @@ spec:
                 scrape_interval: 60s
               remote_write:
                 - url: http://collector.default.svc.cluster.local/metrics?cluster_name=aws-cirrus-jb-cluster&cloud_account_id=975482786146&region=us-east-2
-                  headers:
-                    "organization_id": "3e0e0d25-b482-4e61-aa52-9994b2dcd51e"
                   remote_timeout: 30s
                   write_relabel_configs:
                     - source_labels: [__name__]
@@ -263,8 +261,6 @@ spec:
                 scrape_interval: 60s
               remote_write:
                 - url: http://collector.default.svc.cluster.local/metrics?cluster_name=aws-cirrus-jb-cluster&cloud_account_id=975482786146&region=us-east-2
-                  headers:
-                    "organization_id": "3e0e0d25-b482-4e61-aa52-9994b2dcd51e"
                   remote_timeout: 30s
                   write_relabel_configs:
                     - source_labels: [__name__]

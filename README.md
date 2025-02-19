@@ -225,8 +225,6 @@ Note that internally this will create a CloudFormation stack with the name "exte
      - name: ghcr-secret
 
    clusterName: eks-test-cirrus-evan
-   cloudZero:
-     organizationId: 80cab1b4-1e7e-49da-90b9-644a1d90af9b
    csp:
      region: us-east-1
      accountId: "975482786146"
