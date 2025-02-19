@@ -120,6 +120,11 @@ func (m *MetricShipper) Run() error {
 			if err := m.ProcessReplayRequests(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to process replay requests")
 			}
+
+			// check the disk usage
+			if err := m.HandleDisk(); err != nil {
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to handle the disk usage")
+			}
 		}
 	}
 }
