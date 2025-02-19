@@ -20,7 +20,7 @@ type ReplayRequest struct {
 
 type replayRequestHeader struct {
 	RefID string `json:"ref_id"` //nolint:tagliatelle // upstream uses cammel case
-	Url   string `json:"url"`
+	URL   string `json:"url"`
 }
 
 func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {

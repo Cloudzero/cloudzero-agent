@@ -134,7 +134,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*File) ([]*File, error) {
 		rr, err := NewReplayRequestFromHeader(rrh)
 		if err == nil {
 			// save the replay request to disk
-			if err := m.SaveReplayRequest(rr); err != nil {
+			if err = m.SaveReplayRequest(rr); err != nil {
 				// do not fail here
 				log.Ctx(m.ctx).Err(err).Msg("failed to save the replay request to disk")
 			}
