@@ -96,10 +96,11 @@ func (r *resourceRepoImpl) Create(ctx context.Context, it *types.ResourceTags) e
 
 	err := r.DB(ctx).
 		Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
+			Columns:   []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
+			DoNothing: true,
 		}).Create(it).Error
 	if err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("storage write create failure")
+		log.Ctx(ctx).Warn().Err(err).Msg("storage write create failure")
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "create",
 			"resource_type": fmt.Sprintf("%d", it.Type),
@@ -178,7 +179,7 @@ func (r *resourceRepoImpl) Update(ctx context.Context, it *types.ResourceTags) e
 	if err := r.DB(ctx).Model(it).
 		Where("id = ?", it.ID).
 		Updates(updates).Error; err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("storage write update failure")
+		log.Ctx(ctx).Warn().Err(err).Msg("storage write update failure")
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "update",
 			"resource_type": fmt.Sprintf("%d", it.Type),
