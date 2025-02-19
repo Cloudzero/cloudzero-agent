@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestShipperMetrics(t *testing.T) {
+func TestShipper_Metrics(t *testing.T) {
 	pm, err := InitMetrics()
 	require.NoError(t, err)
 
