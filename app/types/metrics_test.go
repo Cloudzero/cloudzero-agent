@@ -21,7 +21,7 @@ func TestNewMetric(t *testing.T) {
 	metric := types.NewMetric("org", "cloudaccount", "cluster", name, nodeName, timeStamp, labels, value)
 
 	assert.NotEmpty(t, metric.ID)
-	assert.Equal(t, name, metric.Name)
+	assert.Equal(t, name, metric.MetricName)
 	assert.Equal(t, nodeName, metric.NodeName)
 	assert.NotZero(t, metric.CreatedAt)
 	assert.Equal(t, timeStamp, metric.TimeStamp)
@@ -42,8 +42,8 @@ func TestMetricRange(t *testing.T) {
 	}
 
 	assert.Len(t, metricRange.Metrics, 2)
-	assert.Equal(t, "metric1", metricRange.Metrics[0].Name)
-	assert.Equal(t, "metric2", metricRange.Metrics[1].Name)
+	assert.Equal(t, "metric1", metricRange.Metrics[0].MetricName)
+	assert.Equal(t, "metric2", metricRange.Metrics[1].MetricName)
 	assert.Equal(t, "node1", metricRange.Metrics[0].NodeName)
 	assert.Equal(t, "node1", metricRange.Metrics[1].NodeName)
 	assert.NotNil(t, metricRange.Next)
