@@ -24,7 +24,6 @@ func TestPutMetrics(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.Settings{
-		OrganizationID: "testorg",
 		CloudAccountID: "123456789012",
 		Region:         "us-west-2",
 		ClusterName:    "testcluster",

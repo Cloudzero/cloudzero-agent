@@ -1,7 +1,5 @@
 # Values you'll need to override.
 clusterName: ""
-cloudZero:
-  organizationId: ""
 csp:
   region: ""
   accountId: ""

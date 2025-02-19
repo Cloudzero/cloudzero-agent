@@ -21,7 +21,6 @@ CLOUD_ACCOUNT_ID="1234567890"
 API_ENDPOINT="http://localhost:8080/metrics"
 
 # HTTP Headers
-ORGANIZATION_ID="3e0e0d25-12345-12345-12345"
 CONTENT_TYPE="application/x-protobuf"
 CONTENT_ENCODING="snappy"
 # ----------------------------
@@ -37,7 +36,6 @@ upload_file() {
     # Perform the POST request using curl
     response=$(curl -s -w "%{http_code}" -o /dev/null \
         -X POST "$url" \
-        -H "organization_id: ${ORGANIZATION_ID}" \
         -H "Content-Type: ${CONTENT_TYPE}" \
         -H "Content-Encoding: ${CONTENT_ENCODING}" \
         --data-binary "@${file_path}")

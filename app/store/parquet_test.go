@@ -27,7 +27,7 @@ func TestParquetStore_PutAndPending(t *testing.T) {
 	defer ps.Flush()
 
 	// Add metrics less than the row limit
-	metric := types.NewMetric("org", "cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
+	metric := types.NewMetric("cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
 	err = ps.Put(context.Background(), metric, metric, metric)
 	assert.NoError(t, err)
 
@@ -50,7 +50,7 @@ func TestParquetStore_Flush(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Add metrics and verify they are pending
-	metric := types.NewMetric("org", "cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
+	metric := types.NewMetric("cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
 	err = ps.Put(context.Background(), metric, metric)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, ps.Pending())
@@ -80,7 +80,7 @@ func TestParquetStore_Compact(t *testing.T) {
 		id := fmt.Sprintf("test_metric_%d", i)
 		value := fmt.Sprintf("%d", i)
 		metric := types.NewMetric(
-			"org", "cloudaccount", "cluster",
+			"cloudaccount", "cluster",
 			id,
 			"node1",
 			time.Now().Unix(),
@@ -122,7 +122,7 @@ func TestParquetStore_MatchingFiles(t *testing.T) {
 			id := fmt.Sprintf("test_metric_%d", i)
 			value := fmt.Sprintf("%d", i)
 			metric := types.NewMetric(
-				"org", "cloudaccount", "cluster",
+				"cloudaccount", "cluster",
 				id,
 				"node1",
 				time.Now().Unix(),

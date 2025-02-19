@@ -200,7 +200,6 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 				continue
 			}
 			metrics = append(metrics, types.NewMetric(
-				d.settings.OrganizationID,
 				d.settings.CloudAccountID,
 				d.settings.ClusterName,
 				metricName,
