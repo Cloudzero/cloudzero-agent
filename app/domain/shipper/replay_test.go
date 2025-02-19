@@ -1,4 +1,4 @@
-package shipper
+package shipper_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,11 +27,11 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 			StoragePath: t.TempDir(),
 		},
 	}
-	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
 	// save the request
-	rr, err := shipper.SaveReplayRequest(referenceIDs)
+	rr, err := metricShipper.SaveReplayRequest(referenceIDs)
 	require.NoError(t, err)
 	require.NotNil(t, rr)
 
@@ -41,7 +42,7 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 		require.NoError(t, err)
 
 		// serialize
-		rr2 := ReplayRequest{}
+		rr2 := shipper.ReplayRequest{}
 		err = json.Unmarshal(data, &rr2)
 		require.NoError(t, err)
 
@@ -52,7 +53,7 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 	// ensure reading the active requests works
 	t.Run("TestShipper_ReplayCreate_ReadActive", func(t *testing.T) {
 		// get active requests
-		requests, err := shipper.GetActiveReplayRequests()
+		requests, err := metricShipper.GetActiveReplayRequests()
 		require.NoError(t, err)
 		enc, _ := json.Marshal(requests)
 		fmt.Println(string(enc))
@@ -61,7 +62,7 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 	})
 }
 
-func TestShiper_ReplayRequestRun(t *testing.T) {
+func TestShipper_ReplayRequestRun(t *testing.T) {
 	// get a tmp dir
 	tmpDir := t.TempDir()
 	// create some test files
@@ -98,7 +99,7 @@ func TestShiper_ReplayRequestRun(t *testing.T) {
 	mockFiles.On("GetMatching", settings.Database.StorageUploadSubpath, refIDs).Return([]string{}, nil)
 
 	// create the shipper with the http override
-	shipper, err := NewMetricShipper(context.Background(), settings, mockFiles)
+	shipper, err := shipper.NewMetricShipper(context.Background(), settings, mockFiles)
 	require.NoError(t, err)
 	shipper.HTTPClient.Transport = mockRoundTripper
 
@@ -129,15 +130,15 @@ func TestShiper_ReplayRequestRun(t *testing.T) {
 	require.Empty(t, replays)
 }
 
-func createTestFiles(t *testing.T, dir string, n int) []*File {
+func createTestFiles(t *testing.T, dir string, n int) []*shipper.File {
 	// create some test files to simulate resource tracking
-	files := make([]*File, 0)
+	files := make([]*shipper.File, 0)
 	for i := range n {
 		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.parquet", i))
 		require.NoError(t, err)
 		_, err = tempFile.WriteString(fmt.Sprintf("This is some test data - %d", n))
 		require.NoError(t, err)
-		file, err := NewFile(tempFile.Name())
+		file, err := shipper.NewFile(tempFile.Name())
 		require.NoError(t, err)
 		files = append(files, file)
 	}
