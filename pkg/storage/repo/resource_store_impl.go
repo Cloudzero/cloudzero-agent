@@ -102,7 +102,7 @@ func (r *resourceRepoImpl) Create(ctx context.Context, it *types.ResourceTags) e
 			"action":        "create",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
-			"name":          it.Name,
+			"resource_name": it.Name,
 		}).Inc()
 		return core.TranslateError(err)
 	}
@@ -180,7 +180,7 @@ func (r *resourceRepoImpl) Update(ctx context.Context, it *types.ResourceTags) e
 			"action":        "update",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
-			"name":          it.Name,
+			"resource_name": it.Name,
 		}).Inc()
 		return core.TranslateError(err)
 	}
