@@ -12,10 +12,10 @@ import (
 type StorageWarning uint
 
 var (
-	STORAGE_WARNING_LOW  StorageWarning = 50
-	STORAGE_WARNING_MED  StorageWarning = 75
-	STORAGE_WARNING_HIGH StorageWarning = 90
-	STORAGE_WARNING_CRIT StorageWarning = 95
+	StorageWarningLow  StorageWarning = 50
+	StorageWarningMed  StorageWarning = 75
+	StorageWarningHigh StorageWarning = 90
+	StorageWarningCrit StorageWarning = 95
 )
 
 // Add a variable to hold the Statfs function for mocking errors
@@ -29,7 +29,7 @@ type DiskMonitor struct {
 }
 
 func NewDiskFromPath(path string) (*DiskMonitor, error) {
-	return nil, nil
+	return nil, errors.ErrUnsupported
 }
 
 // Read the stats from the disk
@@ -97,7 +97,7 @@ func (d *DiskMonitor) StoragePercentUsed() (float64, error) {
 		return 0, err
 	}
 
-	percentUsed := (float64(used) / float64(total)) * 100
+	percentUsed := (float64(used) / float64(total)) * 100 //nolint:revive // ?? its just a fraction bro
 
 	return percentUsed, nil
 }
@@ -107,7 +107,7 @@ func (d *DiskMonitor) LargestN(n uint) ([]string, error) {
 	if _, err := d.GetStatFS(); err != nil {
 		return nil, err
 	}
-	return nil, errors.New("UNIMPLEMENTED")
+	return nil, errors.ErrUnsupported
 }
 
 // Returns the oldest `n` files
@@ -115,10 +115,9 @@ func (d *DiskMonitor) OldestN(n uint) ([]string, error) {
 	if _, err := d.GetStatFS(); err != nil {
 		return nil, err
 	}
-	return nil, errors.New("UNIMPLEMENTED")
+	return nil, errors.ErrUnsupported
 }
 
-func (c *MetricShipper) HandleDisk() error {
-
-	return nil
+func (m *MetricShipper) HandleDisk() error {
+	return errors.ErrUnsupported
 }
