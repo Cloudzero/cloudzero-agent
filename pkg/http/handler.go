@@ -65,7 +65,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 
 		result, err := handler.Execute(r.Context(), review.Request)
 		if err != nil {
-			log.Ctx(r.Context()).Error().Err(err)
+			log.Ctx(r.Context()).Error().Err(err).Send()
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -84,7 +84,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 
 		res, err := json.Marshal(admissionResponse)
 		if err != nil {
-			log.Ctx(r.Context()).Error().Err(err)
+			log.Ctx(r.Context()).Error().Err(err).Msg("failed to marshal")
 			http.Error(w, fmt.Sprintf("could not marshal response: %v", err), http.StatusInternalServerError)
 			return
 		}
