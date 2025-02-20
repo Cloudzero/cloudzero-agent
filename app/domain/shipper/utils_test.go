@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package shipper
+package shipper_test
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -106,15 +107,15 @@ func captureOutput(f func()) (string, string) {
 	return outBuf.String(), errBuf.String()
 }
 
-func createTestFiles(t *testing.T, dir string, n int) []*File {
+func createTestFiles(t *testing.T, dir string, n int) []*shipper.MetricFile {
 	// create some test files to simulate resource tracking
-	files := make([]*File, 0)
+	files := make([]*shipper.MetricFile, 0)
 	for i := range n {
 		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.parquet", i))
 		require.NoError(t, err)
 		_, err = tempFile.WriteString(fmt.Sprintf("This is some test data - %d", n))
 		require.NoError(t, err)
-		file, err := NewFile(tempFile.Name())
+		file, err := shipper.NewMetricFile(tempFile.Name())
 		require.NoError(t, err)
 		files = append(files, file)
 	}

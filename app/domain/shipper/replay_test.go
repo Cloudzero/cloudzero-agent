@@ -31,8 +31,8 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	// save the request
-	rr := &ReplayRequest{ReferenceIDs: referenceIDs}
-	err = shipper.SaveReplayRequest(rr)
+	rr := &shipper.ReplayRequest{ReferenceIDs: referenceIDs}
+	err = metricShipper.SaveReplayRequest(rr)
 	require.NoError(t, err)
 	require.NotNil(t, rr)
 
@@ -99,34 +99,34 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	mockFiles.On("GetMatching", "", refIDs).Return(refIDs, nil)
 	mockFiles.On("GetMatching", settings.Database.StorageUploadSubpath, refIDs).Return([]string{}, nil)
 
-	// create the shipper with the http override
-	shipper, err := shipper.NewMetricShipper(context.Background(), settings, mockFiles)
+	// create the metricShipper with the http override
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockFiles)
 	require.NoError(t, err)
-	shipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// save the replay request
-	err = shipper.SaveReplayRequest(&ReplayRequest{ReferenceIDs: refIDs})
+	err = metricShipper.SaveReplayRequest(&shipper.ReplayRequest{ReferenceIDs: refIDs})
 	require.NoError(t, err)
 
 	// ensure the replay request can be found
-	requests, err := shipper.GetActiveReplayRequests()
+	requests, err := metricShipper.GetActiveReplayRequests()
 	require.NoError(t, err)
 	require.NotEmpty(t, requests)
 
 	// process the active replay requests
-	err = shipper.ProcessReplayRequests()
+	err = metricShipper.ProcessReplayRequests()
 	require.NoError(t, err)
 
 	// ensure files got uploaded
-	base, err := os.ReadDir(shipper.GetBaseDir())
+	base, err := os.ReadDir(metricShipper.GetBaseDir())
 	require.NoError(t, err)
-	uploaded, err := os.ReadDir(shipper.GetUploadedDir())
+	uploaded, err := os.ReadDir(metricShipper.GetUploadedDir())
 	require.NoError(t, err)
 	require.Equal(t, 2, len(base))
 	require.Equal(t, 5, len(uploaded))
 
 	// validate replay request was deleted
-	replays, err := os.ReadDir(shipper.GetReplayRequestDir())
+	replays, err := os.ReadDir(metricShipper.GetReplayRequestDir())
 	require.NoError(t, err)
 	require.Empty(t, replays)
 }

@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package shipper
+package shipper_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,17 +26,17 @@ func TestShipper_Integration_InvalidApiKey(t *testing.T) {
 	// get a tmp dir
 	tmpDir := t.TempDir()
 
-	// create the shipper
+	// create the metricShipper
 	settings := setupSettingsIntegration(t, tmpDir, "invalid-api-key")
-	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
 	// create test files
 	files := createTestFiles(t, tmpDir, 5)
 
-	_, err = shipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(files)
 	require.Error(t, err)
-	require.Equal(t, ErrUnauthorized, err)
+	require.Equal(t, shipper.ErrUnauthorized, err)
 }
 
 func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
@@ -48,16 +49,16 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	require.True(t, exists)
 	tmpDir := t.TempDir()
 
-	// create the shipper
+	// create the metricShipper
 	settings := setupSettingsIntegration(t, tmpDir, apiKey)
-	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
 	// create some test files to simulate resource tracking
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	files2, err := shipper.AllocatePresignedURLs(files)
+	files2, err := metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	// validate the pre-signed urls exist
@@ -83,16 +84,16 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	require.True(t, exists)
 	tmpDir := t.TempDir()
 
-	// create the shipper
+	// create the metricShipper
 	settings := setupSettingsIntegration(t, tmpDir, apiKey)
-	shipper, err := NewMetricShipper(context.Background(), settings, nil)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
 	// create some test files to simulate resource tracking
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	files2, err := shipper.AllocatePresignedURLs(files)
+	files2, err := metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	// get the ref ids
@@ -102,7 +103,7 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	}
 
 	// abandon these files
-	err = shipper.AbandonFiles(refIDs, "integration-test-abandon")
+	err = metricShipper.AbandonFiles(refIDs, "integration-test-abandon")
 	require.NoError(t, err)
 }
 
