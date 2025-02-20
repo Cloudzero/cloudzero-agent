@@ -10,11 +10,11 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/rs/zerolog/log"
 	admission "k8s.io/api/admission/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	log "k8s.io/klog/v2"
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
@@ -65,7 +65,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 
 		result, err := handler.Execute(r.Context(), review.Request)
 		if err != nil {
-			log.Error(err)
+			log.Ctx(r.Context()).Error().Err(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -84,12 +84,12 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 
 		res, err := json.Marshal(admissionResponse)
 		if err != nil {
-			log.Error(err)
+			log.Ctx(r.Context()).Error().Err(err)
 			http.Error(w, fmt.Sprintf("could not marshal response: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		log.Infof("Webhook [%s - %s] - Allowed: %t", r.URL.Path, review.Request.Operation, result.Allowed)
+		log.Ctx(r.Context()).Debug().Msg(fmt.Sprintf("Webhook [%s - %s] - Allowed: %t", r.URL.Path, review.Request.Operation, result.Allowed))
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(res) // ignore return values
 	}
