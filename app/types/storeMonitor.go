@@ -8,9 +8,9 @@ type StoreWarning uint
 var (
 	StorageWarningNone StoreWarning = 49
 	StorageWarningLow  StoreWarning = 50
-	StorageWarningMed  StoreWarning = 75
-	StorageWarningHigh StoreWarning = 90
-	StorageWarningCrit StoreWarning = 95
+	StorageWarningMed  StoreWarning = 65
+	StorageWarningHigh StoreWarning = 80
+	StorageWarningCrit StoreWarning = 90
 )
 
 // StoreUsage stores information about the current state of a store
