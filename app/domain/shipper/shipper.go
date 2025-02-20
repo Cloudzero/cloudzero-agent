@@ -161,7 +161,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 	}
 
 	// create the files object
-	files, err := NewFilesFromPaths(paths) // TODO -- replace with builder
+	files, err := NewMetricFilesFromPaths(paths) // TODO -- replace with builder
 	if err != nil {
 		return fmt.Errorf("failed to create the files; %w", err)
 	}
@@ -225,16 +225,16 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	}
 
 	// combine found ids into a map
-	found := make(map[string]*File) // {ReferenceID: File}
+	found := make(map[string]*MetricFile) // {ReferenceID: File}
 	for _, item := range new {
-		file, err := NewFile(filepath.Join(m.setting.Database.StoragePath, filepath.Base(item)))
+		file, err := NewMetricFile(filepath.Join(m.setting.Database.StoragePath, filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
 		found[filepath.Base(item)] = file
 	}
 	for _, item := range uploaded {
-		file, err := NewFile(filepath.Join(m.GetUploadedDir(), filepath.Base(item)))
+		file, err := NewMetricFile(filepath.Join(m.GetUploadedDir(), filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
@@ -243,7 +243,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 
 	// compare the results and discover which files were not found
 	missing := make([]string, 0)
-	valid := make([]*File, 0)
+	valid := make([]*MetricFile, 0)
 	for _, item := range rr.ReferenceIDs {
 		file, exists := found[filepath.Base(item)]
 		if exists {
@@ -280,7 +280,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 // - Generate presigned URL
 // - Upload to the remote API
 // - Rename the file to indicate upload
-func (m *MetricShipper) HandleRequest(files []*File) error {
+func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
@@ -313,8 +313,8 @@ func (m *MetricShipper) HandleRequest(files []*File) error {
 }
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) Upload(file *File) error {
-	data, err := file.ReadFile()
+func (m *MetricShipper) Upload(file *MetricFile) error {
+	data, err := file.ReadAll()
 	if err != nil {
 		return fmt.Errorf("failed to get the file data: %w", err)
 	}
@@ -345,7 +345,7 @@ func (m *MetricShipper) Upload(file *File) error {
 	return nil
 }
 
-func (m *MetricShipper) MarkFileUploaded(file *File) error {
+func (m *MetricShipper) MarkFileUploaded(file *MetricFile) error {
 	// create the uploaded dir if needed
 	uploadDir := m.GetUploadedDir()
 	if err := os.MkdirAll(uploadDir, filePermissions); err != nil {

@@ -49,7 +49,7 @@ func main() {
 		zerolog.DefaultContextLogger = &logger
 	}
 
-	appendable, err := store.NewParquetStore(settings.Database)
+	appendable, err := store.NewDiskStore(settings.Database)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}

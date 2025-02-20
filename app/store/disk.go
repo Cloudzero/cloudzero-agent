@@ -5,16 +5,17 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/andybalholm/brotli"
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
-	"github.com/parquet-go/parquet-go"
-	"github.com/parquet-go/parquet-go/compress/brotli"
+	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -25,27 +26,35 @@ const (
 	directoryMode     = 0o755
 	batchSize         = 1000
 	fileReadBatchSize = 1000
+	jsonBufferSize    = 1024
 )
 
-type ParquetStore struct {
-	dirPath        string
-	id             string
-	activeFilePath string
-	rowLimit       int
-	rowCount       int
-	file           *os.File
-	writer         *parquet.GenericWriter[types.Metric]
-	startTime      int64
-	mu             sync.Mutex
+// DiskStore is a data store intended to be backed by a disk. Currently, data is stored in Brotli-compressed JSON, but transcoded to Snappy-compressed Parquet
+type DiskStore struct {
+	dirPath          string
+	id               string
+	activeFilePath   string
+	rowLimit         int
+	rowCount         int
+	file             *os.File
+	compressionLevel int
+	compressor       *brotli.Writer
+	writer           *jwriter.Writer
+	arrayState       *jwriter.ArrayState
+	startTime        int64
+	mu               sync.Mutex
 }
 
-// Just to make sure ParquetStore implements the AppendableFiles interface
-var _ types.AppendableFiles = (*ParquetStore)(nil)
+// Just to make sure DiskStore implements the AppendableFiles interface
+var _ types.AppendableFiles = (*DiskStore)(nil)
 
-// NewParquetStore initializes a ParquetStore with a directory path and row limit
-func NewParquetStore(settings config.Database) (*ParquetStore, error) {
+// NewDiskStore initializes a DiskStore with a directory path and row limit
+func NewDiskStore(settings config.Database) (*DiskStore, error) {
 	if settings.MaxRecords <= 0 {
 		settings.MaxRecords = config.DefaultDatabaseMaxRecords
+	}
+	if settings.CompressionLevel <= 0 || settings.CompressionLevel > brotli.BestCompression {
+		settings.CompressionLevel = config.DefaultDatabaseCompressionLevel
 	}
 	if _, err := os.Stat(settings.StoragePath); os.IsNotExist(err) {
 		if err := os.MkdirAll(settings.StoragePath, directoryMode); err != nil {
@@ -53,10 +62,11 @@ func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 		}
 	}
 
-	store := &ParquetStore{
-		dirPath:  settings.StoragePath,
-		rowLimit: settings.MaxRecords,
-		id:       uuid.New().String()[:8], //nolint:revive // we just want a random string
+	store := &DiskStore{
+		dirPath:          settings.StoragePath,
+		rowLimit:         settings.MaxRecords,
+		id:               uuid.New().String()[:8], //nolint:revive // we just want a random string
+		compressionLevel: settings.CompressionLevel,
 	}
 
 	if err := store.newFileWriter(); err != nil {
@@ -65,44 +75,46 @@ func NewParquetStore(settings config.Database) (*ParquetStore, error) {
 	return store, nil
 }
 
-func (p *ParquetStore) makeFileName() string {
+func (p *DiskStore) makeFileName() string {
 	return fmt.Sprintf("%s.%d", p.id, timestamp.Milli())
 }
 
-// newFileWriter creates a new Parquet writer with `active.parquet` as the active file
-func (p *ParquetStore) newFileWriter() error {
+// newFileWriter creates a new Parquet writer with `active.json.br` as the active file
+func (p *DiskStore) newFileWriter() error {
 	// Intentionally make a new file, to prevent from collision on rename
 	// for any OS level buffering
 	p.activeFilePath = filepath.Join(p.dirPath, p.makeFileName())
 
 	file, err := os.Create(p.activeFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create active parquet file: %w", err)
+		return fmt.Errorf("failed to create active file: %w", err)
 	}
-	writer := parquet.NewGenericWriter[types.Metric](
-		file,
-		parquet.SchemaOf(new(types.Metric)),
-		parquet.Compression(&brotli.Codec{
-			Quality: 8,
-			LGWin:   brotli.DefaultLGWin,
-		}),
-	)
+
+	compressor := brotli.NewWriterLevel(file, p.compressionLevel)
+
+	writer := jwriter.NewStreamingWriter(compressor, jsonBufferSize)
+	arrayState := writer.Array()
 
 	p.rowCount = 0
 	p.startTime = timestamp.Milli() // Capture the start time
 	p.file = file
-	p.writer = writer
+	p.compressor = compressor
+	p.writer = &writer
+	p.arrayState = &arrayState
 	return nil
 }
 
-// Put appends metrics to the Parquet file, creating a new file if the row limit is reached
-func (p *ParquetStore) Put(ctx context.Context, metrics ...types.Metric) error {
+// Put appends metrics to the JSON file, creating a new file if the row limit is reached
+func (p *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	_, err := p.writer.Write(metrics)
-	if err != nil {
-		return fmt.Errorf("failed to write metrics: %w", err)
+	for _, metric := range metrics {
+		encodedMetric, err := json.Marshal(metric)
+		if err != nil {
+			return fmt.Errorf("failed to marshal metric: %w", err)
+		}
+		p.arrayState.Raw(encodedMetric)
 	}
 	p.rowCount += len(metrics)
 
@@ -121,7 +133,7 @@ func (p *ParquetStore) Put(ctx context.Context, metrics ...types.Metric) error {
 }
 
 // Flush finalizes the current writer, writes all buffered data to disk, and renames the file
-func (p *ParquetStore) Flush() error {
+func (p *DiskStore) Flush() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if err := p.flushUnlocked(); err != nil {
@@ -136,19 +148,27 @@ func (p *ParquetStore) Flush() error {
 }
 
 // flushUnlocked finalizes the current writer, writes all buffered data to disk, and renames the file
-func (p *ParquetStore) flushUnlocked() error {
+func (p *DiskStore) flushUnlocked() error {
 	if p.writer == nil {
 		return nil
 	}
 
-	// Close the writer to flush data
-	if err := p.writer.Close(); err != nil {
-		return fmt.Errorf("failed to close parquet writer: %w", err)
+	// End the JSON array
+	p.arrayState.End()
+
+	// Flush the JSON writer to ensure all data is written to the compressor
+	if err := p.writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush JSON writer: %w", err)
+	}
+
+	// Close the compressor to flush data
+	if err := p.compressor.Close(); err != nil {
+		return fmt.Errorf("failed to close compressor: %w", err)
 	}
 
 	// Close the file
 	if err := p.file.Close(); err != nil {
-		return fmt.Errorf("failed to close parquet file: %w", err)
+		return fmt.Errorf("failed to close JSON file: %w", err)
 	}
 
 	// Capture stop time
@@ -157,7 +177,7 @@ func (p *ParquetStore) flushUnlocked() error {
 	// Rename the active file with start and stop timestamps
 	timestampedFilePath := filepath.Join(
 		p.dirPath,
-		fmt.Sprintf("metrics_%d_%d.parquet", p.startTime, stopTime),
+		fmt.Sprintf("metrics_%d_%d.json.br", p.startTime, stopTime),
 	)
 	err := os.Rename(p.activeFilePath, timestampedFilePath)
 	if err != nil {
@@ -166,24 +186,25 @@ func (p *ParquetStore) flushUnlocked() error {
 
 	// Reset writer and file pointers
 	p.writer = nil
+	p.arrayState = nil
 	p.file = nil
 	p.rowCount = 0 // Reset row count after flush
 	return nil
 }
 
 // Pending returns the count of buffered rows not yet written to disk
-func (p *ParquetStore) Pending() int {
+func (p *DiskStore) Pending() int {
 	return p.rowCount
 }
 
-func (p *ParquetStore) GetFiles() ([]string, error) {
-	pattern := filepath.Join(p.dirPath, "metrics_*_*.parquet")
+func (p *DiskStore) GetFiles() ([]string, error) {
+	pattern := filepath.Join(p.dirPath, "metrics_*_*.json.br")
 	return filepath.Glob(pattern)
 }
 
 // Gets a list of files that match a predefined list of target files from a specific
 // subdirectory.
-func (p *ParquetStore) GetMatching(loc string, targets []string) ([]string, error) {
+func (p *DiskStore) GetMatching(loc string, targets []string) ([]string, error) {
 	// create a lookup table of the targets to search for
 	targetMap := make(map[string]any, len(targets))
 	for _, item := range targets {
@@ -231,10 +252,10 @@ func (p *ParquetStore) GetMatching(loc string, targets []string) ([]string, erro
 	return matches, nil
 }
 
-// All retrieves all metrics from uncompacted .parquet files, excluding the active and compressed files.
+// All retrieves all metrics from uncompacted .json.br files, excluding the active and compressed files.
 // It reads the data into memory and returns a MetricRange.
-func (p *ParquetStore) All(ctx context.Context, file string) (types.MetricRange, error) {
-	metrics, err := p.readParquetFile(file)
+func (p *DiskStore) All(ctx context.Context, file string) (types.MetricRange, error) {
+	metrics, err := p.readCompressedJSONFile(file)
 	if err != nil {
 		return types.MetricRange{}, fmt.Errorf("failed to read parquet file %s: %w", file, err)
 	}
@@ -245,38 +266,31 @@ func (p *ParquetStore) All(ctx context.Context, file string) (types.MetricRange,
 	}, nil
 }
 
-// readParquetFile reads all metrics from a single .parquet file and returns them as a slice.
-func (p *ParquetStore) readParquetFile(parquetFilePath string) ([]types.Metric, error) {
-	if _, err := os.Stat(parquetFilePath); os.IsNotExist(err) {
+// readCompressedJSONFile reads all metrics from a single .json.br file and returns them as a slice.
+func (p *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, error) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return []types.Metric{}, nil // No file to read
 	}
 
-	// Open the parquet file
-	file, err := os.Open(parquetFilePath)
+	// Open the JSON file
+	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open parquet file: %w", err)
+		return nil, fmt.Errorf("failed to open JSON file: %w", err)
 	}
 	defer file.Close()
 
-	// Create a parquet reader
-	reader := parquet.NewGenericReader[types.Metric](file)
-	defer reader.Close()
+	// Create Brotli decompressor
+	decompressor := brotli.NewReader(file)
+	// defer decompressor.Close() // Necessary for cbrotli, but not the Go-native version
 
+	// Create a JSON decoder
+	decoder := json.NewDecoder(decompressor)
+
+	// Read metrics from the JSON file
 	var metrics []types.Metric
-	buffer := make([]types.Metric, batchSize)
-
-	for {
-		n, err := reader.Read(buffer)
-		if err != nil {
-			if err == io.EOF {
-				metrics = append(metrics, buffer[:n]...)
-				break
-			}
-			return nil, fmt.Errorf("error reading from parquet file: %w", err)
-		}
-
-		// Append the read metrics to the slice
-		metrics = append(metrics, buffer[:n]...)
+	err = decoder.Decode(&metrics)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JSON file: %w", err)
 	}
 
 	return metrics, nil
