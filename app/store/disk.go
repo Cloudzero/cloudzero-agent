@@ -212,6 +212,8 @@ func (d *DiskStore) GetFiles() ([]string, error) {
 
 // Gets a list of files that match a predefined list of target files from a specific
 // subdirectory.
+//
+// If `targets` is set to nil, then all files in the `loc` will be returned
 func (d *DiskStore) GetMatching(loc string, targets []string) ([]string, error) {
 	// create a lookup table of the targets to search for
 	targetMap := make(map[string]any, len(targets))
@@ -247,7 +249,7 @@ func (d *DiskStore) GetMatching(loc string, targets []string) ([]string, error) 
 
 		// check for matches
 		for _, file := range files {
-			if _, exists := targetMap[file.Name()]; exists {
+			if _, exists := targetMap[file.Name()]; exists || targets == nil {
 				matches = append(matches, file.Name())
 			}
 		}

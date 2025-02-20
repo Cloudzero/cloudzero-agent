@@ -15,6 +15,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -31,6 +32,14 @@ func (m *MockAppendableFiles) GetFiles() ([]string, error) {
 func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]string, error) {
 	args := m.Called(loc, requests)
 	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockAppendableFiles) GetUsage() (*types.StoreUsage, error) {
+	return nil, nil
+}
+
+func (m *MockAppendableFiles) Raw() (any, error) {
+	return nil, nil
 }
 
 // MockRoundTripper is a mock implementation of http.RoundTripper

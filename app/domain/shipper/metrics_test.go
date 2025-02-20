@@ -25,7 +25,16 @@ func TestShipper_Metrics(t *testing.T) {
 	remoteWriteFileTotal.WithLabelValues().Inc()
 	remoteWriteFailureTotal.WithLabelValues("10").Inc()
 	replayRequestTotal.WithLabelValues().Inc()
-	currentDiskUsage.WithLabelValues("10000").Inc()
+
+	// disk usage
+	metricDiskTotalSizeBytes.WithLabelValues("10000").Inc()
+	metricCurrentDiskUsageBytes.WithLabelValues("10000").Inc()
+	metricCurrentDiskUsagePercentage.WithLabelValues("10000").Inc()
+	metricCurrentDiskUnsentFileCount.WithLabelValues("10000").Inc()
+	metricCurrentDiskSentFileCount.WithLabelValues("10000").Inc()
+	metricCurrentDiskReplayRequestCount.WithLabelValues("10000").Inc()
+	metricDiskCleanupSuccessTotal.WithLabelValues().Inc()
+	metricDiskCleanupFailureTotal.WithLabelValues().Inc()
 
 	// fetch metrics from the mock handler
 	resp, err := http.Get(srv.URL)
@@ -40,5 +49,14 @@ func TestShipper_Metrics(t *testing.T) {
 	require.Contains(t, string(body), "remote_write_file_total")
 	require.Contains(t, string(body), "remote_write_failure_total")
 	require.Contains(t, string(body), "replay_request_total")
-	require.Contains(t, string(body), "remote_write_backlog_records")
+
+	// disk usage
+	require.Contains(t, string(body), "shipper_disk_total_size_bytes")
+	require.Contains(t, string(body), "shipper_current_disk_usage_bytes")
+	require.Contains(t, string(body), "shipper_current_disk_usage_percentage")
+	require.Contains(t, string(body), "shipper_current_disk_unsent_file_count")
+	require.Contains(t, string(body), "shipper_current_disk_sent_file_count")
+	require.Contains(t, string(body), "shipper_current_disk_replay_request_count")
+	require.Contains(t, string(body), "shipper_disk_cleanup_success_total")
+	require.Contains(t, string(body), "shipper_disk_cleanup_failure_total")
 }

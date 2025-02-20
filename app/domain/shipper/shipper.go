@@ -42,7 +42,7 @@ var (
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
 type MetricShipper struct {
 	setting *config.Settings
-	lister  types.AppendableFiles
+	lister  types.AppendableDisk
 
 	// Internal fields
 	ctx          context.Context
@@ -53,7 +53,7 @@ type MetricShipper struct {
 }
 
 // NewMetricShipper initializes a new MetricShipper.
-func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableFiles) (*MetricShipper, error) {
+func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableDisk) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
@@ -308,6 +308,7 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 		}
 		pm.Run(fn, waiter)
 	}
+	waiter.Wait()
 
 	return nil
 }
