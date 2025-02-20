@@ -200,3 +200,13 @@ func TestDiskStore_MatchingFiles(t *testing.T) {
 		require.Equal(t, len(files), len(res))
 	})
 }
+
+func TestDiskStore_GetUsage(t *testing.T) {
+	tmpDir := t.TempDir()
+	d, err := store.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100})
+	require.NoError(t, err)
+	defer d.Flush()
+
+	_, err = d.GetUsage()
+	require.NoError(t, err)
+}
