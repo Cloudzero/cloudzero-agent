@@ -343,8 +343,8 @@ func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 	}
 
 	// basic stats
-	total := stat.Blocks * uint64(stat.Bsize)
-	available := stat.Bavail * uint64(stat.Bsize)
+	total := stat.Blocks * uint64(stat.Bsize)     //nolint:gosec // not an issue in 1.24
+	available := stat.Bavail * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
 	used := total - available
 	var percentUsed float64
 	if total > 0 {
@@ -352,7 +352,7 @@ func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 	}
 
 	// This is USUALLY true
-	reserved := (stat.Bfree - stat.Bavail) * uint64(stat.Bsize)
+	reserved := (stat.Bfree - stat.Bavail) * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
 
 	// set inode information
 	inodeTotal := stat.Files
@@ -367,7 +367,7 @@ func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 		Available:      available,
 		Used:           used,
 		PercentUsed:    percentUsed,
-		BlockSize:      uint32(stat.Bsize),
+		BlockSize:      uint32(stat.Bsize), //nolint:gosec // not an issue in 1.24
 		Reserved:       reserved,
 		InodeTotal:     inodeTotal,
 		InodeUsed:      inodeUsed,
