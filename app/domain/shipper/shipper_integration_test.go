@@ -65,7 +65,34 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	}
 }
 
-func TestShipper_Integration_UploadToS3(t *testing.T) {}
+func TestShipper_Integration_UploadToS3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// setup env
+	apiKey, exists := os.LookupEnv("CLOUDZERO_DEV_API_KEY")
+	require.True(t, exists)
+	tmpDir := t.TempDir()
+
+	// create the metricShipper
+	settings := getMockSettingsIntegration(t, tmpDir, apiKey)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
+	require.NoError(t, err)
+
+	// create some test files to simulate resource tracking
+	files := createTestFiles(t, tmpDir, 2)
+
+	// get the presigned URLs
+	files2, err := metricShipper.AllocatePresignedURLs(files)
+	require.NoError(t, err)
+
+	// upload to s3
+	for _, file := range files2 {
+		err = metricShipper.Upload(file)
+		require.NoError(t, err)
+	}
+}
 
 func TestShipper_Integration_ExpiredPresignedURL(t *testing.T) {}
 
