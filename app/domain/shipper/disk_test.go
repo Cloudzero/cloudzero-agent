@@ -1,6 +1,7 @@
 package shipper_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -40,7 +41,7 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 
 			settings := getMockSettings("")
 			settings.Database.StoragePath = tmpDir
-			metricShipper, err := shipper.NewMetricShipper(t.Context(), settings, mockLister)
+			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err)
 
 			err = metricShipper.HandleDisk()
@@ -72,7 +73,7 @@ func TestShipper_Disk_DeletesOldFiles(t *testing.T) {
 
 	settings := getMockSettings("")
 	settings.Database.StoragePath = tmpDir
-	metricShipper, err := shipper.NewMetricShipper(t.Context(), settings, mockLister)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
 	require.NoError(t, metricShipper.PurgeOldMetrics())
@@ -107,7 +108,7 @@ func TestShipper_Disk_SetsMetrics(t *testing.T) {
 	// setup the shipper
 	settings := getMockSettings("")
 	settings.Database.StoragePath = tmpDir
-	metricShipper, err := shipper.NewMetricShipper(t.Context(), settings, mockLister)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
 	// get disk usage
@@ -163,7 +164,7 @@ func TestShipper_Disk_ErrorHandling(t *testing.T) {
 			// setup the shipper
 			settings := getMockSettings("")
 			settings.Database.StoragePath = tmpDir
-			metricShipper, err := shipper.NewMetricShipper(t.Context(), settings, mockLister)
+			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err, "failed to create metric shipper")
 
 			_, err = metricShipper.GetDiskUsage()
