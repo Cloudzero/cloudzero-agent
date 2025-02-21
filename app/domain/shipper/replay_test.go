@@ -65,7 +65,8 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 
 func TestShipper_ReplayRequestRun(t *testing.T) {
 	// get a tmp dir
-	tmpDir := t.TempDir()
+	tmpDir := getTmpDir(t)
+
 	// create some test files
 	files := createTestFiles(t, tmpDir, 5)
 

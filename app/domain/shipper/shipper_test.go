@@ -15,10 +15,12 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
 func TestPerformShipping(t *testing.T) {
@@ -36,17 +38,19 @@ func TestPerformShipping(t *testing.T) {
 			},
 		}
 
-		mockFiles := &MockAppendableFiles{}
-		mockFiles.On("GetFiles").Return([]string{}, nil)
+		mockLister := &MockAppendableFiles{}
+		mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: 49}, nil)
+		mockLister.On("GetFiles").Return([]string{}, nil)
+		mockLister.On("GetMatching", mock.Anything, mock.Anything).Return([]string{}, nil)
 		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*1500)
 		defer cancel()
-		metricShipper, err := shipper.NewMetricShipper(ctx, settings, mockFiles)
+		metricShipper, err := shipper.NewMetricShipper(ctx, settings, mockLister)
 		require.NoError(t, err)
 		err = metricShipper.Run()
 		require.NoError(t, err)
 		err = metricShipper.Shutdown()
 		require.NoError(t, err)
-		mockFiles.AssertExpectations(t)
+		mockLister.AssertExpectations(t)
 	})
 
 	// ensure no errors when running

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"io"
 	"testing"
-	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
@@ -18,78 +17,6 @@ import (
 	"github.com/parquet-go/parquet-go"
 	"github.com/stretchr/testify/assert"
 )
-
-var testMetrics = []types.Metric{
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-1",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-2",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-3",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-}
-
-func compressedTestMetrics() []byte {
-	jsonData, err := json.Marshal(testMetrics)
-	if err != nil {
-		panic(err)
-	}
-
-	var compressedData bytes.Buffer
-
-	func() {
-		compressor := brotli.NewWriterLevel(&compressedData, 1)
-		defer compressor.Close()
-
-		_, err = compressor.Write(jsonData)
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	return compressedData.Bytes()
-}
 
 func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 	pr, pw := io.Pipe()

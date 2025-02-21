@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
@@ -73,6 +74,16 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			Body:       io.NopCloser(bytes.NewBuffer(enc)),
 		}, m.mockError
 	}
+}
+
+func getTmpDir(t *testing.T) string {
+	// get a tmp dir
+	tmpDir := t.TempDir()
+	err := os.Mkdir(filepath.Join(tmpDir, "uploaded"), 0o777)
+	require.NoError(t, err)
+	err = os.Mkdir(filepath.Join(tmpDir, "replay"), 0o777)
+	require.NoError(t, err)
+	return tmpDir
 }
 
 func getMockSettings(mockURL string) *config.Settings {
@@ -157,13 +168,85 @@ func captureOutput(f func()) (string, string) {
 	return outBuf.String(), errBuf.String()
 }
 
+var testMetrics = []types.Metric{
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-1",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-2",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-3",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+}
+
+func compressedTestMetrics() []byte {
+	jsonData, err := json.Marshal(testMetrics)
+	if err != nil {
+		panic(err)
+	}
+
+	var compressedData bytes.Buffer
+
+	func() {
+		compressor := brotli.NewWriterLevel(&compressedData, 1)
+		defer compressor.Close()
+
+		_, err = compressor.Write(jsonData)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	return compressedData.Bytes()
+}
+
 func createTestFiles(t *testing.T, dir string, n int) []*shipper.MetricFile {
 	// create some test files to simulate resource tracking
 	files := make([]*shipper.MetricFile, 0)
 	for i := range n {
 		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.parquet", i))
 		require.NoError(t, err)
-		_, err = tempFile.WriteString(fmt.Sprintf("This is some test data - %d", n))
+		_, err = tempFile.Write(compressedTestMetrics()) // write valid data in each one
 		require.NoError(t, err)
 		file, err := shipper.NewMetricFile(tempFile.Name())
 		require.NoError(t, err)

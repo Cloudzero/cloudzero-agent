@@ -227,7 +227,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	// combine found ids into a map
 	found := make(map[string]*MetricFile) // {ReferenceID: File}
 	for _, item := range new {
-		file, err := NewMetricFile(filepath.Join(m.setting.Database.StoragePath, filepath.Base(item)))
+		file, err := NewMetricFile(filepath.Join(m.GetBaseDir(), filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
@@ -309,6 +309,13 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 		pm.Run(fn, waiter)
 	}
 	waiter.Wait()
+
+	// check for errors in the waiter
+	for err := range waiter.Err() {
+		if err != nil {
+			return fmt.Errorf("failed to upload files; %w", err)
+		}
+	}
 
 	return nil
 }
