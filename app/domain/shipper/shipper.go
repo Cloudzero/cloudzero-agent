@@ -42,7 +42,7 @@ var (
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
 type MetricShipper struct {
 	setting *config.Settings
-	lister  types.AppendableFiles
+	lister  types.AppendableDisk
 
 	// Internal fields
 	ctx          context.Context
@@ -53,7 +53,7 @@ type MetricShipper struct {
 }
 
 // NewMetricShipper initializes a new MetricShipper.
-func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableFiles) (*MetricShipper, error) {
+func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableDisk) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
@@ -119,6 +119,11 @@ func (m *MetricShipper) Run() error {
 			// run the replay request
 			if err := m.ProcessReplayRequests(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to process replay requests")
+			}
+
+			// check the disk usage
+			if err := m.HandleDisk(); err != nil {
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to handle the disk usage")
 			}
 		}
 	}
@@ -222,7 +227,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	// combine found ids into a map
 	found := make(map[string]*MetricFile) // {ReferenceID: File}
 	for _, item := range new {
-		file, err := NewMetricFile(filepath.Join(m.setting.Database.StoragePath, filepath.Base(item)))
+		file, err := NewMetricFile(filepath.Join(m.GetBaseDir(), filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
@@ -302,6 +307,14 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 			return nil
 		}
 		pm.Run(fn, waiter)
+	}
+	waiter.Wait()
+
+	// check for errors in the waiter
+	for err := range waiter.Err() {
+		if err != nil {
+			return fmt.Errorf("failed to upload files; %w", err)
+		}
 	}
 
 	return nil

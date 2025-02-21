@@ -6,11 +6,14 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/go-obvious/timestamp"
@@ -43,10 +46,16 @@ type DiskStore struct {
 	arrayState       *jwriter.ArrayState
 	startTime        int64
 	mu               sync.Mutex
+
+	// internal metadata for the state of the disk store
+	stat *syscall.Statfs_t
 }
 
 // Just to make sure DiskStore implements the AppendableFiles interface
 var _ types.AppendableFiles = (*DiskStore)(nil)
+
+// Just to make sure DiskStore implements the DiskMonitor interface
+var _ types.StoreMonitor = (*DiskStore)(nil)
 
 // NewDiskStore initializes a DiskStore with a directory path and row limit
 func NewDiskStore(settings config.Database) (*DiskStore, error) {
@@ -75,56 +84,56 @@ func NewDiskStore(settings config.Database) (*DiskStore, error) {
 	return store, nil
 }
 
-func (p *DiskStore) makeFileName() string {
-	return fmt.Sprintf("%s.%d", p.id, timestamp.Milli())
+func (d *DiskStore) makeFileName() string {
+	return fmt.Sprintf("%s.%d", d.id, timestamp.Milli())
 }
 
 // newFileWriter creates a new Parquet writer with `active.json.br` as the active file
-func (p *DiskStore) newFileWriter() error {
+func (d *DiskStore) newFileWriter() error {
 	// Intentionally make a new file, to prevent from collision on rename
 	// for any OS level buffering
-	p.activeFilePath = filepath.Join(p.dirPath, p.makeFileName())
+	d.activeFilePath = filepath.Join(d.dirPath, d.makeFileName())
 
-	file, err := os.Create(p.activeFilePath)
+	file, err := os.Create(d.activeFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create active file: %w", err)
 	}
 
-	compressor := brotli.NewWriterLevel(file, p.compressionLevel)
+	compressor := brotli.NewWriterLevel(file, d.compressionLevel)
 
 	writer := jwriter.NewStreamingWriter(compressor, jsonBufferSize)
 	arrayState := writer.Array()
 
-	p.rowCount = 0
-	p.startTime = timestamp.Milli() // Capture the start time
-	p.file = file
-	p.compressor = compressor
-	p.writer = &writer
-	p.arrayState = &arrayState
+	d.rowCount = 0
+	d.startTime = timestamp.Milli() // Capture the start time
+	d.file = file
+	d.compressor = compressor
+	d.writer = &writer
+	d.arrayState = &arrayState
 	return nil
 }
 
 // Put appends metrics to the JSON file, creating a new file if the row limit is reached
-func (p *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (d *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	for _, metric := range metrics {
 		encodedMetric, err := json.Marshal(metric)
 		if err != nil {
 			return fmt.Errorf("failed to marshal metric: %w", err)
 		}
-		p.arrayState.Raw(encodedMetric)
+		d.arrayState.Raw(encodedMetric)
 	}
-	p.rowCount += len(metrics)
+	d.rowCount += len(metrics)
 
 	// If row count exceeds the limit, flush and create a new active file
-	if p.rowCount >= p.rowLimit {
-		if err := p.flushUnlocked(); err != nil {
+	if d.rowCount >= d.rowLimit {
+		if err := d.flushUnlocked(); err != nil {
 			log.Ctx(ctx).Error().Err(err).Msg("failed to flush writer")
 			return err
 		}
-		if err := p.newFileWriter(); err != nil {
+		if err := d.newFileWriter(); err != nil {
 			log.Ctx(ctx).Error().Err(err).Msg("failed to create new file writer")
 			return err
 		}
@@ -133,14 +142,14 @@ func (p *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
 }
 
 // Flush finalizes the current writer, writes all buffered data to disk, and renames the file
-func (p *DiskStore) Flush() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if err := p.flushUnlocked(); err != nil {
+func (d *DiskStore) Flush() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if err := d.flushUnlocked(); err != nil {
 		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to flush writer")
 		return err
 	}
-	if err := p.newFileWriter(); err != nil {
+	if err := d.newFileWriter(); err != nil {
 		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to create new file writer")
 		return err
 	}
@@ -148,26 +157,26 @@ func (p *DiskStore) Flush() error {
 }
 
 // flushUnlocked finalizes the current writer, writes all buffered data to disk, and renames the file
-func (p *DiskStore) flushUnlocked() error {
-	if p.writer == nil {
+func (d *DiskStore) flushUnlocked() error {
+	if d.writer == nil {
 		return nil
 	}
 
 	// End the JSON array
-	p.arrayState.End()
+	d.arrayState.End()
 
 	// Flush the JSON writer to ensure all data is written to the compressor
-	if err := p.writer.Flush(); err != nil {
+	if err := d.writer.Flush(); err != nil {
 		return fmt.Errorf("failed to flush JSON writer: %w", err)
 	}
 
 	// Close the compressor to flush data
-	if err := p.compressor.Close(); err != nil {
+	if err := d.compressor.Close(); err != nil {
 		return fmt.Errorf("failed to close compressor: %w", err)
 	}
 
 	// Close the file
-	if err := p.file.Close(); err != nil {
+	if err := d.file.Close(); err != nil {
 		return fmt.Errorf("failed to close JSON file: %w", err)
 	}
 
@@ -176,35 +185,37 @@ func (p *DiskStore) flushUnlocked() error {
 
 	// Rename the active file with start and stop timestamps
 	timestampedFilePath := filepath.Join(
-		p.dirPath,
-		fmt.Sprintf("metrics_%d_%d.json.br", p.startTime, stopTime),
+		d.dirPath,
+		fmt.Sprintf("metrics_%d_%d.json.br", d.startTime, stopTime),
 	)
-	err := os.Rename(p.activeFilePath, timestampedFilePath)
+	err := os.Rename(d.activeFilePath, timestampedFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to rename active parquet file: %w", err)
 	}
 
 	// Reset writer and file pointers
-	p.writer = nil
-	p.arrayState = nil
-	p.file = nil
-	p.rowCount = 0 // Reset row count after flush
+	d.writer = nil
+	d.arrayState = nil
+	d.file = nil
+	d.rowCount = 0 // Reset row count after flush
 	return nil
 }
 
 // Pending returns the count of buffered rows not yet written to disk
-func (p *DiskStore) Pending() int {
-	return p.rowCount
+func (d *DiskStore) Pending() int {
+	return d.rowCount
 }
 
-func (p *DiskStore) GetFiles() ([]string, error) {
-	pattern := filepath.Join(p.dirPath, "metrics_*_*.json.br")
+func (d *DiskStore) GetFiles() ([]string, error) {
+	pattern := filepath.Join(d.dirPath, "metrics_*_*.json.br")
 	return filepath.Glob(pattern)
 }
 
 // Gets a list of files that match a predefined list of target files from a specific
 // subdirectory.
-func (p *DiskStore) GetMatching(loc string, targets []string) ([]string, error) {
+//
+// If `targets` is set to nil, then all files in the `loc` will be returned
+func (d *DiskStore) GetMatching(loc string, targets []string) ([]string, error) {
 	// create a lookup table of the targets to search for
 	targetMap := make(map[string]any, len(targets))
 	for _, item := range targets {
@@ -215,7 +226,7 @@ func (p *DiskStore) GetMatching(loc string, targets []string) ([]string, error) 
 	var matches []string
 
 	// open a pointer to the directory requested
-	handle, err := os.Open(filepath.Join(p.dirPath, loc))
+	handle, err := os.Open(filepath.Join(d.dirPath, loc))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the directory: %w", err)
 	}
@@ -239,7 +250,7 @@ func (p *DiskStore) GetMatching(loc string, targets []string) ([]string, error) 
 
 		// check for matches
 		for _, file := range files {
-			if _, exists := targetMap[file.Name()]; exists {
+			if _, exists := targetMap[file.Name()]; exists || targets == nil {
 				matches = append(matches, file.Name())
 			}
 		}
@@ -252,10 +263,38 @@ func (p *DiskStore) GetMatching(loc string, targets []string) ([]string, error) 
 	return matches, nil
 }
 
+// GetFilesOlderThan gets objects that are older than a cutoff date. This is not recurrsive
+func (d *DiskStore) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
+	var oldFiles []string
+
+	// walk the specific directory
+	err := filepath.Walk(filepath.Join(d.dirPath, loc), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("unknown error walking directory: %w", err)
+		}
+
+		// ignore dirs (i.e. not recurrsive)
+		if info.IsDir() {
+			return nil
+		}
+
+		// compare the file
+		if info.ModTime().Before(cutoff) {
+			oldFiles = append(oldFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk the directory: %w", err)
+	}
+
+	return oldFiles, nil
+}
+
 // All retrieves all metrics from uncompacted .json.br files, excluding the active and compressed files.
 // It reads the data into memory and returns a MetricRange.
-func (p *DiskStore) All(ctx context.Context, file string) (types.MetricRange, error) {
-	metrics, err := p.readCompressedJSONFile(file)
+func (d *DiskStore) All(ctx context.Context, file string) (types.MetricRange, error) {
+	metrics, err := d.readCompressedJSONFile(file)
 	if err != nil {
 		return types.MetricRange{}, fmt.Errorf("failed to read parquet file %s: %w", file, err)
 	}
@@ -267,7 +306,7 @@ func (p *DiskStore) All(ctx context.Context, file string) (types.MetricRange, er
 }
 
 // readCompressedJSONFile reads all metrics from a single .json.br file and returns them as a slice.
-func (p *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, error) {
+func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return []types.Metric{}, nil // No file to read
 	}
@@ -294,4 +333,49 @@ func (p *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 	}
 
 	return metrics, nil
+}
+
+// GetUsage gathers disk usage stats using syscall.Statfs.
+func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(d.dirPath, &stat); err != nil {
+		return nil, err
+	}
+
+	// basic stats
+	total := stat.Blocks * uint64(stat.Bsize)     //nolint:gosec // not an issue in 1.24
+	available := stat.Bavail * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
+	used := total - available
+	var percentUsed float64
+	if total > 0 {
+		percentUsed = (float64(used) / float64(total)) * 100 //nolint:revive // 100 does not need a constant
+	}
+
+	// This is USUALLY true
+	reserved := (stat.Bfree - stat.Bavail) * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
+
+	// set inode information
+	inodeTotal := stat.Files
+	inodeAvailable := stat.Ffree
+	inodeUsed := inodeTotal - inodeAvailable
+
+	// save the stat information if needed
+	d.stat = &stat
+
+	return &types.StoreUsage{
+		Total:          total,
+		Available:      available,
+		Used:           used,
+		PercentUsed:    percentUsed,
+		BlockSize:      uint32(stat.Bsize), //nolint:gosec // not an issue in 1.24
+		Reserved:       reserved,
+		InodeTotal:     inodeTotal,
+		InodeUsed:      inodeUsed,
+		InodeAvailable: inodeAvailable,
+	}, nil
+}
+
+// Returns the raw `syscall.Statfs_t` object
+func (d *DiskStore) Raw() (any, error) {
+	return nil, errors.ErrUnsupported
 }

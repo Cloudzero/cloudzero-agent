@@ -176,11 +176,11 @@ CLEANFILES += \
 
 .PHONY: test
 test: ## Run the unit tests
-	@$(GO) test -timeout 60s ./... -race -cover
+	@$(GO) test -test.short -timeout 60s ./... -race -cover
 
 .PHONY: test-integration
 test-integration: ## Run the integration tests
-	@$(GO) test -tags=integration -timeout 60s -race ./... 
+	@$(GO) test -tags=integration -run Integration -timeout 60s -race ./... 
 
 # ----------- DOCKER IMAGE ------------
 

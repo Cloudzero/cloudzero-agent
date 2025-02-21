@@ -18,35 +18,52 @@ type ReplayRequest struct {
 	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
 }
 
+type replayRequestHeader struct {
+	RefID string `json:"ref_id"` //nolint:tagliatelle // upstream uses cammel case
+	URL   string `json:"url"`
+}
+
+func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
+	// parse into list type
+	rrh := make([]replayRequestHeader, 0)
+	if err := json.Unmarshal([]byte(value), &rrh); err != nil {
+		return nil, fmt.Errorf("failed to parse the replay request data: %w", err)
+	}
+
+	// convert to the replay request
+	rr := ReplayRequest{
+		ReferenceIDs: make([]string, len(rrh)),
+	}
+	for i, item := range rrh {
+		rr.ReferenceIDs[i] = item.RefID
+	}
+
+	return &rr, nil
+}
+
 // Saves a reply-request from the remote to disk to be picked up on next iteration
-func (m *MetricShipper) SaveReplayRequest(ids []string) (*ReplayRequest, error) {
+func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
 	// create the directory if needed
 	replayDir := m.GetReplayRequestDir()
 	if err := os.MkdirAll(replayDir, filePermissions); err != nil {
-		return nil, fmt.Errorf("failed to create the replay request directory: %w", err)
+		return fmt.Errorf("failed to create the replay request directory: %w", err)
 	}
 
 	// compose the filename
-	filename := filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf("replay-%d.json", timestamp.Milli()))
-
-	// create the payload
-	rr := &ReplayRequest{
-		Filepath:     filename,
-		ReferenceIDs: ids,
-	}
+	rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf("replay-%d.json", timestamp.Milli()))
 
 	// encode to json
 	enc, err := json.Marshal(rr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode the replay request to json: %w", err)
+		return fmt.Errorf("failed to encode the replay request to json: %w", err)
 	}
 
 	// write the file
 	if err := os.WriteFile(rr.Filepath, enc, filePermissions); err != nil {
-		return nil, fmt.Errorf("failed to write the replay request to file: %w", err)
+		return fmt.Errorf("failed to write the replay request to file: %w", err)
 	}
 
-	return rr, nil
+	return nil
 }
 
 // gets all active replay request files

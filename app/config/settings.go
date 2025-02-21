@@ -5,6 +5,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -64,6 +65,8 @@ type Cloudzero struct {
 	SendTimeout    time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	Host           string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
 	apiKey         string        // Set after reading keypath
+
+	_host string // cached value of `Host` since it is overriden in initalization
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
@@ -204,6 +207,7 @@ func (s *Settings) SetRemoteUploadAPI() error {
 	if s.Cloudzero.Host == "" {
 		return errors.New("host is empty")
 	}
+	s.Cloudzero._host = s.Cloudzero.Host // cache value to use later
 	baseURL, err := url.Parse("https://" + s.Cloudzero.Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse host")
@@ -221,6 +225,49 @@ func (s *Settings) SetRemoteUploadAPI() error {
 	}
 	s.Cloudzero.Host = url
 	return nil
+}
+
+// Sanitizes the input host from the config, and returns a standard
+// `url.URL` type to build the query from
+func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
+	if s.Cloudzero._host == "" {
+		s.Cloudzero._host = s.Cloudzero.Host
+	}
+
+	// format the host to a standardized format
+	val := s.Cloudzero._host
+	if !strings.Contains(s.Cloudzero._host, "://") {
+		val = "http://" + val
+	}
+
+	// parse as url
+	u, err := url.Parse(val)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the url: %w", err)
+	}
+
+	// remove a port off the host if any
+	host := u.Host
+	if strings.Contains(host, ":") {
+		var err error
+		host, _, err = net.SplitHostPort(host)
+		if err != nil {
+			return nil, fmt.Errorf("failed to remove the port from the host: %w", err)
+		}
+	}
+
+	// define the parameters
+	params := url.Values{}
+	params.Add("cluster_name", s.ClusterName)
+	params.Add("cloud_account_id", s.CloudAccountID)
+	params.Add("region", s.Region)
+
+	// set extra info on the url
+	u.Scheme = "https"
+	u.Host = host
+	u.Path += "/v1/container-metrics"
+	u.RawQuery = params.Encode()
+	return u, nil
 }
 
 func isValidURL(uri string) bool {
