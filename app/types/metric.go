@@ -38,10 +38,10 @@ type Metric struct {
 	Month          string            `json:"month"            parquet:"month"`
 	Day            string            `json:"day"              parquet:"day"`
 	Hour           string            `json:"hour"             parquet:"hour"`
-	MetricName     string            `json:"metric_name"      parquet:"metric_name"`                       //nolint:tagliatelle // we should keep these consistent
-	NodeName       string            `json:"node_name"        parquet:"node_name"`                         //nolint:tagliatelle // we should keep these consistent
-	CreatedAt      int64             `json:"created_at"       parquet:"created_at,timestamp(microsecond)"` //nolint:tagliatelle // we should keep these consistent
-	TimeStamp      int64             `json:"timestamp"        parquet:"timestamp,timestamp(microsecond)"`  //nolint:tagliatelle // "timestamp" is one word, tagliatelle wants timeStamp.
+	MetricName     string            `json:"metric_name"      parquet:"metric_name"`          //nolint:tagliatelle // we should keep these consistent
+	NodeName       string            `json:"node_name"        parquet:"node_name"`            //nolint:tagliatelle // we should keep these consistent
+	CreatedAt      int64             `json:"created_at"       parquet:"created_at,timestamp"` //nolint:tagliatelle // we should keep these consistent
+	TimeStamp      int64             `json:"timestamp"        parquet:"timestamp,timestamp"`  //nolint:tagliatelle // "timestamp" is one word, tagliatelle wants timeStamp.
 	Labels         map[string]string `json:"labels"           parquet:"labels"`
 	Value          string            `json:"value"            parquet:"value"`
 }
