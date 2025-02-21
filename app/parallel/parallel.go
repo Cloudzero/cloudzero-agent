@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	minNumWorkers = 2
+	minNumWorkers    = 2
+	errChannelBuffer = 100
 )
 
 // Task is a function type for parallel manager.
@@ -79,7 +80,7 @@ type Waiter struct {
 // NewWaiter creates a new parallel.Waiter.
 func NewWaiter() *Waiter {
 	return &Waiter{
-		errch: make(chan error),
+		errch: make(chan error, errChannelBuffer),
 	}
 }
 
