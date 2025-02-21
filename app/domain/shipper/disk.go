@@ -4,43 +4,22 @@
 package shipper
 
 import (
-	"errors"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
 )
 
+var metricCutoffTime = time.Now().AddDate(0, 0, -90) // date where metrics will start to be purged based on normal cleanup operations
+
 func (m *MetricShipper) HandleDisk() error {
 	// get the disk usage
-	usage, err := m.lister.GetUsage()
+	usage, err := m.GetDiskUsage()
 	if err != nil {
-		return fmt.Errorf("failed to get the usage: %w", err)
+		return err
 	}
-
-	// report all of the metrics
-	metricDiskTotalSizeBytes.WithLabelValues().Set(float64(usage.Total))
-	metricCurrentDiskUsageBytes.WithLabelValues().Set(float64(usage.Used))
-	metricCurrentDiskUsagePercentage.WithLabelValues().Set(usage.PercentUsed)
-
-	// read file counts
-	unsent, err := m.lister.GetFiles()
-	if err != nil {
-		return fmt.Errorf("failed to get the unsent files: %w", err)
-	}
-	sent, err := m.lister.GetMatching(m.setting.Database.StorageUploadSubpath, nil)
-	if err != nil {
-		return fmt.Errorf("failed to get the uploaded files; %w", err)
-	}
-	rr, err := m.lister.GetMatching(replaySubdirName, nil)
-	if err != nil {
-		return fmt.Errorf("failed to get the replay request files: %w", err)
-	}
-
-	// set the file metrics
-	metricCurrentDiskUnsentFileCount.WithLabelValues().Set(float64(len(unsent)))
-	metricCurrentDiskSentFileCount.WithLabelValues().Set(float64(len(sent)))
-	metricCurrentDiskReplayRequestCount.WithLabelValues().Set(float64(len(rr)))
 
 	// get the storage warning level
 	warn := usage.GetStorageWarning()
@@ -97,14 +76,73 @@ func (m *MetricShipper) HandleDisk() error {
 	return nil
 }
 
+// GetDiskUsage gets the storage usage of the attached volume, and also reports
+// the usage to prometheus.
+func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
+	// get the disk usage
+	usage, err := m.lister.GetUsage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the usage: %w", err)
+	}
+
+	// report all of the metrics
+	metricDiskTotalSizeBytes.WithLabelValues().Set(float64(usage.Total))
+	metricCurrentDiskUsageBytes.WithLabelValues().Set(float64(usage.Used))
+	metricCurrentDiskUsagePercentage.WithLabelValues().Set(usage.PercentUsed)
+
+	// read file counts
+	unsent, err := m.lister.GetFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the unsent files: %w", err)
+	}
+	sent, err := m.lister.GetMatching(m.setting.Database.StorageUploadSubpath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the uploaded files; %w", err)
+	}
+	rr, err := m.lister.GetMatching(replaySubdirName, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the replay request files: %w", err)
+	}
+
+	// set the file metrics
+	metricCurrentDiskUnsentFile.WithLabelValues().Set(float64(len(unsent)))
+	metricCurrentDiskSentFile.WithLabelValues().Set(float64(len(sent)))
+	metricCurrentDiskReplayRequest.WithLabelValues().Set(float64(len(rr)))
+
+	return usage, nil
+}
+
 func (m *MetricShipper) HandleStorageWarningMedium() error {
-	return errors.ErrUnsupported
+	return m.PurgeOldMetrics()
 }
 
 func (m *MetricShipper) HandleStorageWarningHigh() error {
-	return errors.ErrUnsupported
+	return m.PurgeOldMetrics() // TODO -- add more aggressive cleanup
 }
 
 func (m *MetricShipper) HandleStorageWarningCritical() error {
-	return errors.ErrUnsupported
+	return m.PurgeOldMetrics() // TODO -- add more aggressive cleanup
+}
+
+// PurgeOldMetrics deletes all uploaded metric files older than `metricCutoffTime`
+func (m *MetricShipper) PurgeOldMetrics() error {
+	files, err := m.lister.GetOlderThan(m.GetUploadedDir(), metricCutoffTime)
+	if err != nil {
+		return fmt.Errorf("failed to get the files older than: %w", err)
+	}
+
+	if len(files) == 0 {
+		return nil
+	}
+
+	// delete all files
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			return fmt.Errorf("failed to delete the file: %w", err)
+		}
+	}
+
+	log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Successfully purged old files")
+
+	return nil
 }

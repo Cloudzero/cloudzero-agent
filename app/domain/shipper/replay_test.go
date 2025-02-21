@@ -91,7 +91,7 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	}
 
 	// create the settings
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 	settings.Database.StoragePath = tmpDir // use the tmp dir as the root storage dir
 
 	// setup the database backend for the test

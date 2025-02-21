@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/go-obvious/timestamp"
@@ -260,6 +261,34 @@ func (d *DiskStore) GetMatching(loc string, targets []string) ([]string, error) 
 	}
 
 	return matches, nil
+}
+
+// GetFilesOlderThan gets objects that are older than a cutoff date. This is not recurrsive
+func (d *DiskStore) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
+	var oldFiles []string
+
+	// walk the specific directory
+	err := filepath.Walk(filepath.Join(d.dirPath, loc), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("unknown error walking directory: %w", err)
+		}
+
+		// ignore dirs (i.e. not recurrsive)
+		if info.IsDir() {
+			return nil
+		}
+
+		// compare the file
+		if info.ModTime().Before(cutoff) {
+			oldFiles = append(oldFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk the directory: %w", err)
+	}
+
+	return oldFiles, nil
 }
 
 // All retrieves all metrics from uncompacted .json.br files, excluding the active and compressed files.

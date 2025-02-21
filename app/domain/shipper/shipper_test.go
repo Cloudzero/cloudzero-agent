@@ -100,7 +100,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestAllocatePresignedURL_Success(t *testing.T) {
 
 func TestAllocatePresignedURL_NoFiles(t *testing.T) {
 	// Setup
-	settings := setupSettings("https://example.com/upload")
+	settings := getMockSettings("https://example.com/upload")
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -150,7 +150,7 @@ func TestAllocatePresignedURL_HTTPError(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestAllocatePresignedURL_Unauthorized(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestAllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestAllocatePresignedURL_RequestCreationError(t *testing.T) {
 	// Use an invalid URL to force request creation error
 	mockURL := "http://%41:8080/" // Invalid URL
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -257,7 +257,7 @@ func TestAllocatePresignedURL_HTTPClientError(t *testing.T) {
 		mockError:        errors.New("network error"),
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestUploadFile_Success(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -321,7 +321,7 @@ func TestUploadFile_HTTPError(t *testing.T) {
 		mockError:              nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -352,7 +352,7 @@ func TestUploadFile_CreateRequestError(t *testing.T) {
 	// Use an invalid URL to force request creation error
 	mockURL := "http://%41:8080/" // Invalid URL
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -386,7 +386,7 @@ func TestUploadFile_HTTPClientError(t *testing.T) {
 		mockError:        errors.New("network error"),
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -416,7 +416,7 @@ func TestUploadFile_FileOpenError(t *testing.T) {
 	// Setup
 	mockURL := "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	_, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
@@ -445,7 +445,7 @@ func TestAbandonFiles_Success(t *testing.T) {
 		mockError:        nil,
 	}
 
-	settings := setupSettings(mockURL)
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)

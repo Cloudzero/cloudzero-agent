@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -34,8 +35,14 @@ func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]stri
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *MockAppendableFiles) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
+	args := m.Called(loc, cutoff)
+	return args.Get(0).([]string), args.Error(1)
+}
+
 func (m *MockAppendableFiles) GetUsage() (*types.StoreUsage, error) {
-	return nil, nil
+	args := m.Called()
+	return args.Get(0).(*types.StoreUsage), args.Error(1)
 }
 
 func (m *MockAppendableFiles) Raw() (any, error) {
@@ -68,7 +75,7 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 }
 
-func setupSettings(mockURL string) *config.Settings {
+func getMockSettings(mockURL string) *config.Settings {
 	return &config.Settings{
 		ClusterName:    "test-cluster",
 		CloudAccountID: "test-account",
@@ -82,6 +89,40 @@ func setupSettings(mockURL string) *config.Settings {
 			StorageUploadSubpath: "uploaded",
 		},
 	}
+}
+
+func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settings {
+	// tmp file to write api key
+	filePath := filepath.Join(dir, ".cz-api-key")
+	err := os.WriteFile(filePath, []byte(apiKey), 0o644)
+	require.NoError(t, err)
+
+	// get the endpoint
+	apiHost, exists := os.LookupEnv("CLOUDZERO_HOST")
+	require.True(t, exists)
+
+	// create the config
+	cfg := &config.Settings{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "test-account",
+		Region:         "us-east-1",
+		Cloudzero: config.Cloudzero{
+			Host:        apiHost,
+			SendTimeout: time.Second * 30,
+			APIKeyPath:  filePath,
+		},
+		Database: config.Database{
+			StoragePath: "/tmp/storage",
+		},
+	}
+
+	// validate the config
+	err = cfg.SetAPIKey()
+	require.NoError(t, err)
+	err = cfg.SetRemoteUploadAPI()
+	require.NoError(t, err)
+
+	return cfg
 }
 
 func captureOutput(f func()) (string, string) {

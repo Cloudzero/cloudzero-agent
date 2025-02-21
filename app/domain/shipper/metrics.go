@@ -76,25 +76,25 @@ var (
 		[]string{},
 	)
 
-	metricCurrentDiskUnsentFileCount = prometheus.NewGaugeVec(
+	metricCurrentDiskUnsentFile = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_unsent_file_count",
+			Name: "shipper_current_disk_unsent_file",
 			Help: "Current number of unsent files found in the pv",
 		},
 		[]string{},
 	)
 
-	metricCurrentDiskSentFileCount = prometheus.NewGaugeVec(
+	metricCurrentDiskSentFile = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_sent_file_count",
+			Name: "shipper_current_disk_sent_file",
 			Help: "Current number of sent files found in the pv",
 		},
 		[]string{},
 	)
 
-	metricCurrentDiskReplayRequestCount = prometheus.NewGaugeVec(
+	metricCurrentDiskReplayRequest = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_replay_request_count",
+			Name: "shipper_current_disk_replay_request",
 			Help: "Current number of replay requests found in the pv",
 		},
 		[]string{},
@@ -131,9 +131,9 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			metricDiskTotalSizeBytes,
 			metricCurrentDiskUsageBytes,
 			metricCurrentDiskUsagePercentage,
-			metricCurrentDiskUnsentFileCount,
-			metricCurrentDiskSentFileCount,
-			metricCurrentDiskReplayRequestCount,
+			metricCurrentDiskUnsentFile,
+			metricCurrentDiskSentFile,
+			metricCurrentDiskReplayRequest,
 			metricDiskCleanupSuccessTotal,
 			metricDiskCleanupFailureTotal,
 		),

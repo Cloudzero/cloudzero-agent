@@ -8,6 +8,7 @@ package types
 
 import (
 	"context"
+	"time"
 )
 
 // Appendable represents an interface for append-only storage
@@ -29,8 +30,11 @@ type AppendableFiles interface {
 	// GetFiles returns the list of files in the store.
 	GetFiles() ([]string, error)
 
-	// `GetMatching` searches inside a `loc` for all matching `targets`
+	// GetMatching searches inside a `loc` for all matching `targets`
 	GetMatching(loc string, targets []string) ([]string, error)
+
+	// GetOlderThan gets all files older than a certain date
+	GetOlderThan(loc string, cutoff time.Time) ([]string, error)
 }
 
 type AppendableReader interface {

@@ -9,11 +9,8 @@ package shipper_test
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +24,7 @@ func TestShipper_Integration_InvalidApiKey(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// create the metricShipper
-	settings := setupSettingsIntegration(t, tmpDir, "invalid-api-key")
+	settings := getMockSettingsIntegration(t, tmpDir, "invalid-api-key")
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
@@ -50,7 +47,7 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// create the metricShipper
-	settings := setupSettingsIntegration(t, tmpDir, apiKey)
+	settings := getMockSettingsIntegration(t, tmpDir, apiKey)
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
@@ -85,7 +82,7 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// create the metricShipper
-	settings := setupSettingsIntegration(t, tmpDir, apiKey)
+	settings := getMockSettingsIntegration(t, tmpDir, apiKey)
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
 
@@ -105,38 +102,4 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	// abandon these files
 	err = metricShipper.AbandonFiles(refIDs, "integration-test-abandon")
 	require.NoError(t, err)
-}
-
-func setupSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settings {
-	// tmp file to write api key
-	filePath := filepath.Join(dir, ".cz-api-key")
-	err := os.WriteFile(filePath, []byte(apiKey), 0o644)
-	require.NoError(t, err)
-
-	// get the endpoint
-	apiHost, exists := os.LookupEnv("CLOUDZERO_HOST")
-	require.True(t, exists)
-
-	// create the config
-	cfg := &config.Settings{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "test-account",
-		Region:         "us-east-1",
-		Cloudzero: config.Cloudzero{
-			Host:        apiHost,
-			SendTimeout: time.Second * 30,
-			APIKeyPath:  filePath,
-		},
-		Database: config.Database{
-			StoragePath: "/tmp/storage",
-		},
-	}
-
-	// validate the config
-	err = cfg.SetAPIKey()
-	require.NoError(t, err)
-	err = cfg.SetRemoteUploadAPI()
-	require.NoError(t, err)
-
-	return cfg
 }
