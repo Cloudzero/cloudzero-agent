@@ -24,21 +24,23 @@ import (
 
 type MockAppendableFiles struct {
 	mock.Mock
+	baseDir string
 }
 
-func (m *MockAppendableFiles) GetFiles() ([]string, error) {
-	args := m.Called()
+func (m *MockAppendableFiles) GetFiles(paths ...string) ([]string, error) {
+	args := m.Called(paths)
 	return args.Get(0).([]string), args.Error(1)
 }
 
-func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]string, error) {
-	args := m.Called(loc, requests)
-	return args.Get(0).([]string), args.Error(1)
-}
+func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error {
+	args := m.Called(loc, process)
 
-func (m *MockAppendableFiles) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
-	args := m.Called(loc, cutoff)
-	return args.Get(0).([]string), args.Error(1)
+	// walk the specific location in the store
+	if err := filepath.Walk(filepath.Join(m.baseDir, loc), process); err != nil {
+		return fmt.Errorf("failed to walk the store: %w", err)
+	}
+
+	return args.Error(0)
 }
 
 func (m *MockAppendableFiles) GetUsage() (*types.StoreUsage, error) {

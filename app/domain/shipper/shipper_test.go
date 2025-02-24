@@ -40,8 +40,8 @@ func TestPerformShipping(t *testing.T) {
 
 		mockLister := &MockAppendableFiles{}
 		mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: 49}, nil)
-		mockLister.On("GetFiles").Return([]string{}, nil)
-		mockLister.On("GetMatching", mock.Anything, mock.Anything).Return([]string{}, nil)
+		mockLister.On("GetFiles", []string(nil)).Return([]string{}, nil)
+		mockLister.On("GetFiles", mock.Anything).Return([]string{}, nil)
 		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*1500)
 		defer cancel()
 		metricShipper, err := shipper.NewMetricShipper(ctx, settings, mockLister)

@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -95,11 +96,11 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the unsent files: %w", err)
 	}
-	sent, err := m.lister.GetMatching(m.setting.Database.StorageUploadSubpath, nil)
+	sent, err := m.lister.GetFiles(m.setting.Database.StorageUploadSubpath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the uploaded files; %w", err)
 	}
-	rr, err := m.lister.GetMatching(replaySubdirName, nil)
+	rr, err := m.lister.GetFiles(replaySubdirName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the replay request files: %w", err)
 	}
@@ -126,23 +127,38 @@ func (m *MetricShipper) HandleStorageWarningCritical() error {
 
 // PurgeOldMetrics deletes all uploaded metric files older than `metricCutoffTime`
 func (m *MetricShipper) PurgeOldMetrics() error {
-	files, err := m.lister.GetOlderThan(m.GetUploadedDir(), metricCutoffTime)
-	if err != nil {
-		return fmt.Errorf("failed to get the files older than: %w", err)
+	oldFiles := make([]string, 0)
+	if err := m.lister.Walk(m.setting.Database.StorageUploadSubpath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("unknown error walking directory: %w", err)
+		}
+
+		// ignore dirs (i.e. not recurrsive)
+		if info.IsDir() {
+			return nil
+		}
+
+		// compare the file
+		if info.ModTime().Before(metricCutoffTime) {
+			oldFiles = append(oldFiles, path)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to walk the filestore: %w", err)
 	}
 
-	if len(files) == 0 {
+	if len(oldFiles) == 0 {
 		return nil
 	}
 
 	// delete all files
-	for _, file := range files {
+	for _, file := range oldFiles {
 		if err := os.Remove(file); err != nil {
 			return fmt.Errorf("failed to delete the file: %w", err)
 		}
 	}
 
-	log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Successfully purged old files")
+	log.Ctx(m.ctx).Info().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
 
 	return nil
 }

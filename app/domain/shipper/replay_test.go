@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,9 +97,10 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	settings.Database.StoragePath = tmpDir // use the tmp dir as the root storage dir
 
 	// setup the database backend for the test
-	mockFiles := &MockAppendableFiles{}
-	mockFiles.On("GetMatching", "", refIDs).Return(refIDs, nil)
-	mockFiles.On("GetMatching", settings.Database.StorageUploadSubpath, refIDs).Return([]string{}, nil)
+	mockFiles := &MockAppendableFiles{baseDir: tmpDir}
+	mockFiles.On("GetFiles").Return(refIDs, nil)
+	mockFiles.On("GetFiles", settings.Database.StorageUploadSubpath).Return([]string{}, nil)
+	mockFiles.On("Walk", mock.Anything, mock.Anything).Return(nil)
 
 	// create the metricShipper with the http override
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockFiles)

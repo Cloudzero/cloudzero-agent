@@ -52,9 +52,3 @@ type StoreMonitor interface {
 	// Raw provides the raw type used for compuation of the disk usage stats
 	Raw() (any, error)
 }
-
-// AppendableDisk combines AppendableFiles and StoreMonitor
-type AppendableDisk interface {
-	AppendableFiles
-	StoreMonitor
-}

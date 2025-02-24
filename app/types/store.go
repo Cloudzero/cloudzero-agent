@@ -8,7 +8,7 @@ package types
 
 import (
 	"context"
-	"time"
+	"path/filepath"
 )
 
 // Appendable represents an interface for append-only storage
@@ -27,14 +27,11 @@ type Appendable interface {
 }
 
 type AppendableFiles interface {
-	// GetFiles returns the list of files in the store.
-	GetFiles() ([]string, error)
+	// GetFiles returns the list of files in the store. `paths` can be used to add a specific location
+	GetFiles(paths ...string) ([]string, error)
 
-	// GetMatching searches inside a `loc` for all matching `targets`
-	GetMatching(loc string, targets []string) ([]string, error)
-
-	// GetOlderThan gets all files older than a certain date
-	GetOlderThan(loc string, cutoff time.Time) ([]string, error)
+	// Walk runs a `proccess` on the file loc of the implementation store
+	Walk(loc string, process filepath.WalkFunc) error
 }
 
 type AppendableReader interface {
@@ -57,4 +54,10 @@ type Store interface {
 	// Delete removes a specific metric by its identifier. It takes a context and a string identifier as parameters.
 	// Returns an error.
 	Delete(context.Context, string) error
+}
+
+// AppendableFilesMonitor combines AppendableFiles and StoreMonitor
+type AppendableFilesMonitor interface {
+	AppendableFiles
+	StoreMonitor
 }
