@@ -4,7 +4,6 @@
 package sqlite_test
 
 import (
-	"database/sql"
 	"sync"
 	"testing"
 
@@ -77,9 +76,10 @@ func TestSqlite3_ConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			var errs int //number of failed results
 			for id, knownvalue := range kv {
-				resultvalue, err := lookup(db, id)
-				if err != nil || resultvalue != knownvalue {
-					t.Errorf("[%d] [Error:%s]  looking up [%s] got [%s] should be [%s]", thread, err, id, resultvalue, knownvalue)
+				var value string
+				err := db.QueryRow("SELECT value FROM 'test' where key=?", id).Scan(&value)
+				if err != nil || value != knownvalue {
+					t.Errorf("[%d] [Error:%s]  looking up [%s] got [%s] should be [%s]", thread, err, id, value, knownvalue)
 					errs++
 				}
 			}
@@ -87,10 +87,4 @@ func TestSqlite3_ConcurrentAccess(t *testing.T) {
 	}
 
 	wg.Wait()
-}
-
-func lookup(db *sql.DB, key string) (string, error) {
-	var value string
-	err := db.QueryRow("SELECT value FROM 'test' where key=?", key).Scan(&value)
-	return value, err
 }
