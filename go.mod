@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/itchyny/gojq v0.12.17
 	github.com/pkg/errors v0.9.1
