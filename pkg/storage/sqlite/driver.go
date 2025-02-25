@@ -16,7 +16,7 @@ import (
 
 const (
 	InMemoryDSN        = ":memory:"
-	MemorySharedCached = "file::memory:?cache=shared"
+	MemorySharedCached = "file:memory?mode=memory&cache=shared"
 )
 
 // NewSQLiteDriver creates a gorm SQLite driver configured with our settings.
