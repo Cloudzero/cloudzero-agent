@@ -27,10 +27,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// public
+const (
+	ReplaySubDirectory   = "replay"
+	UploadedSubDirectory = "uploaded"
+)
+
+// private
 const (
 	shipperWorkerCount = 10
 	expirationTime     = 3600
-	replaySubdirName   = "replay"
 	filePermissions    = 0o755
 	lockMaxRetry       = 60
 )
@@ -123,7 +129,7 @@ func (m *MetricShipper) Run() error {
 			}
 
 			// check the disk usage
-			if err := m.HandleDisk(); err != nil {
+			if err := m.HandleDisk(time.Now().AddDate(0, 0, -int(m.setting.Database.PurgeMetricsOlderThanDay))); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to handle the disk usage")
 			}
 		}
@@ -243,7 +249,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 
 	// fetch the already uploadedFiles files that match these ids
 	uploadedFiles := make([]string, 0)
-	if err := m.lister.Walk(m.setting.Database.StorageUploadSubpath, func(path string, info fs.FileInfo, err error) error {
+	if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -401,7 +407,7 @@ func (m *MetricShipper) MarkFileUploaded(file *MetricFile) error {
 
 	// if the filepath already contains the uploaded location,
 	// then ignore this entry
-	if strings.Contains(file.Filepath(), m.setting.Database.StorageUploadSubpath) {
+	if strings.Contains(file.Filepath(), UploadedSubDirectory) {
 		return nil
 	}
 
@@ -421,11 +427,11 @@ func (m *MetricShipper) GetBaseDir() string {
 }
 
 func (m *MetricShipper) GetReplayRequestDir() string {
-	return filepath.Join(m.GetBaseDir(), replaySubdirName)
+	return filepath.Join(m.GetBaseDir(), ReplaySubDirectory)
 }
 
 func (m *MetricShipper) GetUploadedDir() string {
-	return filepath.Join(m.GetBaseDir(), m.setting.Database.StorageUploadSubpath)
+	return filepath.Join(m.GetBaseDir(), UploadedSubDirectory)
 }
 
 // Shutdown gracefully stops the MetricShipper service.

@@ -32,8 +32,8 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			mockLister := &MockAppendableFiles{}
+			tmpDir := getTmpDir(t)
+			mockLister := &MockAppendableFiles{baseDir: tmpDir}
 			mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: tt.percentUsed}, nil)
 			mockLister.On("GetFiles", []string(nil)).Return([]string{}, nil)
 			mockLister.On("GetFiles", mock.Anything).Return([]string{}, nil)
@@ -44,7 +44,7 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err)
 
-			err = metricShipper.HandleDisk()
+			err = metricShipper.HandleDisk(time.Now())
 			if tt.expectedError != "" {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -60,7 +60,7 @@ func TestShipper_Disk_DeletesOldFiles(t *testing.T) {
 	// create old file
 	oldFile := filepath.Join(tmpDir, "uploaded", "old.txt")
 	require.NoError(t, os.WriteFile(oldFile, []byte("data"), 0o644), "failed to create old file")
-	oldTime := time.Now().AddDate(0, 0, -91)
+	oldTime := time.Now().AddDate(0, 0, -2)
 	require.NoError(t, os.Chtimes(oldFile, oldTime, oldTime), "failed to change file time")
 
 	// create new file
@@ -76,7 +76,7 @@ func TestShipper_Disk_DeletesOldFiles(t *testing.T) {
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
-	require.NoError(t, metricShipper.PurgeOldMetrics())
+	require.NoError(t, metricShipper.PurgeMetricsBefore(time.Now().AddDate(0, 0, -1)))
 
 	// verify old file deleted
 	_, err = os.Stat(oldFile)
@@ -102,8 +102,8 @@ func TestShipper_Disk_SetsMetrics(t *testing.T) {
 		Total: 1000, Used: 500, PercentUsed: 50.0,
 	}, nil)
 	mockLister.On("GetFiles", []string(nil)).Return([]string{filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2")}, nil)
-	mockLister.On("GetFiles", []string{"uploaded"}).Return([]string{filepath.Join(tmpDir, "f1")}, nil)
-	mockLister.On("GetFiles", []string{"replay"}).Return([]string{filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2")}, nil)
+	mockLister.On("GetFiles", []string{shipper.UploadedSubDirectory}).Return([]string{filepath.Join(tmpDir, "f1")}, nil)
+	mockLister.On("GetFiles", []string{shipper.ReplaySubDirectory}).Return([]string{filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2")}, nil)
 
 	// setup the shipper
 	settings := getMockSettings("")

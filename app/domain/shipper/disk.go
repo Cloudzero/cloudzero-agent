@@ -4,6 +4,7 @@
 package shipper
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,9 +14,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var metricCutoffTime = time.Now().AddDate(0, 0, -90) // date where metrics will start to be purged based on normal cleanup operations
+// var metricCutoffTime = time.Now().AddDate(0, 0, -90) // date where metrics will start to be purged based on normal cleanup operations
 
-func (m *MetricShipper) HandleDisk() error {
+func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 	// get the disk usage
 	usage, err := m.GetDiskUsage()
 	if err != nil {
@@ -27,19 +28,18 @@ func (m *MetricShipper) HandleDisk() error {
 
 	switch warn {
 	case types.StorageWarningNone:
-		log.Ctx(m.ctx).Debug().
-			Uint64("total", usage.Total).
-			Uint64("used", usage.Used).
-			Float64("percentUsed", usage.PercentUsed).
-			Uint64("total", usage.Total).
-			Msg("No storage level warning")
+		fallthrough
 	case types.StorageWarningLow:
 		log.Ctx(m.ctx).Debug().
 			Uint64("total", usage.Total).
 			Uint64("used", usage.Used).
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
-			Msg("Low storage level warning")
+			Any("warningLevel", warn).
+			Msg("storage level warning")
+
+		// do nothing to the disk at this point
+		return nil
 	case types.StorageWarningMed:
 		log.Ctx(m.ctx).Info().
 			Uint64("total", usage.Total).
@@ -47,7 +47,7 @@ func (m *MetricShipper) HandleDisk() error {
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
 			Msg("Medium storage level warning")
-		if err := m.HandleStorageWarningMedium(); err != nil {
+		if err := m.handleStorageWarningMedium(metricCutoff); err != nil {
 			return err
 		}
 	case types.StorageWarningHigh:
@@ -57,7 +57,7 @@ func (m *MetricShipper) HandleDisk() error {
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
 			Msg("High storage level warning")
-		if err := m.HandleStorageWarningHigh(); err != nil {
+		if err := m.handleStorageWarningHigh(metricCutoff); err != nil {
 			return err
 		}
 	case types.StorageWarningCrit:
@@ -67,7 +67,7 @@ func (m *MetricShipper) HandleDisk() error {
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
 			Msg("Critical storage level warning")
-		if err := m.HandleStorageWarningCritical(); err != nil {
+		if err := m.handleStorageWarningCritical(metricCutoff); err != nil {
 			return err
 		}
 	default:
@@ -96,11 +96,11 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the unsent files: %w", err)
 	}
-	sent, err := m.lister.GetFiles(m.setting.Database.StorageUploadSubpath)
+	sent, err := m.lister.GetFiles(UploadedSubDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the uploaded files; %w", err)
 	}
-	rr, err := m.lister.GetFiles(replaySubdirName)
+	rr, err := m.lister.GetFiles(ReplaySubDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the replay request files: %w", err)
 	}
@@ -113,22 +113,22 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 	return usage, nil
 }
 
-func (m *MetricShipper) HandleStorageWarningMedium() error {
-	return m.PurgeOldMetrics()
+func (m *MetricShipper) handleStorageWarningMedium(before time.Time) error {
+	return m.PurgeMetricsBefore(before)
 }
 
-func (m *MetricShipper) HandleStorageWarningHigh() error {
-	return m.PurgeOldMetrics() // TODO -- add more aggressive cleanup
+func (m *MetricShipper) handleStorageWarningHigh(before time.Time) error {
+	return m.PurgeMetricsBefore(before) // TODO -- add more aggressive cleanup
 }
 
-func (m *MetricShipper) HandleStorageWarningCritical() error {
-	return m.PurgeOldMetrics() // TODO -- add more aggressive cleanup
+func (m *MetricShipper) handleStorageWarningCritical(before time.Time) error {
+	return m.PurgeMetricsBefore(before) // TODO -- add more aggressive cleanup
 }
 
-// PurgeOldMetrics deletes all uploaded metric files older than `metricCutoffTime`
-func (m *MetricShipper) PurgeOldMetrics() error {
+// PurgeMetricsBefore deletes all uploaded metric files older than `metricCutoffTime`
+func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 	oldFiles := make([]string, 0)
-	if err := m.lister.Walk(m.setting.Database.StorageUploadSubpath, func(path string, info fs.FileInfo, err error) error {
+	if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("unknown error walking directory: %w", err)
 		}
@@ -139,7 +139,7 @@ func (m *MetricShipper) PurgeOldMetrics() error {
 		}
 
 		// compare the file
-		if info.ModTime().Before(metricCutoffTime) {
+		if info.ModTime().Before(before) {
 			oldFiles = append(oldFiles, path)
 		}
 		return nil
@@ -161,4 +161,8 @@ func (m *MetricShipper) PurgeOldMetrics() error {
 	log.Ctx(m.ctx).Info().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
 
 	return nil
+}
+
+func (m *MetricShipper) PurgeUntilSize(size uint64) error {
+	return errors.ErrUnsupported
 }

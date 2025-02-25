@@ -81,9 +81,9 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 func getTmpDir(t *testing.T) string {
 	// get a tmp dir
 	tmpDir := t.TempDir()
-	err := os.Mkdir(filepath.Join(tmpDir, "uploaded"), 0o777)
+	err := os.Mkdir(filepath.Join(tmpDir, shipper.UploadedSubDirectory), 0o777)
 	require.NoError(t, err)
-	err = os.Mkdir(filepath.Join(tmpDir, "replay"), 0o777)
+	err = os.Mkdir(filepath.Join(tmpDir, shipper.ReplaySubDirectory), 0o777)
 	require.NoError(t, err)
 	return tmpDir
 }
@@ -98,8 +98,7 @@ func getMockSettings(mockURL string) *config.Settings {
 			SendTimeout: time.Millisecond * 100,
 		},
 		Database: config.Database{
-			StoragePath:          "/tmp/storage",
-			StorageUploadSubpath: "uploaded",
+			StoragePath: "/tmp/storage",
 		},
 	}
 }

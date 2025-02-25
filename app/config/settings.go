@@ -47,10 +47,11 @@ type Logging struct {
 }
 
 type Database struct {
-	StoragePath          string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
-	StorageUploadSubpath string `yaml:"storage_upload_subpath" default:"uploaded" env:"DATABASE_STORAGE_UPLOAD_SUBPATH" env-description:"subpath inside of 'storage_path' on where to store uploaded files"`
-	MaxRecords           int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
-	CompressionLevel     int    `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
+	StoragePath      string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
+	MaxRecords       int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
+	CompressionLevel int    `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
+
+	PurgeMetricsOlderThanDay uint16 `yaml:"purge_metrics_older_than_day" default:"90" env:"PURGE_METRICS_OLDER_THAN_DAY" env-description:"The number of days to keep metric information locally. Any file older than the number of days specified here can be deleted to free up space on the disk."`
 }
 
 type Server struct {

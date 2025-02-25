@@ -6,7 +6,6 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -276,7 +275,7 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 // GetUsage gathers disk usage stats using syscall.Statfs.
 func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs(d.dirPath, &stat); err != nil {
+	if err := syscall.Statfs("/", &stat); err != nil {
 		return nil, err
 	}
 
@@ -311,9 +310,4 @@ func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 		InodeUsed:      inodeUsed,
 		InodeAvailable: inodeAvailable,
 	}, nil
-}
-
-// Returns the raw `syscall.Statfs_t` object
-func (d *DiskStore) Raw() (any, error) {
-	return nil, errors.ErrUnsupported
 }

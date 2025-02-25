@@ -13,6 +13,8 @@ import (
 	"github.com/go-obvious/timestamp"
 )
 
+const replayFileFormat = "replay-%d.json"
+
 type ReplayRequest struct {
 	Filepath     string   `json:"filepath"`
 	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
@@ -50,7 +52,7 @@ func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
 	}
 
 	// compose the filename
-	rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf("replay-%d.json", timestamp.Milli()))
+	rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf(replayFileFormat, timestamp.Milli()))
 
 	// encode to json
 	enc, err := json.Marshal(rr)
@@ -89,7 +91,7 @@ func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 		}
 
 		// skip over invalid files (like lock files)
-		if !strings.Contains(item.Name(), "replay") || !strings.Contains(item.Name(), ".json") {
+		if !strings.Contains(item.Name(), strings.Split(replayFileFormat, "-")[0]) || !strings.Contains(item.Name(), ".json") {
 			continue
 		}
 

@@ -99,7 +99,7 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	// setup the database backend for the test
 	mockFiles := &MockAppendableFiles{baseDir: tmpDir}
 	mockFiles.On("GetFiles").Return(refIDs, nil)
-	mockFiles.On("GetFiles", settings.Database.StorageUploadSubpath).Return([]string{}, nil)
+	mockFiles.On("GetFiles", shipper.UploadedSubDirectory).Return([]string{}, nil)
 	mockFiles.On("Walk", mock.Anything, mock.Anything).Return(nil)
 
 	// create the metricShipper with the http override
