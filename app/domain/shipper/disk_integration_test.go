@@ -336,28 +336,28 @@ func TestShipper_Disk_Integration_FSManagement(t *testing.T) {
 	})
 
 	// Test case: Critical warning level
-	// t.Run("Critical Warning Level", func(t *testing.T) {
-	// 	// Clean up from previous test
-	// 	os.RemoveAll(fsTester.uploadedDir)
-	// 	os.MkdirAll(fsTester.uploadedDir, 0o755)
+	t.Run("Critical Warning Level", func(t *testing.T) {
+		// Clean up from previous test
+		os.RemoveAll(fsTester.uploadedDir)
+		os.MkdirAll(fsTester.uploadedDir, 0o755)
 
-	// 	// Create fresh files for this test
-	// 	err := fsTester.CreateTestFiles(fsTester.uploadedDir, 50, 24*time.Hour)
-	// 	assert.NoError(t, err)
+		// Create fresh files for this test
+		err := fsTester.CreateTestFiles(fsTester.uploadedDir, 50, 24*time.Hour)
+		assert.NoError(t, err)
 
-	// 	// Create the metric shipper with the mock lister
-	// 	fileLister := NewTestFileLister(fsTester)
-	// 	settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
-	// 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
-	// 	require.NoError(t, err)
+		// Create the metric shipper with the mock lister
+		fileLister := NewTestFileLister(fsTester)
+		settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+		metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
+		require.NoError(t, err)
 
-	// 	fsTester.SimulateDiskUsage(95) // 95% usage - should trigger critical warning
-	// 	err = metricShipper.HandleDisk(cutoffDate)
-	// 	assert.NoError(t, err)
+		fsTester.SimulateDiskUsage(95) // 95% usage - should trigger critical warning
+		err = metricShipper.HandleDisk(cutoffDate)
+		assert.NoError(t, err)
 
-	// 	// Verify 20% of files were deleted
-	// 	files, err := os.ReadDir(fsTester.uploadedDir)
-	// 	assert.NoError(t, err)
-	// 	assert.Len(t, files, 40) // 50 - (50 * 20%) = 40
-	// })
+		// Verify 20% of files were deleted
+		files, err := os.ReadDir(fsTester.uploadedDir)
+		assert.NoError(t, err)
+		assert.Len(t, files, 40) // 50 - (50 * 20%) = 40
+	})
 }
