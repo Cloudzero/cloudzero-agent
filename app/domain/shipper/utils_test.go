@@ -32,6 +32,11 @@ func (m *MockAppendableFiles) GetFiles(paths ...string) ([]string, error) {
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *MockAppendableFiles) ListFiles(paths ...string) ([]os.DirEntry, error) {
+	args := m.Called(paths)
+	return args.Get(0).([]os.DirEntry), args.Error(1)
+}
+
 func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error {
 	args := m.Called(loc, process)
 
@@ -43,7 +48,7 @@ func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error 
 	return args.Error(0)
 }
 
-func (m *MockAppendableFiles) GetUsage() (*types.StoreUsage, error) {
+func (m *MockAppendableFiles) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	args := m.Called()
 	return args.Get(0).(*types.StoreUsage), args.Error(1)
 }
@@ -124,7 +129,7 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 			APIKeyPath:  filePath,
 		},
 		Database: config.Database{
-			StoragePath: "/tmp/storage",
+			StoragePath: dir,
 		},
 	}
 

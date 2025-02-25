@@ -6,11 +6,11 @@ package types
 type StoreWarning uint
 
 var (
-	StorageWarningNone StoreWarning = 49
-	StorageWarningLow  StoreWarning = 50
-	StorageWarningMed  StoreWarning = 65
-	StorageWarningHigh StoreWarning = 80
-	StorageWarningCrit StoreWarning = 90
+	StoreWarningNone StoreWarning = 49
+	StoreWarningLow  StoreWarning = 50
+	StoreWarningMed  StoreWarning = 65
+	StoreWarningHigh StoreWarning = 80
+	StoreWarningCrit StoreWarning = 90
 )
 
 // StoreUsage stores information about the current state of a store
@@ -31,21 +31,22 @@ func (du *StoreUsage) GetStorageWarning() StoreWarning {
 	percentUsed := StoreWarning(du.PercentUsed)
 
 	switch {
-	case percentUsed >= StorageWarningCrit:
-		return StorageWarningCrit
-	case percentUsed >= StorageWarningHigh:
-		return StorageWarningHigh
-	case percentUsed >= StorageWarningMed:
-		return StorageWarningMed
-	case percentUsed >= StorageWarningLow:
-		return StorageWarningLow
+	case percentUsed >= StoreWarningCrit:
+		return StoreWarningCrit
+	case percentUsed >= StoreWarningHigh:
+		return StoreWarningHigh
+	case percentUsed >= StoreWarningMed:
+		return StoreWarningMed
+	case percentUsed >= StoreWarningLow:
+		return StoreWarningLow
 	default:
-		return StorageWarningNone
+		return StoreWarningNone
 	}
 }
 
 // StoreMonitor is a generic interface for reporting on the usage of a store
 type StoreMonitor interface {
-	// GetUsage returns a complete snapshot of the store usage
-	GetUsage() (*StoreUsage, error)
+	// GetUsage returns a complete snapshot of the store usage.
+	// optional `paths` can be defined which will be used as `filepath.Join(paths...)`
+	GetUsage(paths ...string) (*StoreUsage, error)
 }

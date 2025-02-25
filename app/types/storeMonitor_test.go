@@ -15,21 +15,21 @@ func TestStorageWarning_Thresholds(t *testing.T) {
 		percent  float64
 		expected types.StoreWarning
 	}{
-		{"None-0", 0.0, types.StorageWarningNone},
-		{"None-49", 49.0, types.StorageWarningNone},
-		{"None-49.9", 49.9, types.StorageWarningNone},
-		{"Low-50", 50.0, types.StorageWarningLow},
-		{"Low-50.5", 50.5, types.StorageWarningLow},
-		{"Low-64.9", 64.9, types.StorageWarningLow},
-		{"Med-65", 65.0, types.StorageWarningMed},
-		{"Med-75.1", 75.1, types.StorageWarningMed},
-		{"Med-79.9", 79.9, types.StorageWarningMed},
-		{"High-80", 80.0, types.StorageWarningHigh},
-		{"High-85.5", 85.5, types.StorageWarningHigh},
-		{"High-89.9", 89.9, types.StorageWarningHigh},
-		{"Crit-90", 90.0, types.StorageWarningCrit},
-		{"Crit-95.1", 95.1, types.StorageWarningCrit},
-		{"Crit-100", 100.0, types.StorageWarningCrit},
+		{"None-0", 0.0, types.StoreWarningNone},
+		{"None-49", 49.0, types.StoreWarningNone},
+		{"None-49.9", 49.9, types.StoreWarningNone},
+		{"Low-50", 50.0, types.StoreWarningLow},
+		{"Low-50.5", 50.5, types.StoreWarningLow},
+		{"Low-64.9", 64.9, types.StoreWarningLow},
+		{"Med-65", 65.0, types.StoreWarningMed},
+		{"Med-75.1", 75.1, types.StoreWarningMed},
+		{"Med-79.9", 79.9, types.StoreWarningMed},
+		{"High-80", 80.0, types.StoreWarningHigh},
+		{"High-85.5", 85.5, types.StoreWarningHigh},
+		{"High-89.9", 89.9, types.StoreWarningHigh},
+		{"Crit-90", 90.0, types.StoreWarningCrit},
+		{"Crit-95.1", 95.1, types.StoreWarningCrit},
+		{"Crit-100", 100.0, types.StoreWarningCrit},
 	}
 
 	for _, tt := range tests {

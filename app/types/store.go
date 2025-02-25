@@ -8,6 +8,7 @@ package types
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 )
 
@@ -29,6 +30,9 @@ type Appendable interface {
 type AppendableFiles interface {
 	// GetFiles returns the list of files in the store. `paths` can be used to add a specific location
 	GetFiles(paths ...string) ([]string, error)
+
+	// ListFiles gives a list of `[]os.DirEntry` for a given store. `paths` can be used to add a specific location
+	ListFiles(paths ...string) ([]os.DirEntry, error)
 
 	// Walk runs a `proccess` on the file loc of the implementation store
 	Walk(loc string, process filepath.WalkFunc) error

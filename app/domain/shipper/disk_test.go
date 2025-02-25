@@ -23,11 +23,11 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 		percentUsed   float64
 		expectedError string
 	}{
-		{"NoWarning", 49.9, ""},
-		{"LowWarning", 50.0, ""},
-		{"MediumWarning", 65.0, ""},
-		{"HighWarning", 80.0, ""},
-		{"CriticalWarning", 90.0, ""},
+		{"No Warning", 49.9, ""},
+		{"Low Warning", 50.0, ""},
+		{"Medium Warning", 65.0, ""},
+		{"High Warning", 80.0, ""},
+		{"Critical Warning", 90.0, ""},
 	}
 
 	for _, tt := range tests {
@@ -37,6 +37,8 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 			mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: tt.percentUsed}, nil)
 			mockLister.On("GetFiles", []string(nil)).Return([]string{}, nil)
 			mockLister.On("GetFiles", mock.Anything).Return([]string{}, nil)
+			mockLister.On("ListFiles", []string(nil)).Return([]os.DirEntry{}, nil)
+			mockLister.On("ListFiles", mock.Anything).Return([]os.DirEntry{}, nil)
 			mockLister.On("Walk", mock.Anything, mock.Anything).Return(nil)
 
 			settings := getMockSettings("")

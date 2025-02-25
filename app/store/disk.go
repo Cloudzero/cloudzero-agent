@@ -218,6 +218,12 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 	return filepath.Glob(pattern)
 }
 
+func (d *DiskStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
+	allPaths := []string{d.dirPath}
+	allPaths = append(allPaths, paths...)
+	return os.ReadDir(filepath.Join(allPaths...))
+}
+
 // Walk will run `process` to walk the file tree
 func (d *DiskStore) Walk(loc string, process filepath.WalkFunc) error {
 	// walk the specific location in the store
@@ -273,7 +279,8 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 }
 
 // GetUsage gathers disk usage stats using syscall.Statfs.
-func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
+// paths will be used as `filepath.Join(paths...)`
+func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs("/", &stat); err != nil {
 		return nil, err

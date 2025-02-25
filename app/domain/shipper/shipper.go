@@ -6,7 +6,6 @@ package shipper
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -25,25 +24,6 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
-)
-
-// public
-const (
-	ReplaySubDirectory   = "replay"
-	UploadedSubDirectory = "uploaded"
-)
-
-// private
-const (
-	shipperWorkerCount = 10
-	expirationTime     = 3600
-	filePermissions    = 0o755
-	lockMaxRetry       = 60
-)
-
-var (
-	ErrUnauthorized = errors.New("unauthorized request - possible invalid API key")
-	ErrNoURLs       = errors.New("no presigned URLs returned")
 )
 
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
