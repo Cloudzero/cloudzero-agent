@@ -15,8 +15,7 @@ jobs:
         run: |
           go mod download
       - name: Run go tests
-        run: |
-          go test -timeout 30s -race -cover ./...
+        run: make test
 
   lint:
     runs-on: ubuntu-latest
