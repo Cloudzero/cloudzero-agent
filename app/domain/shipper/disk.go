@@ -26,68 +26,56 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 	// get the storage warning level
 	warn := usage.GetStorageWarning()
 
+	// log the storage warning
+	log.Ctx(m.ctx).Info().
+		Uint64("total", usage.Total).
+		Uint64("used", usage.Used).
+		Float64("percentUsed", usage.PercentUsed).
+		Uint64("total", usage.Total).
+		Any("warningLevel", warn).
+		Msg("storage warning level")
+
 	switch warn {
 	case types.StoreWarningNone:
 		fallthrough
 	case types.StoreWarningLow:
 		fallthrough
 	case types.StoreWarningMed:
-		log.Ctx(m.ctx).Debug().
-			Uint64("total", usage.Total).
-			Uint64("used", usage.Used).
-			Float64("percentUsed", usage.PercentUsed).
-			Uint64("total", usage.Total).
-			Any("warningLevel", warn).
-			Msg("storage level warning")
-
-		// do nothing to the disk at this point
 		return nil
 	case types.StoreWarningHigh:
-		log.Ctx(m.ctx).Warn().
-			Uint64("total", usage.Total).
-			Uint64("used", usage.Used).
-			Float64("percentUsed", usage.PercentUsed).
-			Uint64("total", usage.Total).
-			Msg("High storage level warning")
-		if err := m.handleStorageWarningHigh(metricCutoff); err != nil {
+		if err = m.handleStorageWarningHigh(metricCutoff); err != nil {
+			// note the error in prom
+			metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
 			return err
 		}
-		warnStr := strconv.Itoa(int(warn))
-		counter, err := metricDiskCleanupSuccessTotal.GetMetricWithLabelValues(warnStr)
-		if err != nil {
-			warnStr := strconv.Itoa(int(warn))
-			counter, err := metricDiskCleanupFailureTotal.GetMetricWithLabelValues(warnStr)
-			if err != nil {
-				return fmt.Errorf("failed to find metric: %w", err)
-			}
-			counter.Inc()
-			return fmt.Errorf("failed to find metric: %w", err)
-		}
-		counter.Inc()
+
+		// note the success in prom
+		metricDiskCleanupSuccessTotal.WithLabelValues(strconv.Itoa(int(warn))).Inc()
+
 	case types.StoreWarningCrit:
-		log.Ctx(m.ctx).Error().
-			Uint64("total", usage.Total).
-			Uint64("used", usage.Used).
-			Float64("percentUsed", usage.PercentUsed).
-			Uint64("total", usage.Total).
-			Msg("Critical storage level warning")
-		if err := m.handleStorageWarningCritical(); err != nil {
-			warnStr := strconv.Itoa(int(warn))
-			counter, err := metricDiskCleanupFailureTotal.GetMetricWithLabelValues(warnStr)
-			if err != nil {
-				return fmt.Errorf("failed to find metric: %w", err)
-			}
-			counter.Inc()
+		if err = m.handleStorageWarningCritical(); err != nil {
+			// note the error in prom
+			metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
 			return err
 		}
-		warnStr := strconv.Itoa(int(warn))
-		counter, err := metricDiskCleanupSuccessTotal.GetMetricWithLabelValues(warnStr)
-		if err != nil {
-			return fmt.Errorf("failed to find metric: %w", err)
-		}
-		counter.Inc()
+
+		// note the success in prom
+		metricDiskCleanupSuccessTotal.WithLabelValues(strconv.Itoa(int(warn))).Inc()
+
 	default:
 		return fmt.Errorf("unknown storage warning level: %d", warn)
+	}
+
+	// fetch the usage again
+	usage2, err := m.lister.GetUsage()
+	if err != nil {
+		return fmt.Errorf("failed to get the disk usage: %w", err)
+	}
+
+	// log how much storage was purged
+	changed := usage.PercentUsed - usage2.PercentUsed
+	if changed != 0 {
+		metricDiskCleanupPercentage.Observe(usage2.PercentUsed)
 	}
 
 	return nil

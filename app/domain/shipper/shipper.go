@@ -190,9 +190,15 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 
 	// handle all valid replay requests
 	for _, rr := range requests {
+		metricReplayRequestFileCount.Observe(float64(len(rr.ReferenceIDs)))
+
 		if err := m.HandleReplayRequest(rr); err != nil {
+			metricReplayRequestErrorTotal.WithLabelValues(err.Error()).Inc()
 			return fmt.Errorf("failed to process replay request '%s': %w", rr.Filepath, err)
 		}
+
+		// decrease the current queue for this replay request
+		metricReplayRequestCurrent.WithLabelValues().Dec()
 	}
 
 	return nil

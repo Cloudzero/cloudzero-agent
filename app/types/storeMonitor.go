@@ -3,7 +3,7 @@
 
 package types
 
-type StoreWarning uint
+type StoreWarning int
 
 var (
 	StoreWarningNone StoreWarning = 49

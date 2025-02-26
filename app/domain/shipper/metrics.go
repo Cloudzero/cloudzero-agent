@@ -41,10 +41,44 @@ var (
 		[]string{"file_count"},
 	)
 
-	replayRequestTotal = prometheus.NewCounterVec(
+	// Replay Requests
+	// ----------------------------------------------------------
+	metricReplayRequestTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "replay_request_total",
+			Name: "shipper_replay_request_total",
 			Help: "Total number of replay requests receieved from the remote file receiver.",
+		},
+		[]string{},
+	)
+
+	metricReplayRequestCurrent = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "shipper_replay_request_current",
+			Help: "The current number of replay requests queued",
+		},
+		[]string{},
+	)
+
+	metricReplayRequestFileCount = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "shipper_replay_request_file_count",
+			Help:    "Number of files requested for a replay request",
+			Buckets: prometheus.ExponentialBuckets(10, 2, 15),
+		},
+	)
+
+	metricReplayRequestErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_replay_request_error_total",
+			Help: "Number of errors observed while processing replay requests",
+		},
+		[]string{"error"},
+	)
+
+	metricReplayRequestAbandonFilesTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_replay_request_abandon_files_total",
+			Help: "total number of abandoned files",
 		},
 		[]string{},
 	)
@@ -100,6 +134,14 @@ var (
 		[]string{},
 	)
 
+	metricDiskCleanupFailureTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_disk_cleanup_failure_total",
+			Help: "Number of failures when purging files for disk space",
+		},
+		[]string{"storage_warning", "error"},
+	)
+
 	metricDiskCleanupSuccessTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "shipper_disk_cleanup_success_total",
@@ -108,12 +150,12 @@ var (
 		[]string{"storage_warning"},
 	)
 
-	metricDiskCleanupFailureTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "shipper_disk_cleanup_failure_total",
-			Help: "Number of failures when purging files for disk space",
+	metricDiskCleanupPercentage = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "shipper_disk_cleanup_percentage",
+			Help:    "Percent removed from the storage volume during a purge operation",
+			Buckets: prometheus.LinearBuckets(0, 10, 11), // 0% to 100% in steps of 10%
 		},
-		[]string{"storage_warning"},
 	)
 )
 
@@ -125,7 +167,13 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			presignedURLRequestFailureTotal,
 			remoteWriteFileTotal,
 			remoteWriteFailureTotal,
-			replayRequestTotal,
+
+			// replay requests
+			metricReplayRequestTotal,
+			metricReplayRequestCurrent,
+			metricReplayRequestFileCount,
+			metricReplayRequestErrorTotal,
+			metricReplayRequestAbandonFilesTotal,
 
 			// disk usage
 			metricDiskTotalSizeBytes,
@@ -134,8 +182,9 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			metricCurrentDiskUnsentFile,
 			metricCurrentDiskSentFile,
 			metricCurrentDiskReplayRequest,
-			metricDiskCleanupSuccessTotal,
 			metricDiskCleanupFailureTotal,
+			metricDiskCleanupSuccessTotal,
+			metricDiskCleanupPercentage,
 		),
 	)
 }

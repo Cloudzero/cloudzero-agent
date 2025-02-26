@@ -138,6 +138,10 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*MetricFile) ([]*MetricFil
 				// do not fail here
 				log.Ctx(m.ctx).Err(err).Msg("failed to save the replay request to disk")
 			}
+
+			// observe the presence of the replay request
+			metricReplayRequestTotal.WithLabelValues().Inc()
+			metricReplayRequestCurrent.WithLabelValues().Inc()
 		} else {
 			// do not fail the operation here
 			log.Ctx(m.ctx).Err(err).Msg("failed to parse the replay request header")
@@ -209,6 +213,14 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// log the number of success abandoned files
+	counter, err := metricReplayRequestAbandonFilesTotal.GetMetricWithLabelValues()
+	if err != nil {
+		log.Ctx(m.ctx).Err(err).Msg("failed to get the prometheus metric")
+	} else {
+		counter.Add(float64(len(referenceIDs)))
 	}
 
 	// success

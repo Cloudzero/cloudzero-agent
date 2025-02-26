@@ -18,6 +18,7 @@ const (
 	expirationTime     = 3600
 	filePermissions    = 0o755
 	lockMaxRetry       = 60
+	replayFileFormat   = "replay-%d.json"
 )
 
 var (

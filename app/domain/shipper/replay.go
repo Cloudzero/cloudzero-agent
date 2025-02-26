@@ -13,8 +13,6 @@ import (
 	"github.com/go-obvious/timestamp"
 )
 
-const replayFileFormat = "replay-%d.json"
-
 type ReplayRequest struct {
 	Filepath     string   `json:"filepath"`
 	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
