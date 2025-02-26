@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
@@ -51,6 +52,18 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		if err := m.handleStorageWarningHigh(metricCutoff); err != nil {
 			return err
 		}
+		warnStr := strconv.Itoa(int(warn))
+		counter, err := metricDiskCleanupSuccessTotal.GetMetricWithLabelValues(warnStr)
+		if err != nil {
+			warnStr := strconv.Itoa(int(warn))
+			counter, err := metricDiskCleanupFailureTotal.GetMetricWithLabelValues(warnStr)
+			if err != nil {
+				return fmt.Errorf("failed to find metric: %w", err)
+			}
+			counter.Inc()
+			return fmt.Errorf("failed to find metric: %w", err)
+		}
+		counter.Inc()
 	case types.StoreWarningCrit:
 		log.Ctx(m.ctx).Error().
 			Uint64("total", usage.Total).
@@ -59,8 +72,20 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 			Uint64("total", usage.Total).
 			Msg("Critical storage level warning")
 		if err := m.handleStorageWarningCritical(); err != nil {
+			warnStr := strconv.Itoa(int(warn))
+			counter, err := metricDiskCleanupFailureTotal.GetMetricWithLabelValues(warnStr)
+			if err != nil {
+				return fmt.Errorf("failed to find metric: %w", err)
+			}
+			counter.Inc()
 			return err
 		}
+		warnStr := strconv.Itoa(int(warn))
+		counter, err := metricDiskCleanupSuccessTotal.GetMetricWithLabelValues(warnStr)
+		if err != nil {
+			return fmt.Errorf("failed to find metric: %w", err)
+		}
+		counter.Inc()
 	default:
 		return fmt.Errorf("unknown storage warning level: %d", warn)
 	}
