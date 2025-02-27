@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -130,3 +127,17 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	err = metricShipper.AbandonFiles(refIDs, "integration-test-abandon")
 	require.NoError(t, err)
 }
+
+// func TestShipper_Integration_DiskManagement(t *testing.T) {
+// 	if testing.Short() {
+// 		t.Skip("skipping integration test")
+// 	}
+
+// 	// get a tmp dir
+// 	tmpDir := getTmpDir(t)
+
+// 	// create the metricShipper
+// 	settings := getMockSettingsIntegration(t, tmpDir, "")
+// 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
+// 	require.NoError(t, err)
+// }

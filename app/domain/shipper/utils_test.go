@@ -24,24 +24,31 @@ import (
 
 type MockAppendableFiles struct {
 	mock.Mock
+	baseDir string
 }
 
-func (m *MockAppendableFiles) GetFiles() ([]string, error) {
-	args := m.Called()
+func (m *MockAppendableFiles) GetFiles(paths ...string) ([]string, error) {
+	args := m.Called(paths)
 	return args.Get(0).([]string), args.Error(1)
 }
 
-func (m *MockAppendableFiles) GetMatching(loc string, requests []string) ([]string, error) {
-	args := m.Called(loc, requests)
-	return args.Get(0).([]string), args.Error(1)
+func (m *MockAppendableFiles) ListFiles(paths ...string) ([]os.DirEntry, error) {
+	args := m.Called(paths)
+	return args.Get(0).([]os.DirEntry), args.Error(1)
 }
 
-func (m *MockAppendableFiles) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
-	args := m.Called(loc, cutoff)
-	return args.Get(0).([]string), args.Error(1)
+func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error {
+	args := m.Called(loc, process)
+
+	// walk the specific location in the store
+	if err := filepath.Walk(filepath.Join(m.baseDir, loc), process); err != nil {
+		return fmt.Errorf("failed to walk the store: %w", err)
+	}
+
+	return args.Error(0)
 }
 
-func (m *MockAppendableFiles) GetUsage() (*types.StoreUsage, error) {
+func (m *MockAppendableFiles) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	args := m.Called()
 	return args.Get(0).(*types.StoreUsage), args.Error(1)
 }
@@ -79,9 +86,9 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 func getTmpDir(t *testing.T) string {
 	// get a tmp dir
 	tmpDir := t.TempDir()
-	err := os.Mkdir(filepath.Join(tmpDir, "uploaded"), 0o777)
+	err := os.Mkdir(filepath.Join(tmpDir, shipper.UploadedSubDirectory), 0o777)
 	require.NoError(t, err)
-	err = os.Mkdir(filepath.Join(tmpDir, "replay"), 0o777)
+	err = os.Mkdir(filepath.Join(tmpDir, shipper.ReplaySubDirectory), 0o777)
 	require.NoError(t, err)
 	return tmpDir
 }
@@ -96,8 +103,7 @@ func getMockSettings(mockURL string) *config.Settings {
 			SendTimeout: time.Millisecond * 100,
 		},
 		Database: config.Database{
-			StoragePath:          "/tmp/storage",
-			StorageUploadSubpath: "uploaded",
+			StoragePath: "/tmp/storage",
 		},
 	}
 }
@@ -123,7 +129,7 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 			APIKeyPath:  filePath,
 		},
 		Database: config.Database{
-			StoragePath: "/tmp/storage",
+			StoragePath: dir,
 		},
 	}
 

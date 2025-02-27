@@ -104,7 +104,7 @@ func TestDiskStore_Compact(t *testing.T) {
 	}
 }
 
-func TestDiskStore_MatchingFiles(t *testing.T) {
+func TestDiskStore_GetFiles(t *testing.T) {
 	// create a unique directory for each test
 	dirPath, err := os.MkdirTemp(t.TempDir(), "TestDiskStore_MatchingFiles_")
 	assert.NoError(t, err)
@@ -139,19 +139,8 @@ func TestDiskStore_MatchingFiles(t *testing.T) {
 
 	addRecords()
 
-	// `GetMatchingFiles` must not return any files when no targets are defined
-	t.Run("TestDiskStore_MatchingFiles_EmptyTargetFiles", func(t *testing.T) {
-		files, err := ps.GetFiles()
-		require.NoError(t, err)
-		require.Equal(t, 3, len(files))
-
-		files, err = ps.GetMatching("", []string{})
-		require.NoError(t, err)
-		require.Empty(t, files)
-	})
-
 	// the `GetMatchingFiles` must respect the split between directories
-	t.Run("TestDiskStore_MatchingFiles_EnsureSubdirectorySplit", func(t *testing.T) {
+	t.Run("TestDiskStore_GetFiles_EnsureSubdirectorySplit", func(t *testing.T) {
 		files, err := ps.GetFiles()
 		require.NoError(t, err)
 
@@ -165,12 +154,12 @@ func TestDiskStore_MatchingFiles(t *testing.T) {
 		}
 
 		// ensure the root is empty
-		res, err := ps.GetMatching("", files)
+		res, err := ps.GetFiles()
 		require.NoError(t, err)
 		require.Empty(t, res)
 
 		// ensure the new directory is not empty
-		res, err = ps.GetMatching("uploaded", files)
+		res, err = ps.GetFiles("uploaded")
 		require.NoError(t, err)
 		require.Equal(t, 3, len(res))
 
@@ -181,23 +170,6 @@ func TestDiskStore_MatchingFiles(t *testing.T) {
 		res, err = ps.GetFiles()
 		require.NoError(t, err)
 		require.Equal(t, 3, len(res))
-	})
-
-	// `GetMatchingFiles` must ONLY use the filename as the id, and ignore the rest of the path
-	t.Run("TestDiskStore_MatchingFiles_EnsureIgnoreFullPath", func(t *testing.T) {
-		files, err := ps.GetFiles()
-		require.NoError(t, err)
-
-		// create different paths
-		newIds := make([]string, len(files))
-		for _, item := range files {
-			newIds = append(newIds, filepath.Join("invalid", "unrelated", "dir", item))
-		}
-
-		// ensure that even with bad paths only the filename is used
-		res, err := ps.GetMatching("", newIds)
-		require.NoError(t, err)
-		require.Equal(t, len(files), len(res))
 	})
 }
 

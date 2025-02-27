@@ -50,7 +50,7 @@ func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
 	}
 
 	// compose the filename
-	rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf("replay-%d.json", timestamp.Milli()))
+	rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf(replayFileFormat, timestamp.Milli()))
 
 	// encode to json
 	enc, err := json.Marshal(rr)
@@ -89,7 +89,7 @@ func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 		}
 
 		// skip over invalid files (like lock files)
-		if !strings.Contains(item.Name(), "replay") || !strings.Contains(item.Name(), ".json") {
+		if !strings.Contains(item.Name(), strings.Split(replayFileFormat, "-")[0]) || !strings.Contains(item.Name(), ".json") {
 			continue
 		}
 

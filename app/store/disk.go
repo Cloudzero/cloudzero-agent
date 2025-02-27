@@ -6,14 +6,11 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/go-obvious/timestamp"
@@ -206,89 +203,35 @@ func (d *DiskStore) Pending() int {
 	return d.rowCount
 }
 
-func (d *DiskStore) GetFiles() ([]string, error) {
-	pattern := filepath.Join(d.dirPath, "metrics_*_*.json.br")
+func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
+	// set to root path
+	allPaths := []string{d.dirPath}
+
+	// add specified location
+	allPaths = append(allPaths, paths...)
+
+	// add file filter
+	allPaths = append(allPaths, "metrics_*_*.json.br")
+
+	// list with glob find
+	pattern := filepath.Join(allPaths...)
 	return filepath.Glob(pattern)
 }
 
-// Gets a list of files that match a predefined list of target files from a specific
-// subdirectory.
-//
-// If `targets` is set to nil, then all files in the `loc` will be returned
-func (d *DiskStore) GetMatching(loc string, targets []string) ([]string, error) {
-	// create a lookup table of the targets to search for
-	targetMap := make(map[string]any, len(targets))
-	for _, item := range targets {
-		targetMap[filepath.Base(item)] = struct{}{}
-	}
-
-	// store list of all found paths that match the requested targets
-	var matches []string
-
-	// open a pointer to the directory requested
-	handle, err := os.Open(filepath.Join(d.dirPath, loc))
-	if err != nil {
-		return nil, fmt.Errorf("failed to open the directory: %w", err)
-	}
-	defer handle.Close()
-
-	// TODO -- could pontentially run in a go-routine if enough files
-	// but may add overhead. Need more testing to see if this would be valuable
-	for {
-		// read in chunks
-		files, err := handle.ReadDir(fileReadBatchSize)
-
-		// if the directory is empty, skip
-		if err == io.EOF {
-			break
-		}
-
-		// check for actual error
-		if err != nil {
-			return nil, fmt.Errorf("failed to read the directory: %w", err)
-		}
-
-		// check for matches
-		for _, file := range files {
-			if _, exists := targetMap[file.Name()]; exists || targets == nil {
-				matches = append(matches, file.Name())
-			}
-		}
-
-		if len(files) == 0 {
-			break
-		}
-	}
-
-	return matches, nil
+func (d *DiskStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
+	allPaths := []string{d.dirPath}
+	allPaths = append(allPaths, paths...)
+	return os.ReadDir(filepath.Join(allPaths...))
 }
 
-// GetFilesOlderThan gets objects that are older than a cutoff date. This is not recurrsive
-func (d *DiskStore) GetOlderThan(loc string, cutoff time.Time) ([]string, error) {
-	var oldFiles []string
-
-	// walk the specific directory
-	err := filepath.Walk(filepath.Join(d.dirPath, loc), func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("unknown error walking directory: %w", err)
-		}
-
-		// ignore dirs (i.e. not recurrsive)
-		if info.IsDir() {
-			return nil
-		}
-
-		// compare the file
-		if info.ModTime().Before(cutoff) {
-			oldFiles = append(oldFiles, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk the directory: %w", err)
+// Walk will run `process` to walk the file tree
+func (d *DiskStore) Walk(loc string, process filepath.WalkFunc) error {
+	// walk the specific location in the store
+	if err := filepath.Walk(filepath.Join(d.dirPath, loc), process); err != nil {
+		return fmt.Errorf("failed to walk the store: %w", err)
 	}
 
-	return oldFiles, nil
+	return nil
 }
 
 // All retrieves all metrics from uncompacted .json.br files, excluding the active and compressed files.
@@ -336,9 +279,10 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 }
 
 // GetUsage gathers disk usage stats using syscall.Statfs.
-func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
+// paths will be used as `filepath.Join(paths...)`
+func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs(d.dirPath, &stat); err != nil {
+	if err := syscall.Statfs("/", &stat); err != nil {
 		return nil, err
 	}
 
@@ -373,9 +317,4 @@ func (d *DiskStore) GetUsage() (*types.StoreUsage, error) {
 		InodeUsed:      inodeUsed,
 		InodeAvailable: inodeAvailable,
 	}, nil
-}
-
-// Returns the raw `syscall.Statfs_t` object
-func (d *DiskStore) Raw() (any, error) {
-	return nil, errors.ErrUnsupported
 }

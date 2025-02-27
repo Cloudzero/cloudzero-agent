@@ -6,9 +6,9 @@ package shipper
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,23 +26,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	shipperWorkerCount = 10
-	expirationTime     = 3600
-	replaySubdirName   = "replay"
-	filePermissions    = 0o755
-	lockMaxRetry       = 60
-)
-
-var (
-	ErrUnauthorized = errors.New("unauthorized request - possible invalid API key")
-	ErrNoURLs       = errors.New("no presigned URLs returned")
-)
-
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
 type MetricShipper struct {
 	setting *config.Settings
-	lister  types.AppendableDisk
+	lister  types.AppendableFilesMonitor
 
 	// Internal fields
 	ctx          context.Context
@@ -53,7 +40,7 @@ type MetricShipper struct {
 }
 
 // NewMetricShipper initializes a new MetricShipper.
-func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableDisk) (*MetricShipper, error) {
+func NewMetricShipper(ctx context.Context, s *config.Settings, f types.AppendableFilesMonitor) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
@@ -122,7 +109,7 @@ func (m *MetricShipper) Run() error {
 			}
 
 			// check the disk usage
-			if err := m.HandleDisk(); err != nil {
+			if err := m.HandleDisk(time.Now().AddDate(0, 0, -int(m.setting.Database.PurgeMetricsOlderThanDay))); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to handle the disk usage")
 			}
 		}
@@ -203,37 +190,81 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 
 	// handle all valid replay requests
 	for _, rr := range requests {
+		metricReplayRequestFileCount.Observe(float64(len(rr.ReferenceIDs)))
+
 		if err := m.HandleReplayRequest(rr); err != nil {
+			metricReplayRequestErrorTotal.WithLabelValues(err.Error()).Inc()
 			return fmt.Errorf("failed to process replay request '%s': %w", rr.Filepath, err)
 		}
+
+		// decrease the current queue for this replay request
+		metricReplayRequestCurrent.WithLabelValues().Dec()
 	}
 
 	return nil
 }
 
 func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
+	// compose loopup map of reference ids
+	refIDLookup := make(map[string]any)
+	for _, item := range rr.ReferenceIDs {
+		refIDLookup[item] = struct{}{}
+	}
+
 	// fetch the new files that match these ids
-	new, err := m.lister.GetMatching("", rr.ReferenceIDs)
-	if err != nil {
+	newFiles := make([]string, 0)
+	if err := m.lister.Walk("", func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// skip dir
+		if info.IsDir() {
+			return nil
+		}
+
+		// check for a match
+		if _, exists := refIDLookup[info.Name()]; exists {
+			newFiles = append(newFiles, info.Name())
+		}
+
+		return nil
+	}); err != nil {
 		return fmt.Errorf("failed to get matching new files: %w", err)
 	}
 
-	// fetch the already uploaded files that match these ids
-	uploaded, err := m.lister.GetMatching(m.setting.Database.StorageUploadSubpath, rr.ReferenceIDs)
-	if err != nil {
+	// fetch the already uploadedFiles files that match these ids
+	uploadedFiles := make([]string, 0)
+	if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// skip dir
+		if info.IsDir() {
+			return nil
+		}
+
+		// check for a match
+		if _, exists := refIDLookup[info.Name()]; exists {
+			uploadedFiles = append(uploadedFiles, info.Name())
+		}
+
+		return nil
+	}); err != nil {
 		return fmt.Errorf("failed to get matching uploaded files: %w", err)
 	}
 
 	// combine found ids into a map
 	found := make(map[string]*MetricFile) // {ReferenceID: File}
-	for _, item := range new {
+	for _, item := range newFiles {
 		file, err := NewMetricFile(filepath.Join(m.GetBaseDir(), filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
 		found[filepath.Base(item)] = file
 	}
-	for _, item := range uploaded {
+	for _, item := range uploadedFiles {
 		file, err := NewMetricFile(filepath.Join(m.GetUploadedDir(), filepath.Base(item)))
 		if err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
@@ -362,7 +393,7 @@ func (m *MetricShipper) MarkFileUploaded(file *MetricFile) error {
 
 	// if the filepath already contains the uploaded location,
 	// then ignore this entry
-	if strings.Contains(file.Filepath(), m.setting.Database.StorageUploadSubpath) {
+	if strings.Contains(file.Filepath(), UploadedSubDirectory) {
 		return nil
 	}
 
@@ -382,11 +413,11 @@ func (m *MetricShipper) GetBaseDir() string {
 }
 
 func (m *MetricShipper) GetReplayRequestDir() string {
-	return filepath.Join(m.GetBaseDir(), replaySubdirName)
+	return filepath.Join(m.GetBaseDir(), ReplaySubDirectory)
 }
 
 func (m *MetricShipper) GetUploadedDir() string {
-	return filepath.Join(m.GetBaseDir(), m.setting.Database.StorageUploadSubpath)
+	return filepath.Join(m.GetBaseDir(), UploadedSubDirectory)
 }
 
 // Shutdown gracefully stops the MetricShipper service.
