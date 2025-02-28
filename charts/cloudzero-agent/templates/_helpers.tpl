@@ -340,7 +340,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 */}}
 {{- define "cloudzero-agent.insightsController.server.webhookFullname" -}}
 {{- if .Values.server.fullnameOverride -}}
-{{- .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}-webhook
+{{- printf "%s-webhook" .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
@@ -404,7 +404,7 @@ Name for the backfill job resource
 {{- define "cloudzero-agent.initBackfillJobName" -}}
 {{- $name := printf "%s-backfill-%s" .Release.Name .Chart.Version }}
 {{- $imageRef := splitList ":" (include  "cloudzero-agent.initBackfillJob.imageReference" .) | last }}
-{{- printf "%s-%s" $name ($imageRef | trunc 6) | trunc 61 | replace "." "-" -}}
+{{- printf "%s-%s" $name ($imageRef | trunc 6) | trunc 61 | replace "." "-" | trimSuffix "-" -}}
 {{- end }}
 
 {{/*

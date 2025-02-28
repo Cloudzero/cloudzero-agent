@@ -118,12 +118,17 @@ spec:
               {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
               {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
               {{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
-              caBundles+=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
+              wh_{{ $configType }}_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
+              caBundles+=("${wh_{{ $configType }}_caBundle:-missing }")
               {{- end }}
               {{- end }}
 
               CA_BUNDLE=${caBundles[0]}
               for caBundle in "${caBundles[@]}"; do
+                  if [[ "$caBundle" == "missing" ]]; then
+                      echo "Empty caBundle found in ValidatingWebhookConfiguration."
+                      GENERATE_CERTIFICATE=true
+                  fi
                   if [[ "$caBundle" != "$CA_BUNDLE" ]]; then
                       echo "Mismatch found between ValidatingWebhookConfiguration caBundle values."
                         GENERATE_CERTIFICATE=true

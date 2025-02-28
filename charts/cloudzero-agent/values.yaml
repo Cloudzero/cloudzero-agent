@@ -182,7 +182,7 @@ initCertJob:
     serviceAccountName: ""
     clusterRoleName: ""
     clusterRoleBindingName: ""
-  ttlSecondsAfterFinished: 180
+  ttlSecondsAfterFinished: 5
 
 kubeStateMetrics:
   enabled: true

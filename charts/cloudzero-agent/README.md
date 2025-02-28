@@ -214,10 +214,6 @@ kubectl create secret -n example-namespace generic example-secret-name --from-li
 
 The secret can then be used with `existingSecretName`.
 
-### Memory Sizing
-
-Please see the [sizing guide](./docs/sizing-guide.md) in the docs directory.
-
 ### Update Helm Chart
 If you are updating an existing installation, pull the latest chart information:
 
@@ -279,5 +275,7 @@ To receive a notification when a new version of the chart is [released](https://
 
 - [Memory Sizing Guide](./docs/sizing-guide.md)
 - [Deployment Validation Guide](./docs/deploy-validation.md)
+- Using istio? [Read on here](./docs/istio.md)
+- [Chart release notes](./docs/releases/)
 
 ---
