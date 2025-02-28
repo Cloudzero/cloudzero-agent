@@ -33,7 +33,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		Float64("percentUsed", usage.PercentUsed).
 		Uint64("total", usage.Total).
 		Any("warningLevel", warn).
-		Msg("storage warning level")
+		Msg("Storage usage")
 
 	switch warn {
 	case types.StoreWarningNone:
@@ -84,6 +84,8 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 // GetDiskUsage gets the storage usage of the attached volume, and also reports
 // the usage to prometheus.
 func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
+	log.Ctx(m.ctx).Debug().Msg("Fetching disk info")
+
 	// get the disk usage
 	usage, err := m.lister.GetUsage()
 	if err != nil {
@@ -118,15 +120,18 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 }
 
 func (m *MetricShipper) handleStorageWarningHigh(before time.Time) error {
+	log.Ctx(m.ctx).Info().Msg("Handling high storage usage ...")
 	return m.PurgeMetricsBefore(before)
 }
 
 func (m *MetricShipper) handleStorageWarningCritical() error {
+	log.Ctx(m.ctx).Info().Msg("Handling critical storage usage ...")
 	return m.PurgeOldestNPercentage(CriticalPurgePercent)
 }
 
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`
 func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
+	log.Ctx(m.ctx).Info().Msgf("Purging all metrics before: %s", before.String())
 	oldFiles := make([]string, 0)
 	if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -148,6 +153,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 	}
 
 	if len(oldFiles) == 0 {
+		log.Ctx(m.ctx).Info().Msg("No files to purge found")
 		return nil
 	}
 
@@ -165,6 +171,8 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 
 // PurgeOldestPercentage removes the oldest `percent` of files
 func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
+	log.Ctx(m.ctx).Info().Msgf("Purging oldest %d percent of files", percent)
+
 	if percent <= 0 || percent > 100 { //nolint:revive // 100 is for fractions
 		return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
 	}
@@ -193,7 +201,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 	}
 
 	if len(files) == 0 {
-		log.Ctx(m.ctx).Info().Msg("No files to purge")
+		log.Ctx(m.ctx).Info().Msg("No files to purge found")
 		return nil
 	}
 

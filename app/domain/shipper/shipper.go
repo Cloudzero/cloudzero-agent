@@ -71,6 +71,14 @@ func (m *MetricShipper) GetMetricHandler() http.Handler {
 
 // Run starts the MetricShipper service and blocks until a shutdown signal is received.
 func (m *MetricShipper) Run() error {
+	// create the required directories for this application
+	if err := os.Mkdir(m.GetUploadedDir(), filePermissions); err != nil {
+		return fmt.Errorf("failed to create the uploaded directory: %w", err)
+	}
+	if err := os.Mkdir(m.GetReplayRequestDir(), filePermissions); err != nil {
+		return fmt.Errorf("failed to create the replay request directory: %w", err)
+	}
+
 	// Set up channel to listen for OS signals
 	sigChan := make(chan os.Signal, 1)
 	// Listen for interrupt and termination signals
@@ -98,6 +106,8 @@ func (m *MetricShipper) Run() error {
 			return nil
 
 		case <-ticker.C:
+			log.Ctx(m.ctx).Info().Msg("Running shipper application")
+
 			// run the base request
 			if err := m.ProcessNewFiles(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to ship metrics")
@@ -117,12 +127,10 @@ func (m *MetricShipper) Run() error {
 }
 
 func (m *MetricShipper) ProcessNewFiles() error {
-	// ensure the directory is created
-	if err := os.MkdirAll(m.GetBaseDir(), filePermissions); err != nil {
-		return fmt.Errorf("failed to create the base file directory: %w", err)
-	}
+	log.Ctx(m.ctx).Info().Msg("Processing new files ...")
 
 	// lock the base dir for the duration of the new file handling
+	log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
 	l := lock.NewFileLock(
 		m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
 		lock.WithStaleTimeout(time.Second*30), // detects stale timeout
@@ -146,27 +154,38 @@ func (m *MetricShipper) ProcessNewFiles() error {
 	if err != nil {
 		return fmt.Errorf("failed to get shippable files: %w", err)
 	}
+	log.Ctx(m.ctx).Debug().Int("numFiles", len(paths)).Send()
 
 	// create the files object
-	files, err := NewMetricFilesFromPaths(paths) // TODO -- replace with builder
+	files, err := NewMetricFilesFromPaths(paths)
 	if err != nil {
 		return fmt.Errorf("failed to create the files; %w", err)
 	}
 	if len(files) == 0 {
+		log.Ctx(m.ctx).Info().Msg("No files found, skipping")
 		return nil
 	}
 
 	// handle the file request
-	return m.HandleRequest(files)
+	if err := m.HandleRequest(files); err != nil {
+		return err
+	}
+
+	// NOTE: used as a hook in integration tests to validate that the application worked
+	log.Ctx(m.ctx).Info().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
+	return nil
 }
 
 func (m *MetricShipper) ProcessReplayRequests() error {
+	log.Ctx(m.ctx).Info().Msg("Processing replay requests")
+
 	// ensure the directory is created
 	if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
 		return fmt.Errorf("failed to create the replay request file directory: %w", err)
 	}
 
 	// lock the replay request dir for the duration of the replay request processing
+	log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
 	l := lock.NewFileLock(
 		m.ctx, filepath.Join(m.GetReplayRequestDir(), ".lock"),
 		lock.WithStaleTimeout(time.Second*30), // detects stale timeout
@@ -188,6 +207,11 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 		return fmt.Errorf("failed to get replay requests: %w", err)
 	}
 
+	if len(requests) == 0 {
+		log.Ctx(m.ctx).Info().Msg("No replay requests found, skipping")
+		return nil
+	}
+
 	// handle all valid replay requests
 	for _, rr := range requests {
 		metricReplayRequestFileCount.Observe(float64(len(rr.ReferenceIDs)))
@@ -201,10 +225,14 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 		metricReplayRequestCurrent.WithLabelValues().Dec()
 	}
 
+	log.Ctx(m.ctx).Info().Msg("Successfully handled all replay requests")
+
 	return nil
 }
 
 func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
+	log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", len(rr.ReferenceIDs)).Msg("Handling replay request")
+
 	// compose loopup map of reference ids
 	refIDLookup := make(map[string]any)
 	for _, item := range rr.ReferenceIDs {
@@ -232,6 +260,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	}); err != nil {
 		return fmt.Errorf("failed to get matching new files: %w", err)
 	}
+	log.Ctx(m.ctx).Debug().Int("newFiles", len(newFiles)).Send()
 
 	// fetch the already uploadedFiles files that match these ids
 	uploadedFiles := make([]string, 0)
@@ -254,6 +283,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	}); err != nil {
 		return fmt.Errorf("failed to get matching uploaded files: %w", err)
 	}
+	log.Ctx(m.ctx).Debug().Int("uploadedFiles", len(uploadedFiles)).Send()
 
 	// combine found ids into a map
 	found := make(map[string]*MetricFile) // {ReferenceID: File}
@@ -271,6 +301,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		}
 		found[filepath.Base(item)] = file
 	}
+	log.Ctx(m.ctx).Debug().Int("found", len(found)).Send()
 
 	// compare the results and discover which files were not found
 	missing := make([]string, 0)
@@ -290,6 +321,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	if len(missing) > 0 {
 		log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, len(missing))
 		if err := m.AbandonFiles(missing, "not found"); err != nil {
+			metricReplayRequestAbandonFilesErrorTotal.WithLabelValues(err.Error()).Inc()
 			return fmt.Errorf("failed to send the abandon file request: %w", err)
 		}
 	}
@@ -304,6 +336,8 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		return fmt.Errorf("failed to delete the replay request file: %w", err)
 	}
 
+	log.Ctx(m.ctx).Info().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
+
 	return nil
 }
 
@@ -312,6 +346,8 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 // - Upload to the remote API
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
+	log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handing request")
+
 	pm := parallel.New(shipperWorkerCount)
 	defer pm.Close()
 
@@ -353,6 +389,8 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
 func (m *MetricShipper) Upload(file *MetricFile) error {
+	log.Ctx(m.ctx).Debug().Str("fileName", file.ReferenceID).Msg("Uploading file")
+
 	data, err := file.ReadAll()
 	if err != nil {
 		return fmt.Errorf("failed to get the file data: %w", err)
@@ -385,6 +423,8 @@ func (m *MetricShipper) Upload(file *MetricFile) error {
 }
 
 func (m *MetricShipper) MarkFileUploaded(file *MetricFile) error {
+	log.Ctx(m.ctx).Debug().Str("fileName", file.ReferenceID).Msg("Marking file as uploaded")
+
 	// create the uploaded dir if needed
 	uploadDir := m.GetUploadedDir()
 	if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
