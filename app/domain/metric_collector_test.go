@@ -40,7 +40,8 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V1 Decode with Compression", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(&cfg, mockClock, storage)
+		d, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
+		require.NoError(t, err)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
@@ -53,7 +54,8 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V2 Decode Path", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(&cfg, mockClock, storage)
+		d, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
+		require.NoError(t, err)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildV2WriteRequest(

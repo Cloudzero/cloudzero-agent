@@ -44,10 +44,24 @@ var (
 )
 
 var (
-	collectorMetricsReceived = promauto.NewCounterVec(
+	metricsReceived = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "collector_metrics_received_total",
+			Name: "metrics_received_total",
 			Help: "Total number of metrics received",
+		},
+		[]string{},
+	)
+	metricsReceivedCost = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "metrics_received_cost_total",
+			Help: "Total number of cost metrics received",
+		},
+		[]string{},
+	)
+	metricsReceivedObservability = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "metrics_received_observability_total",
+			Help: "Total number of observability metrics received",
 		},
 		[]string{},
 	)
@@ -55,27 +69,36 @@ var (
 
 // MetricCollector is responsible for collecting and flushing metrics.
 type MetricCollector struct {
-	settings   *config.Settings
-	appendable types.Appendable
-	clock      itypes.TimeProvider
-	cancelFunc context.CancelFunc
+	settings           *config.Settings
+	costStore          types.Appendable
+	observabilityStore types.Appendable
+	filter             *MetricFilter
+	clock              itypes.TimeProvider
+	cancelFunc         context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, a types.Appendable) *MetricCollector {
+func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, costStore types.Appendable, observabilityStore types.Appendable) (*MetricCollector, error) {
 	if s.Cloudzero.RotateInterval <= 0 {
 		s.Cloudzero.RotateInterval = config.DefaultCZRotateInterval
 	}
 
+	filter, err := NewMetricFilter(&s.Metrics)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	collector := &MetricCollector{
-		settings:   s,
-		appendable: a,
-		clock:      clock,
-		cancelFunc: cancel,
+		settings:           s,
+		costStore:          costStore,
+		observabilityStore: observabilityStore,
+		filter:             filter,
+		clock:              clock,
+		cancelFunc:         cancel,
 	}
 	go collector.rotateCachePeriodically(ctx)
-	return collector
+	return collector, nil
 }
 
 // PutMetrics appends metrics and returns write response stats.
@@ -117,17 +140,31 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}
 
-	collectorMetricsReceived.WithLabelValues().Add(float64(len(metrics)))
+	costMetrics, observabilityMetrics := d.filter.Filter(metrics)
 
-	if err := d.appendable.Put(ctx, metrics...); err != nil {
-		return stats, err
+	metricsReceived.WithLabelValues().Add(float64(len(metrics)))
+	metricsReceivedCost.WithLabelValues().Add(float64(len(costMetrics)))
+	metricsReceivedObservability.WithLabelValues().Add(float64(len(observabilityMetrics)))
+
+	if costMetrics != nil && d.costStore != nil {
+		if err := d.costStore.Put(ctx, costMetrics...); err != nil {
+			return stats, err
+		}
+	}
+	if observabilityMetrics != nil && d.observabilityStore != nil {
+		if err := d.observabilityStore.Put(ctx, observabilityMetrics...); err != nil {
+			return stats, err
+		}
 	}
 	return stats, nil
 }
 
 // Flush triggers the flushing of accumulated metrics.
 func (d *MetricCollector) Flush(ctx context.Context) error {
-	return d.appendable.Flush()
+	if err := d.costStore.Flush(); err != nil {
+		return err
+	}
+	return d.observabilityStore.Flush()
 }
 
 // Close stops the flushing goroutine gracefully.

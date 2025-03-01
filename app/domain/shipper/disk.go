@@ -72,7 +72,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		}
 
 		// fetch the usage again
-		usage2, err := m.lister.GetUsage()
+		usage2, err := m.listers[0].GetUsage()
 		if err != nil {
 			return fmt.Errorf("failed to get the disk usage: %w", err)
 		}
@@ -97,7 +97,7 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 		var err error
 
 		// get the disk usage
-		usage, err = m.lister.GetUsage()
+		usage, err = m.listers[0].GetUsage()
 		if err != nil {
 			return fmt.Errorf("failed to get the usage: %w", err)
 		}
@@ -108,15 +108,15 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 		metricCurrentDiskUsagePercentage.WithLabelValues().Set(usage.PercentUsed)
 
 		// read file counts
-		unsent, err := m.lister.GetFiles()
+		unsent, err := m.listers[0].GetFiles()
 		if err != nil {
 			return fmt.Errorf("failed to get the unsent files: %w", err)
 		}
-		sent, err := m.lister.GetFiles(UploadedSubDirectory)
+		sent, err := m.listers[0].GetFiles(UploadedSubDirectory)
 		if err != nil {
 			return fmt.Errorf("failed to get the uploaded files; %w", err)
 		}
-		rr, err := m.lister.GetFiles(ReplaySubDirectory)
+		rr, err := m.listers[0].GetFiles(ReplaySubDirectory)
 		if err != nil {
 			return fmt.Errorf("failed to get the replay request files: %w", err)
 		}
@@ -150,23 +150,26 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 	return m.metrics.Span("shipper_PurgeMetricsBefore", func() error {
 		log.Ctx(m.ctx).Info().Msgf("Purging all metrics before: %s", before.String())
 		oldFiles := make([]string, 0)
-		if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
-			if err != nil {
-				return fmt.Errorf("unknown error walking directory: %w", err)
-			}
 
-			// ignore dirs (i.e. not recurrsive)
-			if info.IsDir() {
+		for _, lister := range m.listers {
+			if err := lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
+				if err != nil {
+					return fmt.Errorf("unknown error walking directory: %w", err)
+				}
+
+				// ignore dirs (i.e. not recurrsive)
+				if info.IsDir() {
+					return nil
+				}
+
+				// compare the file
+				if info.ModTime().Before(before) {
+					oldFiles = append(oldFiles, path)
+				}
 				return nil
+			}); err != nil {
+				return fmt.Errorf("failed to walk the filestore: %w", err)
 			}
-
-			// compare the file
-			if info.ModTime().Before(before) {
-				oldFiles = append(oldFiles, path)
-			}
-			return nil
-		}); err != nil {
-			return fmt.Errorf("failed to walk the filestore: %w", err)
 		}
 
 		if len(oldFiles) == 0 {
@@ -196,9 +199,13 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 			return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
 		}
 
-		entries, err := m.lister.ListFiles(UploadedSubDirectory)
-		if err != nil {
-			return fmt.Errorf("failed to list files: %w", err)
+		var entries []os.DirEntry
+		for _, lister := range m.listers {
+			listerEntries, err := lister.ListFiles(UploadedSubDirectory)
+			if err != nil {
+				return fmt.Errorf("failed to list files: %w", err)
+			}
+			entries = append(entries, listerEntries...)
 		}
 
 		type fileData struct {

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/filter"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 )
@@ -37,8 +38,16 @@ type Settings struct {
 	Logging   Logging   `yaml:"logging"`
 	Database  Database  `yaml:"database"`
 	Cloudzero Cloudzero `yaml:"cloudzero"`
+	Metrics   Metrics   `yaml:"metrics"`
 
 	mu sync.Mutex
+}
+
+type Metrics struct {
+	Cost                []filter.FilterEntry `yaml:"cost"`
+	Observability       []filter.FilterEntry `yaml:"observability"`
+	CostLabels          []filter.FilterEntry `yaml:"cost_labels"`
+	ObservabilityLabels []filter.FilterEntry `yaml:"observability_labels"`
 }
 
 type Logging struct {
@@ -78,6 +87,7 @@ type Cloudzero struct {
 
 func NewSettings(configFiles ...string) (*Settings, error) {
 	var cfg Settings
+
 	for _, cfgFile := range configFiles {
 		if cfgFile == "" {
 			continue

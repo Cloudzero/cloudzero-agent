@@ -50,7 +50,8 @@ func TestRemoteWriteMethods(t *testing.T) {
 		},
 	}
 
-	d := domain.NewMetricCollector(&cfg, mockClock, storage)
+	d, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
+	assert.NoError(t, err)
 	defer d.Close()
 
 	handler := handlers.NewRemoteWriteAPI(MountBase, d)

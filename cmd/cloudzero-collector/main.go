@@ -52,12 +52,25 @@ func main() {
 		zerolog.DefaultContextLogger = &logger
 	}
 
-	appendable, err := store.NewDiskStore(settings.Database)
+	costMetricStore, err := store.NewDiskStore(settings.Database, store.CostContentIdentifier)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
 	defer func() {
-		if innerErr := appendable.Flush(); innerErr != nil {
+		if innerErr := costMetricStore.Flush(); innerErr != nil {
+			logger.Err(innerErr).Msg("failed to flush Parquet store")
+		}
+		if r := recover(); r != nil {
+			logger.Panic().Interface("panic", r).Msg("application panicked, exiting")
+		}
+	}()
+
+	observabilityMetricStore, err := store.NewDiskStore(settings.Database, store.ObservabilityContentIdentifier)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize database")
+	}
+	defer func() {
+		if innerErr := observabilityMetricStore.Flush(); innerErr != nil {
 			logger.Err(innerErr).Msg("failed to flush Parquet store")
 		}
 		if r := recover(); r != nil {
@@ -67,12 +80,15 @@ func main() {
 
 	// Handle shutdown events gracefully
 	go func() {
-		HandleShutdownEvents(ctx, appendable)
+		HandleShutdownEvents(ctx, costMetricStore, observabilityMetricStore)
 		os.Exit(0)
 	}()
 
 	// create the metric collector service interface
-	domain := domain.NewMetricCollector(settings, clock, appendable)
+	domain, err := domain.NewMetricCollector(settings, clock, costMetricStore, observabilityMetricStore)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize metric collector")
+	}
 	defer domain.Close()
 
 	loggerMiddleware := func(next http.Handler) http.Handler {
@@ -103,11 +119,13 @@ func main() {
 	logger.Info().Msg("Service stopping")
 }
 
-func HandleShutdownEvents(ctx context.Context, appendable types.Appendable) {
+func HandleShutdownEvents(ctx context.Context, appendables ...types.Appendable) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-signalChan
 
 	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
-	appendable.Flush()
+	for _, appendable := range appendables {
+		appendable.Flush()
+	}
 }

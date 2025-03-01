@@ -49,7 +49,12 @@ func main() {
 		zerolog.DefaultContextLogger = &logger
 	}
 
-	appendable, err := store.NewDiskStore(settings.Database)
+	costStore, err := store.NewDiskStore(settings.Database, store.CostContentIdentifier)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initialize database")
+	}
+
+	observabilityStore, err := store.NewDiskStore(settings.Database, store.ObservabilityContentIdentifier)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
@@ -73,7 +78,7 @@ func main() {
 	}()
 
 	// Create the shipper and start in a thread
-	domain, err := shipper.NewMetricShipper(ctx, settings, appendable)
+	domain, err := shipper.NewMetricShipper(ctx, settings, costStore, observabilityStore)
 	if err != nil {
 		log.Err(err).Msg("failed to create the metric shipper")
 		exitCode = 1

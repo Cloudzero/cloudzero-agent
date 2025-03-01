@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -29,20 +30,26 @@ const (
 	jsonBufferSize    = 1024
 )
 
+const (
+	CostContentIdentifier          = "metrics"
+	ObservabilityContentIdentifier = "observability"
+)
+
 // DiskStore is a data store intended to be backed by a disk. Currently, data is stored in Brotli-compressed JSON, but transcoded to Snappy-compressed Parquet
 type DiskStore struct {
-	dirPath          string
-	id               string
-	activeFilePath   string
-	rowLimit         int
-	rowCount         int
-	file             *os.File
-	compressionLevel int
-	compressor       *brotli.Writer
-	writer           *jwriter.Writer
-	arrayState       *jwriter.ArrayState
-	startTime        int64
-	mu               sync.Mutex
+	dirPath           string
+	id                string
+	contentIdentifier string
+	activeFilePath    string
+	rowLimit          int
+	rowCount          int
+	file              *os.File
+	compressionLevel  int
+	compressor        *brotli.Writer
+	writer            *jwriter.Writer
+	arrayState        *jwriter.ArrayState
+	startTime         int64
+	mu                sync.Mutex
 
 	// internal metadata for the state of the disk store
 	stat *syscall.Statfs_t
@@ -55,7 +62,7 @@ var _ types.AppendableFiles = (*DiskStore)(nil)
 var _ types.StoreMonitor = (*DiskStore)(nil)
 
 // NewDiskStore initializes a DiskStore with a directory path and row limit
-func NewDiskStore(settings config.Database) (*DiskStore, error) {
+func NewDiskStore(settings config.Database, contentIdentifier string) (*DiskStore, error) {
 	if settings.MaxRecords <= 0 {
 		settings.MaxRecords = config.DefaultDatabaseMaxRecords
 	}
@@ -68,11 +75,16 @@ func NewDiskStore(settings config.Database) (*DiskStore, error) {
 		}
 	}
 
+	if contentIdentifier == "" {
+		contentIdentifier = CostContentIdentifier
+	}
+
 	store := &DiskStore{
-		dirPath:          settings.StoragePath,
-		rowLimit:         settings.MaxRecords,
-		id:               uuid.New().String()[:8],
-		compressionLevel: settings.CompressionLevel,
+		dirPath:           settings.StoragePath,
+		rowLimit:          settings.MaxRecords,
+		id:                uuid.New().String()[:8],
+		contentIdentifier: contentIdentifier,
+		compressionLevel:  settings.CompressionLevel,
 	}
 
 	if err := store.newFileWriter(); err != nil {
@@ -183,7 +195,7 @@ func (d *DiskStore) flushUnlocked() error {
 	// Rename the active file with start and stop timestamps
 	timestampedFilePath := filepath.Join(
 		d.dirPath,
-		fmt.Sprintf("metrics_%d_%d.json.br", d.startTime, stopTime),
+		fmt.Sprintf("%s_%d_%d.json.br", d.contentIdentifier, d.startTime, stopTime),
 	)
 	err := os.Rename(d.activeFilePath, timestampedFilePath)
 	if err != nil {
@@ -211,7 +223,7 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 	allPaths = append(allPaths, paths...)
 
 	// add file filter
-	allPaths = append(allPaths, "metrics_*_*.json.br")
+	allPaths = append(allPaths, d.contentIdentifier+"_*_*.json.br")
 
 	// list with glob find
 	pattern := filepath.Join(allPaths...)
@@ -221,6 +233,12 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 func (d *DiskStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
 	allPaths := []string{d.dirPath}
 	allPaths = append(allPaths, paths...)
+	for _, path := range allPaths {
+		basePath := filepath.Base(path)
+		if strings.HasPrefix(basePath, d.contentIdentifier) && strings.HasSuffix(basePath, ".json.br") {
+			allPaths = append(allPaths, path)
+		}
+	}
 	return os.ReadDir(filepath.Join(allPaths...))
 }
 
