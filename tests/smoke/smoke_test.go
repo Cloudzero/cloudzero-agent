@@ -53,14 +53,22 @@ type testContext struct {
 
 	// directory information
 	tmpDir       string // the root dir created with t.TempDir()
+	apiKey       string // actual api key since the validate function is not run on the config
 	apiKeyFile   string // location of the api key file
 	configFile   string // location of the config file
 	dataLocation string // location of actively running data for the collector/shipper
+
+	// container names for docker networking
+	collectorName   string
+	shipperName     string
+	s3instanceName  string
+	remotewriteName string
 
 	// internal docker state
 	network     *testcontainers.DockerNetwork
 	collector   *testcontainers.Container
 	shipper     *testcontainers.Container
+	s3instance  *testcontainers.Container
 	remotewrite *testcontainers.Container
 }
 
@@ -74,7 +82,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		apiKey = "ak-test"
 	}
 
-	remoteWritePort := "8080"
+	remoteWritePort := "8081"
 	remoteWriteEndpoint, exists := os.LookupEnv("CLOUDZERO_HOST")
 	if !exists {
 		remoteWriteEndpoint = "mock-host:8081"
@@ -89,36 +97,22 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 	dataLocation, err := os.MkdirTemp(tmpDir, "data-*")
 	require.NoError(t, err, "failed to create the data location")
 
-	// create the object with a test config
-	tx := &testContext{
-		T:   t,
-		ctx: context.Background(), // in go 1.24 use t.Context()
-		cfg: &config.Settings{
-			CloudAccountID: "test-account-id",
-			Region:         "us-east-1",
-			ClusterName:    "smoke-test-cluster",
-			Logging:        config.Logging{Level: "debug"},
-			Database:       config.Database{StoragePath: dataLocation},
-			Cloudzero: config.Cloudzero{
-				APIKeyPath:  apiKeyFile,
-				Host:        remoteWriteEndpoint,
-				SendTimeout: time.Second * 30,
-				UseHttp:     true,
-			},
+	// create the config
+	cfg := config.Settings{
+		CloudAccountID: "test-account-id",
+		Region:         "us-east-1",
+		ClusterName:    "smoke-test-cluster",
+		Logging:        config.Logging{Level: "debug"},
+		Database:       config.Database{StoragePath: dataLocation},
+		Cloudzero: config.Cloudzero{
+			APIKeyPath:  apiKeyFile,
+			Host:        remoteWriteEndpoint,
+			SendTimeout: time.Second * 30,
 		},
-		remoteWritePort: remoteWritePort,
-		tmpDir:          tmpDir,
-		apiKeyFile:      apiKeyFile,
-		dataLocation:    dataLocation,
-	}
-
-	// run the options
-	for _, opt := range opts {
-		opt(tx)
 	}
 
 	// marshal into yaml
-	modifiedConfig, err := yaml.Marshal(&tx.cfg)
+	modifiedConfig, err := yaml.Marshal(&cfg)
 	require.NoError(t, err, "failed to marshal the config file")
 
 	// write the config file
@@ -127,8 +121,27 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 	require.NoError(t, err, "failed to write the modified config file")
 	require.NoError(t, err, "failed to read copied config file")
 
-	// set on the context object
-	tx.configFile = configFile
+	// create the testing object
+	tx := &testContext{
+		T:               t,
+		ctx:             context.Background(), // in go 1.24 use t.Context()
+		cfg:             &cfg,
+		configFile:      configFile,
+		remoteWritePort: remoteWritePort,
+		tmpDir:          tmpDir,
+		apiKey:          apiKey,
+		apiKeyFile:      apiKeyFile,
+		dataLocation:    dataLocation,
+		collectorName:   "cz-insights-controller-mock-collector",
+		shipperName:     "cz-insights-controller-mock-shipper",
+		s3instanceName:  "cz-insights-controller-mock-s3instance",
+		remotewriteName: "cz-insights-controller-mock-remotewrite",
+	}
+
+	// run the options
+	for _, opt := range opts {
+		opt(tx)
+	}
 
 	return tx
 }
@@ -273,6 +286,13 @@ func (t *testContext) WaitForLog(container *testcontainers.Container, log string
 	})
 }
 
+func (t *testContext) GetContainerName(container *testcontainers.Container) string {
+	resp, err := (*container).Inspect(t.ctx)
+	require.NoError(t, err, "failed to inspect container")
+	require.NotEmpty(t, resp)
+	return resp.Name[1:]
+}
+
 func (t *testContext) CreateNetwork() *testcontainers.DockerNetwork {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -301,6 +321,7 @@ func (t *testContext) StartCollector() *testcontainers.Container {
 				Dockerfile: "tests/docker/Dockerfile.collector",
 				KeepImage:  true,
 			},
+			Name:     t.collectorName,
 			Networks: []string{t.network.Name},
 			HostConfigModifier: func(hc *container.HostConfig) {
 				hc.Binds = append(hc.Binds, fmt.Sprintf("%s:%s", t.tmpDir, t.tmpDir)) // bind the tmp dir to the container
@@ -338,6 +359,7 @@ func (t *testContext) StartShipper() *testcontainers.Container {
 				Dockerfile: "tests/docker/Dockerfile.shipper",
 				KeepImage:  true,
 			},
+			Name:     t.shipperName,
 			Networks: []string{t.network.Name},
 			HostConfigModifier: func(hc *container.HostConfig) {
 				hc.Binds = append(hc.Binds, fmt.Sprintf("%s:%s", t.tmpDir, t.tmpDir)) // bind the tmp dir to the container
@@ -366,8 +388,41 @@ func (t *testContext) StartShipper() *testcontainers.Container {
 func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 	t.CreateNetwork()
 
-	if t.shipper == nil {
+	if t.s3instance == nil {
+		fmt.Println("Creating the mock s3 instance ...")
+
+		s3instanceRequest := testcontainers.ContainerRequest{
+			Image:    "minio/minio:latest",
+			Networks: []string{t.network.Name},
+			Name:     t.s3instanceName,
+			Env: map[string]string{
+				"MINIO_ROOT_USER":     "minio-admin",
+				"MINIO_ROOT_PASSWORD": "minio-admin",
+			},
+			Cmd:             []string{"server", "/data"},
+			WaitingFor:      wait.ForLog("API: http://").WithStartupTimeout(2 * time.Minute),
+			AutoRemove:      true,
+			AlwaysPullImage: true,
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Consumers: []testcontainers.LogConsumer{&stdoutLogConsumer{}},
+			},
+		}
+
+		s3instance, err := testcontainers.GenericContainer(t.ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: s3instanceRequest,
+			Started:          true,
+		})
+		require.NoError(t, err, "failed to create the s3 instance")
+		t.s3instance = &s3instance
+
+		fmt.Println("Successfully created the s3 instance")
+	}
+
+	if t.remotewrite == nil {
 		fmt.Println("Building the mock remotewrite ...")
+
+		s3InstanceUrl := fmt.Sprintf("%s:9000", t.GetContainerName(t.s3instance))
+		fmt.Printf("With mock s3 instance url: '%s'\n", s3InstanceUrl)
 
 		remotewriteReq := testcontainers.ContainerRequest{
 			FromDockerfile: testcontainers.FromDockerfile{
@@ -375,14 +430,17 @@ func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 				Dockerfile: "tests/docker/Dockerfile.remotewrite",
 				KeepImage:  true,
 			},
-			Networks: []string{t.network.Name},
-			// HostConfigModifier: func(hc *container.HostConfig) {
-			// 	hc.Binds = append(hc.Binds, fmt.Sprintf("%s:%s", t.tmpDir, t.tmpDir)) // bind the tmp dir to the container
-			// },
+			Name:       t.remotewriteName,
+			Networks:   []string{t.network.Name},
 			Entrypoint: []string{"/app/remotewrite"},
 			Env: map[string]string{
-				"API_KEY": t.cfg.GetAPIKey(),
+				"API_KEY": t.apiKey,
 				"PORT":    t.remoteWritePort,
+
+				// minio creds
+				"S3_ENDPOINT":    fmt.Sprintf("%s:9000", t.s3instanceName),
+				"S3_ACCESS_KEY":  "minio-admin",
+				"S3_PRIVATE_KEY": "minio-admin",
 			},
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Consumers: []testcontainers.LogConsumer{&stdoutLogConsumer{}},
@@ -399,13 +457,9 @@ func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 		fmt.Println("Mock remotewrite built successfully")
 		t.remotewrite = &remotewrite
 
-		// get the host
-		host, err := remotewrite.Host(t.ctx)
-		require.NoError(t, err, "failed to get the mock remotewrite host")
-
 		// set the host as the setting
 		t.SetSettings(func(settings *config.Settings) error {
-			settings.Cloudzero.Host = fmt.Sprintf("%s:%s", host, t.remoteWritePort)
+			settings.Cloudzero.Host = fmt.Sprintf("%s:%s", t.remotewriteName, t.remoteWritePort)
 			return nil
 		})
 	}
