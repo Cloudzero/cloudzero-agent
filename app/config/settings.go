@@ -5,7 +5,6 @@ package config
 
 import (
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -65,6 +64,7 @@ type Cloudzero struct {
 	SendInterval   time.Duration `yaml:"send_interval" default:"10m" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
 	SendTimeout    time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	Host           string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
+	UseHttp        bool          `yaml:"use_http" env:"USE_HTTP" default:"false" env-description:"use http for client requests instead of https"`
 	apiKey         string        // Set after reading keypath
 
 	_host string // cached value of `Host` since it is overriden in initalization
@@ -247,16 +247,6 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 		return nil, fmt.Errorf("failed to parse the url: %w", err)
 	}
 
-	// remove a port off the host if any
-	host := u.Host
-	if strings.Contains(host, ":") {
-		var err error
-		host, _, err = net.SplitHostPort(host)
-		if err != nil {
-			return nil, fmt.Errorf("failed to remove the port from the host: %w", err)
-		}
-	}
-
 	// define the parameters
 	params := url.Values{}
 	params.Add("cluster_name", s.ClusterName)
@@ -264,8 +254,11 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 	params.Add("region", s.Region)
 
 	// set extra info on the url
-	u.Scheme = "https"
-	u.Host = host
+	if s.Cloudzero.UseHttp {
+		u.Scheme = "http"
+	} else {
+		u.Scheme = "https"
+	}
 	u.Path += "/v1/container-metrics"
 	u.RawQuery = params.Encode()
 	return u, nil

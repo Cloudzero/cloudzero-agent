@@ -56,8 +56,12 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*MetricFile) ([]*MetricFil
 	}
 
 	// Create a new HTTP request
-	uploadEndpoint := m.setting.Cloudzero.Host + "/upload"
-	req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint, bytes.NewBuffer(enc))
+	uploadEndpoint, err := m.setting.GetRemoteAPIBase()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get remote base: %w", err)
+	}
+	uploadEndpoint.Path += "/upload"
+	req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}

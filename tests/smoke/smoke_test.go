@@ -48,7 +48,8 @@ type testContext struct {
 	mu  sync.Mutex
 
 	// config
-	cfg *config.Settings
+	cfg             *config.Settings
+	remoteWritePort string // for mock remote write
 
 	// directory information
 	tmpDir       string // the root dir created with t.TempDir()
@@ -57,9 +58,10 @@ type testContext struct {
 	dataLocation string // location of actively running data for the collector/shipper
 
 	// internal docker state
-	network   *testcontainers.DockerNetwork
-	collector *testcontainers.Container
-	shipper   *testcontainers.Container
+	network     *testcontainers.DockerNetwork
+	collector   *testcontainers.Container
+	shipper     *testcontainers.Container
+	remotewrite *testcontainers.Container
 }
 
 func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
@@ -69,12 +71,13 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 	// create an api key file
 	apiKey, exists := os.LookupEnv("CLOUDZERO_DEV_API_KEY")
 	if !exists {
-		apiKey = "test-api-key"
+		apiKey = "ak-test"
 	}
 
+	remoteWritePort := "8080"
 	remoteWriteEndpoint, exists := os.LookupEnv("CLOUDZERO_HOST")
 	if !exists {
-		remoteWriteEndpoint = "mock-remote-write:8081"
+		remoteWriteEndpoint = "mock-host:8081"
 	}
 
 	// write the api key file
@@ -100,11 +103,13 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 				APIKeyPath:  apiKeyFile,
 				Host:        remoteWriteEndpoint,
 				SendTimeout: time.Second * 30,
+				UseHttp:     true,
 			},
 		},
-		tmpDir:       tmpDir,
-		apiKeyFile:   apiKeyFile,
-		dataLocation: dataLocation,
+		remoteWritePort: remoteWritePort,
+		tmpDir:          tmpDir,
+		apiKeyFile:      apiKeyFile,
+		dataLocation:    dataLocation,
 	}
 
 	// run the options
@@ -125,12 +130,21 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 	// set on the context object
 	tx.configFile = configFile
 
-	// add options
-	for _, opt := range opts {
-		opt(tx)
-	}
-
 	return tx
+}
+
+// Sets the setting as modified by the function and writes the config file
+func (t *testContext) SetSettings(f func(settings *config.Settings) error) {
+	err := f(t.cfg)
+	require.NoError(t, err, "failed to write the new config")
+
+	// marshal into yaml
+	modifiedConfig, err := yaml.Marshal(t.cfg)
+	require.NoError(t, err, "failed to marshal the config file")
+
+	// write the config file
+	err = os.WriteFile(t.configFile, modifiedConfig, 0o777)
+	require.NoError(t, err, "failed to write the modified config file")
 }
 
 // Wrap tests in this to inject `testContext` into them
@@ -347,4 +361,54 @@ func (t *testContext) StartShipper() *testcontainers.Container {
 	}
 
 	return t.shipper
+}
+
+func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
+	t.CreateNetwork()
+
+	if t.shipper == nil {
+		fmt.Println("Building the mock remotewrite ...")
+
+		remotewriteReq := testcontainers.ContainerRequest{
+			FromDockerfile: testcontainers.FromDockerfile{
+				Context:    "../..",
+				Dockerfile: "tests/docker/Dockerfile.remotewrite",
+				KeepImage:  true,
+			},
+			Networks: []string{t.network.Name},
+			// HostConfigModifier: func(hc *container.HostConfig) {
+			// 	hc.Binds = append(hc.Binds, fmt.Sprintf("%s:%s", t.tmpDir, t.tmpDir)) // bind the tmp dir to the container
+			// },
+			Entrypoint: []string{"/app/remotewrite"},
+			Env: map[string]string{
+				"API_KEY": t.cfg.GetAPIKey(),
+				"PORT":    t.remoteWritePort,
+			},
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Consumers: []testcontainers.LogConsumer{&stdoutLogConsumer{}},
+			},
+			WaitingFor: wait.ForLog("Server is running on :"),
+		}
+
+		remotewrite, err := testcontainers.GenericContainer(t.ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: remotewriteReq,
+			Started:          true,
+		})
+		require.NoError(t, err, "failed to create the mock remotewrite")
+
+		fmt.Println("Mock remotewrite built successfully")
+		t.remotewrite = &remotewrite
+
+		// get the host
+		host, err := remotewrite.Host(t.ctx)
+		require.NoError(t, err, "failed to get the mock remotewrite host")
+
+		// set the host as the setting
+		t.SetSettings(func(settings *config.Settings) error {
+			settings.Cloudzero.Host = fmt.Sprintf("%s:%s", host, t.remoteWritePort)
+			return nil
+		})
+	}
+
+	return t.remotewrite
 }

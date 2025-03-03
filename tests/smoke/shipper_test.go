@@ -30,3 +30,30 @@ func TestSmoke_Shipper_Runs(t *testing.T) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 	}))
 }
+
+func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	runTest(t, func(t *testContext) {
+		// start the mock remote write
+		remotewrite := t.StartMockRemoteWrite()
+		require.NotNil(t, remotewrite, "remotewrite is null")
+
+		// start the shipper
+		shipper := t.StartShipper()
+		require.NotNil(t, shipper, "shipper is null")
+
+		// write files to the data directory
+		numMetricFiles := 10
+		t.WriteTestMetrics(numMetricFiles, 100)
+
+		// wait for the log message
+		err := t.WaitForLog(shipper, fmt.Sprintf("\"numNewFiles\":%d", numMetricFiles))
+		require.NoError(t, err, "failed to find log message")
+	}, withConfigOverride(func(settings *config.Settings) {
+		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.UseHttp = true
+	}))
+}
