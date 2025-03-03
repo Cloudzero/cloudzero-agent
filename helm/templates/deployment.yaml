@@ -102,18 +102,6 @@ spec:
             limits:
               memory: "1024Mi"
               cpu: "1000m"
-        - name: temp-shell
-          image: busybox
-          command: ["sleep", "36000"] # Keeps the pod running
-          volumeMounts:
-            - name: secret-volume
-              mountPath: /cloudzero/secret
-              readOnly: true
-            - name: config-volume
-              mountPath: /cloudzero/config
-              readOnly: true
-            - name: persistent-storage
-              mountPath: /cloudzero/data
 
       volumes:
         - name: config-volume
