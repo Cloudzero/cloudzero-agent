@@ -22,7 +22,7 @@ const (
 	DefaultCZSendInterval           = 10 * time.Minute
 	DefaultCZSendTimeout            = 10 * time.Second
 	DefaultCZRotateInterval         = 10 * time.Minute
-	DefaultDatabaseMaxRecords       = 1_000_000
+	DefaultDatabaseMaxRecords       = 1_500_000
 	DefaultDatabaseCompressionLevel = 8
 	DefaultServerPort               = 8080
 	DefaultServerMode               = "http"

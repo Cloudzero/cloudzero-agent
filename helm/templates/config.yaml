@@ -17,8 +17,8 @@ data:
 
     database:
       storage_path: /cloudzero/data
-      max_records: 1000000
-      compress: true
+      max_records: 1500000
+      compression_level: 8
 
     cloudzero:
       api_key_path: /cloudzero/secret/apiToken
