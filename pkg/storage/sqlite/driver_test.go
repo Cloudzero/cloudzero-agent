@@ -59,7 +59,7 @@ func TestSqlite3_ConcurrentAccess(t *testing.T) {
 	_, err = db.Exec("INSERT into 'test' VALUES ('a', 'aye'), ('b', 'bee'), ('c', 'cee')")
 	require.NoError(t, err, "failed to isnert into test table")
 
-	//values that are in our db
+	// values that are in our db
 	kv := map[string]string{
 		"a": "aye",
 		"b": "bee",
@@ -68,13 +68,13 @@ func TestSqlite3_ConcurrentAccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	//We spawn 20 goroutines that each try to query every value in 'kv' and verify the results are correct
-	//Each goroutine is given a waitgroup and a thread number just to track the output.
+	// We spawn 20 goroutines that each try to query every value in 'kv' and verify the results are correct
+	// Each goroutine is given a waitgroup and a thread number just to track the output.
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, thread int) {
 			defer wg.Done()
-			var errs int //number of failed results
+			var errs int // number of failed results
 			for id, knownvalue := range kv {
 				var value string
 				err := db.QueryRow("SELECT value FROM 'test' where key=?", id).Scan(&value)
