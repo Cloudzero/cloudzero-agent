@@ -16,11 +16,15 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
+	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 )
 
 func TestPutMetrics(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
 
 	ctx := context.Background()
 	cfg := config.Settings{
@@ -36,7 +40,7 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V1 Decode with Compression", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(&cfg, storage)
+		d := domain.NewMetricCollector(&cfg, mockClock, storage)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
@@ -49,7 +53,7 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V2 Decode Path", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
-		d := domain.NewMetricCollector(&cfg, storage)
+		d := domain.NewMetricCollector(&cfg, mockClock, storage)
 		defer d.Close()
 
 		payload, _, _, err := testdata.BuildV2WriteRequest(

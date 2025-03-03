@@ -199,40 +199,57 @@ func captureOutput(f func()) (string, string) {
 	return outBuf.String(), errBuf.String()
 }
 
+var testMetrics = []types.Metric{
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		MetricName:     "test-metric-1",
+		NodeName:       "my-node",
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		MetricName:     "test-metric-2",
+		NodeName:       "my-node",
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		MetricName:     "test-metric-3",
+		NodeName:       "my-node",
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+}
+
 func createTestFiles(t *testing.T, dir string, n int) []types.File {
 	files := make([]types.File, 0)
-
 	for i := range n {
-		now := time.Now()
+		now := time.Now().UTC()
 
 		// create a file location
 		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%05d.json.br", now.UnixMilli(), i))
 		file, err := os.Create(path)
 		require.NoError(t, err, "failed to create file: %s", err)
 
-		// create the metrics array
-		metrics := make([]*types.Metric, 5)
-		for j := range 5 {
-			metrics[j] = &types.Metric{
-				ClusterName:    "test-cluster",
-				CloudAccountID: "1234567890",
-				Year:           fmt.Sprintf("%04d", now.Year()),
-				Month:          fmt.Sprintf("%02d", int(now.Month())),
-				Day:            fmt.Sprintf("%02d", now.Day()),
-				Hour:           fmt.Sprintf("%02d", now.Hour()),
-				MetricName:     fmt.Sprintf("test-metric-%d", j),
-				NodeName:       "test-node",
-				CreatedAt:      time.Now().UnixMilli(),
-				Value:          "I'm a value!",
-				TimeStamp:      time.Now().UnixMilli(),
-				Labels: map[string]string{
-					"foo": "bar",
-				},
-			}
-		}
-
 		// compress the metrics
-		jsonData, err := json.Marshal(metrics)
+		jsonData, err := json.Marshal(testMetrics)
 		require.NoError(t, err, "failed to encode the metrics as json")
 
 		var compressedData bytes.Buffer

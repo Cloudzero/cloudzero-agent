@@ -5,9 +5,12 @@
 package types
 
 import (
+	"encoding/json"
+	"fmt"
+	"maps"
+	"strconv"
 	"time"
 
-	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 )
 
@@ -31,46 +34,127 @@ type InputData struct {
 }
 
 type Metric struct {
-	ID             string            `json:"id"               parquet:"-"`
-	ClusterName    string            `json:"cluster_name"     parquet:"cluster_name"`     //nolint:tagliatelle // we should keep these consistent
-	CloudAccountID string            `json:"cloud_account_id" parquet:"cloud_account_id"` //nolint:tagliatelle // we should keep these consistent
-	Year           string            `json:"year"             parquet:"year"`
-	Month          string            `json:"month"            parquet:"month"`
-	Day            string            `json:"day"              parquet:"day"`
-	Hour           string            `json:"hour"             parquet:"hour"`
-	MetricName     string            `json:"metric_name"      parquet:"metric_name"`          //nolint:tagliatelle // we should keep these consistent
-	NodeName       string            `json:"node_name"        parquet:"node_name"`            //nolint:tagliatelle // we should keep these consistent
-	CreatedAt      int64             `json:"created_at"       parquet:"created_at,timestamp"` //nolint:tagliatelle // we should keep these consistent
-	TimeStamp      int64             `json:"timestamp"        parquet:"timestamp,timestamp"`  //nolint:tagliatelle // "timestamp" is one word, tagliatelle wants timeStamp.
-	Labels         map[string]string `json:"labels"           parquet:"labels"`
-	Value          string            `json:"value"            parquet:"value"`
+	ID             uuid.UUID
+	ClusterName    string
+	CloudAccountID string
+	MetricName     string
+	NodeName       string
+	CreatedAt      time.Time
+	TimeStamp      time.Time
+	Labels         map[string]string
+	Value          string
 }
 
-func NewMetric(cloudAccountID, clusterName, name, nodeName string, timeStamp int64, labels map[string]string, value string) Metric {
-	if labels == nil {
-		labels = make(map[string]string)
+type ParquetMetric struct {
+	ClusterName    string            `parquet:"cluster_name"`
+	CloudAccountID string            `parquet:"cloud_account_id"`
+	Year           string            `parquet:"year"`
+	Month          string            `parquet:"month"`
+	Day            string            `parquet:"day"`
+	Hour           string            `parquet:"hour"`
+	MetricName     string            `parquet:"metric_name"`
+	NodeName       string            `parquet:"node_name"`
+	CreatedAt      int64             `parquet:"created_at,timestamp"`
+	TimeStamp      int64             `parquet:"timestamp,timestamp"`
+	Labels         map[string]string `parquet:"labels"`
+	Value          string            `parquet:"value"`
+}
+
+func (pm *ParquetMetric) Metric() Metric {
+	m := Metric{
+		ClusterName:    pm.ClusterName,
+		CloudAccountID: pm.CloudAccountID,
+		MetricName:     pm.MetricName,
+		NodeName:       pm.NodeName,
+		CreatedAt:      time.UnixMilli(pm.CreatedAt).UTC(),
+		TimeStamp:      time.UnixMilli(pm.TimeStamp).UTC(),
+		Value:          pm.Value,
 	}
-	createAt := timestamp.Milli()
-	t := time.Unix(0, timeStamp*int64(time.Millisecond))
-	year := GetYear(t)
-	month := GetMonth(t)
-	day := GetDay(t)
-	hour := GetHour(t)
-	return Metric{
-		ID:             uuid.New().String(),
-		CloudAccountID: cloudAccountID,
-		ClusterName:    clusterName,
-		MetricName:     name,
-		NodeName:       nodeName,
-		CreatedAt:      createAt,
-		Year:           year,
-		Month:          month,
-		Day:            day,
-		Hour:           hour,
-		TimeStamp:      timeStamp,
-		Labels:         labels,
-		Value:          value,
+	m.ImportLabels(pm.Labels)
+	return m
+}
+
+func (m *Metric) Parquet() ParquetMetric {
+	return ParquetMetric{
+		ClusterName:    m.ClusterName,
+		CloudAccountID: m.CloudAccountID,
+		Year:           m.TimeStamp.Format("2006"),
+		Month:          m.TimeStamp.Format("01"),
+		Day:            m.TimeStamp.Format("02"),
+		Hour:           m.TimeStamp.Format("15"),
+		MetricName:     m.MetricName,
+		NodeName:       m.NodeName,
+		CreatedAt:      m.CreatedAt.UnixMilli(),
+		TimeStamp:      m.TimeStamp.UnixMilli(),
+		Labels:         m.FullLabels(),
+		Value:          m.Value,
 	}
+}
+
+type jsonMetric struct {
+	ID             string            `json:"id"`
+	ClusterName    string            `json:"cluster_name"`     //nolint:tagliatelle // we should keep these consistent
+	CloudAccountID string            `json:"cloud_account_id"` //nolint:tagliatelle // we should keep these consistent
+	MetricName     string            `json:"metric_name"`      //nolint:tagliatelle // we should keep these consistent
+	NodeName       string            `json:"node_name"`        //nolint:tagliatelle // we should keep these consistent
+	CreatedAt      string            `json:"created_at"`       //nolint:tagliatelle // we should keep these consistent
+	TimeStamp      string            `json:"timestamp"`        //nolint:tagliatelle // we should keep these consistent
+	Labels         map[string]string `json:"labels"`
+	Value          string            `json:"value"`
+}
+
+func (m *Metric) JSON() map[string]interface{} {
+	return map[string]interface{}{
+		"id":               m.ID.String(),
+		"cluster_name":     m.ClusterName,
+		"cloud_account_id": m.CloudAccountID,
+		"metric_name":      m.MetricName,
+		"node_name":        m.NodeName,
+		"created_at":       strconv.FormatInt(m.CreatedAt.UnixMilli(), 10),
+		"timestamp":        strconv.FormatInt(m.TimeStamp.UnixMilli(), 10),
+		"labels":           m.Labels,
+		"value":            m.Value,
+	}
+}
+
+func (m Metric) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.JSON())
+}
+
+func (m *Metric) UnmarshalJSON(data []byte) error {
+	var aux jsonMetric
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	{
+		var err error
+		m.ID, err = uuid.Parse(aux.ID)
+		if err != nil {
+			return fmt.Errorf("failed to parse id: %w", err)
+		}
+	}
+
+	m.ClusterName = aux.ClusterName
+	m.CloudAccountID = aux.CloudAccountID
+	m.MetricName = aux.MetricName
+	m.NodeName = aux.NodeName
+	m.Value = aux.Value
+
+	if createdAt, err := strconv.ParseInt(aux.CreatedAt, 10, 64); err == nil {
+		m.CreatedAt = time.UnixMilli(createdAt).UTC()
+	} else {
+		return fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	if timestamp, err := strconv.ParseInt(aux.TimeStamp, 10, 64); err == nil {
+		m.TimeStamp = time.UnixMilli(timestamp).UTC()
+	} else {
+		return fmt.Errorf("failed to parse timestamp: %w", err)
+	}
+
+	m.ImportLabels(aux.Labels)
+
+	return nil
 }
 
 type MetricRange struct {
@@ -78,22 +162,46 @@ type MetricRange struct {
 	Next    *string  `json:"next,omitempty"`
 }
 
-// GetYear extracts the year as a string with four digits.
-func GetYear(t time.Time) string {
-	return t.Format("2006")
+// ImportLabels imports labels from a map. This is similar to setting the Labels
+// field to labels, except for special-case labels are used to set fields on the
+// metric.
+//
+// Note that the fields will only be set if the label is present in the map, so
+// it will not overwrite existing values unless the relevant label is actually
+// found.
+func (m *Metric) ImportLabels(labels map[string]string) {
+	dest := map[string]string{}
+	if m.Labels != nil {
+		maps.Copy(dest, m.Labels)
+	}
+
+	for k, v := range labels {
+		switch k {
+		case "__name__":
+			m.MetricName = v
+			continue
+		case "node":
+			m.NodeName = v
+			continue
+		}
+		dest[k] = v
+	}
+
+	m.Labels = dest
 }
 
-// GetMonth extracts the month as a string with two digits (leading zero if necessary).
-func GetMonth(t time.Time) string {
-	return t.Format("01")
-}
+// FullLabels returns a map of all labels, including ones which have been
+// hoisted out to fields.
+func (m *Metric) FullLabels() map[string]string {
+	labels := map[string]string{}
 
-// GetDay extracts the day as a string with two digits (leading zero if necessary).
-func GetDay(t time.Time) string {
-	return t.Format("02")
-}
+	maps.Copy(labels, m.Labels)
+	if m.MetricName != "" {
+		labels["__name__"] = m.MetricName
+	}
+	if m.NodeName != "" {
+		labels["node"] = m.NodeName
+	}
 
-// GetHour extracts the hour as a string with two digits (leading zero if necessary) in 24-hour format.
-func GetHour(t time.Time) string {
-	return t.Format("15")
+	return labels
 }

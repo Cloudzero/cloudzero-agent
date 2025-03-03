@@ -19,6 +19,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
+	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 )
 
 const MountBase = "/"
@@ -34,6 +35,9 @@ func TestRemoteWriteMethods(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	storage := mocks.NewMockStore(ctrl)
 
 	cfg := config.Settings{
@@ -46,7 +50,7 @@ func TestRemoteWriteMethods(t *testing.T) {
 		},
 	}
 
-	d := domain.NewMetricCollector(&cfg, storage)
+	d := domain.NewMetricCollector(&cfg, mockClock, storage)
 	defer d.Close()
 
 	handler := handlers.NewRemoteWriteAPI(MountBase, d)

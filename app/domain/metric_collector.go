@@ -13,7 +13,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/google/uuid"
 	prom "github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
 	"github.com/prometheus/prometheus/storage/remote"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	itypes "github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 var (
@@ -42,11 +45,12 @@ var (
 type MetricCollector struct {
 	settings   *config.Settings
 	appendable types.Appendable
+	clock      itypes.TimeProvider
 	cancelFunc context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(s *config.Settings, a types.Appendable) *MetricCollector {
+func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, a types.Appendable) *MetricCollector {
 	if s.Cloudzero.RotateInterval <= 0 {
 		s.Cloudzero.RotateInterval = config.DefaultCZRotateInterval
 	}
@@ -55,6 +59,7 @@ func NewMetricCollector(s *config.Settings, a types.Appendable) *MetricCollector
 	collector := &MetricCollector{
 		settings:   s,
 		appendable: a,
+		clock:      clock,
 		cancelFunc: cancel,
 	}
 	go collector.rotateCachePeriodically(ctx)
@@ -183,31 +188,27 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 	var metrics []types.Metric
 	for _, ts := range writeReq.Timeseries {
 		labelsMap := make(map[string]string)
-		var metricName, nodeName string
 
 		for _, label := range ts.Labels {
 			labelsMap[label.Name] = label.Value
-			switch label.Name {
-			case "__name__":
-				metricName = label.Value
-			case "node":
-				nodeName = label.Value
-			}
 		}
 
 		for _, sample := range ts.Samples {
-			if len(metricName) == 0 { // don't save garbage metrics
+			metric := types.Metric{
+				ID:             uuid.New(),
+				ClusterName:    d.settings.ClusterName,
+				CloudAccountID: d.settings.CloudAccountID,
+				CreatedAt:      d.clock.GetCurrentTime(),
+				TimeStamp:      timestamp.Time(sample.Timestamp),
+				Value:          formatFloat(sample.Value),
+			}
+			metric.ImportLabels(labelsMap)
+
+			if len(metric.MetricName) == 0 { // don't save garbage metrics
 				continue
 			}
-			metrics = append(metrics, types.NewMetric(
-				d.settings.CloudAccountID,
-				d.settings.ClusterName,
-				metricName,
-				nodeName,
-				sample.Timestamp,
-				labelsMap,
-				formatFloat(sample.Value),
-			))
+
+			metrics = append(metrics, metric)
 		}
 	}
 	return metrics, nil
@@ -228,7 +229,6 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 	var metrics []types.Metric
 	for _, ts := range writeReq.Timeseries {
 		labelsMap := make(map[string]string)
-		metricName := ""
 
 		// Decode labels from LabelsRefs using the symbols array
 		for i := 0; i < len(ts.LabelsRefs); i += 2 {
@@ -240,19 +240,19 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 			labelName := writeReq.Symbols[nameIdx]
 			labelValue := writeReq.Symbols[valueIdx]
 			labelsMap[labelName] = labelValue
-			if labelName == "__name__" {
-				metricName = labelValue
-			}
 		}
 
 		// Process samples
 		for _, sample := range ts.Samples {
 			metric := types.Metric{
-				MetricName: metricName,
-				TimeStamp:  sample.Timestamp,
-				Labels:     labelsMap,
-				Value:      formatFloat(sample.Value),
+				ID:             uuid.New(),
+				ClusterName:    d.settings.ClusterName,
+				CloudAccountID: d.settings.CloudAccountID,
+				CreatedAt:      d.clock.GetCurrentTime(),
+				TimeStamp:      timestamp.Time(sample.Timestamp),
+				Value:          formatFloat(sample.Value),
 			}
+			metric.ImportLabels(labelsMap)
 			metrics = append(metrics, metric)
 			stats.Samples++
 		}

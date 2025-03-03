@@ -23,15 +23,11 @@ var testMetrics = []types.Metric{
 	{
 		ClusterName:    "test-cluster",
 		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
 		MetricName:     "test-metric-1",
 		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
 		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
 		Labels: map[string]string{
 			"foo": "bar",
 		},
@@ -39,15 +35,11 @@ var testMetrics = []types.Metric{
 	{
 		ClusterName:    "test-cluster",
 		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
 		MetricName:     "test-metric-2",
 		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
 		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
 		Labels: map[string]string{
 			"foo": "bar",
 		},
@@ -55,15 +47,11 @@ var testMetrics = []types.Metric{
 	{
 		ClusterName:    "test-cluster",
 		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
 		MetricName:     "test-metric-3",
 		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
+		CreatedAt:      time.UnixMilli(1741116110190).UTC(),
 		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
+		TimeStamp:      time.UnixMilli(1741116110190).UTC(),
 		Labels: map[string]string{
 			"foo": "bar",
 		},
@@ -91,14 +79,19 @@ func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 	parquetData, err := io.ReadAll(parquetStreamer)
 	assert.NoError(t, err)
 
-	parquetReader := parquet.NewGenericReader[types.Metric](bytes.NewReader(parquetData))
+	parquetReader := parquet.NewGenericReader[types.ParquetMetric](bytes.NewReader(parquetData))
 	defer parquetReader.Close()
 	assert.Equal(t, len(testMetrics), int(parquetReader.NumRows()))
 
-	decodedMetrics := make([]types.Metric, len(testMetrics))
-	rowsRead, err := parquetReader.Read(decodedMetrics)
+	decodedParquetMetrics := make([]types.ParquetMetric, len(testMetrics))
+	rowsRead, err := parquetReader.Read(decodedParquetMetrics)
 	assert.NoError(t, err)
 	assert.Equal(t, len(testMetrics), rowsRead)
+
+	decodedMetrics := make([]types.Metric, 0, len(decodedParquetMetrics))
+	for _, parquetMetric := range decodedParquetMetrics {
+		decodedMetrics = append(decodedMetrics, parquetMetric.Metric())
+	}
 
 	if diff := cmp.Diff(decodedMetrics, testMetrics); diff != "" {
 		t.Errorf("decoded metrics mismatch (-want +got):\n%s", diff)

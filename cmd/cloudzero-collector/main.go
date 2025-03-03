@@ -21,6 +21,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load settings")
 	}
+
+	clock := &utils.Clock{}
 
 	ctx := context.Background()
 	var logger zerolog.Logger
@@ -69,7 +72,7 @@ func main() {
 	}()
 
 	// create the metric collector service interface
-	domain := domain.NewMetricCollector(settings, appendable)
+	domain := domain.NewMetricCollector(settings, clock, appendable)
 	defer domain.Close()
 
 	loggerMiddleware := func(next http.Handler) http.Handler {

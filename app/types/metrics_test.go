@@ -8,17 +8,32 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMetric(t *testing.T) {
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+	timeStamp := mockClock.GetCurrentTime()
+
 	name := "test_metric"
 	nodeName := "node-1"
-	timeStamp := time.Now().UnixMilli()
 	labels := map[string]string{"env": "test"}
 	value := "123.45"
 
-	metric := types.NewMetric("cloudaccount", "cluster", name, nodeName, timeStamp, labels, value)
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     name,
+		NodeName:       nodeName,
+		CreatedAt:      timeStamp,
+		TimeStamp:      timeStamp,
+		Labels:         labels,
+		Value:          value,
+	}
 
 	assert.NotEmpty(t, metric.ID)
 	assert.Equal(t, name, metric.MetricName)
@@ -30,9 +45,32 @@ func TestNewMetric(t *testing.T) {
 }
 
 func TestMetricRange(t *testing.T) {
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	metrics := []types.Metric{
-		types.NewMetric("cloudaccount", "cluster", "metric1", "node1", time.Now().UnixMilli(), map[string]string{"env": "test"}, "123.45"),
-		types.NewMetric("cloudaccount", "cluster", "metric2", "node1", time.Now().UnixMilli(), map[string]string{"env": "prod"}, "678.90"),
+		{
+			ID:             uuid.New(),
+			ClusterName:    "cluster",
+			CloudAccountID: "cloudaccount",
+			MetricName:     "metric1",
+			NodeName:       "node1",
+			CreatedAt:      mockClock.GetCurrentTime(),
+			TimeStamp:      mockClock.GetCurrentTime(),
+			Labels:         map[string]string{"env": "test"},
+			Value:          "123.45",
+		},
+		{
+			ID:             uuid.New(),
+			ClusterName:    "cluster",
+			CloudAccountID: "cloudaccount",
+			MetricName:     "metric2",
+			NodeName:       "node1",
+			CreatedAt:      mockClock.GetCurrentTime(),
+			TimeStamp:      mockClock.GetCurrentTime(),
+			Labels:         map[string]string{"env": "prod"},
+			Value:          "678.90",
+		},
 	}
 	next := "next_token"
 

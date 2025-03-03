@@ -71,7 +71,7 @@ func NewDiskStore(settings config.Database) (*DiskStore, error) {
 	store := &DiskStore{
 		dirPath:          settings.StoragePath,
 		rowLimit:         settings.MaxRecords,
-		id:               uuid.New().String()[:8], //nolint:revive // we just want a random string
+		id:               uuid.New().String()[:8],
 		compressionLevel: settings.CompressionLevel,
 	}
 

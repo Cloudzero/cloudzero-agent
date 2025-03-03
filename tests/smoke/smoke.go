@@ -210,7 +210,7 @@ func (t *testContext) Clean() {
 // writes valid metric files to the shared data path `t.dataLocation`
 func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 	for i := range numFiles {
-		now := time.Now()
+		now := time.Now().UTC()
 
 		// create a file location
 		file, err := os.Create(filepath.Join(t.dataLocation, fmt.Sprintf("metrics_%d_%05d.json.br", now.UnixMilli(), i)))
@@ -222,15 +222,11 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 			metrics[j] = &types.Metric{
 				ClusterName:    t.cfg.ClusterName,
 				CloudAccountID: t.cfg.CloudAccountID,
-				Year:           fmt.Sprintf("%04d", now.Year()),
-				Month:          fmt.Sprintf("%02d", int(now.Month())),
-				Day:            fmt.Sprintf("%02d", now.Day()),
-				Hour:           fmt.Sprintf("%02d", now.Hour()),
 				MetricName:     fmt.Sprintf("test-metric-%d", j),
 				NodeName:       "test-node",
-				CreatedAt:      time.Now().UnixMilli(),
+				CreatedAt:      now,
 				Value:          "I'm a value!",
-				TimeStamp:      time.Now().UnixMilli(),
+				TimeStamp:      now,
 				Labels: map[string]string{
 					"foo": "bar",
 				},

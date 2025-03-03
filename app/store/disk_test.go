@@ -14,6 +14,8 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,8 +28,21 @@ func TestDiskStore_PutAndPending(t *testing.T) {
 	assert.NoError(t, err)
 	defer ps.Flush()
 
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	// Add metrics less than the row limit
-	metric := types.NewMetric("cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     "test_metric",
+		NodeName:       "node1",
+		CreatedAt:      mockClock.GetCurrentTime(),
+		TimeStamp:      mockClock.GetCurrentTime(),
+		Labels:         map[string]string{"label": "test"},
+		Value:          "123.45",
+	}
 	err = ps.Put(context.Background(), metric, metric, metric)
 	assert.NoError(t, err)
 
@@ -49,8 +64,21 @@ func TestDiskStore_Flush(t *testing.T) {
 	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit})
 	assert.NoError(t, err)
 
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	// Add metrics and verify they are pending
-	metric := types.NewMetric("cloudaccount", "cluster", "test_metric", "node1", time.Now().Unix(), map[string]string{"label": "test"}, "123.45")
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     "test_metric",
+		NodeName:       "node1",
+		CreatedAt:      mockClock.GetCurrentTime(),
+		TimeStamp:      mockClock.GetCurrentTime(),
+		Labels:         map[string]string{"label": "test"},
+		Value:          "123.45",
+	}
 	err = ps.Put(context.Background(), metric, metric)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, ps.Pending())
@@ -76,17 +104,23 @@ func TestDiskStore_Compact(t *testing.T) {
 	assert.NoError(t, err)
 	defer ps.Flush()
 
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	for i := 0; i < recordCount; i++ {
 		id := fmt.Sprintf("test_metric_%d", i)
 		value := fmt.Sprintf("%d", i)
-		metric := types.NewMetric(
-			"cloudaccount", "cluster",
-			id,
-			"node1",
-			time.Now().Unix(),
-			map[string]string{"label": id},
-			value,
-		)
+		metric := types.Metric{
+			ID:             uuid.New(),
+			ClusterName:    "cluster",
+			CloudAccountID: "cloudaccount",
+			MetricName:     id,
+			NodeName:       "node1",
+			CreatedAt:      mockClock.GetCurrentTime(),
+			TimeStamp:      mockClock.GetCurrentTime(),
+			Labels:         map[string]string{"label": id},
+			Value:          value,
+		}
 		err := ps.Put(ctx, metric)
 		assert.NoError(t, err)
 	}
@@ -117,18 +151,24 @@ func TestDiskStore_GetFiles(t *testing.T) {
 	assert.NoError(t, err)
 	defer ps.Flush()
 
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
 	addRecords := func() {
 		for i := 0; i < recordCount; i++ {
 			id := fmt.Sprintf("test_metric_%d", i)
 			value := fmt.Sprintf("%d", i)
-			metric := types.NewMetric(
-				"cloudaccount", "cluster",
-				id,
-				"node1",
-				time.Now().Unix(),
-				map[string]string{"label": id},
-				value,
-			)
+			metric := types.Metric{
+				ID:             uuid.New(),
+				ClusterName:    "cluster",
+				CloudAccountID: "cloudaccount",
+				MetricName:     id,
+				NodeName:       "node1",
+				CreatedAt:      mockClock.GetCurrentTime(),
+				TimeStamp:      mockClock.GetCurrentTime(),
+				Labels:         map[string]string{"label": id},
+				Value:          value,
+			}
 			err := ps.Put(ctx, metric)
 			assert.NoError(t, err)
 		}

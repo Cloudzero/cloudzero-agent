@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	parquetBufferSize = 1024
+	parquetBufferSize = 16384
 )
 
 // NewParquetStreamer reads a Brotli-compressed JSON file containing an array of
@@ -28,7 +28,7 @@ func NewParquetStreamer(input io.Reader) io.ReadCloser {
 
 	pipeReader, pipeWriter := io.Pipe()
 
-	parquetWriter := parquet.NewGenericWriter[types.Metric](pipeWriter, parquet.Compression(&parquet.Snappy))
+	parquetWriter := parquet.NewGenericWriter[types.ParquetMetric](pipeWriter, parquet.Compression(&parquet.Snappy))
 
 	go func() {
 		defer func() {
@@ -46,7 +46,7 @@ func NewParquetStreamer(input io.Reader) io.ReadCloser {
 		}
 
 		for decoder.More() {
-			var metrics []types.Metric = make([]types.Metric, 0, parquetBufferSize)
+			var metrics []types.ParquetMetric = make([]types.ParquetMetric, 0, parquetBufferSize)
 
 			for i := 0; i < parquetBufferSize && decoder.More(); i++ {
 				var metric types.Metric
@@ -54,7 +54,7 @@ func NewParquetStreamer(input io.Reader) io.ReadCloser {
 					pipeWriter.CloseWithError(fmt.Errorf("failed to decode JSON: %w", err))
 					return
 				}
-				metrics = append(metrics, metric)
+				metrics = append(metrics, metric.Parquet())
 			}
 
 			_, err := parquetWriter.Write(metrics)
