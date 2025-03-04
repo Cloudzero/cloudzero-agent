@@ -168,7 +168,7 @@ func parseProtoMsg(contentType string) (string, error) {
 }
 
 func formatFloat(value float64) string {
-	return strconv.FormatFloat(value, 'f', -1, 64) //nolint:revive // a constant here would be somewhat silly
+	return strconv.FormatFloat(value, 'f', -1, 64)
 }
 
 // DecodeV1 decompresses and decodes a Protobuf v1 WriteRequest, then converts it to a slice of Metric structs.

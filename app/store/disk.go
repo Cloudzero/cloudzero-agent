@@ -292,7 +292,7 @@ func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	used := total - available
 	var percentUsed float64
 	if total > 0 {
-		percentUsed = (float64(used) / float64(total)) * 100 //nolint:revive // 100 does not need a constant
+		percentUsed = (float64(used) / float64(total)) * 100
 	}
 
 	// This is USUALLY true

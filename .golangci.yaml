@@ -77,7 +77,7 @@ linters-settings:
         arguments:
           - maxLitCount: "3"
             allowStrs: '""'
-            allowInts: "0,1,2,3"
+            allowInts: "0,1,2,3,10,8,16,32,64,100,128,192,256,512,1024,2048,4096,8192,16384,32768,65536"
             allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
       - name: atomic
       - name: comment-spacings
