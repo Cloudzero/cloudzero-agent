@@ -257,12 +257,12 @@ data:
 
     database:
       storage_path: {{ .Values.aggregator.mountRoot }}/data
-      max_records: 1000000
-      compression_level: 8
+      max_records: {{ .Values.aggregator.database.maxRecords }}
+      compression_level: {{ .Values.aggregator.database.compressionLevel }}
 
     cloudzero:
       api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
-      send_interval: 1m
-      send_timeout: 10s
-      rotate_interval: 30m
+      send_interval: {{ .Values.aggregator.cloudzero.sendInterval }}
+      send_timeout: {{ .Values.aggregator.cloudzero.sendTimeout }}
+      rotate_interval: {{ .Values.aggregator.cloudzero.rotateInterval }}
       host: {{ .Values.host }}
