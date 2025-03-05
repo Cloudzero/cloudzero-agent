@@ -102,7 +102,7 @@ func getMockSettings(mockURL string) *config.Settings {
 		Region:         "us-east-1",
 		Cloudzero: config.Cloudzero{
 			Host:        mockURL,
-			SendTimeout: time.Millisecond * 100,
+			SendTimeout: time.Millisecond * 1000,
 		},
 		Database: config.Database{
 			StoragePath: "/tmp/storage",

@@ -126,17 +126,24 @@ func TestShipper_Unit_AllocatePresignedURL_Success(t *testing.T) {
 
 func TestShipper_Unit_AllocatePresignedURL_NoFiles(t *testing.T) {
 	// Setup
-	settings := getMockSettings("https://example.com/upload")
+	mockURL := "https://example.com/upload"
+
+	mockRoundTripper := &MockRoundTripper{
+		status:    http.StatusOK,
+		mockError: nil,
+	}
+
+	settings := getMockSettings(mockURL)
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
+	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	presignedURLs, err := metricShipper.AllocatePresignedURLs([]types.File{})
-
-	// Verify
-	assert.NoError(t, err)
-	assert.Nil(t, presignedURLs)
+	require.NoError(t, err)
+	urlResponse, err := metricShipper.AllocatePresignedURLs([]types.File{})
+	require.Equal(t, err, shipper.ErrNoURLs)
+	require.Empty(t, urlResponse)
 }
 
 func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
