@@ -398,10 +398,25 @@ aggregator:
   replicas: 1
   logging:
     level: info
-  collector:
-    port: 8080
   mountRoot: /cloudzero
   image:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
     tag: latest
     pullPolicy: IfNotPresent
+  collector:
+    port: 8080
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "1024Mi"
+        cpu: "2000m"
+  shipper:
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "1024Mi"
+        cpu: "2000m"
