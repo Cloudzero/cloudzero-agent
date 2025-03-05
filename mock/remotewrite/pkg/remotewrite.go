@@ -1,4 +1,7 @@
-package main
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package remotewrite
 
 import (
 	"context"
@@ -17,8 +20,10 @@ const (
 	region     = "us-east-1"
 )
 
-type remoteWrite struct {
+type RemoteWrite struct {
 	files map[string]*file
+
+	apiKey string
 
 	// internal state
 	s3Endpoint   string
@@ -27,6 +32,9 @@ type remoteWrite struct {
 
 	// minio
 	minioClient *minio.Client
+
+	// network delays
+	uploadDelay time.Duration
 }
 
 type file struct {
@@ -35,15 +43,21 @@ type file struct {
 	created time.Time
 }
 
-func newRemoteWrite(
+type NewRemoteWriteOpts struct {
+	APIKey       string
+	S3Endpoint   string
+	S3AccessKey  string
+	S3PrivateKey string
+	UploadDelay  time.Duration
+}
+
+func NewRemoteWrite(
 	ctx context.Context,
-	s3Endpoint string,
-	s3AccessKey string,
-	s3PrivateKey string,
-) (*remoteWrite, error) {
+	opts *NewRemoteWriteOpts,
+) (*RemoteWrite, error) {
 	// create the minio client
-	minioClient, err := minio.New(s3Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(s3AccessKey, s3PrivateKey, ""),
+	minioClient, err := minio.New(opts.S3Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(opts.S3AccessKey, opts.S3PrivateKey, ""),
 		Secure: false,
 	})
 	if err != nil {
@@ -62,20 +76,32 @@ func newRemoteWrite(
 		}
 	}
 
-	return &remoteWrite{
+	return &RemoteWrite{
 		files:        make(map[string]*file),
-		s3Endpoint:   s3Endpoint,
-		s3AccessKey:  s3AccessKey,
-		s3PrivateKey: s3PrivateKey,
+		apiKey:       opts.APIKey,
+		s3Endpoint:   opts.S3Endpoint,
+		s3AccessKey:  opts.S3AccessKey,
+		s3PrivateKey: opts.S3PrivateKey,
+		uploadDelay:  opts.UploadDelay,
 		minioClient:  minioClient,
 	}, nil
 }
 
-func (rw *remoteWrite) Handler(r chi.Router) {
+func (rw *RemoteWrite) Handler(r chi.Router) {
+	// add middleware
+	r.Use(func(h http.Handler) http.Handler {
+		return authMiddleware(h, rw.apiKey)
+	})
+
 	// Cluster status endpoint
 	r.Get("/cluster_status", http.HandlerFunc(rw.status))
 	// Upload endpoint for pre-signed URLs
 	r.Post("/upload", http.HandlerFunc(rw.upload))
 	// Abandon endpoint
 	r.Post("/abandon", http.HandlerFunc(rw.abandon))
+
+	// mock-specific endpoints
+	r.Route("/mock", func(r chi.Router) {
+		r.Get("/queryMinio", http.HandlerFunc(rw.QueryMinio))
+	})
 }

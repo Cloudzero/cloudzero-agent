@@ -1,4 +1,4 @@
-package main
+package remotewrite
 
 import (
 	"log/slog"

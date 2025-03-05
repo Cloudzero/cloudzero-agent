@@ -1,9 +1,13 @@
-package smoke_test
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package smoke
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/cloudzero/cloudzero-insights-controller/tests/test_utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +22,10 @@ func TestSmoke_RemoteWrite_Runs(t *testing.T) {
 		require.NotNil(t, remotewrite, "remotewrite is null")
 
 		// wait for the log message
-		err := t.WaitForLog(remotewrite, fmt.Sprintf("Server is running on :%s", t.remoteWritePort))
+		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+			Container: remotewrite,
+			Log:       fmt.Sprintf("Server is running on :%s", t.remoteWritePort),
+		})
 		require.NoError(t, err, "failed to find log message")
 	})
 }

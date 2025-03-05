@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
-
 package shipper
 
 import (
@@ -79,7 +76,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []*MetricFile) ([]*MetricFil
 	q.Add("region", m.setting.Region)
 	req.URL.RawQuery = q.Encode()
 
-	log.Info().Msgf("Requesting %d presigned URLs from '%s' with key '%s'", len(files), req.URL.String(), m.setting.GetAPIKey())
+	log.Info().Msgf("Requesting %d presigned URLs", len(files))
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)

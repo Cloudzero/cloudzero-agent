@@ -8,8 +8,10 @@ require (
 	github.com/andybalholm/brotli v1.1.0
 	github.com/aws/aws-sdk-go-v2 v1.35.0
 	github.com/docker/docker v27.4.1+incompatible
+	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-obvious/server v0.1.7
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v0.0.4
@@ -66,13 +68,11 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/dennwc/varint v1.0.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.1 // indirect
 	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-chi/render v1.0.3 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect

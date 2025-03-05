@@ -1,4 +1,7 @@
-package main
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package remotewrite
 
 import (
 	"encoding/json"
@@ -6,7 +9,7 @@ import (
 )
 
 // Handle cluster status data upload
-func (rw *remoteWrite) status(w http.ResponseWriter, r *http.Request) {
+func (rw *RemoteWrite) status(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

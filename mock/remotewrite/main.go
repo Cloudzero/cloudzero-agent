@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -6,8 +9,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
+	remotewrite "github.com/cloudzero/cloudzero-insights-controller/mock/remotewrite/pkg"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/exp/slog"
 )
 
 func main() {
@@ -37,8 +44,22 @@ func main() {
 		log.Fatalf("Please pass `S3_PRIVATE_KEY` env variable")
 	}
 
+	// check for mock options
+	uploadDelay := time.Second * 0
+	uploadDelayMsStr := os.Getenv("UPLOAD_DELAY_MS")
+	uploadDelayMs, err := strconv.Atoi(uploadDelayMsStr)
+	if err == nil {
+		uploadDelay = time.Millisecond * time.Duration(uploadDelayMs)
+	}
+
 	// create the client
-	rw, err := newRemoteWrite(context.Background(), s3Endpoint, s3AccessKey, s3PrivateKey)
+	rw, err := remotewrite.NewRemoteWrite(context.Background(), &remotewrite.NewRemoteWriteOpts{
+		APIKey:       apiKey,
+		S3Endpoint:   s3Endpoint,
+		S3AccessKey:  s3AccessKey,
+		S3PrivateKey: s3PrivateKey,
+		UploadDelay:  uploadDelay,
+	})
 	if err != nil {
 		log.Fatalf("failed to create the remotewrite client: %s", err.Error())
 	}
@@ -46,16 +67,11 @@ func main() {
 	// create the http mux
 	r := chi.NewRouter()
 
-	// add middleware
-	r.Use(func(h http.Handler) http.Handler {
-		return authMiddleware(h, apiKey)
-	})
-
 	// add routes
 	r.Route("/v1/container-metrics", rw.Handler)
 
-	fmt.Printf("Server is running on :%s\n", port)
+	slog.Default().Info(fmt.Sprintf("Mock remotewrite is listening on: 'localhost:%s'", port))
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), r); err != nil {
-		fmt.Println("Error starting server:", err)
+		slog.Default().Error("Error starting server", "error", err)
 	}
 }

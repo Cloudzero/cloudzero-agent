@@ -19,6 +19,7 @@ const (
 	filePermissions    = 0o755
 	lockMaxRetry       = 60
 	replayFileFormat   = "replay-%d.json"
+	filesChunkSize     = 200
 )
 
 var (
