@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -189,7 +190,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		// create a new types.File to compare the remote ids
 		storeFile, err := store.NewMetricFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to create a new metric file")
+			return errors.New("failed to create a new metric file")
 		}
 
 		// check for a match
@@ -218,7 +219,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		// create a new types.File to compare the remote ids
 		storeFile, err := store.NewMetricFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to create a new metric file")
+			return errors.New("failed to create a new metric file")
 		}
 
 		// check for a match

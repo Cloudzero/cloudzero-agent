@@ -62,8 +62,6 @@ linters-settings:
     template: |-
       SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
       SPDX-License-Identifier: Apache-2.0
-    exclude-dirs:
-      - pkg/types/mocks
   govet:
     enable:
       - shadow
@@ -110,6 +108,9 @@ issues:
     - pkg/status
     - .go
     - .git
+    - pkg/types/mocks
+    - mock/
+    - tests/
   exclude-rules:
     - path: pkg/types/mocks
       linters:

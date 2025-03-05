@@ -89,7 +89,7 @@ func (m *MetricShipper) Run() error {
 	log.Ctx(m.ctx).Info().Msg("Shipper service starting")
 
 	// run at the start
-	if err := m.run(); err != nil {
+	if err := m.runShipper(); err != nil {
 		log.Ctx(m.ctx).Error().Err(err).Send()
 	}
 
@@ -108,14 +108,14 @@ func (m *MetricShipper) Run() error {
 			return nil
 
 		case <-ticker.C:
-			if err := m.run(); err != nil {
+			if err := m.runShipper(); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Send()
 			}
 		}
 	}
 }
 
-func (m *MetricShipper) run() error {
+func (m *MetricShipper) runShipper() error {
 	log.Ctx(m.ctx).Info().Msg("Running shipper application")
 
 	// run the base request

@@ -1,8 +1,10 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package store_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -39,8 +41,6 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	require.NoError(t, err)
 
 	// read the data
-	data, err := io.ReadAll(file)
+	_, err = io.ReadAll(file)
 	require.NoError(t, err)
-
-	fmt.Println(string(data))
 }

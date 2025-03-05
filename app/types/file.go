@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package types
 
 import "io"
@@ -5,7 +8,10 @@ import "io"
 type File interface {
 	io.ReadWriteCloser
 
-	UniqueID() string          // a unique identifier for the file
-	Location() (string, error) // location of the file
-	Rename(new string) error   // change the name / location of the file in the environment
+	// a unique identifier for the file
+	UniqueID() string
+	// location of the file
+	Location() (string, error)
+	// change the name / location of the file in the environment
+	Rename(new string) error
 }

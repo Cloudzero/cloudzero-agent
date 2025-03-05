@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package shipper
 
 import (
@@ -27,10 +30,6 @@ type PresignedURLAPIResponse = map[string]string
 
 // Allocates a set of pre-signed urls for the passed file objects
 func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
-	if len(files) == 0 {
-		return nil, nil
-	}
-
 	// create the payload with the files
 	bodyFiles := make([]*PresignedURLAPIPayloadFile, len(files))
 	for i, file := range files {

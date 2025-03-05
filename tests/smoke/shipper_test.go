@@ -104,7 +104,7 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
-		settings.Cloudzero.UseHttp = true
+		settings.Cloudzero.UseHTTP = true
 	}))
 }
 
@@ -151,7 +151,7 @@ func TestSmoke_Shipper_LoadTest(t *testing.T) {
 	},
 		withConfigOverride(func(settings *config.Settings) {
 			settings.Cloudzero.SendInterval = time.Second * 10
-			settings.Cloudzero.UseHttp = true
+			settings.Cloudzero.UseHTTP = true
 			settings.Cloudzero.SendTimeout = time.Minute * 5
 		}),
 		withUploadDelayMs("0"),

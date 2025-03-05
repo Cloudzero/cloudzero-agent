@@ -64,7 +64,7 @@ type Cloudzero struct {
 	SendInterval   time.Duration `yaml:"send_interval" default:"10m" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
 	SendTimeout    time.Duration `yaml:"send_timeout" default:"10s" env:"SEND_TIMEOUT" env-description:"timeout in seconds to send data"`
 	Host           string        `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
-	UseHttp        bool          `yaml:"use_http" env:"USE_HTTP" default:"false" env-description:"use http for client requests instead of https"`
+	UseHTTP        bool          `yaml:"use_http" env:"USE_HTTP" default:"false" env-description:"use http for client requests instead of https"`
 	apiKey         string        // Set after reading keypath
 
 	_host string // cached value of `Host` since it is overriden in initalization
@@ -254,7 +254,7 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 	params.Add("region", s.Region)
 
 	// set extra info on the url
-	if s.Cloudzero.UseHttp {
+	if s.Cloudzero.UseHTTP {
 		u.Scheme = "http"
 	} else {
 		u.Scheme = "https"

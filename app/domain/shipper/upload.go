@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package shipper
 
 import (
@@ -15,7 +18,7 @@ import (
 )
 
 // Upload uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) Upload(file types.File, presignedUrl string) error {
+func (m *MetricShipper) Upload(file types.File, presignedURL string) error {
 	log.Ctx(m.ctx).Debug().Str("fileId", GetRemoteFileID(file)).Msg("Uploading file")
 
 	// Create a unique context with a timeout for the upload
@@ -28,7 +31,7 @@ func (m *MetricShipper) Upload(file types.File, presignedUrl string) error {
 	}
 
 	// Create a new HTTP PUT request with the file as the body
-	req, err := http.NewRequestWithContext(ctx, "PUT", presignedUrl, bytes.NewBuffer(data))
+	req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
 	if err != nil {
 		return fmt.Errorf("failed to create upload HTTP request: %w", err)
 	}
