@@ -173,7 +173,7 @@ func (tl *TestFileLister) Walk(subDir string, walkFn filepath.WalkFunc) error {
 	})
 }
 
-func TestShipper_Disk_Integration_PurgeMetricsBefore(t *testing.T) {
+func TestShipper_Integration_Disk_PurgeMetricsBefore(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -217,7 +217,7 @@ func TestShipper_Disk_Integration_PurgeMetricsBefore(t *testing.T) {
 	}
 }
 
-func TestShipper_Disk_Integration_PurgeOldestPercentage(t *testing.T) {
+func TestShipper_Integration_Disk_PurgeOldestPercentage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -259,7 +259,7 @@ func TestShipper_Disk_Integration_PurgeOldestPercentage(t *testing.T) {
 	}
 }
 
-func TestShipper_Disk_Integration_FSManagement(t *testing.T) {
+func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}

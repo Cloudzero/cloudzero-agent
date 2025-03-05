@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package shipper_test
+package store_test
 
 import (
 	"bytes"
@@ -9,14 +9,66 @@ import (
 	"encoding/json"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/parquet-go/parquet-go"
 	"github.com/stretchr/testify/assert"
 )
+
+var testMetrics = []types.Metric{
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-1",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-2",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+	{
+		ClusterName:    "test-cluster",
+		CloudAccountID: "1234567890",
+		Year:           "2024",
+		Month:          "1",
+		Day:            "2",
+		Hour:           "3",
+		MetricName:     "test-metric-3",
+		NodeName:       "my-node",
+		CreatedAt:      time.Now().UnixMilli(),
+		Value:          "I'm a value!",
+		TimeStamp:      time.Now().UnixMilli(),
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+	},
+}
 
 func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 	pr, pw := io.Pipe()
@@ -33,7 +85,7 @@ func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := shipper.NewParquetStreamer(pr)
+	parquetStreamer := store.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	parquetData, err := io.ReadAll(parquetStreamer)
@@ -68,7 +120,7 @@ func TestNewParquetStreamer_WrongCompression(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := shipper.NewParquetStreamer(pr)
+	parquetStreamer := store.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)
@@ -91,7 +143,7 @@ func TestNewParquetStreamer_TruncatedJSON(t *testing.T) {
 		compressor.Write(jsonData[:len(jsonData)/2])
 	}()
 
-	parquetStreamer := shipper.NewParquetStreamer(pr)
+	parquetStreamer := store.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)
@@ -120,7 +172,7 @@ func TestNewParquetStreamer_TruncatedData(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := shipper.NewParquetStreamer(pr)
+	parquetStreamer := store.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)

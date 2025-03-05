@@ -110,7 +110,10 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		Region:         "us-east-1",
 		ClusterName:    "smoke-test-cluster",
 		Logging:        config.Logging{Level: "debug"},
-		Database:       config.Database{StoragePath: dataLocation},
+		Database: config.Database{
+			StoragePath:              dataLocation,
+			PurgeMetricsOlderThanDay: 90,
+		},
 		Cloudzero: config.Cloudzero{
 			APIKeyPath:   apiKeyFile,
 			Host:         remoteWriteEndpoint,

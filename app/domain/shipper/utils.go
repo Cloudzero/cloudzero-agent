@@ -1,5 +1,7 @@
 package shipper
 
+import "github.com/cloudzero/cloudzero-insights-controller/app/types"
+
 // Chunk splits a list into a matrix of elements with a size of `n`
 func Chunk[T any](list []T, n int) [][]T {
 	if n <= 0 {
@@ -13,4 +15,8 @@ func Chunk[T any](list []T, n int) [][]T {
 	}
 
 	return chunks
+}
+
+func GetRemoteFileID(file types.File) string {
+	return file.UniqueID() + remoteFileExtension
 }

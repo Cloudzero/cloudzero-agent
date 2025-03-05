@@ -4,15 +4,12 @@
 package shipper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -21,6 +18,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/lock"
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"
+	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
 )
@@ -85,11 +83,15 @@ func (m *MetricShipper) Run() error {
 	defer signal.Stop(sigChan)
 
 	// Initialize ticker for periodic shipping
-	fmt.Println(m.setting.Cloudzero.SendInterval)
 	ticker := time.NewTicker(m.setting.Cloudzero.SendInterval)
 	defer ticker.Stop()
 
 	log.Ctx(m.ctx).Info().Msg("Shipper service starting")
+
+	// run at the start
+	if err := m.run(); err != nil {
+		log.Ctx(m.ctx).Error().Err(err).Send()
+	}
 
 	for {
 		select {
@@ -165,14 +167,14 @@ func (m *MetricShipper) ProcessNewFiles() error {
 	}
 	log.Ctx(m.ctx).Debug().Int("numFiles", len(paths)).Send()
 
-	// create the files object
-	files, err := NewMetricFilesFromPaths(paths)
-	if err != nil {
-		return fmt.Errorf("failed to create the files; %w", err)
-	}
-	if len(files) == 0 {
-		log.Ctx(m.ctx).Info().Msg("No files found, skipping")
-		return nil
+	// create a list of metric files
+	files := make([]types.File, 0)
+	for _, item := range paths {
+		file, err := store.NewMetricFile(item)
+		if err != nil {
+			return fmt.Errorf("failed to create the metric file: %w", err)
+		}
+		files = append(files, file)
 	}
 
 	// handle the file request
@@ -189,7 +191,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Generate presigned URL
 // - Upload to the remote API
 // - Rename the file to indicate upload
-func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
+func (m *MetricShipper) HandleRequest(files []types.File) error {
 	log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handing request")
 	if len(files) == 0 {
 		return nil
@@ -205,17 +207,17 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 		defer pm.Close()
 
 		// Assign pre-signed urls to each of the file references
-		files, err := m.AllocatePresignedURLs(chunk)
+		urlMap, err := m.AllocatePresignedURLs(chunk)
 		if err != nil {
 			return fmt.Errorf("failed to allocate presigned URLs: %w", err)
 		}
 
 		waiter := parallel.NewWaiter()
-		for _, file := range files {
+		for _, file := range chunk {
 			fn := func() error {
 				// Upload the file
-				if err := m.Upload(file); err != nil {
-					return fmt.Errorf("failed to upload %s: %w", file.ReferenceID, err)
+				if err := m.Upload(file, urlMap[GetRemoteFileID(file)]); err != nil {
+					return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
 				}
 
 				// mark the file as uploaded
@@ -239,67 +241,6 @@ func (m *MetricShipper) HandleRequest(files []*MetricFile) error {
 	}
 
 	log.Ctx(m.ctx).Info().Msg("Successfully processed all of the files")
-
-	return nil
-}
-
-// Upload uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) Upload(file *MetricFile) error {
-	log.Ctx(m.ctx).Debug().Str("fileName", file.ReferenceID).Msg("Uploading file")
-
-	data, err := file.ReadAll()
-	if err != nil {
-		return fmt.Errorf("failed to get the file data: %w", err)
-	}
-
-	// Create a unique context with a timeout for the upload
-	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
-	defer cancel()
-
-	// Create a new HTTP PUT request with the file as the body
-	req, err := http.NewRequestWithContext(ctx, "PUT", file.PresignedURL, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("failed to create upload HTTP request: %w", err)
-	}
-
-	// Send the request
-	resp, err := m.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("file upload HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check for successful upload
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return nil
-}
-
-func (m *MetricShipper) MarkFileUploaded(file *MetricFile) error {
-	log.Ctx(m.ctx).Debug().Str("fileName", file.ReferenceID).Msg("Marking file as uploaded")
-
-	// create the uploaded dir if needed
-	uploadDir := m.GetUploadedDir()
-	if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
-		return fmt.Errorf("failed to create the upload directory: %w", err)
-	}
-
-	// if the filepath already contains the uploaded location,
-	// then ignore this entry
-	if strings.Contains(file.Filepath(), UploadedSubDirectory) {
-		return nil
-	}
-
-	// compose the new path
-	new := filepath.Join(uploadDir, file.Filename())
-
-	// rename the file (IS ATOMIC)
-	if err := os.Rename(file.location, new); err != nil {
-		return fmt.Errorf("failed to move the file to the uploaded directory: %s", err)
-	}
 
 	return nil
 }

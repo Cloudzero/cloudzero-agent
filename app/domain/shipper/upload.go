@@ -2,146 +2,77 @@ package shipper
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
+	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
 )
 
-type PresignedURLAPIPayload struct {
-	Files []*PresignedURLAPIPayloadFile `json:"files"`
-}
+// Upload uploads the specified file to S3 using the provided presigned URL.
+func (m *MetricShipper) Upload(file types.File, presignedUrl string) error {
+	log.Ctx(m.ctx).Debug().Str("fileId", GetRemoteFileID(file)).Msg("Uploading file")
 
-type PresignedURLAPIPayloadFile struct {
-	ReferenceID string `json:"reference_id"`      //nolint:tagliatelle // downstream expects cammel case
-	SHA256      string `json:"sha_256,omitempty"` //nolint:tagliatelle // downstream expects cammel case
-	Size        int64  `json:"size,omitempty"`
-}
+	// Create a unique context with a timeout for the upload
+	ctx, cancel := context.WithTimeout(m.ctx, m.setting.Cloudzero.SendTimeout)
+	defer cancel()
 
-// Allocates a set of pre-signed urls for the passed file objects
-// The passed `files` argument will be modified to add the `PresignedURL` field
-// You can opt to consume the return value or allow for implicit modification.
-func (m *MetricShipper) AllocatePresignedURLs(files []*MetricFile) ([]*MetricFile, error) {
-	if len(files) == 0 {
-		return nil, nil
-	}
-
-	// create the payload with the files
-	bodyFiles := make([]*PresignedURLAPIPayloadFile, len(files))
-	for i, file := range files {
-		bodyFiles[i] = &PresignedURLAPIPayloadFile{
-			ReferenceID: file.ReferenceID,
-		}
-	}
-
-	// create the http request body
-	body := PresignedURLAPIPayload{Files: bodyFiles}
-
-	// marshal to json
-	enc, err := json.Marshal(body)
+	data, err := io.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode the body into json: %w", err)
+		return fmt.Errorf("failed to read the file: %w", err)
 	}
 
-	// Create a new HTTP request
-	uploadEndpoint, err := m.setting.GetRemoteAPIBase()
+	// Create a new HTTP PUT request with the file as the body
+	req, err := http.NewRequestWithContext(ctx, "PUT", presignedUrl, bytes.NewBuffer(data))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get remote base: %w", err)
+		return fmt.Errorf("failed to create upload HTTP request: %w", err)
 	}
-	uploadEndpoint.Path += "/upload"
-	req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	// Set necessary headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", m.setting.GetAPIKey())
-
-	// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
-	q := req.URL.Query()
-	q.Add("count", strconv.Itoa(len(files)))
-	q.Add("expiration", strconv.Itoa(expirationTime))
-	q.Add("cloud_account_id", m.setting.CloudAccountID)
-	q.Add("cluster_name", m.setting.ClusterName)
-	q.Add("region", m.setting.Region)
-	req.URL.RawQuery = q.Encode()
-
-	log.Info().Msgf("Requesting %d presigned URLs", len(files))
 
 	// Send the request
 	resp, err := m.HTTPClient.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("HTTP request failed")
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		return fmt.Errorf("file upload HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return nil, ErrUnauthorized
-	}
-
-	// Check for HTTP errors
-	if resp.StatusCode != http.StatusOK {
+	// Check for successful upload
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// Parse the response
-	var response map[string]string // map of: {ReferenceId: PresignedURL}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	return nil
+}
+
+func (m *MetricShipper) MarkFileUploaded(file types.File) error {
+	log.Ctx(m.ctx).Debug().Str("fileId", GetRemoteFileID(file)).Msg("Marking file as uploaded")
+
+	// create the uploaded dir if needed
+	uploadDir := m.GetUploadedDir()
+	if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
+		return fmt.Errorf("failed to create the upload directory: %w", err)
 	}
 
-	// validation
-	if len(response) == 0 {
-		return nil, ErrNoURLs
+	// if the filepath already contains the uploaded location,
+	// then ignore this entry
+	location, err := file.Location()
+	if err != nil {
+		return fmt.Errorf("failed to get the file location: %w", err)
+	}
+	if strings.Contains(location, UploadedSubDirectory) {
+		return nil
 	}
 
-	// create a map of {ReferenceId: File} to match api response
-	fileMap := make(map[string]*MetricFile)
-	for _, item := range files {
-		fileMap[item.ReferenceID] = item
+	// rename the file to the uploaded directory
+	new := filepath.Join(uploadDir, filepath.Base(location))
+	if err := file.Rename(new); err != nil {
+		return fmt.Errorf("failed to move the file to the uploaded directory: %s", err)
 	}
 
-	// ensure the same length
-	if len(response) != len(fileMap) {
-		return nil, fmt.Errorf("the length of the response did not match the request! files (%d) != urls (%d)", len(fileMap), len(response))
-	}
-
-	// set the pre-signed url value of the file and recompose the list
-	// setting this value on the file reference will affect the base list
-	// so we do not need to re-create the list and can simply return the list
-	// passed as an argument
-	for refid, url := range response {
-		if file, ok := fileMap[refid]; ok {
-			file.PresignedURL = url
-		}
-	}
-
-	// check for a replay request
-	rrh := resp.Header.Get("X-CloudZero-Replay")
-	if rrh != "" {
-		// parse the replay request
-		rr, err := NewReplayRequestFromHeader(rrh)
-		if err == nil {
-			// save the replay request to disk
-			if err = m.SaveReplayRequest(rr); err != nil {
-				// do not fail here
-				log.Ctx(m.ctx).Err(err).Msg("failed to save the replay request to disk")
-			}
-
-			// observe the presence of the replay request
-			metricReplayRequestTotal.WithLabelValues().Inc()
-			metricReplayRequestCurrent.WithLabelValues().Inc()
-		} else {
-			// do not fail the operation here
-			log.Ctx(m.ctx).Err(err).Msg("failed to parse the replay request header")
-		}
-	}
-
-	return files, nil
+	return nil
 }

@@ -10,13 +10,14 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestShipper_ReplayRequestCreate(t *testing.T) {
+func TestShipper_Unit_ReplayRequestCreate(t *testing.T) {
 	t.Parallel()
-	referenceIDs := []string{"file1", "file2"}
+	referenceIDs := types.NewSetFromList([]string{"file1", "file2"})
 
 	settings := &config.Settings{
 		Cloudzero: config.Cloudzero{
@@ -49,7 +50,7 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 		require.NoError(t, err)
 
 		// validate
-		require.Equal(t, len(rr.ReferenceIDs), len(rr2.ReferenceIDs))
+		require.Equal(t, rr.ReferenceIDs.Size(), rr2.ReferenceIDs.Size())
 	})
 
 	// ensure reading the active requests works
@@ -64,7 +65,7 @@ func TestShipper_ReplayRequestCreate(t *testing.T) {
 	})
 }
 
-func TestShipper_ReplayRequestRun(t *testing.T) {
+func TestShipper_Unit_ReplayRequestRun(t *testing.T) {
 	// get a tmp dir
 	tmpDir := getTmpDir(t)
 
@@ -72,9 +73,9 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 5)
 
 	// create the replay request reference ids
-	refIDs := make([]string, len(files))
-	for i, item := range files {
-		refIDs[i] = item.ReferenceID
+	refIDs := types.NewSet[string]()
+	for _, item := range files {
+		refIDs.Add(shipper.GetRemoteFileID(item))
 	}
 
 	// Setup http response
@@ -83,7 +84,7 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 	// create the mock response body
 	mockResponseBody := make(map[string]string)
 	for _, item := range files {
-		mockResponseBody[item.ReferenceID] = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?signature=abc123", item.ReferenceID)
+		mockResponseBody[shipper.GetRemoteFileID(item)] = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?signature=abc123", shipper.GetRemoteFileID(item))
 	}
 
 	mockRoundTripper := &MockRoundTripper{
@@ -98,7 +99,7 @@ func TestShipper_ReplayRequestRun(t *testing.T) {
 
 	// setup the database backend for the test
 	mockFiles := &MockAppendableFiles{baseDir: tmpDir}
-	mockFiles.On("GetFiles").Return(refIDs, nil)
+	mockFiles.On("GetFiles").Return(refIDs.List(), nil)
 	mockFiles.On("GetFiles", shipper.UploadedSubDirectory).Return([]string{}, nil)
 	mockFiles.On("Walk", mock.Anything, mock.Anything).Return(nil)
 

@@ -13,13 +13,15 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/lock"
+	"github.com/cloudzero/cloudzero-insights-controller/app/store"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/go-obvious/timestamp"
 	"github.com/rs/zerolog/log"
 )
 
 type ReplayRequest struct {
-	Filepath     string   `json:"filepath"`
-	ReferenceIDs []string `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
+	Filepath     string             `json:"filepath"`
+	ReferenceIDs *types.Set[string] `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
 }
 
 type replayRequestHeader struct {
@@ -36,10 +38,10 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 
 	// convert to the replay request
 	rr := ReplayRequest{
-		ReferenceIDs: make([]string, len(rrh)),
+		ReferenceIDs: types.NewSet[string](),
 	}
-	for i, item := range rrh {
-		rr.ReferenceIDs[i] = item.RefID
+	for _, item := range rrh {
+		rr.ReferenceIDs.Add(item.RefID)
 	}
 
 	return &rr, nil
@@ -153,7 +155,7 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 
 	// handle all valid replay requests
 	for _, rr := range requests {
-		metricReplayRequestFileCount.Observe(float64(len(rr.ReferenceIDs)))
+		metricReplayRequestFileCount.Observe(float64(rr.ReferenceIDs.Size()))
 
 		if err := m.HandleReplayRequest(rr); err != nil {
 			metricReplayRequestErrorTotal.WithLabelValues(err.Error()).Inc()
@@ -170,16 +172,10 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 }
 
 func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
-	log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", len(rr.ReferenceIDs)).Msg("Handling replay request")
-
-	// compose loopup map of reference ids
-	refIDLookup := make(map[string]any)
-	for _, item := range rr.ReferenceIDs {
-		refIDLookup[item] = struct{}{}
-	}
+	log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size()).Msg("Handling replay request")
 
 	// fetch the new files that match these ids
-	newFiles := make([]string, 0)
+	newFiles := make([]types.File, 0)
 	if err := m.lister.Walk("", func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -190,9 +186,15 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 			return nil
 		}
 
+		// create a new types.File to compare the remote ids
+		storeFile, err := store.NewMetricFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to create a new metric file")
+		}
+
 		// check for a match
-		if _, exists := refIDLookup[info.Name()]; exists {
-			newFiles = append(newFiles, info.Name())
+		if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
+			newFiles = append(newFiles, storeFile)
 		}
 
 		return nil
@@ -202,7 +204,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	log.Ctx(m.ctx).Debug().Int("newFiles", len(newFiles)).Send()
 
 	// fetch the already uploadedFiles files that match these ids
-	uploadedFiles := make([]string, 0)
+	uploadedFiles := make([]types.File, 0)
 	if err := m.lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -213,9 +215,15 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 			return nil
 		}
 
+		// create a new types.File to compare the remote ids
+		storeFile, err := store.NewMetricFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to create a new metric file")
+		}
+
 		// check for a match
-		if _, exists := refIDLookup[info.Name()]; exists {
-			uploadedFiles = append(uploadedFiles, info.Name())
+		if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
+			uploadedFiles = append(uploadedFiles, storeFile)
 		}
 
 		return nil
@@ -224,49 +232,32 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	}
 	log.Ctx(m.ctx).Debug().Int("uploadedFiles", len(uploadedFiles)).Send()
 
-	// combine found ids into a map
-	found := make(map[string]*MetricFile) // {ReferenceID: File}
-	for _, item := range newFiles {
-		file, err := NewMetricFile(filepath.Join(m.GetBaseDir(), filepath.Base(item)))
-		if err != nil {
-			return fmt.Errorf("failed to create file: %w", err)
-		}
-		found[filepath.Base(item)] = file
+	// create a file array of all the files found to send to the remote
+	total := make([]types.File, 0)
+	total = append(total, newFiles...)
+	total = append(total, uploadedFiles...)
+
+	// check for missing files from the replay request
+	found := types.NewSet[string]()
+	for _, item := range total {
+		found.Add(GetRemoteFileID(item))
 	}
-	for _, item := range uploadedFiles {
-		file, err := NewMetricFile(filepath.Join(m.GetUploadedDir(), filepath.Base(item)))
-		if err != nil {
-			return fmt.Errorf("failed to create file: %w", err)
-		}
-		found[filepath.Base(item)] = file
-	}
-	log.Ctx(m.ctx).Debug().Int("found", len(found)).Send()
+	log.Ctx(m.ctx).Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
 
 	// compare the results and discover which files were not found
-	missing := make([]string, 0)
-	valid := make([]*MetricFile, 0)
-	for _, item := range rr.ReferenceIDs {
-		file, exists := found[filepath.Base(item)]
-		if exists {
-			valid = append(valid, file)
-		} else {
-			missing = append(missing, filepath.Base(item))
-		}
-	}
-
-	log.Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, len(valid), len(rr.ReferenceIDs))
+	missing := rr.ReferenceIDs.Diff(found)
 
 	// send abandon requests for the non-found files
-	if len(missing) > 0 {
-		log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, len(missing))
-		if err := m.AbandonFiles(missing, "not found"); err != nil {
+	if missing.Size() > 0 {
+		log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
+		if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
 			metricReplayRequestAbandonFilesErrorTotal.WithLabelValues(err.Error()).Inc()
 			return fmt.Errorf("failed to send the abandon file request: %w", err)
 		}
 	}
 
-	// run the `HandleRequest` function for these files
-	if err := m.HandleRequest(valid); err != nil {
+	// run the `HandleRequest` function for the found files
+	if err := m.HandleRequest(total); err != nil {
 		return fmt.Errorf("failed to upload replay request files: %w", err)
 	}
 

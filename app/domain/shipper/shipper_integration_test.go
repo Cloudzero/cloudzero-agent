@@ -52,13 +52,14 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	files2, err := metricShipper.AllocatePresignedURLs(files)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	// validate the pre-signed urls exist
-	require.Equal(t, len(files), len(files2))
-	for _, file := range files2 {
-		require.NotEmpty(t, file.PresignedURL)
+	require.Equal(t, len(files), len(urlResponse))
+	for key, val := range urlResponse {
+		require.NotEmpty(t, key)
+		require.NotEmpty(t, val)
 	}
 }
 
@@ -81,12 +82,12 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 2)
 
 	// get the presigned URLs
-	files2, err := metricShipper.AllocatePresignedURLs(files)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	// upload to s3
-	for _, file := range files2 {
-		err = metricShipper.Upload(file)
+	for _, file := range files {
+		err = metricShipper.Upload(file, urlResponse[shipper.GetRemoteFileID(file)])
 		require.NoError(t, err)
 	}
 }
@@ -114,13 +115,13 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	files2, err := metricShipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(files)
 	require.NoError(t, err)
 
 	// get the ref ids
-	refIDs := make([]string, len(files2))
-	for i, file := range files2 {
-		refIDs[i] = file.ReferenceID
+	refIDs := make([]string, len(files))
+	for i, file := range files {
+		refIDs[i] = shipper.GetRemoteFileID(file)
 	}
 
 	// abandon these files

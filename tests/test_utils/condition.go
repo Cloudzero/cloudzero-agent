@@ -18,7 +18,7 @@ func WaitForCondition(
 ) error {
 	// fix zero values
 	if timeout == 0 {
-		timeout = time.Duration(30) * time.Second
+		timeout = time.Duration(1) * time.Minute
 	}
 	if poll == 0 {
 		poll = time.Duration(1) * time.Second

@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestShipper_Disk_StorageWarnings(t *testing.T) {
+func TestShipper_Unit_Disk_StorageWarnings(t *testing.T) {
 	tests := []struct {
 		name          string
 		percentUsed   float64
@@ -56,7 +56,7 @@ func TestShipper_Disk_StorageWarnings(t *testing.T) {
 	}
 }
 
-func TestShipper_Disk_DeletesOldFiles(t *testing.T) {
+func TestShipper_Unit_Disk_DeletesOldFiles(t *testing.T) {
 	tmpDir := getTmpDir(t)
 
 	// create old file
@@ -89,7 +89,7 @@ func TestShipper_Disk_DeletesOldFiles(t *testing.T) {
 	require.NoError(t, err, "new file should remain")
 }
 
-func TestShipper_Disk_SetsMetrics(t *testing.T) {
+func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 	// create a metric srv
 	pm, err := shipper.InitMetrics()
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestShipper_Disk_SetsMetrics(t *testing.T) {
 	require.Contains(t, string(body), "shipper_current_disk_replay_request")
 }
 
-func TestShipper_Disk_ErrorHandling(t *testing.T) {
+func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	tests := []struct {
