@@ -160,7 +160,7 @@ data:
   {{- end}}
     remote_write:
       {{ if .Values.aggregator.enabled }}
-      - url: 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/metrics'
+      - url: 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
       {{ else }}
       - url: '{{ .Values.scheme }}://{{ include "cloudzero-agent.cleanString" .Values.host }}{{ .Values.endpoint }}?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
       {{ end }}
