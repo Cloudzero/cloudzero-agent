@@ -14,6 +14,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	prom "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/prompb"
@@ -39,6 +41,16 @@ const (
 var (
 	v1ContentType = string(prom.RemoteWriteProtoMsgV1)
 	v2ContentType = string(prom.RemoteWriteProtoMsgV2)
+)
+
+var (
+	collectorMetricsReceived = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "collector_metrics_received_total",
+			Help: "Total number of metrics received",
+		},
+		[]string{},
+	)
 )
 
 // MetricCollector is responsible for collecting and flushing metrics.
@@ -104,6 +116,8 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	default:
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}
+
+	collectorMetricsReceived.WithLabelValues().Add(float64(len(metrics)))
 
 	if err := d.appendable.Put(ctx, metrics...); err != nil {
 		return stats, err

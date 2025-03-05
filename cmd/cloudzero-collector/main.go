@@ -93,8 +93,12 @@ func main() {
 	logger.Info().Msg("Starting service")
 	server.New(
 		build.Version(),
-		[]server.Middleware{loggerMiddleware},
+		[]server.Middleware{
+			loggerMiddleware,
+			handlers.PromHTTPMiddleware,
+		},
 		handlers.NewRemoteWriteAPI("/collector", domain),
+		handlers.NewPromMetricsAPI("/metrics"),
 	).Run(ctx)
 	logger.Info().Msg("Service stopping")
 }
