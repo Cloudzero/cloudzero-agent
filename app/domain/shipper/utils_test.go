@@ -17,7 +17,9 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -100,7 +102,7 @@ func getMockSettings(mockURL string) *config.Settings {
 		Region:         "us-east-1",
 		Cloudzero: config.Cloudzero{
 			Host:        mockURL,
-			SendTimeout: time.Millisecond * 100,
+			SendTimeout: time.Millisecond * 1000,
 		},
 		Database: config.Database{
 			StoragePath: "/tmp/storage",
@@ -123,6 +125,9 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 		ClusterName:    "test-cluster",
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
+		Logging: config.Logging{
+			Level: "debug",
+		},
 		Cloudzero: config.Cloudzero{
 			Host:        apiHost,
 			SendTimeout: time.Second * 30,
@@ -131,6 +136,14 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 		Database: config.Database{
 			StoragePath: dir,
 		},
+	}
+
+	var logger zerolog.Logger
+	{
+		logLevel, parseErr := zerolog.ParseLevel(cfg.Logging.Level)
+		require.NoError(t, parseErr)
+		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
+		zerolog.DefaultContextLogger = &logger
 	}
 
 	// validate the config
@@ -174,89 +187,59 @@ func captureOutput(f func()) (string, string) {
 	return outBuf.String(), errBuf.String()
 }
 
-var testMetrics = []types.Metric{
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-1",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-2",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-	{
-		ClusterName:    "test-cluster",
-		CloudAccountID: "1234567890",
-		Year:           "2024",
-		Month:          "1",
-		Day:            "2",
-		Hour:           "3",
-		MetricName:     "test-metric-3",
-		NodeName:       "my-node",
-		CreatedAt:      time.Now().UnixMilli(),
-		Value:          "I'm a value!",
-		TimeStamp:      time.Now().UnixMilli(),
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-	},
-}
+func createTestFiles(t *testing.T, dir string, n int) []types.File {
+	files := make([]types.File, 0)
 
-func compressedTestMetrics() []byte {
-	jsonData, err := json.Marshal(testMetrics)
-	if err != nil {
-		panic(err)
-	}
-
-	var compressedData bytes.Buffer
-
-	func() {
-		compressor := brotli.NewWriterLevel(&compressedData, 1)
-		defer compressor.Close()
-
-		_, err = compressor.Write(jsonData)
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	return compressedData.Bytes()
-}
-
-func createTestFiles(t *testing.T, dir string, n int) []*shipper.MetricFile {
-	// create some test files to simulate resource tracking
-	files := make([]*shipper.MetricFile, 0)
 	for i := range n {
-		tempFile, err := os.CreateTemp(dir, fmt.Sprintf("file-%d.parquet", i))
-		require.NoError(t, err)
-		_, err = tempFile.Write(compressedTestMetrics()) // write valid data in each one
-		require.NoError(t, err)
-		file, err := shipper.NewMetricFile(tempFile.Name())
-		require.NoError(t, err)
-		files = append(files, file)
+		now := time.Now()
+
+		// create a file location
+		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%05d.json.br", now.UnixMilli(), i))
+		file, err := os.Create(path)
+		require.NoError(t, err, "failed to create file: %s", err)
+
+		// create the metrics array
+		metrics := make([]*types.Metric, 5)
+		for j := range 5 {
+			metrics[j] = &types.Metric{
+				ClusterName:    "test-cluster",
+				CloudAccountID: "1234567890",
+				Year:           fmt.Sprintf("%04d", now.Year()),
+				Month:          fmt.Sprintf("%02d", int(now.Month())),
+				Day:            fmt.Sprintf("%02d", now.Day()),
+				Hour:           fmt.Sprintf("%02d", now.Hour()),
+				MetricName:     fmt.Sprintf("test-metric-%d", j),
+				NodeName:       "test-node",
+				CreatedAt:      time.Now().UnixMilli(),
+				Value:          "I'm a value!",
+				TimeStamp:      time.Now().UnixMilli(),
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+			}
+		}
+
+		// compress the metrics
+		jsonData, err := json.Marshal(metrics)
+		require.NoError(t, err, "failed to encode the metrics as json")
+
+		var compressedData bytes.Buffer
+		func() {
+			compressor := brotli.NewWriterLevel(&compressedData, 1)
+			defer compressor.Close()
+
+			_, err = compressor.Write(jsonData)
+			require.NoError(t, err, "failed to write the json data through the brotli compressor")
+		}()
+
+		// write the data to the file
+		_, err = file.Write(compressedData.Bytes())
+		require.NoError(t, err, "failed to write the metrics to the file")
+
+		f, err := store.NewMetricFile(path)
+		require.NoError(t, err, "failed to create metric file")
+		files = append(files, f)
 	}
+
 	return files
 }

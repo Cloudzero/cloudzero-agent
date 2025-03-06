@@ -180,7 +180,11 @@ test: ## Run the unit tests
 
 .PHONY: test-integration
 test-integration: ## Run the integration tests
-	@$(GO) test -tags=integration -run Integration -timeout 60s -race ./... 
+	@$(GO) test -run Integration -timeout 60s -race ./... 
+
+.PHONY: test-smoke
+test-smoke: ## Run the smoke tests
+	@$(GO) test -run Smoke -v -timeout 5m -race ./tests/smoke/*.go
 
 # ----------- DOCKER IMAGE ------------
 

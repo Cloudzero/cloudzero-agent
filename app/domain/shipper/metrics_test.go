@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestShipper_Metrics(t *testing.T) {
+func TestShipper_Unit_Metrics(t *testing.T) {
 	pm, err := InitMetrics()
 	require.NoError(t, err)
 
@@ -31,6 +31,7 @@ func TestShipper_Metrics(t *testing.T) {
 	metricReplayRequestFileCount.Observe(100)
 	metricReplayRequestErrorTotal.WithLabelValues("error").Inc()
 	metricReplayRequestAbandonFilesTotal.WithLabelValues().Inc()
+	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues("error").Inc()
 
 	// disk usage
 	metricDiskTotalSizeBytes.WithLabelValues().Inc()
@@ -62,6 +63,7 @@ func TestShipper_Metrics(t *testing.T) {
 	require.Contains(t, string(body), "shipper_replay_request_file_count")
 	require.Contains(t, string(body), "shipper_replay_request_error_total")
 	require.Contains(t, string(body), "shipper_replay_request_abandon_files_total")
+	require.Contains(t, string(body), "shipper_replay_request_abandon_files_error_total")
 
 	// disk usage
 	require.Contains(t, string(body), "shipper_disk_total_size_bytes")

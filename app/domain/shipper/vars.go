@@ -14,11 +14,13 @@ const (
 
 // private
 const (
-	shipperWorkerCount = 10
-	expirationTime     = 3600
-	filePermissions    = 0o755
-	lockMaxRetry       = 60
-	replayFileFormat   = "replay-%d.json"
+	shipperWorkerCount  = 10
+	expirationTime      = 3600
+	filePermissions     = 0o755
+	lockMaxRetry        = 60
+	replayFileFormat    = "replay-%d.json"
+	filesChunkSize      = 200
+	remoteFileExtension = ".parquet"
 )
 
 var (

@@ -83,6 +83,14 @@ var (
 		[]string{},
 	)
 
+	metricReplayRequestAbandonFilesErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_replay_request_abandon_files_error_total",
+			Help: "total number of abandoned files",
+		},
+		[]string{"error"},
+	)
+
 	// Disk Usage
 	// ----------------------------------------------------------
 
@@ -174,6 +182,7 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			metricReplayRequestFileCount,
 			metricReplayRequestErrorTotal,
 			metricReplayRequestAbandonFilesTotal,
+			metricReplayRequestAbandonFilesErrorTotal,
 
 			// disk usage
 			metricDiskTotalSizeBytes,
