@@ -24,7 +24,7 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	require.NoError(t, err)
 
 	// write to the os file
-	go func() {
+	func() {
 		compressor := brotli.NewWriterLevel(osFile, 1)
 		defer func() {
 			compressor.Close()
