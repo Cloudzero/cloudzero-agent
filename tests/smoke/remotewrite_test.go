@@ -24,7 +24,7 @@ func TestSmoke_RemoteWrite_Runs(t *testing.T) {
 		// wait for the log message
 		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
 			Container: remotewrite,
-			Log:       fmt.Sprintf("Server is running on :%s", t.remoteWritePort),
+			Log:       fmt.Sprintf("Mock remotewrite is listening on: 'localhost:%s", t.remoteWritePort),
 		})
 		require.NoError(t, err, "failed to find log message")
 	})
