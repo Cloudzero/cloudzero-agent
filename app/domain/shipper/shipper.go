@@ -116,75 +116,81 @@ func (m *MetricShipper) Run() error {
 }
 
 func (m *MetricShipper) runShipper() error {
-	log.Ctx(m.ctx).Info().Msg("Running shipper application")
+	return m.metrics.Span("shipper_runShipper", func() error {
+		log.Ctx(m.ctx).Info().Msg("Running shipper application")
 
-	// run the base request
-	if err := m.ProcessNewFiles(); err != nil {
-		return fmt.Errorf("failed to ship the metrics: %w", err)
-	}
+		// run the base request
+		if err := m.ProcessNewFiles(); err != nil {
+			metricNewFilesErrorTotal.WithLabelValues(err.Error()).Inc()
+			return fmt.Errorf("failed to ship the metrics: %w", err)
+		}
 
-	// run the replay request
-	if err := m.ProcessReplayRequests(); err != nil {
-		return fmt.Errorf("failed to process the replay requests: %w", err)
-	}
+		// run the replay request
+		if err := m.ProcessReplayRequests(); err != nil {
+			return fmt.Errorf("failed to process the replay requests: %w", err)
+		}
 
-	// check the disk usage
-	if err := m.HandleDisk(time.Now().AddDate(0, 0, -int(m.setting.Database.PurgeMetricsOlderThanDay))); err != nil {
-		return fmt.Errorf("failed to handle the disk usage: %w", err)
-	}
+		// check the disk usage
+		if err := m.HandleDisk(time.Now().AddDate(0, 0, -int(m.setting.Database.PurgeMetricsOlderThanDay))); err != nil {
+			return fmt.Errorf("failed to handle the disk usage: %w", err)
+		}
 
-	// used as a marker in tests to signify that the shipper was complete.
-	// if you change this string, then change in the smoke tests as well.
-	log.Ctx(m.ctx).Info().Msg("Successfully ran the shipper application")
+		// used as a marker in tests to signify that the shipper was complete.
+		// if you change this string, then change in the smoke tests as well.
+		log.Ctx(m.ctx).Info().Msg("Successfully ran the shipper application")
 
-	return nil
+		return nil
+	})
 }
 
 func (m *MetricShipper) ProcessNewFiles() error {
-	log.Ctx(m.ctx).Info().Msg("Processing new files ...")
+	return m.metrics.Span("shipper_ProcessNewFiles", func() error {
+		log.Ctx(m.ctx).Info().Msg("Processing new files ...")
 
-	// lock the base dir for the duration of the new file handling
-	log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
-	l := lock.NewFileLock(
-		m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
-		lock.WithStaleTimeout(time.Second*30), // detects stale timeout
-		lock.WithRefreshInterval(time.Second*5),
-		lock.WithMaxRetry(lockMaxRetry), // 5 min wait
-	)
-	if err := l.Acquire(); err != nil {
-		return fmt.Errorf("failed to acquire the lock: %w", err)
-	}
-	defer func() {
-		if err := l.Release(); err != nil {
-			log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+		// lock the base dir for the duration of the new file handling
+		log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
+		l := lock.NewFileLock(
+			m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
+			lock.WithStaleTimeout(time.Second*30), // detects stale timeout
+			lock.WithRefreshInterval(time.Second*5),
+			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
+		)
+		if err := l.Acquire(); err != nil {
+			return fmt.Errorf("failed to acquire the lock: %w", err)
 		}
-	}()
+		defer func() {
+			if err := l.Release(); err != nil {
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+			}
+		}()
 
-	// Process new files in parallel
-	paths, err := m.lister.GetFiles()
-	if err != nil {
-		return fmt.Errorf("failed to get shippable files: %w", err)
-	}
-	log.Ctx(m.ctx).Debug().Int("numFiles", len(paths)).Send()
-
-	// create a list of metric files
-	files := make([]types.File, 0)
-	for _, item := range paths {
-		file, err := store.NewMetricFile(item)
+		// Process new files in parallel
+		paths, err := m.lister.GetFiles()
 		if err != nil {
-			return fmt.Errorf("failed to create the metric file: %w", err)
+			return fmt.Errorf("failed to get shippable files: %w", err)
 		}
-		files = append(files, file)
-	}
+		log.Ctx(m.ctx).Debug().Int("numFiles", len(paths)).Send()
 
-	// handle the file request
-	if err := m.HandleRequest(files); err != nil {
-		return err
-	}
+		// create a list of metric files
+		files := make([]types.File, 0)
+		for _, item := range paths {
+			file, err := store.NewMetricFile(item)
+			if err != nil {
+				return fmt.Errorf("failed to create the metric file: %w", err)
+			}
+			files = append(files, file)
+		}
 
-	// NOTE: used as a hook in integration tests to validate that the application worked
-	log.Ctx(m.ctx).Info().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
-	return nil
+		// handle the file request
+		if err := m.HandleRequest(files); err != nil {
+			return err
+		}
+
+		// NOTE: used as a hook in integration tests to validate that the application worked
+		log.Ctx(m.ctx).Info().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
+		metricNewFilesProcessingCurrent.WithLabelValues().Set(float64(len(paths)))
+		return nil
+	})
 }
 
 // Takes in a list of files and runs them through the following:
@@ -192,57 +198,62 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Upload to the remote API
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(files []types.File) error {
-	log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handing request")
-	if len(files) == 0 {
-		return nil
-	}
-
-	// chunk into more reasonable sizes to mangage
-	chunks := Chunk(files, filesChunkSize)
-	log.Ctx(m.ctx).Info().Msgf("processing files as %d chunks", len(chunks))
-
-	for i, chunk := range chunks {
-		log.Ctx(m.ctx).Debug().Msgf("handling chunk: %d", i)
-		pm := parallel.New(shipperWorkerCount)
-		defer pm.Close()
-
-		// Assign pre-signed urls to each of the file references
-		urlMap, err := m.AllocatePresignedURLs(chunk)
-		if err != nil {
-			return fmt.Errorf("failed to allocate presigned URLs: %w", err)
+	return m.metrics.Span("shipper_handle_request", func() error {
+		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handing request")
+		metricHandleRequestFileCount.Observe(float64(len(files)))
+		if len(files) == 0 {
+			return nil
 		}
 
-		waiter := parallel.NewWaiter()
-		for _, file := range chunk {
-			fn := func() error {
-				// Upload the file
-				if err := m.Upload(file, urlMap[GetRemoteFileID(file)]); err != nil {
-					return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
-				}
+		// chunk into more reasonable sizes to mangage
+		chunks := Chunk(files, filesChunkSize)
+		log.Ctx(m.ctx).Info().Msgf("processing files as %d chunks", len(chunks))
 
-				// mark the file as uploaded
-				if err := m.MarkFileUploaded(file); err != nil {
-					return fmt.Errorf("failed to mark the file as uploaded: %w", err)
-				}
+		for i, chunk := range chunks {
+			log.Ctx(m.ctx).Debug().Msgf("handling chunk: %d", i)
+			pm := parallel.New(shipperWorkerCount)
+			defer pm.Close()
 
-				atomic.AddUint64(&m.shippedFiles, 1)
-				return nil
-			}
-			pm.Run(fn, waiter)
-		}
-		waiter.Wait()
-
-		// check for errors in the waiter
-		for err := range waiter.Err() {
+			// Assign pre-signed urls to each of the file references
+			urlMap, err := m.AllocatePresignedURLs(chunk)
 			if err != nil {
-				return fmt.Errorf("failed to upload files; %w", err)
+				metricPresignedURLErrorTotal.WithLabelValues(err.Error()).Inc()
+				return fmt.Errorf("failed to allocate presigned URLs: %w", err)
+			}
+
+			waiter := parallel.NewWaiter()
+			for _, file := range chunk {
+				fn := func() error {
+					// Upload the file
+					if err := m.UploadFile(file, urlMap[GetRemoteFileID(file)]); err != nil {
+						return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
+					}
+
+					// mark the file as uploaded
+					if err := m.MarkFileUploaded(file); err != nil {
+						return fmt.Errorf("failed to mark the file as uploaded: %w", err)
+					}
+
+					atomic.AddUint64(&m.shippedFiles, 1)
+					return nil
+				}
+				pm.Run(fn, waiter)
+			}
+			waiter.Wait()
+
+			// check for errors in the waiter
+			for err := range waiter.Err() {
+				if err != nil {
+					return fmt.Errorf("failed to upload files; %w", err)
+				}
 			}
 		}
-	}
 
-	log.Ctx(m.ctx).Info().Msg("Successfully processed all of the files")
+		log.Ctx(m.ctx).Info().Msg("Successfully processed all of the files")
+		metricHandleRequestSuccessTotal.WithLabelValues().Inc()
 
-	return nil
+		return nil
+	})
 }
 
 func (m *MetricShipper) GetBaseDir() string {
@@ -260,5 +271,6 @@ func (m *MetricShipper) GetUploadedDir() string {
 // Shutdown gracefully stops the MetricShipper service.
 func (m *MetricShipper) Shutdown() error {
 	m.cancel()
+	metricShutdownTotal.WithLabelValues().Inc()
 	return nil
 }

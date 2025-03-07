@@ -17,27 +17,60 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "function_execution_seconds",
 			Help:    "Time taken for a function execution",
-			Buckets: prometheus.DefBuckets, // Default buckets
+			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
 		},
 		[]string{"function_name", "error"},
 	)
 )
 
-// An extremely basic span function wrapper to track execution time.
-// This is NOT a replacement for otel, just a simple exercise that may prove useful
-// in certain cases
-func (p *PrometheusMetrics) Span(name string, fn func() error) {
+type Span struct {
+	name  string
+	start time.Time
+	err   error
+}
+
+// Start a span with a given function name
+func (p *PrometheusMetrics) StartSpan(name string) *Span {
 	spanOnce.Do(func() {
 		p.registry.MustRegister(functionDuration)
 		(*p.metrics) = append((*p.metrics), functionDuration)
 	})
 
-	start := time.Now()
-	err := fn() // run the actual function
-	duration := time.Since(start).Seconds()
-	if err == nil {
-		functionDuration.WithLabelValues(name, "").Observe(duration)
-	} else {
-		functionDuration.WithLabelValues(name, err.Error()).Observe(duration)
+	return &Span{
+		name:  name,
+		start: time.Now(),
 	}
+}
+
+// Error observes an error and optionally transiently passes it to the caller
+func (s *Span) Error(err error) error {
+	s.err = err
+	return err
+}
+
+// End ends the span and observes the underlying prometheus metric
+func (s *Span) End() {
+	duration := time.Since(s.start).Seconds()
+	if s.err == nil {
+		functionDuration.WithLabelValues(s.name, "").Observe(duration)
+	} else {
+		functionDuration.WithLabelValues(s.name, s.err.Error()).Observe(duration)
+	}
+}
+
+// An extremely basic span function wrapper to track execution time.
+// This is NOT a replacement for otel, just a simple exercise that may prove useful
+// in certain cases.
+//
+// In addition, this function transiently passes the error to the caller
+func (p *PrometheusMetrics) Span(name string, fn func() error) error {
+	spanOnce.Do(func() {
+		p.registry.MustRegister(functionDuration)
+		(*p.metrics) = append((*p.metrics), functionDuration)
+	})
+
+	span := p.StartSpan(name)
+	defer span.End()
+	err := fn() // run the actual function
+	return span.Error(err)
 }

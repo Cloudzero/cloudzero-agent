@@ -87,7 +87,7 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 
 	// upload to s3
 	for _, file := range files {
-		err = metricShipper.Upload(file, urlResponse[shipper.GetRemoteFileID(file)])
+		err = metricShipper.UploadFile(file, urlResponse[shipper.GetRemoteFileID(file)])
 		require.NoError(t, err)
 	}
 }

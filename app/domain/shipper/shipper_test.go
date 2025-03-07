@@ -309,7 +309,7 @@ func TestShipper_Unit_UploadFile_Success(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.Upload(files[0], mockURL)
+	err = metricShipper.UploadFile(files[0], mockURL)
 
 	// Verify
 	assert.NoError(t, err)
@@ -335,7 +335,7 @@ func TestShipper_Unit_UploadFile_HTTPError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.Upload(files[0], mockURL)
+	err = metricShipper.UploadFile(files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)
@@ -355,7 +355,7 @@ func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.Upload(files[0], mockURL)
+	err = metricShipper.UploadFile(files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)
@@ -380,7 +380,7 @@ func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.Upload(files[0], mockURL)
+	err = metricShipper.UploadFile(files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)

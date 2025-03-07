@@ -19,11 +19,20 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	srv := httptest.NewServer(pm.Handler())
 	defer srv.Close()
 
-	// record all metrics
-	presignedURLRequestTotal.WithLabelValues().Inc()
-	presignedURLRequestFailureTotal.WithLabelValues().Inc()
-	remoteWriteFileTotal.WithLabelValues().Inc()
-	remoteWriteFailureTotal.WithLabelValues("10").Inc()
+	// other
+	metricShutdownTotal.WithLabelValues().Inc()
+
+	// new files
+	metricNewFilesErrorTotal.WithLabelValues("error").Inc()
+	metricNewFilesProcessingCurrent.WithLabelValues().Inc()
+
+	// generic request handling
+	metricHandleRequestFileCount.Observe(20)
+	metricHandleRequestSuccessTotal.WithLabelValues().Inc()
+	metricPresignedURLErrorTotal.WithLabelValues("error").Inc()
+
+	// presigned urls
+	metricPresignedURLErrorTotal.WithLabelValues("error").Inc()
 
 	// replay requests
 	metricReplayRequestTotal.WithLabelValues().Inc()
@@ -52,10 +61,16 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// validate
-	require.Contains(t, string(body), "presigned_url_request_total")
-	require.Contains(t, string(body), "presigned_url_request_failure_total")
-	require.Contains(t, string(body), "remote_write_file_total")
-	require.Contains(t, string(body), "remote_write_failure_total")
+
+	require.Contains(t, string(body), "shipper_shutdown_total")
+
+	require.Contains(t, string(body), "shipper_new_files_error_total")
+	require.Contains(t, string(body), "shipper_new_files_processing_current")
+
+	require.Contains(t, string(body), "shipper_handle_request_file_count")
+	require.Contains(t, string(body), "shipper_handle_request_success_total")
+
+	require.Contains(t, string(body), "shipper_presigned_url_error_total")
 
 	// replay requests
 	require.Contains(t, string(body), "shipper_replay_request_total")
