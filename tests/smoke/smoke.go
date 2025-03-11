@@ -113,7 +113,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		Database: config.Database{
 			StoragePath: dataLocation,
 			PurgeRules: config.PurgeRules{
-				MetricsOlderThan: time.Duration(90) * time.Hour * 24,
+				MetricsOlderThan: time.Hour * 24 * 90,
 				Lazy:             true,
 				Percent:          20,
 			},

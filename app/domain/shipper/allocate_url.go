@@ -42,7 +42,9 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		}
 
 		// create the http request body
-		body := PresignedURLAPIPayload{Files: bodyFiles}
+		body := PresignedURLAPIPayload{
+			Files: bodyFiles,
+		}
 
 		// marshal to json
 		enc, err := json.Marshal(body)

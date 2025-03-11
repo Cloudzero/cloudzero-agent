@@ -41,8 +41,7 @@ func TestShipper_Unit_Disk_StorageWarnings(t *testing.T) {
 			mockLister.On("ListFiles", mock.Anything).Return([]os.DirEntry{}, nil)
 			mockLister.On("Walk", mock.Anything, mock.Anything).Return(nil)
 
-			settings := getMockSettings("")
-			settings.Database.StoragePath = tmpDir
+			settings := getMockSettings("", tmpDir)
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err)
 
@@ -73,8 +72,7 @@ func TestShipper_Unit_Disk_DeletesOldFiles(t *testing.T) {
 	mockLister := &MockAppendableFiles{baseDir: tmpDir}
 	mockLister.On("Walk", mock.Anything, mock.Anything).Return(nil)
 
-	settings := getMockSettings("")
-	settings.Database.StoragePath = tmpDir
+	settings := getMockSettings("", tmpDir)
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
@@ -108,8 +106,7 @@ func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 	mockLister.On("GetFiles", []string{shipper.ReplaySubDirectory}).Return([]string{filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2")}, nil)
 
 	// setup the shipper
-	settings := getMockSettings("")
-	settings.Database.StoragePath = tmpDir
+	settings := getMockSettings("", tmpDir)
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
@@ -164,8 +161,7 @@ func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 			tt.mockSetup(mockLister)
 
 			// setup the shipper
-			settings := getMockSettings("")
-			settings.Database.StoragePath = tmpDir
+			settings := getMockSettings("", tmpDir)
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err, "failed to create metric shipper")
 

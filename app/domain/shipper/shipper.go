@@ -34,7 +34,6 @@ type MetricShipper struct {
 	HTTPClient   *http.Client
 	shippedFiles uint64 // Counter for shipped files
 	metrics      *instr.PrometheusMetrics
-	shipperId    string
 }
 
 // NewMetricShipper initializes a new MetricShipper.
