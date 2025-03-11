@@ -96,7 +96,7 @@ func getTmpDir(t *testing.T) string {
 }
 
 func getMockSettings(mockURL string) *config.Settings {
-	return &config.Settings{
+	cfg := &config.Settings{
 		ClusterName:    "test-cluster",
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
@@ -106,8 +106,15 @@ func getMockSettings(mockURL string) *config.Settings {
 		},
 		Database: config.Database{
 			StoragePath: "/tmp/storage",
+			PurgeRules: config.PurgeRules{
+				MetricsOlderThan: time.Duration(90) * time.Hour * 24,
+				Lazy:             true,
+				Percent:          20,
+			},
 		},
 	}
+
+	return cfg
 }
 
 func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settings {
@@ -135,6 +142,11 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 		},
 		Database: config.Database{
 			StoragePath: dir,
+			PurgeRules: config.PurgeRules{
+				MetricsOlderThan: time.Duration(90) * time.Hour * 24,
+				Lazy:             true,
+				Percent:          20,
+			},
 		},
 	}
 

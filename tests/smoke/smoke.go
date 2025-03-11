@@ -111,8 +111,12 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		ClusterName:    "smoke-test-cluster",
 		Logging:        config.Logging{Level: "debug"},
 		Database: config.Database{
-			StoragePath:              dataLocation,
-			PurgeMetricsOlderThanDay: 90,
+			StoragePath: dataLocation,
+			PurgeRules: config.PurgeRules{
+				MetricsOlderThan: time.Duration(90) * time.Hour * 24,
+				Lazy:             true,
+				Percent:          20,
+			},
 		},
 		Cloudzero: config.Cloudzero{
 			APIKeyPath:   apiKeyFile,

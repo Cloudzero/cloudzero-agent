@@ -41,7 +41,12 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		case types.StoreWarningLow:
 			fallthrough
 		case types.StoreWarningMed:
-			return nil
+			// purge old metrics if not in lazy mode
+			if !m.setting.Database.PurgeRules.Lazy {
+				if err := m.PurgeMetricsBefore(metricCutoff); err != nil {
+					return fmt.Errorf("failed to purge older metrics: %w", err)
+				}
+			}
 		case types.StoreWarningHigh:
 			if err = m.handleStorageWarningHigh(metricCutoff); err != nil {
 				// note the error in prom
@@ -137,7 +142,7 @@ func (m *MetricShipper) handleStorageWarningHigh(before time.Time) error {
 
 func (m *MetricShipper) handleStorageWarningCritical() error {
 	log.Ctx(m.ctx).Info().Msg("Handling critical storage usage ...")
-	return m.PurgeOldestNPercentage(CriticalPurgePercent)
+	return m.PurgeOldestNPercentage(m.setting.Database.PurgeRules.Percent)
 }
 
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`

@@ -34,6 +34,7 @@ type MetricShipper struct {
 	HTTPClient   *http.Client
 	shippedFiles uint64 // Counter for shipped files
 	metrics      *instr.PrometheusMetrics
+	shipperId    string
 }
 
 // NewMetricShipper initializes a new MetricShipper.
@@ -131,7 +132,7 @@ func (m *MetricShipper) runShipper() error {
 		}
 
 		// check the disk usage
-		if err := m.HandleDisk(time.Now().AddDate(0, 0, -int(m.setting.Database.PurgeMetricsOlderThanDay))); err != nil {
+		if err := m.HandleDisk(time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
 			return fmt.Errorf("failed to handle the disk usage: %w", err)
 		}
 

@@ -50,7 +50,13 @@ type Database struct {
 	MaxRecords       int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
 	CompressionLevel int    `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
 
-	PurgeMetricsOlderThanDay uint16 `yaml:"purge_metrics_older_than_day" default:"90" env:"PURGE_METRICS_OLDER_THAN_DAY" env-description:"The number of days to keep metric information locally. Any file older than the number of days specified here can be deleted to free up space on the disk."`
+	PurgeRules PurgeRules `yaml:"purge_rules"`
+}
+
+type PurgeRules struct {
+	MetricsOlderThan time.Duration `yaml:"metrics_older_than" default:"90d" env:"PURGE_METRICS_OLDER_THAN" env-description:"The amount of time to keep metric information locally. Any file older than the duration specified here can be deleted to free up space on the disk"`
+	Lazy             bool          `yaml:"lazy" default:"true" env:"PURGE_LAZY" env-description:"Whether to purge the files in lazy mode. In this mode, if the metrics are older than 'metrics_older_than' but there is no detected disk pressure, the older 'stale' metrics will be retained"`
+	Percent          int           `yaml:"percent" default:"20" env:"PURGE_PERCENT" env-description:"The percentage of files to remove from disk when critical disk pressure is detected. This is critical for ensuring the disk health is preserved"`
 }
 
 type Server struct {
@@ -67,7 +73,7 @@ type Cloudzero struct {
 	UseHTTP        bool          `yaml:"use_http" env:"USE_HTTP" default:"false" env-description:"use http for client requests instead of https"`
 	apiKey         string        // Set after reading keypath
 
-	_host string // cached value of `Host` since it is overriden in initalization
+	_host string // cached value of `Host` since it is overridden in initialization
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {
