@@ -43,7 +43,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		case types.StoreWarningMed:
 			// purge old metrics if not in lazy mode
 			if !m.setting.Database.PurgeRules.Lazy {
-				if err := m.PurgeMetricsBefore(metricCutoff); err != nil {
+				if err = m.PurgeMetricsBefore(metricCutoff); err != nil {
 					return fmt.Errorf("failed to purge older metrics: %w", err)
 				}
 			}
