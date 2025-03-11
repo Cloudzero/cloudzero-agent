@@ -29,7 +29,6 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	// generic request handling
 	metricHandleRequestFileCount.Observe(20)
 	metricHandleRequestSuccessTotal.WithLabelValues().Inc()
-	metricPresignedURLErrorTotal.WithLabelValues("error").Inc()
 
 	// presigned urls
 	metricPresignedURLErrorTotal.WithLabelValues("error").Inc()

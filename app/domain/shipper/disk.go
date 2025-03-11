@@ -29,7 +29,6 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 
 		// log the storage warning
 		log.Ctx(m.ctx).Info().
-			Uint64("total", usage.Total).
 			Uint64("used", usage.Used).
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
