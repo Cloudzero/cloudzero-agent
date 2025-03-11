@@ -27,6 +27,7 @@ type Span struct {
 	name  string
 	start time.Time
 	err   error
+	ended bool
 }
 
 // Start a span with a given function name
@@ -50,11 +51,13 @@ func (s *Span) Error(err error) error {
 
 // End ends the span and observes the underlying prometheus metric
 func (s *Span) End() {
-	duration := time.Since(s.start).Seconds()
-	if s.err == nil {
-		functionDuration.WithLabelValues(s.name, "").Observe(duration)
-	} else {
-		functionDuration.WithLabelValues(s.name, s.err.Error()).Observe(duration)
+	if !s.ended {
+		duration := time.Since(s.start).Seconds()
+		if s.err == nil {
+			functionDuration.WithLabelValues(s.name, "").Observe(duration)
+		} else {
+			functionDuration.WithLabelValues(s.name, s.err.Error()).Observe(duration)
+		}
 	}
 }
 

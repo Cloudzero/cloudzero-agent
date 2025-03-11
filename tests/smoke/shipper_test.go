@@ -19,13 +19,13 @@ func TestSmoke_Shipper_Runs(t *testing.T) {
 	}
 
 	runTest(t, func(t *testContext) {
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
-
 		// write files to the data directory
 		numMetricFiles := 10
 		t.WriteTestMetrics(numMetricFiles, 100)
+
+		// start the shipper
+		shipper := t.StartShipper()
+		require.NotNil(t, shipper, "shipper is null")
 
 		// wait for the log message
 		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
