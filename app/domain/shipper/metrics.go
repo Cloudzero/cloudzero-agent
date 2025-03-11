@@ -161,7 +161,7 @@ var (
 
 	metricCurrentDiskReplayRequest = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_replay_request",
+			Name: "shipper_disk_replay_request_current",
 			Help: "Current number of replay requests found in the pv",
 		},
 		[]string{},

@@ -130,7 +130,7 @@ func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 	require.Contains(t, string(body), "shipper_current_disk_usage_percentage")
 	require.Contains(t, string(body), "shipper_current_disk_unsent_file")
 	require.Contains(t, string(body), "shipper_current_disk_sent_file")
-	require.Contains(t, string(body), "shipper_current_disk_replay_request")
+	require.Contains(t, string(body), "shipper_disk_replay_request_current")
 }
 
 func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
