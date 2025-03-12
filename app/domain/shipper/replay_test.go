@@ -125,7 +125,7 @@ func TestShipper_Unit_ReplayRequestRun(t *testing.T) {
 	require.NoError(t, err)
 	uploaded, err := os.ReadDir(metricShipper.GetUploadedDir())
 	require.NoError(t, err)
-	require.Equal(t, 2, len(base)) // replay/ uploaded/
+	require.Equal(t, 3, len(base)) // .shipperid replay/ uploaded/
 	require.Equal(t, 5, len(uploaded))
 
 	// validate replay request was deleted

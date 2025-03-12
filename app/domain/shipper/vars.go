@@ -22,9 +22,10 @@ const (
 	filesChunkSize      = 200
 	remoteFileExtension = ".parquet"
 
-	abandonAPIPath      = "/abandon"
-	uploadAPIPath       = "/upload"
-	replayRequestHeader = "X-CloudZero-Replay"
+	abandonAPIPath         = "/abandon"
+	uploadAPIPath          = "/upload"
+	replayRequestHeader    = "X-CloudZero-Replay"
+	shipperIDRequestHeader = "X-CloudZero-Shipper-ID"
 )
 
 var (
