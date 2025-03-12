@@ -177,16 +177,19 @@ func TestPrometheusMetricsSpan(t *testing.T) {
 	srv := httptest.NewServer(p.Handler())
 
 	// basic
-	p.Span("test_function_1", func() error {
+	err = p.Span("test_function_1", func() error {
 		time.Sleep(time.Second)
 		return nil
 	})
+	require.NoError(t, err)
 
 	// with error
-	p.Span("test_function_2", func() error {
+	err = p.Span("test_function_2", func() error {
 		time.Sleep(time.Second / 2)
 		return fmt.Errorf("function failed")
 	})
+	require.Error(t, err)
+	require.Equal(t, "function failed", err.Error())
 
 	body := _testSendPromRequest(t, srv.URL)
 	require.Contains(t, body, "function_name=\"test_function_1\"")

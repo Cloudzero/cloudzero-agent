@@ -94,8 +94,7 @@ func TestShipper_Unit_ReplayRequestRun(t *testing.T) {
 	}
 
 	// create the settings
-	settings := getMockSettings(mockURL)
-	settings.Database.StoragePath = tmpDir // use the tmp dir as the root storage dir
+	settings := getMockSettings(mockURL, tmpDir)
 
 	// setup the database backend for the test
 	mockFiles := &MockAppendableFiles{baseDir: tmpDir}
@@ -126,7 +125,7 @@ func TestShipper_Unit_ReplayRequestRun(t *testing.T) {
 	require.NoError(t, err)
 	uploaded, err := os.ReadDir(metricShipper.GetUploadedDir())
 	require.NoError(t, err)
-	require.Equal(t, 2, len(base))
+	require.Equal(t, 2, len(base)) // replay/ uploaded/
 	require.Equal(t, 5, len(uploaded))
 
 	// validate replay request was deleted

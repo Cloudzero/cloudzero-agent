@@ -69,6 +69,15 @@ func (f *MetricFile) Rename(new string) error {
 	return os.Rename(f.location, new)
 }
 
+// TODO -- this is not correct because of how data is streamed into parquet format
+func (f *MetricFile) Size() (int64, error) {
+	s, err := os.Stat(f.location)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find the file: %w", err)
+	}
+	return s.Size(), nil
+}
+
 func (f *MetricFile) Read(p []byte) (int, error) {
 	if f.reader == nil {
 		_, err := f.File.Seek(0, io.SeekStart)

@@ -10,8 +10,13 @@ type File interface {
 
 	// a unique identifier for the file
 	UniqueID() string
+
 	// location of the file
 	Location() (string, error)
+
 	// change the name / location of the file in the environment
 	Rename(new string) error
+
+	// get the size of the file in bytes
+	Size() (int64, error)
 }

@@ -9,36 +9,61 @@ import (
 )
 
 var (
-	presignedURLRequestTotal = prometheus.NewCounterVec(
+
+	// Other
+	// ----------------------------------------------------------
+	metricShutdownTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "presigned_url_request_total",
-			Help: "Total number of pre-signed url requests.",
+			Name: "shipper_shutdown_total",
+			Help: "Total number of shutdown requests",
 		},
 		[]string{},
 	)
 
-	presignedURLRequestFailureTotal = prometheus.NewCounterVec(
+	// New File Processing
+	// ----------------------------------------------------------
+	metricNewFilesErrorTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "presigned_url_request_failure_total",
-			Help: "Total number of pre-signed url request failures.",
+			Name: "shipper_new_files_error_total",
+			Help: "Total number of errors encountered when running segments of the program",
 		},
 		[]string{},
 	)
 
-	remoteWriteFileTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "remote_write_file_total",
-			Help: "Total number of files sent to the remote file reciever",
+	metricNewFilesProcessingCurrent = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "shipper_new_files_processing_current",
+			Help: "The current number of files being processed by the shipper",
 		},
 		[]string{},
 	)
 
-	remoteWriteFailureTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "remote_write_failure_total",
-			Help: "Total number of failures pushing to the remote file receiver.",
+	// Generic Request Handling
+	// ----------------------------------------------------------
+	metricHandleRequestFileCount = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "shipper_handle_request_file_count",
+			Help:    "Number of files requested for a replay request",
+			Buckets: prometheus.ExponentialBuckets(10, 2, 15),
 		},
-		[]string{"file_count"},
+	)
+
+	metricHandleRequestSuccessTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_handle_request_success_total",
+			Help: "Total number of successful runs of the `HandleRequest` function",
+		},
+		[]string{},
+	)
+
+	// Presigned URLs
+	// ----------------------------------------------------------
+	metricPresignedURLErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_presigned_url_error_total",
+			Help: "Total number of errors seen when creating all presigned urls",
+		},
+		[]string{},
 	)
 
 	// Replay Requests
@@ -72,7 +97,7 @@ var (
 			Name: "shipper_replay_request_error_total",
 			Help: "Number of errors observed while processing replay requests",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	metricReplayRequestAbandonFilesTotal = prometheus.NewCounterVec(
@@ -88,7 +113,7 @@ var (
 			Name: "shipper_replay_request_abandon_files_error_total",
 			Help: "total number of abandoned files",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	// Disk Usage
@@ -136,7 +161,7 @@ var (
 
 	metricCurrentDiskReplayRequest = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_replay_request",
+			Name: "shipper_disk_replay_request_current",
 			Help: "Current number of replay requests found in the pv",
 		},
 		[]string{},
@@ -171,10 +196,18 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 	return instr.NewPrometheusMetrics(
 		// instr.WithDefaultRegistry(),
 		instr.WithPromMetrics(
-			presignedURLRequestTotal,
-			presignedURLRequestFailureTotal,
-			remoteWriteFileTotal,
-			remoteWriteFailureTotal,
+			// other
+			metricShutdownTotal,
+
+			// new files
+			metricNewFilesErrorTotal,
+			metricNewFilesProcessingCurrent,
+
+			// generic request handling
+			metricHandleRequestFileCount,
+			metricHandleRequestSuccessTotal,
+
+			metricPresignedURLErrorTotal,
 
 			// replay requests
 			metricReplayRequestTotal,

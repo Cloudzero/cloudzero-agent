@@ -21,6 +21,10 @@ const (
 	replayFileFormat    = "replay-%d.json"
 	filesChunkSize      = 200
 	remoteFileExtension = ".parquet"
+
+	abandonAPIPath      = "/abandon"
+	uploadAPIPath       = "/upload"
+	replayRequestHeader = "X-CloudZero-Replay"
 )
 
 var (
