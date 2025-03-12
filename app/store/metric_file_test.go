@@ -22,17 +22,15 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	require.NoError(t, err)
 
 	// write to the os file
-	go func() {
-		compressor := brotli.NewWriterLevel(osFile, 1)
-		defer func() {
-			compressor.Close()
-			osFile.Close()
-		}()
-
-		encoder := json.NewEncoder(compressor)
-		err := encoder.Encode(testMetrics)
-		assert.NoError(t, err)
+	compressor := brotli.NewWriterLevel(osFile, 1)
+	defer func() {
+		compressor.Close()
+		osFile.Close()
 	}()
+
+	encoder := json.NewEncoder(compressor)
+	err = encoder.Encode(testMetrics)
+	assert.NoError(t, err)
 
 	// create a new metric file with this
 	file, err := store.NewMetricFile(osFile.Name())
