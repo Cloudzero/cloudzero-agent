@@ -121,7 +121,7 @@ func (m *MetricShipper) runShipper() error {
 
 		// run the base request
 		if err := m.ProcessNewFiles(); err != nil {
-			metricNewFilesErrorTotal.WithLabelValues(err.Error()).Inc()
+			metricNewFilesErrorTotal.WithLabelValues().Inc()
 			return fmt.Errorf("failed to ship the metrics: %w", err)
 		}
 
@@ -199,7 +199,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(files []types.File) error {
 	return m.metrics.Span("shipper_handle_request", func() error {
-		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handing request")
+		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handling request")
 		metricHandleRequestFileCount.Observe(float64(len(files)))
 		if len(files) == 0 {
 			return nil
@@ -217,7 +217,7 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 			// Assign pre-signed urls to each of the file references
 			urlMap, err := m.AllocatePresignedURLs(chunk)
 			if err != nil {
-				metricPresignedURLErrorTotal.WithLabelValues(err.Error()).Inc()
+				metricPresignedURLErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to allocate presigned URLs: %w", err)
 			}
 

@@ -23,7 +23,7 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	metricShutdownTotal.WithLabelValues().Inc()
 
 	// new files
-	metricNewFilesErrorTotal.WithLabelValues("error").Inc()
+	metricNewFilesErrorTotal.WithLabelValues().Inc()
 	metricNewFilesProcessingCurrent.WithLabelValues().Inc()
 
 	// generic request handling
@@ -31,15 +31,15 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	metricHandleRequestSuccessTotal.WithLabelValues().Inc()
 
 	// presigned urls
-	metricPresignedURLErrorTotal.WithLabelValues("error").Inc()
+	metricPresignedURLErrorTotal.WithLabelValues().Inc()
 
 	// replay requests
 	metricReplayRequestTotal.WithLabelValues().Inc()
 	metricReplayRequestCurrent.WithLabelValues().Inc()
 	metricReplayRequestFileCount.Observe(100)
-	metricReplayRequestErrorTotal.WithLabelValues("error").Inc()
+	metricReplayRequestErrorTotal.WithLabelValues().Inc()
 	metricReplayRequestAbandonFilesTotal.WithLabelValues().Inc()
-	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues("error").Inc()
+	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 
 	// disk usage
 	metricDiskTotalSizeBytes.WithLabelValues().Inc()

@@ -27,7 +27,7 @@ var (
 			Name: "shipper_new_files_error_total",
 			Help: "Total number of errors encountered when running segments of the program",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	metricNewFilesProcessingCurrent = prometheus.NewGaugeVec(
@@ -63,7 +63,7 @@ var (
 			Name: "shipper_presigned_url_error_total",
 			Help: "Total number of errors seen when creating all presigned urls",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	// Replay Requests
@@ -97,7 +97,7 @@ var (
 			Name: "shipper_replay_request_error_total",
 			Help: "Number of errors observed while processing replay requests",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	metricReplayRequestAbandonFilesTotal = prometheus.NewCounterVec(
@@ -113,7 +113,7 @@ var (
 			Name: "shipper_replay_request_abandon_files_error_total",
 			Help: "total number of abandoned files",
 		},
-		[]string{"error"},
+		[]string{},
 	)
 
 	// Disk Usage

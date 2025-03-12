@@ -47,7 +47,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		if err != nil {
 			return fmt.Errorf("failed to get the abandon endpoint: %w", err)
 		}
-		abandonEndpoint.Path += "/abandon"
+		abandonEndpoint.Path += abandonAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
 			return fmt.Errorf("failed to create HTTP request: %w", err)

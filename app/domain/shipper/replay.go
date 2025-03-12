@@ -25,14 +25,14 @@ type ReplayRequest struct {
 	ReferenceIDs *types.Set[string] `json:"referenceIds"` //nolint:tagliatelle // I dont want to use IDs
 }
 
-type replayRequestHeader struct {
+type replayRequestHeaderValue struct {
 	RefID string `json:"ref_id"` //nolint:tagliatelle // upstream uses cammel case
 	URL   string `json:"url"`
 }
 
 func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 	// parse into list type
-	rrh := make([]replayRequestHeader, 0)
+	rrh := make([]replayRequestHeaderValue, 0)
 	if err := json.Unmarshal([]byte(value), &rrh); err != nil {
 		return nil, fmt.Errorf("failed to parse the replay request data: %w", err)
 	}
@@ -267,7 +267,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		if missing.Size() > 0 {
 			log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
 			if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
-				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues(err.Error()).Inc()
+				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to send the abandon file request: %w", err)
 			}
 		}

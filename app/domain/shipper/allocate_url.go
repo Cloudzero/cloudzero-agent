@@ -57,7 +57,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		if err != nil {
 			return fmt.Errorf("failed to get remote base: %w", err)
 		}
-		uploadEndpoint.Path += "/upload"
+		uploadEndpoint.Path += uploadAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
 			return fmt.Errorf("failed to create HTTP request: %w", err)
