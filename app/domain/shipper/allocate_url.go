@@ -110,7 +110,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		}
 
 		// check for a replay request
-		rrh := resp.Header.Get("X-CloudZero-Replay")
+		rrh := resp.Header.Get(replayRequestHeader)
 		if rrh != "" {
 			// parse the replay request
 			rr, err := NewReplayRequestFromHeader(rrh)
