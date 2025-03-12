@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/andybalholm/brotli"
@@ -19,8 +18,7 @@ import (
 func TestMetricFile_ReadAll(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	path := filepath.Join(tmpDir, "test-file.json.br")
-	osFile, err := os.Create(path)
+	osFile, err := os.CreateTemp(tmpDir, "test-file-*.json.br")
 	require.NoError(t, err)
 
 	// write to the os file
@@ -37,7 +35,7 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	}()
 
 	// create a new metric file with this
-	file, err := store.NewMetricFile(path)
+	file, err := store.NewMetricFile(osFile.Name())
 	require.NoError(t, err)
 
 	// read the data
