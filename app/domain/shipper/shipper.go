@@ -101,6 +101,13 @@ func (m *MetricShipper) Run() error {
 
 		case sig := <-sigChan:
 			log.Ctx(m.ctx).Info().Msgf("Received signal %s. Initiating shutdown.", sig)
+
+			// flush
+			if err := m.ProcessNewFiles(); err != nil {
+				metricNewFilesErrorTotal.WithLabelValues().Inc()
+				return fmt.Errorf("failed to ship the metrics: %w", err)
+			}
+
 			err := m.Shutdown()
 			if err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to shutdown shipper service")
