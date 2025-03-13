@@ -16,7 +16,8 @@ import (
 )
 
 type PresignedURLAPIPayload struct {
-	Files []*PresignedURLAPIPayloadFile `json:"files"`
+	ShipperID string                        `json:"shipperId"`
+	Files     []*PresignedURLAPIPayloadFile `json:"files"`
 }
 
 type PresignedURLAPIPayloadFile struct {
@@ -41,9 +42,16 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 			}
 		}
 
+		// get the shipper id
+		shipperID, err := m.GetShipperID()
+		if err != nil {
+			return fmt.Errorf("failed to get the shipper id: %w", err)
+		}
+
 		// create the http request body
 		body := PresignedURLAPIPayload{
-			Files: bodyFiles,
+			ShipperID: shipperID,
+			Files:     bodyFiles,
 		}
 
 		// marshal to json
@@ -66,6 +74,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// Set necessary headers
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
+		req.Header.Set(shipperIDRequestHeader, shipperID)
 
 		// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 		q := req.URL.Query()
@@ -74,6 +83,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		q.Add("cloud_account_id", m.setting.CloudAccountID)
 		q.Add("cluster_name", m.setting.ClusterName)
 		q.Add("region", m.setting.Region)
+		q.Add("shipperId", shipperID)
 		req.URL.RawQuery = q.Encode()
 
 		log.Info().Msgf("Requesting %d presigned URLs", len(files))

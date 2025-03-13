@@ -253,12 +253,6 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 		return nil, fmt.Errorf("failed to parse the url: %w", err)
 	}
 
-	// define the parameters
-	params := url.Values{}
-	params.Add("cluster_name", s.ClusterName)
-	params.Add("cloud_account_id", s.CloudAccountID)
-	params.Add("region", s.Region)
-
 	// set extra info on the url
 	if s.Cloudzero.UseHTTP {
 		u.Scheme = "http"
@@ -266,7 +260,6 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 		u.Scheme = "https"
 	}
 	u.Path += "/v1/container-metrics"
-	u.RawQuery = params.Encode()
 	return u, nil
 }
 
