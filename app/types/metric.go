@@ -5,6 +5,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 type Label struct {
@@ -46,18 +48,18 @@ type Metric struct {
 }
 
 type ParquetMetric struct {
-	ClusterName    string            `parquet:"cluster_name"`
-	CloudAccountID string            `parquet:"cloud_account_id"`
-	Year           string            `parquet:"year"`
-	Month          string            `parquet:"month"`
-	Day            string            `parquet:"day"`
-	Hour           string            `parquet:"hour"`
-	MetricName     string            `parquet:"metric_name"`
-	NodeName       string            `parquet:"node_name"`
-	CreatedAt      int64             `parquet:"created_at,timestamp"`
-	TimeStamp      int64             `parquet:"timestamp,timestamp"`
-	Labels         map[string]string `parquet:"labels"`
-	Value          string            `parquet:"value"`
+	ClusterName    string `parquet:"cluster_name"`
+	CloudAccountID string `parquet:"cloud_account_id"`
+	Year           string `parquet:"year"`
+	Month          string `parquet:"month"`
+	Day            string `parquet:"day"`
+	Hour           string `parquet:"hour"`
+	MetricName     string `parquet:"metric_name"`
+	NodeName       string `parquet:"node_name"`
+	CreatedAt      int64  `parquet:"created_at,timestamp"`
+	TimeStamp      int64  `parquet:"timestamp,timestamp"`
+	Labels         string `parquet:"labels"`
+	Value          string `parquet:"value"`
 }
 
 func (pm *ParquetMetric) Metric() Metric {
@@ -70,11 +72,22 @@ func (pm *ParquetMetric) Metric() Metric {
 		TimeStamp:      time.UnixMilli(pm.TimeStamp).UTC(),
 		Value:          pm.Value,
 	}
-	m.ImportLabels(pm.Labels)
+
+	labels := map[string]string{}
+	if err := json.Unmarshal([]byte(pm.Labels), &labels); err != nil {
+		log.Ctx(context.Background()).Fatal().Err(err).Msg("failed to unmarshal labels")
+	}
+
+	m.ImportLabels(labels)
 	return m
 }
 
 func (m *Metric) Parquet() ParquetMetric {
+	labelsData, err := json.Marshal(m.FullLabels())
+	if err != nil {
+		log.Ctx(context.Background()).Fatal().Err(err).Msg("failed to marshal labels")
+	}
+
 	return ParquetMetric{
 		ClusterName:    m.ClusterName,
 		CloudAccountID: m.CloudAccountID,
@@ -86,7 +99,7 @@ func (m *Metric) Parquet() ParquetMetric {
 		NodeName:       m.NodeName,
 		CreatedAt:      m.CreatedAt.UnixMilli(),
 		TimeStamp:      m.TimeStamp.UnixMilli(),
-		Labels:         m.FullLabels(),
+		Labels:         string(labelsData),
 		Value:          m.Value,
 	}
 }
