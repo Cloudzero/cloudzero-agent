@@ -86,7 +86,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		q.Add("shipperId", shipperID)
 		req.URL.RawQuery = q.Encode()
 
-		log.Info().Msgf("Requesting %d presigned URLs", len(files))
+		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
 
 		// Send the request
 		httpSpan := m.metrics.StartSpan("shipper_AllocatePresignedURLs_httpRequest")

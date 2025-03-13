@@ -255,15 +255,20 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		for _, item := range total {
 			found.Add(GetRemoteFileID(item))
 		}
-		log.Ctx(m.ctx).Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
+		log.Ctx(m.ctx).Info().Str("rr", rr.Filepath).Int("found", found.Size()).Int("total", rr.ReferenceIDs.Size()).Msg("Replay request")
 
 		// compare the results and discover which files were not found
 		missing := rr.ReferenceIDs.Diff(found)
 
 		// send abandon requests for the non-found files
 		if missing.Size() > 0 {
-			log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
-			if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
+			missingList := missing.List()
+			log.Ctx(m.ctx).Info().
+				Str("path", rr.Filepath).
+				Int("count", missing.Size()).
+				Interface("files", missingList).
+				Msg("Sending abandon request for missing files")
+			if err := m.AbandonFiles(missingList, "not found"); err != nil {
 				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to send the abandon file request: %w", err)
 			}

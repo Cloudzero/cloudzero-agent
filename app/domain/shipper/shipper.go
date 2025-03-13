@@ -101,7 +101,7 @@ func (m *MetricShipper) Run() error {
 			return nil
 
 		case sig := <-sigChan:
-			log.Ctx(m.ctx).Info().Msgf("Received signal %s. Initiating shutdown.", sig)
+			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
 
 			// flush
 			if err := m.ProcessNewFiles(); err != nil {
@@ -219,10 +219,10 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 
 		// chunk into more reasonable sizes to mangage
 		chunks := Chunk(files, filesChunkSize)
-		log.Ctx(m.ctx).Info().Msgf("processing files as %d chunks", len(chunks))
+		log.Ctx(m.ctx).Info().Int("chunks", len(chunks)).Msg("Processing files")
 
 		for i, chunk := range chunks {
-			log.Ctx(m.ctx).Debug().Msgf("handling chunk: %d", i)
+			log.Ctx(m.ctx).Debug().Int("chunk", i).Msg("Handling chunk")
 			pm := parallel.New(shipperWorkerCount)
 			defer pm.Close()
 

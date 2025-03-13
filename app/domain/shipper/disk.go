@@ -148,7 +148,7 @@ func (m *MetricShipper) handleStorageWarningCritical() error {
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`
 func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 	return m.metrics.Span("shipper_PurgeMetricsBefore", func() error {
-		log.Ctx(m.ctx).Info().Msgf("Purging all metrics before: %s", before.String())
+		log.Ctx(m.ctx).Info().Time("cutoff", before).Msg("Purging old metrics")
 		oldFiles := make([]string, 0)
 
 		for _, lister := range m.listers {
@@ -193,7 +193,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 // PurgeOldestPercentage removes the oldest `percent` of files
 func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 	return m.metrics.Span("shipper_PurgeOldestNPercentage", func() error {
-		log.Ctx(m.ctx).Info().Msgf("Purging oldest %d percent of files", percent)
+		log.Ctx(m.ctx).Info().Int("percent", percent).Msg("Purging oldest percentage of files")
 
 		if percent <= 0 || percent > 100 {
 			return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
