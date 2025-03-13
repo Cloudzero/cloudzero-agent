@@ -91,7 +91,7 @@ func main() {
 	server.New(
 		build.Version(),
 		[]server.Middleware{loggerMiddleware},
-		handlers.NewRemoteWriteAPI("/metrics", domain),
+		handlers.NewRemoteWriteAPI("/collector", domain),
 	).Run(ctx)
 	logger.Info().Msg("Service stopping")
 }
