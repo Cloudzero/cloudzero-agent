@@ -16,6 +16,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -213,7 +214,13 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 		now := time.Now().UTC()
 
 		// create a file location
-		file, err := os.Create(filepath.Join(t.dataLocation, fmt.Sprintf("metrics_%d_%05d.json.br", now.UnixMilli(), i)))
+		var filename string
+		if i%2 == 0 {
+			filename = fmt.Sprintf("%s_%d_%05d.json.br", store.CostContentIdentifier, now.UnixMilli(), i)
+		} else {
+			filename = fmt.Sprintf("%s_%d_%05d.json.br", store.ObservabilityContentIdentifier, now.UnixMilli(), i)
+		}
+		file, err := os.Create(filepath.Join(t.dataLocation, filename))
 		require.NoError(t, err, "failed to create file: %s", err)
 
 		// create the metrics array

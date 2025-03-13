@@ -24,7 +24,7 @@ func TestDiskStore_PutAndPending(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 10
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.CostContentIdentifier)
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -61,7 +61,7 @@ func TestDiskStore_Flush(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 5
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.CostContentIdentifier)
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
@@ -100,7 +100,7 @@ func TestDiskStore_Compact(t *testing.T) {
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.CostContentIdentifier)
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -147,7 +147,7 @@ func TestDiskStore_GetFiles(t *testing.T) {
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.CostContentIdentifier)
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -215,7 +215,7 @@ func TestDiskStore_GetFiles(t *testing.T) {
 
 func TestDiskStore_GetUsage(t *testing.T) {
 	tmpDir := t.TempDir()
-	d, err := store.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100}, store.CostContentIdentifier)
+	d, err := store.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100}, store.WithContentIdentifier(store.CostContentIdentifier))
 	require.NoError(t, err)
 	defer d.Flush()
 

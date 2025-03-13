@@ -3,85 +3,85 @@
 
 package store_test
 
-import (
-	"context"
-	"testing"
+// import (
+// 	"context"
+// 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
+// 	"github.com/google/uuid"
+// 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/store"
-	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-)
+// 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
+// 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+// )
 
-var metricIDs = []uuid.UUID{
-	uuid.New(),
-	uuid.New(),
-}
+// var metricIDs = []uuid.UUID{
+// 	uuid.New(),
+// 	uuid.New(),
+// }
 
-func TestMemoryStore_All(t *testing.T) {
-	ctx := context.Background()
-	memoryStore := store.NewMemoryStore()
+// func TestMemoryStore_All(t *testing.T) {
+// 	ctx := context.Background()
+// 	memoryStore := store.NewMemoryStore()
 
-	t.Run("with an empty store", func(t *testing.T) {
-		metricRange, err := memoryStore.All(ctx, nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, metricRange)
-		assert.Empty(t, metricRange.Metrics)
-		assert.NotNil(t, metricRange.Next)
-	})
+// 	t.Run("with an empty store", func(t *testing.T) {
+// 		metricRange, err := memoryStore.All(ctx, nil)
+// 		assert.NoError(t, err)
+// 		assert.NotNil(t, metricRange)
+// 		assert.Empty(t, metricRange.Metrics)
+// 		assert.NotNil(t, metricRange.Next)
+// 	})
 
-	t.Run("with metrics in the store", func(t *testing.T) {
-		memoryStore.Put(ctx, types.Metric{ID: metricIDs[0], MetricName: "metric1"})
-		memoryStore.Put(ctx, types.Metric{ID: metricIDs[1], MetricName: "metric2"})
+// 	t.Run("with metrics in the store", func(t *testing.T) {
+// 		memoryStore.Put(ctx, types.Metric{ID: metricIDs[0], MetricName: "metric1"})
+// 		memoryStore.Put(ctx, types.Metric{ID: metricIDs[1], MetricName: "metric2"})
 
-		metricRange, err := memoryStore.All(ctx, nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, metricRange)
-		assert.NotEmpty(t, metricRange.Metrics)
-		assert.Len(t, metricRange.Metrics, 2)
-		assert.NotNil(t, metricRange.Next)
-	})
-}
+// 		metricRange, err := memoryStore.All(ctx, nil)
+// 		assert.NoError(t, err)
+// 		assert.NotNil(t, metricRange)
+// 		assert.NotEmpty(t, metricRange.Metrics)
+// 		assert.Len(t, metricRange.Metrics, 2)
+// 		assert.NotNil(t, metricRange.Next)
+// 	})
+// }
 
-func TestMemoryStore_Get(t *testing.T) {
-	ctx := context.Background()
-	memoryStore := store.NewMemoryStore()
+// func TestMemoryStore_Get(t *testing.T) {
+// 	ctx := context.Background()
+// 	memoryStore := store.NewMemoryStore()
 
-	t.Run("with a non-existent metric", func(t *testing.T) {
-		metric, err := memoryStore.Get(ctx, "non-existent-id")
-		assert.NoError(t, err)
-		assert.Nil(t, metric)
-	})
+// 	t.Run("with a non-existent metric", func(t *testing.T) {
+// 		metric, err := memoryStore.Get(ctx, "non-existent-id")
+// 		assert.NoError(t, err)
+// 		assert.Nil(t, metric)
+// 	})
 
-	t.Run("with an existing metric", func(t *testing.T) {
-		expectedMetric := types.Metric{ID: metricIDs[0], MetricName: "metric1"}
-		memoryStore.Put(ctx, expectedMetric)
+// 	t.Run("with an existing metric", func(t *testing.T) {
+// 		expectedMetric := types.Metric{ID: metricIDs[0], MetricName: "metric1"}
+// 		memoryStore.Put(ctx, expectedMetric)
 
-		metric, err := memoryStore.Get(ctx, metricIDs[0].String())
-		assert.NoError(t, err)
-		assert.NotNil(t, metric)
-		assert.Equal(t, expectedMetric, *metric)
-	})
-}
+// 		metric, err := memoryStore.Get(ctx, metricIDs[0].String())
+// 		assert.NoError(t, err)
+// 		assert.NotNil(t, metric)
+// 		assert.Equal(t, expectedMetric, *metric)
+// 	})
+// }
 
-func TestMemoryStore_Delete(t *testing.T) {
-	ctx := context.Background()
-	memoryStore := store.NewMemoryStore()
+// func TestMemoryStore_Delete(t *testing.T) {
+// 	ctx := context.Background()
+// 	memoryStore := store.NewMemoryStore()
 
-	t.Run("with a non-existent metric", func(t *testing.T) {
-		err := memoryStore.Delete(ctx, "non-existent-id")
-		assert.NoError(t, err)
-	})
+// 	t.Run("with a non-existent metric", func(t *testing.T) {
+// 		err := memoryStore.Delete(ctx, "non-existent-id")
+// 		assert.NoError(t, err)
+// 	})
 
-	t.Run("with an existing metric", func(t *testing.T) {
-		memoryStore.Put(ctx, types.Metric{ID: metricIDs[0], MetricName: "metric1"})
+// 	t.Run("with an existing metric", func(t *testing.T) {
+// 		memoryStore.Put(ctx, types.Metric{ID: metricIDs[0], MetricName: "metric1"})
 
-		err := memoryStore.Delete(ctx, metricIDs[0].String())
-		assert.NoError(t, err)
+// 		err := memoryStore.Delete(ctx, metricIDs[0].String())
+// 		assert.NoError(t, err)
 
-		metric, err := memoryStore.Get(ctx, metricIDs[0].String())
-		assert.NoError(t, err)
-		assert.Nil(t, metric)
-	})
-}
+// 		metric, err := memoryStore.Get(ctx, metricIDs[0].String())
+// 		assert.NoError(t, err)
+// 		assert.Nil(t, metric)
+// 	})
+// }

@@ -26,7 +26,7 @@ import (
 // MetricShipper handles the periodic shipping of metrics to Cloudzero.
 type MetricShipper struct {
 	setting *config.Settings
-	listers []types.AppendableFilesMonitor
+	store   types.ReadableStore
 
 	// Internal fields
 	ctx          context.Context
@@ -38,7 +38,7 @@ type MetricShipper struct {
 }
 
 // NewMetricShipper initializes a new MetricShipper.
-func NewMetricShipper(ctx context.Context, s *config.Settings, f ...types.AppendableFilesMonitor) (*MetricShipper, error) {
+func NewMetricShipper(ctx context.Context, s *config.Settings, store types.ReadableStore) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
@@ -55,7 +55,7 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, f ...types.Append
 
 	return &MetricShipper{
 		setting:    s,
-		listers:    f,
+		store:      store,
 		ctx:        ctx,
 		cancel:     cancel,
 		HTTPClient: httpClient,
@@ -173,13 +173,9 @@ func (m *MetricShipper) ProcessNewFiles() error {
 		}()
 
 		// Process new files in parallel
-		paths := []string{}
-		for _, lister := range m.listers {
-			listerPaths, err := lister.GetFiles()
-			if err != nil {
-				return fmt.Errorf("failed to get shippable files: %w", err)
-			}
-			paths = append(paths, listerPaths...)
+		paths, err := m.store.GetFiles()
+		if err != nil {
+			return fmt.Errorf("failed to list files: %w", err)
 		}
 		log.Ctx(m.ctx).Debug().Int("files", len(paths)).Msg("Found files to ship")
 

@@ -52,7 +52,7 @@ func main() {
 		zerolog.DefaultContextLogger = &logger
 	}
 
-	costMetricStore, err := store.NewDiskStore(settings.Database, store.CostContentIdentifier)
+	costMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.CostContentIdentifier))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
@@ -65,7 +65,7 @@ func main() {
 		}
 	}()
 
-	observabilityMetricStore, err := store.NewDiskStore(settings.Database, store.ObservabilityContentIdentifier)
+	observabilityMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.ObservabilityContentIdentifier))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
@@ -119,7 +119,7 @@ func main() {
 	logger.Info().Msg("Service stopping")
 }
 
-func HandleShutdownEvents(ctx context.Context, appendables ...types.Appendable) {
+func HandleShutdownEvents(ctx context.Context, appendables ...types.WritableStore) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-signalChan

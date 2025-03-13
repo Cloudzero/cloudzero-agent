@@ -42,7 +42,7 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // All mocks base method.
-func (m *MockStore) All(arg0 context.Context, arg1 *string) (types.MetricRange, error) {
+func (m *MockStore) All(arg0 context.Context, arg1 string) (types.MetricRange, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "All", arg0, arg1)
 	ret0, _ := ret[0].(types.MetricRange)

@@ -12,9 +12,13 @@ import (
 	"path/filepath"
 )
 
-// Appendable represents an interface for append-only storage
+// WritableStore represents an interface for append-only storage
 // with controlled flushing and monitoring of buffered entries.
-type Appendable interface {
+type WritableStore interface {
+	// All retrieves all metrics. It takes a context and an optional string pointer as parameters.
+	// Returns a MetricRange and an error.
+	All(context.Context, string) (MetricRange, error)
+
 	// Put appends one or more metrics to the storage, handling buffering internally.
 	Put(context.Context, ...Metric) error
 
@@ -27,7 +31,13 @@ type Appendable interface {
 	Pending() int
 }
 
-type AppendableFiles interface {
+// ReadableStore is for performing read operations against the store
+// It is understood that this will only read to the store, and not write against it.
+//
+// In addition, this implements the StoreMonitor interface to monitor the store.
+type ReadableStore interface {
+	StoreMonitor
+
 	// GetFiles returns the list of files in the store. `paths` can be used to add a specific location
 	GetFiles(paths ...string) ([]string, error)
 
@@ -38,30 +48,9 @@ type AppendableFiles interface {
 	Walk(loc string, process filepath.WalkFunc) error
 }
 
-type AppendableReader interface {
-	// All retrieves all metrics.
-	All(context.Context, string) (MetricRange, error)
-}
-
 // Store represents a storage interface that provides methods to interact with metrics.
-// It embeds the Appendable interface and includes methods to retrieve, delete, and list all metrics.
+// It allows for writing and reading from the store
 type Store interface {
-	Appendable
-	// All retrieves all metrics. It takes a context and an optional string pointer as parameters.
-	// Returns a MetricRange and an error.
-	All(context.Context, *string) (MetricRange, error)
-
-	// Get retrieves a specific metric by its identifier. It takes a context and a string identifier as parameters.
-	// Returns a pointer to a Metric and an error.
-	Get(context.Context, string) (*Metric, error)
-
-	// Delete removes a specific metric by its identifier. It takes a context and a string identifier as parameters.
-	// Returns an error.
-	Delete(context.Context, string) error
-}
-
-// AppendableFilesMonitor combines AppendableFiles and StoreMonitor
-type AppendableFilesMonitor interface {
-	AppendableFiles
-	StoreMonitor
+	WritableStore
+	ReadableStore
 }

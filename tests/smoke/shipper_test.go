@@ -94,11 +94,11 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		require.Equal(t, numMetricFiles, response.Length)
 
 		// validate the filesystem has the correct files as well
-		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "metrics_*_*.json.br"))
+		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the root directory")
 		require.Empty(t, newFiles, "root directory is not empty") // ensure all files were uploaded
 
-		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "metrics_*_*.json.br"))
+		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the uploaded directory")
 		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
@@ -140,11 +140,11 @@ func TestSmoke_Shipper_LoadTest(t *testing.T) {
 		require.Equal(t, numMetricFiles, response.Length)
 
 		// validate the filesystem has the correct files as well
-		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "metrics_*_*.json.br"))
+		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the root directory")
 		require.Empty(t, newFiles, "root directory is not empty") // ensure all files were uploaded
 
-		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "metrics_*_*.json.br"))
+		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the uploaded directory")
 		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
