@@ -33,8 +33,17 @@ func (m *MetricShipper) GetShipperID() (string, error) {
 			}
 			defer file.Close()
 
+			podID, exists := os.LookupEnv("HOSTNAME")
+			var id string
+			if exists {
+				// use hostname
+				id = podID
+			} else {
+				// use uuid
+				id = uuid.NewString()
+			}
+
 			// write an id to the file
-			id := uuid.NewString()
 			if _, err := file.WriteString(id); err != nil {
 				return "", fmt.Errorf("failed to write an id to the id file: %w", err)
 			}
