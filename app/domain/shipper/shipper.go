@@ -91,7 +91,7 @@ func (m *MetricShipper) Run() error {
 
 	// run at the start
 	if err := m.runShipper(); err != nil {
-		log.Ctx(m.ctx).Error().Err(err).Send()
+		log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
 	}
 
 	for {
@@ -117,7 +117,7 @@ func (m *MetricShipper) Run() error {
 
 		case <-ticker.C:
 			if err := m.runShipper(); err != nil {
-				log.Ctx(m.ctx).Error().Err(err).Send()
+				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
 			}
 		}
 	}
@@ -181,7 +181,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 			}
 			paths = append(paths, listerPaths...)
 		}
-		log.Ctx(m.ctx).Debug().Int("numFiles", len(paths)).Send()
+		log.Ctx(m.ctx).Debug().Int("files", len(paths)).Msg("Found files to ship")
 
 		// create a list of metric files
 		files := make([]types.File, 0)

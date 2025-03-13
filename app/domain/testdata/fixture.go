@@ -201,11 +201,10 @@ func BuildWriteRequest(
 
 	if droppedSamples > 0 || droppedExemplars > 0 || droppedHistograms > 0 {
 		log.Ctx(context.TODO()).Debug().
-			Str("message", "dropped data due to their age").
 			Int("droppedSamples", droppedSamples).
 			Int("droppedExemplars", droppedExemplars).
 			Int("droppedHistograms", droppedHistograms).
-			Send()
+			Msg("dropped data due to their age")
 	}
 
 	req := &prompb.WriteRequest{
@@ -249,11 +248,10 @@ func BuildV2WriteRequest(
 
 	if droppedSamples > 0 || droppedExemplars > 0 || droppedHistograms > 0 {
 		log.Ctx(context.TODO()).Debug().
-			Str("message", "dropped data due to their age").
 			Int("droppedSamples", droppedSamples).
 			Int("droppedExemplars", droppedExemplars).
 			Int("droppedHistograms", droppedHistograms).
-			Send()
+			Msg("dropped data due to their age")
 	}
 
 	req := &writev2.Request{
