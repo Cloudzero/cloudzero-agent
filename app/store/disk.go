@@ -64,7 +64,7 @@ type DiskStore struct {
 }
 
 // Just to make sure DiskStore implements the AppendableFiles interface
-var _ types.ReadableStore = (*DiskStore)(nil)
+var _ types.Store = (*DiskStore)(nil)
 
 // Just to make sure DiskStore implements the DiskMonitor interface
 var _ types.StoreMonitor = (*DiskStore)(nil)
