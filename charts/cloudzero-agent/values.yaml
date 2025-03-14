@@ -124,16 +124,16 @@ prometheusConfig:
   configMapNameOverride: ''
   configMapAnnotations: {}
   configOverride: ''
-  globalScrapeInterval: 120s
+  globalScrapeInterval: 60s
   scrapeJobs:
     # -- Enables the kube-state-metrics scrape job.
     kubeStateMetrics:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for kubeStateMetrics job
+      scrapeInterval: 60s  # Scrape interval for kubeStateMetrics job
     # -- Enables the cadvisor scrape job.
     cadvisor:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for nodesCadvisor job
+      scrapeInterval: 60s  # Scrape interval for nodesCadvisor job
     # -- Enables the prometheus scrape job.
     prometheus:
       enabled: true
