@@ -91,6 +91,38 @@ func TestDiskStore_Flush(t *testing.T) {
 	assert.Equal(t, 0, ps.Pending())
 }
 
+func TestDiskStore_FlushTimeout(t *testing.T) {
+	dirPath := t.TempDir()
+	rowLimit := 5
+
+	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit, MaxInterval: 50 * time.Millisecond})
+	assert.NoError(t, err)
+
+	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
+	mockClock := imocks.NewMockClock(initialTime)
+
+	// Add metrics and verify they are pending
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     "test_metric",
+		NodeName:       "node1",
+		CreatedAt:      mockClock.GetCurrentTime(),
+		TimeStamp:      mockClock.GetCurrentTime(),
+		Labels:         map[string]string{"label": "test"},
+		Value:          "123.45",
+	}
+	err = ps.Put(context.Background(), metric, metric)
+	assert.NoError(t, err)
+
+	// Wait for the flush to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify that all pending data has been written
+	assert.Equal(t, 0, ps.Pending())
+}
+
 func TestDiskStore_Compact(t *testing.T) {
 	// create a unique directory for each test
 	dirPath, err := os.MkdirTemp(t.TempDir(), "TestDiskStore_Compact_")

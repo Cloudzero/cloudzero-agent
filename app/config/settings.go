@@ -24,6 +24,7 @@ const (
 	DefaultCZRotateInterval         = 10 * time.Minute
 	DefaultDatabaseMaxRecords       = 1_500_000
 	DefaultDatabaseCompressionLevel = 8
+	DefaultDatabaseMaxInterval      = 10 * time.Minute
 	DefaultServerPort               = 8080
 	DefaultServerMode               = "http"
 )
@@ -55,9 +56,10 @@ type Logging struct {
 }
 
 type Database struct {
-	StoragePath      string `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
-	MaxRecords       int    `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
-	CompressionLevel int    `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
+	StoragePath      string        `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
+	MaxRecords       int           `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
+	CompressionLevel int           `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
+	MaxInterval      time.Duration `yaml:"max_interval" default:"10m" env:"MAX_INTERVAL" env-description:"maximum interval to wait before flushing metrics"`
 
 	PurgeRules PurgeRules `yaml:"purge_rules"`
 }
@@ -151,6 +153,9 @@ func (s *Settings) Validate() error {
 func (d *Database) Validate() error {
 	if d.MaxRecords <= 0 {
 		d.MaxRecords = DefaultDatabaseMaxRecords
+	}
+	if d.MaxInterval <= 0 {
+		d.MaxInterval = DefaultDatabaseMaxInterval
 	}
 	if _, err := os.Stat(d.StoragePath); os.IsNotExist(err) {
 		return errors.Wrap(err, "database storage path does not exist")

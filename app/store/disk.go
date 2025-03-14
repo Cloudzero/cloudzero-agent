@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/go-obvious/timestamp"
@@ -57,6 +58,8 @@ type DiskStore struct {
 	writer            *jwriter.Writer
 	arrayState        *jwriter.ArrayState
 	startTime         int64
+	maxInterval       time.Duration
+	ticker            *time.Ticker
 	mu                sync.Mutex
 
 	// internal metadata for the state of the disk store
@@ -74,6 +77,9 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 	if settings.MaxRecords <= 0 {
 		settings.MaxRecords = config.DefaultDatabaseMaxRecords
 	}
+	if settings.MaxInterval <= 0 {
+		settings.MaxInterval = config.DefaultDatabaseMaxInterval
+	}
 	if settings.CompressionLevel <= 0 || settings.CompressionLevel > brotli.BestCompression {
 		settings.CompressionLevel = config.DefaultDatabaseCompressionLevel
 	}
@@ -88,6 +94,8 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 		rowLimit:         settings.MaxRecords,
 		id:               uuid.New().String()[:8],
 		compressionLevel: settings.CompressionLevel,
+		maxInterval:      settings.MaxInterval,
+		ticker:           time.NewTicker(settings.MaxInterval),
 	}
 
 	// apply the opts
@@ -100,6 +108,16 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 	if err := store.newFileWriter(); err != nil {
 		return nil, err
 	}
+
+	go func() {
+		for {
+			select {
+			case <-store.ticker.C:
+				store.Flush()
+			}
+		}
+	}()
+
 	return store, nil
 }
 
@@ -164,6 +182,14 @@ func (d *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
 func (d *DiskStore) Flush() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
+	if d.rowCount == 0 {
+		log.Ctx(context.TODO()).Debug().Msg("no metrics to flush")
+		return nil
+	} else {
+		log.Ctx(context.TODO()).Debug().Int("count", d.rowCount).Msg("flushing metrics")
+	}
+
 	if err := d.flushUnlocked(); err != nil {
 		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to flush writer")
 		return err
@@ -172,6 +198,7 @@ func (d *DiskStore) Flush() error {
 		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to create new file writer")
 		return err
 	}
+
 	return nil
 }
 
@@ -209,6 +236,9 @@ func (d *DiskStore) flushUnlocked() error {
 	}
 	filename += fmt.Sprintf("_%d_%d.json.br", d.startTime, stopTime)
 
+	// Reset the ticker to the max interval
+	d.ticker.Reset(d.maxInterval)
+
 	// Rename the active file with start and stop timestamps
 	timestampedFilePath := filepath.Join(
 		d.dirPath,
@@ -229,6 +259,9 @@ func (d *DiskStore) flushUnlocked() error {
 
 // Pending returns the count of buffered rows not yet written to disk
 func (d *DiskStore) Pending() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	return d.rowCount
 }
 

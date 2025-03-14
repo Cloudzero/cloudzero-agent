@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
@@ -21,7 +20,6 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
 	"github.com/prometheus/prometheus/storage/remote"
-	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
@@ -79,10 +77,6 @@ type MetricCollector struct {
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
 func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
-	if s.Cloudzero.RotateInterval <= 0 {
-		s.Cloudzero.RotateInterval = config.DefaultCZRotateInterval
-	}
-
 	filter, err := NewMetricFilter(&s.Metrics)
 	if err != nil {
 		return nil, err
@@ -174,17 +168,8 @@ func (d *MetricCollector) Close() {
 
 // rotateCachePeriodically runs a background goroutine that flushes metrics at regular intervals.
 func (d *MetricCollector) rotateCachePeriodically(ctx context.Context) {
-	ticker := time.NewTicker(d.settings.Cloudzero.RotateInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
-		case <-ticker.C:
-			flushCtx, cancel := context.WithTimeout(ctx, d.settings.Cloudzero.RotateInterval)
-			if err := d.Flush(flushCtx); err != nil {
-				log.Ctx(ctx).Err(err).Msg("Error during flush")
-			}
-			cancel()
 		case <-ctx.Done():
 			// Perform a final flush before exiting
 			// flushCtx, cancel := context.WithTimeout(context.Background(), d.flushInterval)
