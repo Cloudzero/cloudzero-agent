@@ -63,7 +63,7 @@ type Database struct {
 }
 
 type PurgeRules struct {
-	MetricsOlderThan time.Duration `yaml:"metrics_older_than" default:"2160h" env:"PURGE_METRICS_OLDER_THAN" env-description:"The amount of time to keep metric information locally. Any file older than the duration specified here can be deleted to free up space on the disk"`
+	MetricsOlderThan time.Duration `yaml:"metrics_older_than" env-default:"2160h" env:"PURGE_METRICS_OLDER_THAN" env-description:"The amount of time to keep metric information locally. Any file older than the duration specified here can be deleted to free up space on the disk"`
 	Lazy             bool          `yaml:"lazy" default:"true" env:"PURGE_LAZY" env-description:"Whether to purge the files in lazy mode. In this mode, if the metrics are older than 'metrics_older_than' but there is no detected disk pressure, the older 'stale' metrics will be retained"`
 	Percent          int           `yaml:"percent" default:"20" env:"PURGE_PERCENT" env-description:"The percentage of files to remove from disk when critical disk pressure is detected. This is critical for ensuring the disk health is preserved"`
 }
