@@ -260,6 +260,12 @@ data:
     region: "{{ .Values.region }}"
     cluster_name: "{{ .Values.clusterName }}"
 
+    metrics:
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters" .Values.metricFilters.cost.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters" .Values.metricFilters.cost.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters" .Values.metricFilters.observability.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" .Values.metricFilters.observability.labels) | nindent 6 }}
+
     server:
       mode: http
       port: {{ .Values.aggregator.collector.port }}

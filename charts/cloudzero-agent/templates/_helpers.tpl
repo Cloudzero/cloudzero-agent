@@ -156,6 +156,35 @@ Combine metric lists
 {{- end -}}
 
 {{/*
+Generate metric filters
+*/}}
+{{- define "cloudzero-agent.generateMetricFilters" -}}
+{{- if ne 0 (add (len .filters.exact) (len .filters.additionalExact) (len .filters.prefix) (len .filters.additionalPrefix) (len .filters.suffix) (len .filters.additionalSuffix) (len .filters.contains) (len .filters.additionalContains) (len .filters.regex) (len .filters.additionalRegex)) }}
+{{ .name }}:
+{{- range $pattern := uniq (concat .filters.exact .filters.additionalExact) }}
+  - pattern: "{{ $pattern }}"
+    match: exact
+{{- end }}
+{{- range $pattern := uniq (concat .filters.prefix .filters.additionalPrefix) }}
+  - pattern: "{{ $pattern }}"
+    match: prefix
+{{- end }}
+{{- range $pattern := uniq (concat .filters.suffix .filters.additionalSuffix) }}
+  - pattern: "{{ $pattern }}"
+    match: suffix
+{{- end }}
+{{- range $pattern := uniq (concat .filters.contains .filters.additionalContains) }}
+  - pattern: "{{ $pattern }}"
+    match: contains
+{{- end }}
+{{- range $pattern := uniq (concat .filters.regex .filters.additionalRegex) }}
+  - pattern: "{{ $pattern }}"
+    match: regex
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Required metric labels
 */}}
 {{- define "cloudzero-agent.requiredMetricLabels" -}}
