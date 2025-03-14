@@ -616,6 +616,7 @@ aggregator:
     rotateInterval: 30m
   database:
     maxRecords: 1500000
+    maxInterval: 10m
     compressionLevel: 8
     purgeRules:
       metricsOlderThan: 2160h
