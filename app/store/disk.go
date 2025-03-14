@@ -315,8 +315,10 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 // GetUsage gathers disk usage stats using syscall.Statfs.
 // paths will be used as `filepath.Join(paths...)`
 func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+	fullpath := filepath.Join(paths...)
+	fullpath = filepath.Join(d.dirPath, fullpath)
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs("/", &stat); err != nil {
+	if err := syscall.Statfs(fullpath, &stat); err != nil {
 		return nil, err
 	}
 
