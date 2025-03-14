@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -35,6 +34,15 @@ const (
 	ObservabilityContentIdentifier = "observability"
 )
 
+type DiskStoreOpt = func(d *DiskStore) error
+
+func WithContentIdentifier(identifier string) DiskStoreOpt {
+	return func(d *DiskStore) error {
+		d.contentIdentifier = identifier
+		return nil
+	}
+}
+
 // DiskStore is a data store intended to be backed by a disk. Currently, data is stored in Brotli-compressed JSON, but transcoded to Snappy-compressed Parquet
 type DiskStore struct {
 	dirPath           string
@@ -56,13 +64,13 @@ type DiskStore struct {
 }
 
 // Just to make sure DiskStore implements the AppendableFiles interface
-var _ types.AppendableFiles = (*DiskStore)(nil)
+var _ types.Store = (*DiskStore)(nil)
 
 // Just to make sure DiskStore implements the DiskMonitor interface
 var _ types.StoreMonitor = (*DiskStore)(nil)
 
 // NewDiskStore initializes a DiskStore with a directory path and row limit
-func NewDiskStore(settings config.Database, contentIdentifier string) (*DiskStore, error) {
+func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, error) {
 	if settings.MaxRecords <= 0 {
 		settings.MaxRecords = config.DefaultDatabaseMaxRecords
 	}
@@ -75,16 +83,18 @@ func NewDiskStore(settings config.Database, contentIdentifier string) (*DiskStor
 		}
 	}
 
-	if contentIdentifier == "" {
-		contentIdentifier = CostContentIdentifier
+	store := &DiskStore{
+		dirPath:          settings.StoragePath,
+		rowLimit:         settings.MaxRecords,
+		id:               uuid.New().String()[:8],
+		compressionLevel: settings.CompressionLevel,
 	}
 
-	store := &DiskStore{
-		dirPath:           settings.StoragePath,
-		rowLimit:          settings.MaxRecords,
-		id:                uuid.New().String()[:8],
-		contentIdentifier: contentIdentifier,
-		compressionLevel:  settings.CompressionLevel,
+	// apply the opts
+	for _, opt := range opts {
+		if err := opt(store); err != nil {
+			return nil, fmt.Errorf("failed to apply the store option: %w", err)
+		}
 	}
 
 	if err := store.newFileWriter(); err != nil {
@@ -192,10 +202,17 @@ func (d *DiskStore) flushUnlocked() error {
 	// Capture stop time
 	stopTime := timestamp.Milli()
 
+	// create filename
+	filename := d.contentIdentifier
+	if filename == "" {
+		filename = "file"
+	}
+	filename += fmt.Sprintf("_%d_%d.json.br", d.startTime, stopTime)
+
 	// Rename the active file with start and stop timestamps
 	timestampedFilePath := filepath.Join(
 		d.dirPath,
-		fmt.Sprintf("%s_%d_%d.json.br", d.contentIdentifier, d.startTime, stopTime),
+		filename,
 	)
 	err := os.Rename(d.activeFilePath, timestampedFilePath)
 	if err != nil {
@@ -222,8 +239,13 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 	// add specified location
 	allPaths = append(allPaths, paths...)
 
+	base := d.contentIdentifier
+	if base == "" {
+		base = "*"
+	}
+
 	// add file filter
-	allPaths = append(allPaths, d.contentIdentifier+"_*_*.json.br")
+	allPaths = append(allPaths, base+"_*_*.json.br")
 
 	// list with glob find
 	pattern := filepath.Join(allPaths...)
@@ -233,12 +255,6 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 func (d *DiskStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
 	allPaths := []string{d.dirPath}
 	allPaths = append(allPaths, paths...)
-	for _, path := range allPaths {
-		basePath := filepath.Base(path)
-		if strings.HasPrefix(basePath, d.contentIdentifier) && strings.HasSuffix(basePath, ".json.br") {
-			allPaths = append(allPaths, path)
-		}
-	}
 	return os.ReadDir(filepath.Join(allPaths...))
 }
 
@@ -299,8 +315,10 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 // GetUsage gathers disk usage stats using syscall.Statfs.
 // paths will be used as `filepath.Join(paths...)`
 func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+	fullpath := filepath.Join(paths...)
+	fullpath = filepath.Join(d.dirPath, fullpath)
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs("/", &stat); err != nil {
+	if err := syscall.Statfs(fullpath, &stat); err != nil {
 		return nil, err
 	}
 

@@ -186,64 +186,67 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 	return m.metrics.Span("shipper_HandleReplayRequest", func() error {
 		log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size()).Msg("Handling replay request")
 
-		newFiles := []types.File{}
-		uploadedFiles := []types.File{}
-
-		walkFn := func(output *[]types.File, path string, info fs.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			// skip dir
-			if info.IsDir() {
-				return nil
-			}
-
-			// create a new types.File to compare the remote ids
-			storeFile, err := store.NewMetricFile(path)
-			if err != nil {
-				return errors.New("failed to create a new metric file")
-			}
-
-			// check for a match
-			if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
-				*output = append(*output, storeFile)
-			}
-
-			return nil
-		}
-
 		// fetch the new files that match these ids
+		newFiles := make([]types.File, 0)
 		if err := m.metrics.Span("shipper_HandleReplayRequest_listNewFiles", func() error {
-			for _, lister := range m.listers {
-				innerErr := lister.Walk("", func(path string, info fs.FileInfo, err error) error {
-					return walkFn(&newFiles, path, info, err)
-				})
-				if innerErr != nil {
-					return fmt.Errorf("failed to walk the directory: %w", innerErr)
+			return m.store.Walk("", func(path string, info fs.FileInfo, err error) error {
+				if err != nil {
+					return err
 				}
-			}
-			return nil
+
+				// skip dir
+				if info.IsDir() {
+					return nil
+				}
+
+				// create a new types.File to compare the remote ids
+				storeFile, err := store.NewMetricFile(path)
+				if err != nil {
+					return errors.New("failed to create a new metric file")
+				}
+
+				// check for a match
+				if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
+					newFiles = append(newFiles, storeFile)
+				}
+
+				return nil
+			})
 		}); err != nil {
 			return fmt.Errorf("failed to get matching new files: %w", err)
 		}
-		log.Ctx(m.ctx).Debug().Int("files", len(newFiles)).Msg("Found new files")
+		log.Ctx(m.ctx).Debug().Int("newFiles", len(newFiles)).Send()
 
 		// fetch the already uploadedFiles files that match these ids
+		uploadedFiles := make([]types.File, 0)
 		if err := m.metrics.Span("shipper_HandleReplayRequest_listUploadedFiles", func() error {
-			for _, lister := range m.listers {
-				innerErr := lister.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
-					return walkFn(&uploadedFiles, path, info, err)
-				})
-				if innerErr != nil {
-					return fmt.Errorf("failed to walk the directory: %w", innerErr)
+			return m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
+				if err != nil {
+					return err
 				}
-			}
-			return nil
+
+				// skip dir
+				if info.IsDir() {
+					return nil
+				}
+
+				// create a new types.File to compare the remote ids
+				storeFile, err := store.NewMetricFile(path)
+				if err != nil {
+					return errors.New("failed to create a new metric file")
+				}
+
+				// check for a match
+				if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
+					uploadedFiles = append(uploadedFiles, storeFile)
+				}
+
+				return nil
+			})
 		}); err != nil {
 			return fmt.Errorf("failed to get matching uploaded files: %w", err)
 		}
-		log.Ctx(m.ctx).Debug().Int("files", len(uploadedFiles)).Msg("Found uploaded files")
+		log.Ctx(m.ctx).Debug().Int("uploadedFiles", len(uploadedFiles)).Send()
 
 		// create a file array of all the files found to send to the remote
 		total := make([]types.File, 0)
@@ -255,20 +258,15 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		for _, item := range total {
 			found.Add(GetRemoteFileID(item))
 		}
-		log.Ctx(m.ctx).Info().Str("rr", rr.Filepath).Int("found", found.Size()).Int("total", rr.ReferenceIDs.Size()).Msg("Replay request")
+		log.Ctx(m.ctx).Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
 
 		// compare the results and discover which files were not found
 		missing := rr.ReferenceIDs.Diff(found)
 
 		// send abandon requests for the non-found files
 		if missing.Size() > 0 {
-			missingList := missing.List()
-			log.Ctx(m.ctx).Info().
-				Str("path", rr.Filepath).
-				Int("count", missing.Size()).
-				Interface("files", missingList).
-				Msg("Sending abandon request for missing files")
-			if err := m.AbandonFiles(missingList, "not found"); err != nil {
+			log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
+			if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
 				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to send the abandon file request: %w", err)
 			}

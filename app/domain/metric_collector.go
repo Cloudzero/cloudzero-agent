@@ -70,15 +70,15 @@ var (
 // MetricCollector is responsible for collecting and flushing metrics.
 type MetricCollector struct {
 	settings           *config.Settings
-	costStore          types.Appendable
-	observabilityStore types.Appendable
+	costStore          types.WritableStore
+	observabilityStore types.WritableStore
 	filter             *MetricFilter
 	clock              itypes.TimeProvider
 	cancelFunc         context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, costStore types.Appendable, observabilityStore types.Appendable) (*MetricCollector, error) {
+func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
 	if s.Cloudzero.RotateInterval <= 0 {
 		s.Cloudzero.RotateInterval = config.DefaultCZRotateInterval
 	}

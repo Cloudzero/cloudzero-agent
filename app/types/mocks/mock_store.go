@@ -11,6 +11,8 @@ package mocks
 
 import (
 	context "context"
+	os "os"
+	filepath "path/filepath"
 	reflect "reflect"
 
 	types "github.com/cloudzero/cloudzero-insights-controller/app/types"
@@ -42,7 +44,7 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // All mocks base method.
-func (m *MockStore) All(arg0 context.Context, arg1 *string) (types.MetricRange, error) {
+func (m *MockStore) All(arg0 context.Context, arg1 string) (types.MetricRange, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "All", arg0, arg1)
 	ret0, _ := ret[0].(types.MetricRange)
@@ -54,20 +56,6 @@ func (m *MockStore) All(arg0 context.Context, arg1 *string) (types.MetricRange, 
 func (mr *MockStoreMockRecorder) All(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "All", reflect.TypeOf((*MockStore)(nil).All), arg0, arg1)
-}
-
-// Delete mocks base method.
-func (m *MockStore) Delete(arg0 context.Context, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockStoreMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStore)(nil).Delete), arg0, arg1)
 }
 
 // Flush mocks base method.
@@ -84,19 +72,61 @@ func (mr *MockStoreMockRecorder) Flush() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockStore)(nil).Flush))
 }
 
-// Get mocks base method.
-func (m *MockStore) Get(arg0 context.Context, arg1 string) (*types.Metric, error) {
+// GetFiles mocks base method.
+func (m *MockStore) GetFiles(paths ...string) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
-	ret0, _ := ret[0].(*types.Metric)
+	varargs := []any{}
+	for _, a := range paths {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetFiles", varargs...)
+	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockStoreMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+// GetFiles indicates an expected call of GetFiles.
+func (mr *MockStoreMockRecorder) GetFiles(paths ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStore)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFiles", reflect.TypeOf((*MockStore)(nil).GetFiles), paths...)
+}
+
+// GetUsage mocks base method.
+func (m *MockStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range paths {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetUsage", varargs...)
+	ret0, _ := ret[0].(*types.StoreUsage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUsage indicates an expected call of GetUsage.
+func (mr *MockStoreMockRecorder) GetUsage(paths ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsage", reflect.TypeOf((*MockStore)(nil).GetUsage), paths...)
+}
+
+// ListFiles mocks base method.
+func (m *MockStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range paths {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListFiles", varargs...)
+	ret0, _ := ret[0].([]os.DirEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFiles indicates an expected call of ListFiles.
+func (mr *MockStoreMockRecorder) ListFiles(paths ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockStore)(nil).ListFiles), paths...)
 }
 
 // Pending mocks base method.
@@ -130,4 +160,18 @@ func (mr *MockStoreMockRecorder) Put(arg0 any, arg1 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockStore)(nil).Put), varargs...)
+}
+
+// Walk mocks base method.
+func (m *MockStore) Walk(loc string, process filepath.WalkFunc) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Walk", loc, process)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Walk indicates an expected call of Walk.
+func (mr *MockStoreMockRecorder) Walk(loc, process any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Walk", reflect.TypeOf((*MockStore)(nil).Walk), loc, process)
 }
