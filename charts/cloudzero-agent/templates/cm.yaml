@@ -277,6 +277,10 @@ data:
       storage_path: {{ .Values.aggregator.mountRoot }}/data
       max_records: {{ .Values.aggregator.database.maxRecords }}
       compression_level: {{ .Values.aggregator.database.compressionLevel }}
+      purge_rules:
+        metrics_older_than: {{ .Values.aggregator.database.purgeRules.metricsOlderThan }}
+        lazy: {{ .Values.aggregator.database.purgeRules.lazy }}
+        percent: {{ .Values.aggregator.database.purgeRules.percent }}
 
     cloudzero:
       api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}

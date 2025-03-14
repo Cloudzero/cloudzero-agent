@@ -617,6 +617,10 @@ aggregator:
   database:
     maxRecords: 1500000
     compressionLevel: 8
+    purgeRules:
+      metricsOlderThan: 2160h
+      lazy: true
+      percent: 20
   collector:
     port: 8080
     resources:
