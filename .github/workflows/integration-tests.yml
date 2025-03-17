@@ -38,3 +38,7 @@ jobs:
         # so the command only runs the single test for now.
       - name: Run integration tests
         run: make test-integration
+
+      # smoke tests hit alfa.
+      - name: Run smoke tests
+        run: make test-smoke
