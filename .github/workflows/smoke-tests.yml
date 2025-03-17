@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Smoke Tests
 
 on:
   pull_request:
@@ -33,8 +33,6 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-        # TODO: Currently the only real integration test is TestRemoteWrite.
-        # There's an issue with some of the other Tests running in a Linux container,
-        # so the command only runs the single test for now.
-      - name: Run integration tests
-        run: make test-integration
+      # smoke tests hit alfa.
+      - name: Run smoke tests
+        run: make test-smoke

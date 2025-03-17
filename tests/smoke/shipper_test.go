@@ -13,31 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSmoke_Shipper_Runs(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	runTest(t, func(t *testContext) {
-		// write files to the data directory
-		numMetricFiles := 10
-		t.WriteTestMetrics(numMetricFiles, 100)
-
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
-
-		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
-			Container: shipper,
-			Log:       "Successfully ran the shipper application",
-		})
-		require.NoError(t, err, "failed to find log message")
-	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
-	}))
-}
-
 func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

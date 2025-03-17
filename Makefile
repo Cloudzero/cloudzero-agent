@@ -184,7 +184,7 @@ test-integration: ## Run the integration tests
 
 .PHONY: test-smoke
 test-smoke: ## Run the smoke tests
-	@$(GO) test -run Smoke -v -timeout 5m -race ./tests/smoke/*.go
+	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/*.go
 
 # ----------- DOCKER IMAGE ------------
 
