@@ -20,6 +20,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/sqlite"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog/log"
 )
 
 // remoteWriteStatsOnce is used to ensure that the initialization of remote write statistics
@@ -95,14 +96,16 @@ func (r *resourceRepoImpl) Create(ctx context.Context, it *types.ResourceTags) e
 
 	err := r.DB(ctx).
 		Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
+			Columns:   []clause.Column{{Name: "type"}, {Name: "name"}, {Name: "namespace"}},
+			DoNothing: true,
 		}).Create(it).Error
 	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("storage write create failure")
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "create",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
-			"name":          it.Name,
+			"resource_name": it.Name,
 		}).Inc()
 		return core.TranslateError(err)
 	}
@@ -176,11 +179,12 @@ func (r *resourceRepoImpl) Update(ctx context.Context, it *types.ResourceTags) e
 	if err := r.DB(ctx).Model(it).
 		Where("id = ?", it.ID).
 		Updates(updates).Error; err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("storage write update failure")
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "update",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
-			"name":          it.Name,
+			"resource_name": it.Name,
 		}).Inc()
 		return core.TranslateError(err)
 	}
