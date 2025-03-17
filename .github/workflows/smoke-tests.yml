@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  integration-tests:
+  smoke-tests:
     runs-on: ubuntu-latest
 
     # references local file ".secrets"
@@ -26,9 +26,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
-      - name: Print environment variables
-        run: env
 
       - name: Install dependencies
         run: go mod tidy

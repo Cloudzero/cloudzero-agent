@@ -27,9 +27,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Print environment variables
-        run: env
-
       - name: Install dependencies
         run: go mod tidy
 
