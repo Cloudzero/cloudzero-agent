@@ -3,16 +3,24 @@
 
 package build
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/go-obvious/server"
+)
 
 var (
 	AppName          = "cloudzero-insight-controller"
 	AuthorName       = "Cloudzero"
 	ChartsRepo       = "cloudzero-charts"
 	AuthorEmail      = "support@cloudzero.com"
-	Copyright        = "© 2024 Cloudzero, Inc."
+	Copyright        = "© 2024-2025 Cloudzero, Inc."
 	PlatformEndpoint = "https://api.cloudzero.com"
 )
+
+func Version() *server.ServerVersion {
+	return &server.ServerVersion{Revision: Rev, Tag: Tag, Time: Time}
+}
 
 func GetVersion() string {
 	return fmt.Sprintf("%s.%s.%s-%s", AppName, Rev, Tag, Time)

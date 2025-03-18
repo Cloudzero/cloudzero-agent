@@ -26,7 +26,7 @@ func setLoggingOptions(l *Logging) {
 	case "error":
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	default:
-		log.Warn().Msgf("Unknown log level %s, defaulting to info", l.Level)
+		log.Warn().Str("level", l.Level).Msg("Unknown log level, defaulting to info")
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 }

@@ -75,3 +75,7 @@ cosign.pub
 __pycache__/
 *.py[cod]
 *$py.class
+
+# drawio temp files
+*.drawio.bkp
+*.drawio.dtmp

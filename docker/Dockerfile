@@ -16,7 +16,7 @@ RUN cat /etc/passwd | grep nobody > /etc/passwd_nobody
 # Copy the Go module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download \
-    && apk add zig
+    && apk add build-base git make zig
 
 # Copy the source code
 COPY . .
@@ -32,22 +32,7 @@ ARG BUILD_TIME=unknown
 # LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        CCTARGET='zig cc -target x86_64-linux-musl' CXXTARGET='zig c++ -target x86_64-linux-musl'; \
-    else \
-        CCTARGET='zig cc -target aarch64-linux-musl' CXXTARGET='zig c++ -target aarch64-linux-musl'; \
-    fi \
-    && CGO_ENABLED=1 \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    CC=$CCTARGET \
-    CXX=$CXXTARGET \
-    go build \
-    -mod=readonly \
-    -trimpath \
-    -ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}" \
-    -tags 'netgo osusergo' \
-    -o /go/bin/cloudzero-insights-controller \
-    cmd/cloudzero-insights-controller/main.go
+RUN make build OUTPUT_BIN_DIR=/go/bin TARGETOS=$TARGETOS TARGETARCH=$TARGETARCH ENABLE_ZIG=true REPO_NAME=${REPO_NAME} BUILD_TIME=${BUILD_TIME} REVISION=${REVISION} TAG=${TAG}
 
 # Stage 2: Access current certs
 FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
@@ -82,8 +67,11 @@ VOLUME [ "/app/config" ]
 ENV PATH=/app:$PATH
 
 # Copy the Go binary from the builder stage
+COPY --from=builder /go/bin/cloudzero-insights-controller /app/cloudzero-insights-controller
 COPY --from=builder /go/bin/cloudzero-insights-controller /app/controller
+COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
+COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command
-CMD ["/app/controller"]
+CMD ["/app/cloudzero-insights-controller"]

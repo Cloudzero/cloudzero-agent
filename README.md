@@ -6,11 +6,15 @@
 
 <img src="./docs/assets/deployment.png" alt="deployment" width="700">
 
-The `CloudZero Insights Controller` provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis.
+This repository contains several applications to support Kubernetes integration with the CloudZero platform, including:
 
-## ⚡ Getting Started
+- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis.
+- _CloudZero Collector_ - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
+- _CloudZero Shipper_ - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
 
-The easiest way to get started it by using the [cloudzero-insights helm chart](https://github.com/Cloudzero/cloudzero-charts).
+## ⚡ Getting Started With CloudZero Insights Controller
+
+The easiest way to get started with the _CloudZero Insights Controller_ is by using the `cloudzero-agent` Helm chart from the [cloudzero-charts repository](https://github.com/Cloudzero/cloudzero-charts).
 
 ### Installation
 
@@ -55,9 +59,238 @@ make undeploy-admission-controller
 make undeploy-test-app
 ```
 
+## Getting Started With CloudZero Collector & Shipper
+
+## DEPLOY QUICK START
+
+The commands below assume several environment variables are set:
+
+- `CZ_DEV_API_TOKEN` - the API token for the CloudZero development environment
+- `AWS_REGION` - the AWS region to use (e.g., us-east-1)
+- `AWS_ACCOUNT_ID` - the AWS account ID to use (e.g., 123456789012). `aws sts get-caller-identity` can be used to find this easily.
+- `EKS_CLUSTER_NAME` - the name of the EKS cluster to use (e.g., `my-cluster`). See [CloudZero's internal documentation](https://cloudzero.atlassian.net/wiki/spaces/ENG/pages/3817930756/Creating+an+Cluster+using+EKS) for information about our naming convention.
+- `KUBE_NAMESPACE` - the Kubernetes namespace to use (e.g., `default`)
+- `GITHUB_USERNAME` - your GitHub username
+- `GITHUB_TOKEN` - a personal access token with read access to the repository on GitHub
+- `GITHUB_EMAIL` - your GitHub email address
+
+### **Step 1: Create an Amazon EKS Cluster**
+
+We'll use `eksctl` to create a new EKS cluster.
+
+Run the following command to create the cluster:
+
+```bash
+eksctl create cluster \
+  --name "$EKS_CLUSTER_NAME" \
+  --region "$AWS_REGION" \
+  --with-oidc \
+  --nodegroup-name ng-1 \
+  --node-type t3.small \
+  --nodes 2 \
+  --nodes-min 2 \
+  --nodes-max 8 \
+  --node-ami-family Bottlerocket
+```
+
+> **Note**: This process may take several minutes to complete. Once finished, `kubectl` will be configured to interact with your new cluster.
+
+Once that is finished, you'll want to connect `kubectl` to your new cluster:
+
+```bash
+aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+```
+
+---
+
+### **Step 2: Install External Secrets Operator**
+
+Next use Helm to install the External Secrets Operator into your cluster.
+
+1. **Add the External Secrets Helm Repository**
+
+   ```bash
+   helm repo add external-secrets https://charts.external-secrets.io
+   helm repo update
+   ```
+
+2. **Install the Operator Using Helm**
+
+   ```bash
+   helm install external-secrets external-secrets/external-secrets \
+     --namespace external-secrets --create-namespace
+   ```
+
+---
+
+### **Step 3: Create a Secret in AWS Secrets Manager**
+
+We'll create a secret in AWS Secrets Manager that we want to sync to Kubernetes.
+
+1. **Create the Secret**
+
+   ```bash
+   aws secretsmanager create-secret \
+     --region "$AWS_REGION" \
+     --name "dev/cloudzero-secret-api-key-$EKS_CLUSTER_NAME" \
+     --secret-string "{\"apiToken\":\"$CZ_DEV_API_TOKEN\"}"
+   ```
+
+---
+
+### **Step 4: Configure IAM Roles for Service Accounts (IRSA)**
+
+To allow the operator to securely access AWS Secrets Manager, we'll use IAM Roles for Service Accounts.
+
+1. **Enable and Associate the OIDC Provider**
+
+   If you haven't enabled the OIDC provider for your cluster, run:
+
+   ```bash
+   eksctl utils associate-iam-oidc-provider --cluster "$EKS_CLUSTER_NAME" --approve
+   ```
+
+2. **Create the IAM Policy**
+
+   Run:
+
+   ```bash
+   aws iam create-policy \
+     --policy-name ExternalSecretsPolicy \
+     --policy-document file://cluster/deployments/cloudzero-secrets/external-secrets-policy.json
+   ```
+
+3. **Create the IAM Service Account Using `eksctl`**
+
+   ```bash
+   eksctl create iamserviceaccount \
+     --name external-secrets-irsa-"$EKS_CLUSTER_NAME" \
+     --namespace $KUBE_NAMESPACE \
+     --cluster "$EKS_CLUSTER_NAME" \
+     --role-name external-secrets-irsa-role-"$EKS_CLUSTER_NAME" \
+     --attach-policy-arn arn:aws:iam::"$AWS_ACCOUNT_ID":policy/ExternalSecretsPolicy \
+     --approve \
+     --override-existing-serviceaccounts
+   ```
+
+Note that internally this will create a CloudFormation stack with the name "external-secrets-irsa-role-$EKS_CLUSTER_NAME". If you need to update this command for whatever reason and try again, you'll need to delete the stack first.
+
+4. **Verify the Service Account Creation**
+
+   ```bash
+   kubectl get serviceaccount external-secrets-irsa-"$EKS_CLUSTER_NAME" -n $KUBE_NAMESPACE -o yaml
+   ```
+
+---
+
+### **Step 5: Deployment the Cloudzero Collector Application Set**
+
+1. **Build the Container Images**
+
+   ```bash
+   make package
+   ```
+
+2. **Make the `cloudzero` namespace**
+
+   ```bash
+   kubectl create namespace $KUBE_NAMESPACE
+   ```
+
+3. **Configure a secret so EKS can pull from GHCR**
+
+   Since this repo is currently private, you'll need to configure a secret so EKS can pull from GHCR.
+
+   First, you'll need to generate a personal access token with read access to the repository on GitHub.
+
+   Once you have your PAT, create a secret in the cluster for it:
+
+   ```bash
+   kubectl create secret docker-registry ghcr-secret \
+     -n $KUBE_NAMESPACE \
+     --docker-server=ghcr.io \
+     --docker-username=$GITHUB_USERNAME \
+     --docker-password=$GITHUB_TOKEN \
+     --docker-email=$GITHUB_EMAIL
+   ```
+
+4. **Deploy the Development Helm Chart**
+
+   There is a helm chart in the `helm` directory that can be used to deploy the collector and shipper with relative ease.
+
+   First, you'll want to create an overrides.yaml file that looks something like this (but with your own data):
+
+   ```yaml
+   imagePullSecrets:
+     - name: ghcr-secret
+
+   clusterName: eks-test-cirrus-evan
+   csp:
+     region: us-east-1
+     accountId: "975482786146"
+
+   image:
+     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+     tag: dev-58222f7abd1a22aa0e15fd0b5e87cf59c4f8ff91
+     pullPolicy: Always
+   ```
+
+   Then, you can deploy the helm chart with the following command:
+
+   ```bash
+   helm install -n $KUBE_NAMESPACE cz-controller ./helm -f overrides.yaml
+   ```
+
+### **Step 6: Deploy Federated Cloudzero Agent**
+
+1. **Deploy the Federated Cloudzero Agent**
+
+   ```bash
+   kubectl apply  -f app/manifests/prometheus-federated/deployment.yml
+   ```
+
+---
+
+### Debugging
+
+The applications are based on a scratch container, so no shell is available. The container images are less than 8MB.
+
+To monitor the data directory, you must deploy a `debug` container as follows:
+
+1. **Deploy a debug container**
+
+   ```bash
+   kubectl apply  -f cluster/deployments/debug/deployment.yaml
+   ```
+
+2. **Attach to the shell of the debug container**
+
+   ```bash
+   kubectl exec -it temp-shell -- /bin/sh
+   ```
+
+   To inspect the data directory, `cd /cloudzero/data`
+
+---
+
+### **Clean Up**
+
+```bash
+eksctl delete cluster -f cluster/cluster.yaml --disable-nodegroup-eviction
+```
+
+## Collector & Shipper Architecture
+
+![](./docs/assets/overview.png)
+
+This project provides a collector application, written in golang, which provides two applications:
+
+- `Collector` - the collector application exposes a prometheus remote write API which can receive POST requests from prometheus in either v1 or v2 encoded format. It decodes the messages, then writes them to the `data` directory as parquet files with snappy compression.
+- `Shipper` - the shipper application watches the data directory looking for completed parquet files on a regular interval (eg. 10 min), then will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used to upload the file. The application has the ability to compress the files before sending them to S3.
+
 ## Message Format
 
-The output of this application is a JSON object that represents `cloudzero` metrics, which is POSTed to the CloudZero remote write API. The format of these objects is based on the Prometheus `Timeseries` protobuf message, defined [here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130). Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
+The output of the _CloudZero Insights Controller_ application is a JSON object that represents `cloudzero` metrics, which is POSTed to the CloudZero remote write API. The format of these objects is based on the Prometheus `Timeseries` protobuf message, defined [here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130). Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
 
 There are four kinds of objects that can be sent:
 

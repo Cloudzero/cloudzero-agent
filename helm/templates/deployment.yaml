@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      imagePullSecrets: {{ include "toList" .Values.imagePullSecrets }}
+      initContainers:
+        - name: wait-for-secret
+          image: busybox
+          command: ['sh', '-c', 'until test -f /cloudzero/secret/apiToken; do echo "waiting for secret"; sleep 2; done']
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+      containers:
+        - name: collector
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          command: ["/app/cloudzero-collector", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+
+        - name: shipper
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/cloudzero-shipper", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /cloudzero/secret
+              readOnly: true
+            - name: config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: "{{ include "helm.fullname" . }}"
+        - name: secret-volume
+          secret:
+            secretName: "{{ include "helm.fullname" . }}"
+        - name: persistent-storage
+          emptyDir: {}
