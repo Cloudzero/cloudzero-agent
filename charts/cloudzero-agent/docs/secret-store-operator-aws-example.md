@@ -321,7 +321,7 @@ We'll now use the synced secret in deploying the CloudZero agent.
 
    existingSecretName: cloudzero-secret-api-key
 
-   server:
+   serverConfig:
      containerSecretFileName: apiToken
    ```
 

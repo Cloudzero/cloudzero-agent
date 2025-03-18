@@ -303,6 +303,29 @@ metricFilters:
         - remote_write_response_codes_total
         - remote_write_timeseries_total
         - storage_write_failure_total
+        # shipper
+        - function_execution_seconds
+        - shipper_shutdown_total
+        - shipper_new_files_error_total
+        - shipper_new_files_processing_current
+        - shipper_handle_request_file_count
+        - shipper_handle_request_success_total
+        - shipper_presigned_url_error_total
+        - shipper_replay_request_total
+        - shipper_replay_request_current
+        - shipper_replay_request_file_count
+        - shipper_replay_request_error_total
+        - shipper_replay_request_abandon_files_total
+        - shipper_replay_request_abandon_files_error_total
+        - shipper_disk_total_size_bytes
+        - shipper_current_disk_usage_bytes
+        - shipper_current_disk_usage_percentage
+        - shipper_current_disk_unsent_file
+        - shipper_current_disk_sent_file
+        - shipper_disk_replay_request_current
+        - shipper_disk_cleanup_failure_total
+        - shipper_disk_cleanup_success_total
+        - shipper_disk_cleanup_percentage
       prefix: []
       suffix: []
       contains: []
@@ -328,16 +351,16 @@ prometheusConfig:
   configMapNameOverride: ''
   configMapAnnotations: {}
   configOverride: ''
-  globalScrapeInterval: 120s
+  globalScrapeInterval: 60s
   scrapeJobs:
     # -- Enables the kube-state-metrics scrape job.
     kubeStateMetrics:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for kubeStateMetrics job
+      scrapeInterval: 60s  # Scrape interval for kubeStateMetrics job
     # -- Enables the cadvisor scrape job.
     cadvisor:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for nodesCadvisor job
+      scrapeInterval: 60s  # Scrape interval for nodesCadvisor job
     # -- Enables the prometheus scrape job.
     prometheus:
       enabled: true
@@ -364,6 +387,7 @@ initBackfillJob:
   #   tag: 0.1.1
   #   pullPolicy: Always
   enabled: true
+  ttlSecondsAfterFinished: 180
 
 # -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
 # initScrapeJob:
@@ -383,6 +407,12 @@ initCertJob:
     repository: bitnami/kubectl
     pullPolicy: Always
     tag: "1.32.0"
+  rbac:
+    create: true
+    serviceAccountName: ""
+    clusterRoleName: ""
+    clusterRoleBindingName: ""
+  ttlSecondsAfterFinished: 5
 
 kubeStateMetrics:
   enabled: true
@@ -518,7 +548,7 @@ insightsController:
     # imagePullSecrets: []
     image:
       repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-      tag: 0.1.1
+      tag: 0.1.2
       pullPolicy: Always
     port: 8443
     read_timeout: 10s
@@ -537,12 +567,12 @@ insightsController:
       timeoutSeconds: 3
       successThreshold: 1
       failureThreshold: 5
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
   volumeMounts: []
   volumes: []
   resources: {}
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
   podAnnotations: {}
   podLabels: {}
   service:
@@ -600,27 +630,71 @@ configmapReload:
     containerSecurityContext: {}
     resources: {}
 
+# The aggregator provides an intermediary between the CloudZero Agent and the CloudZero API.
+# It is composed of two applications, the collector and the shipper.
+
+# The collector application provides an endpoint for the CloudZero Agent to write metrics to.
+# It filters out any unwanted metrics as it receives them, aggregates the wanted metrics,
+# and stores them in a compressed format on disk until they are ready to be uploaded to the
+# CloudZero servers. Once the collector has aggregated sufficient metrics (or a given amount of time has elapsed)
+# the data is sent to the shipper.
+
+# The shipper will process the completed metrics files and push them to the remote server.
+# It will also handle any requests from the server to re-send any missing or incomplete data,
+# ensuring that there is no data loss in the event of any loss of communication with the CloudZero API,
+# even when a misconfiguration (such as an incorrect API key) prevents it.
 aggregator:
   enabled: false
   replicas: 1
   logging:
+    # Logging level that will be posted to stdout.
+    # Valid values are: 'debug', 'info', 'warn', 'error'
     level: info
+  # Top-level directory containing CloudZero data. There will be subdirectories for configuration (the mounted ConfigMap)
+  # and the API key (typically a mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
+  # This value is really only visible internally in the container, so you shouldn't generally need to change it.
+  # Set `aggregator.database.purgeRules` to control the cleanup behavior of this directory
   mountRoot: /cloudzero
   image:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-    tag: latest
+    tag: dev-4873c0e350d9f46363a22521000c04ff98119ed9
     pullPolicy: IfNotPresent
   cloudzero:
+    # Interval between attempts to ship metrics to the remote endpoint.
     sendInterval: 1m
-    sendTimeout: 10s
+    # Max time the aggregator will spend attempting to ship metrics to the remote endpoint.
+    sendTimeout: 30s
     rotateInterval: 30m
   database:
+    # Max number of records per file. Use this to adjust file sizes uploaded to the server. The default value is good in most cases.
     maxRecords: 1500000
+    # Max interval to flush a metrics file. This is mostly useful for smaller clusters with little activity.
     maxInterval: 10m
+    # Compression level to use when compressing metrics files on-disk.
+    # Valid value range from 0-11, with higher values yielding improved compression ratios
+    # at the expense of speed and memory usage.
+    # Read more about brotli compression here: https://github.com/google/brotli/blob/master/c/tools/brotli.md#options
     compressionLevel: 8
+    # The rules that the application will follow in respect to cleaning up old files that have been uploaded to the
+    # Cloudzero platform.
+    # Generally, the defaults will be okay for the majority of use cases. But, the options are here for more advanced
+    # users to optimize disk usage. For example, the default case is to keep uploaded files around for 90 days, as this
+    # falls in line with most customer's data tolerance policies. But, if deployed on a more active and/or larger cluster,
+    # this value can be lowered to keep disk usage lower with the tradeoff of less data-retention. Regardless of what you
+    # define here if there is disk pressure detected, files will be deleted (oldest first) to free space.
     purgeRules:
+      # How long to keep uploaded files. This option can be useful to optimize the storage required by the collector/shipper
+      # architecture on your nodes.
+      # `2160h` is 90 days, and is a reasonable default. This can reasonably be any value, as the application will force
+      # remove files if space is constrained.
+      # `0s` is also a valid option and can signify that you do not want to keep uploaded files at all. Though do note
+      # that this could possibly result in data loss if there are transient upload failures during the lifecycle of the application.
       metricsOlderThan: 2160h
+      # If set to true (default), then files older than `metricsOlderThan` will not be deleted unless there is detected storage pressure.
+      # For example, if there are files older than `metricsOlderThan` but only 30% of storage space is used, the files will not be deleted.
       lazy: true
+      # This controls the percentage of files the application will remove when there is critical storage pressure.
+      # This is defined by >95% of storage usage.
       percent: 20
   collector:
     port: 8080

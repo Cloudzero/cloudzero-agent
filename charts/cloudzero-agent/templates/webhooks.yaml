@@ -12,7 +12,7 @@ metadata:
   {{- include "cloudzero-agent.webhooks.annotations" $ | nindent 2 }}
 webhooks:
   - name: {{ include "cloudzero-agent.validatingWebhookName" $ }}
-    namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector }}
+    namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector | nindent 6 }}
     failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE" ]
