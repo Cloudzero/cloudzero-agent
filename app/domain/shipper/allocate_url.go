@@ -83,7 +83,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		q.Add("cloud_account_id", m.setting.CloudAccountID)
 		q.Add("cluster_name", m.setting.ClusterName)
 		q.Add("region", m.setting.Region)
-		q.Add("shipperId", shipperID)
+		q.Add("shipper_id", shipperID)
 		req.URL.RawQuery = q.Encode()
 
 		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Requesting presigned URLs")

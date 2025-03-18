@@ -27,6 +27,12 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 			return errors.New("cannot send in an empty slice")
 		}
 
+		// get the shipper id
+		shipperID, err := m.GetShipperID()
+		if err != nil {
+			return fmt.Errorf("failed to get the shipper id: %w", err)
+		}
+
 		// create the body
 		body := make([]*AbandonAPIPayloadFile, len(referenceIDs))
 		for i, item := range referenceIDs {
@@ -56,6 +62,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		// Set necessary headers
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
+		req.Header.Set(shipperIDRequestHeader, shipperID)
 
 		// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 		q := req.URL.Query()
@@ -63,6 +70,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		q.Add("cluster_name", m.setting.ClusterName)
 		q.Add("cloud_account_id", m.setting.CloudAccountID)
 		q.Add("region", m.setting.Region)
+		q.Add("shipper_id", shipperID)
 		req.URL.RawQuery = q.Encode()
 
 		log.Ctx(m.ctx).Info().Int("numFiles", len(referenceIDs)).Str("url", req.URL.String()).Msg("Abandoning files")
