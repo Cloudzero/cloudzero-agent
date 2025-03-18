@@ -7,6 +7,8 @@
 FROM --platform=$BUILDPLATFORM golang:1.23-alpine3.20 AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
+ARG REPO_NAME=cloudzero-insights-controller
+
 # Set the working directory inside the container
 WORKDIR /app
 
@@ -32,7 +34,12 @@ ARG BUILD_TIME=unknown
 # LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
-RUN make build OUTPUT_BIN_DIR=/go/bin TARGETOS=$TARGETOS TARGETARCH=$TARGETARCH ENABLE_ZIG=true REPO_NAME=${REPO_NAME} BUILD_TIME=${BUILD_TIME} REVISION=${REVISION} TAG=${TAG}
+RUN make build OUTPUT_BIN_DIR=/go/bin \
+    TARGETOS=$TARGETOS TARGETARCH=$TARGETARCH \
+    ENABLE_ZIG=true \
+    REPO_NAME=${REPO_NAME} \
+    BUILD_TIME=${BUILD_TIME} \
+    REVISION=${REVISION} TAG=${TAG}
 
 # Stage 2: Access current certs
 FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
