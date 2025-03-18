@@ -17,6 +17,16 @@ OUTPUT_BIN_DIR ?= bin
 TARGETOS   ?= $(shell go env GOOS)
 TARGETARCH ?= $(shell go env GOARCH)
 
+# Need to use the correct names for the musl libs - which don't conform to the TARGETARCH values
+# SEE: https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63
+ifeq ($(TARGETARCH),amd64)
+ZIG_ARCH ?= x86_64
+else ifeq ($(TARGETARCH),arm64)
+ZIG_ARCH ?= aarch64
+else
+ZIG_ARCH ?= $(TARGETARCH)
+endif
+
 # Dependency executables
 #
 # These are dependencies that are expected to be installed system-wide. For
@@ -136,8 +146,8 @@ analyze: ## Run static analysis
 build: ## Build the binaries
 
 ifeq ($(ENABLE_ZIG),true)
-CCTARGET  ?= "zig cc  -target $(TARGETARCH)-$(TARGETOS)"
-CXXTARGET ?= "zig c++ -target $(TARGETARCH)-$(TARGETOS)"
+CCTARGET  ?= "zig cc  -target $(ZIG_ARCH)-$(TARGETOS)-musl"
+CXXTARGET ?= "zig c++ -target $(ZIG_ARCH)-$(TARGETOS)-musl"
 endif
 
 define generate-go-command-target
@@ -146,12 +156,12 @@ build: build-$1
 build-$1:
 	mkdir -p bin && \
 	GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) \
-	CCTARGET=$(CCTARGET) CXXTARGET=$(CXXTARGET) \
+	CC=$(CCTARGET) CXX=$(CXXTARGET) \
+	CGO_ENABLED=1 \
 	go build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Tag=${TAG}" \
-		-ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}" \
+		-ldflags="-s -w -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Tag=${TAG} -s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}" \
 		-tags 'netgo osusergo' \
 		-o ${OUTPUT_BIN_DIR}/$1 \
 		./cmd/$1/
