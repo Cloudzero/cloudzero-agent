@@ -142,6 +142,18 @@ data:
             regex: "^({{ join "|" .Values.insightsMetrics }})$"
             action: keep
       {{- end }}
+      {{- if and .Values.aggregator.enabled  .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
+      - job_name: cloudzero-aggregator-job
+        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
+        static_configs:
+          - targets:
+            - {{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+        metrics_path: /metrics
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^({{ join "|" .Values.aggregatorMetrics }})$"
+            action: keep
+      {{- end }}
       {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
       - job_name: static-prometheus
         scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
@@ -159,7 +171,11 @@ data:
       {{- end}}
   {{- end}}
     remote_write:
-      - url: 'https://{{ include "cloudzero-agent.cleanString" .Values.host }}/v1/container-metrics?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
+      {{ if .Values.aggregator.enabled }}
+      - url: 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
+      {{ else }}
+      - url: '{{ .Values.scheme }}://{{ include "cloudzero-agent.cleanString" .Values.host }}{{ .Values.endpoint }}?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
+      {{ end }}
         authorization:
           credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
         write_relabel_configs:
@@ -232,3 +248,44 @@ data:
       annotations:
         {{- .Values.insightsController.annotations | toYaml | nindent 8 }}
 {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  config.yml: |-
+    cloud_account_id: "{{ .Values.cloudAccountId }}"
+    region: "{{ .Values.region }}"
+    cluster_name: "{{ .Values.clusterName }}"
+
+    metrics:
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters" .Values.metricFilters.cost.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters" .Values.metricFilters.cost.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters" .Values.metricFilters.observability.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" .Values.metricFilters.observability.labels) | nindent 6 }}
+
+    server:
+      mode: http
+      port: {{ .Values.aggregator.collector.port }}
+
+    logging:
+      level: "{{ .Values.aggregator.logging.level }}"
+
+    database:
+      storage_path: {{ .Values.aggregator.mountRoot }}/data
+      max_records: {{ .Values.aggregator.database.maxRecords }}
+      max_interval: {{ .Values.aggregator.database.maxInterval }}
+      compression_level: {{ .Values.aggregator.database.compressionLevel }}
+      purge_rules:
+        metrics_older_than: {{ .Values.aggregator.database.purgeRules.metricsOlderThan }}
+        lazy: {{ .Values.aggregator.database.purgeRules.lazy }}
+        percent: {{ .Values.aggregator.database.purgeRules.percent }}
+
+    cloudzero:
+      api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
+      send_interval: {{ .Values.aggregator.cloudzero.sendInterval }}
+      send_timeout: {{ .Values.aggregator.cloudzero.sendTimeout }}
+      rotate_interval: {{ .Values.aggregator.cloudzero.rotateInterval }}
+      host: {{ .Values.host }}

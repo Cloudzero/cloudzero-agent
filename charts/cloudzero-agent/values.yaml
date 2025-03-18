@@ -117,8 +117,235 @@ prometheusMetrics:
   - prometheus_target_scrape_pools_total
   - prometheus_target_sync_failed_total
   - prometheus_target_sync_length_seconds
+aggregatorMetrics:
+  - go_gc_duration_seconds
+  - go_gc_duration_seconds_count
+  - go_gc_duration_seconds_sum
+  - go_gc_gogc_percent
+  - go_gc_gomemlimit_bytes
+  - go_goroutines
+  - go_memstats_alloc_bytes
+  - go_memstats_heap_alloc_bytes
+  - go_memstats_heap_idle_bytes
+  - go_memstats_heap_inuse_bytes
+  - go_memstats_heap_objects
+  - go_memstats_last_gc_time_seconds
+  - go_memstats_alloc_bytes
+  - go_memstats_stack_inuse_bytes
+  - go_threads
+  - http_request_duration_seconds_bucket
+  - http_request_duration_seconds_count
+  - http_request_duration_seconds_sum
+  - http_requests_total
+  - prometheus_remote_storage_exemplars_in_total
+  - prometheus_remote_storage_histograms_in_total
+  - prometheus_remote_storage_samples_in_total
+  - prometheus_remote_storage_string_interner_zero_reference_releases_total
+  - promhttp_metric_handler_requests_in_flight
+  - promhttp_metric_handler_requests_total
 # -- Any items added to this array will be added to the metrics that are sent to CloudZero, in addition to the minimal labels that CloudZero requires.
 additionalMetricLabels: []
+
+# metricFilters is used to determine which metrics are sent to CloudZero, as
+# well as whether they are considered to be cost metrics or observability
+# metrics.
+#
+# There are two sets of filters for each type (cost/observability): name and
+# labels. The name filters are applied to the name to determine whether the
+# metric should be included in the relevant output. If it is to be included, the
+# relevant labels filters are applied to each label to determine whether the
+# label should be included.
+#
+# In the event that there are no filters, the subject is always assumed to
+# match.
+#
+# Note that for each match type (exact, prefix, suffix, contains, regex) there
+# is an "additional..." property. This is to allow you to supply supplemental
+# filters without clobbering the defaults. In general, the "additional..."
+# properties should be used in your overrides file, and the unprefixed versions
+# should be left alone.
+metricFilters:
+  cost:
+    name:
+      exact:
+        - container_cpu_usage_seconds_total
+        - container_memory_working_set_bytes
+        - container_network_receive_bytes_total
+        - container_network_transmit_bytes_total
+        - kube_node_info
+        - kube_node_status_capacity
+        - kube_pod_container_resource_limits
+        - kube_pod_container_resource_requests
+        - kube_pod_labels
+        - kube_pod_info
+      prefix:
+        - "cloudzero_"
+      suffix: []
+      contains: []
+      regex: []
+
+      additionalExact: []
+      additionalPrefix: []
+      additionalSuffix: []
+      additionalContains: []
+      additionalRegex: []
+    labels:
+      exact:
+        - board_asset_tag
+        - container
+        - created_by_kind
+        - created_by_name
+        - image
+        - instance
+        - name
+        - namespace
+        - node
+      prefix:
+        - "_"
+        - "label_"
+        - "app.kubernetes.io/"
+        - "k8s."
+      suffix: []
+      contains: []
+      regex: []
+      additionalExact: []
+      additionalPrefix: []
+      additionalSuffix: []
+      additionalContains: []
+      additionalRegex: []
+
+  observability:
+    name:
+      exact:
+        - go_gc_duration_seconds
+        - go_gc_duration_seconds_count
+        - go_gc_duration_seconds_sum
+        - go_gc_gogc_percent
+        - go_gc_gomemlimit_bytes
+        - go_goroutines
+        - go_memstats_alloc_bytes
+        - go_memstats_heap_alloc_bytes
+        - go_memstats_heap_idle_bytes
+        - go_memstats_heap_inuse_bytes
+        - go_memstats_heap_objects
+        - go_memstats_last_gc_time_seconds
+        - go_memstats_stack_inuse_bytes
+        - go_threads
+        - http_request_duration_seconds_bucket
+        - http_request_duration_seconds_count
+        - http_request_duration_seconds_sum
+        - http_requests_total
+        - process_cpu_seconds_total
+        - process_max_fds
+        - process_open_fds
+        - process_resident_memory_bytes
+        - process_start_time_seconds
+        - process_virtual_memory_bytes
+        - process_virtual_memory_max_bytes
+        - prometheus_agent_corruptions_total
+        - prometheus_api_remote_read_queries
+        - prometheus_http_requests_total
+        - prometheus_notifications_alertmanagers_discovered
+        - prometheus_notifications_dropped_total
+        - prometheus_remote_storage_bytes_total
+        - prometheus_remote_storage_exemplars_in_total
+        - prometheus_remote_storage_histograms_failed_total
+        - prometheus_remote_storage_histograms_in_total
+        - prometheus_remote_storage_histograms_total
+        - prometheus_remote_storage_metadata_bytes_total
+        - prometheus_remote_storage_metadata_failed_total
+        - prometheus_remote_storage_metadata_retried_total
+        - prometheus_remote_storage_metadata_total
+        - prometheus_remote_storage_samples_dropped_total
+        - prometheus_remote_storage_samples_failed_total
+        - prometheus_remote_storage_samples_in_total
+        - prometheus_remote_storage_samples_total
+        - prometheus_remote_storage_shard_capacity
+        - prometheus_remote_storage_shards
+        - prometheus_remote_storage_shards_desired
+        - prometheus_remote_storage_shards_max
+        - prometheus_remote_storage_shards_min
+        - prometheus_remote_storage_string_interner_zero_reference_releases_total
+        - prometheus_sd_azure_cache_hit_total
+        - prometheus_sd_azure_failures_total
+        - prometheus_sd_discovered_targets
+        - prometheus_sd_dns_lookup_failures_total
+        - prometheus_sd_failed_configs
+        - prometheus_sd_file_read_errors_total
+        - prometheus_sd_file_scan_duration_seconds
+        - prometheus_sd_file_watcher_errors_total
+        - prometheus_sd_http_failures_total
+        - prometheus_sd_kubernetes_events_total
+        - prometheus_sd_kubernetes_http_request_duration_seconds
+        - prometheus_sd_kubernetes_http_request_total
+        - prometheus_sd_kubernetes_workqueue_depth
+        - prometheus_sd_kubernetes_workqueue_items_total
+        - prometheus_sd_kubernetes_workqueue_latency_seconds
+        - prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds
+        - prometheus_sd_kubernetes_workqueue_unfinished_work_seconds
+        - prometheus_sd_kubernetes_workqueue_work_duration_seconds
+        - prometheus_sd_received_updates_total
+        - prometheus_sd_updates_delayed_total
+        - prometheus_sd_updates_total
+        - prometheus_target_scrape_pool_reloads_failed_total
+        - prometheus_target_scrape_pool_reloads_total
+        - prometheus_target_scrape_pool_sync_total
+        - prometheus_target_scrape_pools_failed_total
+        - prometheus_target_scrape_pools_total
+        - prometheus_target_sync_failed_total
+        - prometheus_target_sync_length_seconds
+        - promhttp_metric_handler_requests_in_flight
+        - promhttp_metric_handler_requests_total
+        - remote_write_db_failures_total
+        - remote_write_failures_total
+        - remote_write_payload_size_bytes
+        - remote_write_records_processed_total
+        - remote_write_response_codes_total
+        - remote_write_timeseries_total
+        - storage_write_failure_total
+        # shipper
+        - function_execution_seconds
+        - shipper_shutdown_total
+        - shipper_new_files_error_total
+        - shipper_new_files_processing_current
+        - shipper_handle_request_file_count
+        - shipper_handle_request_success_total
+        - shipper_presigned_url_error_total
+        - shipper_replay_request_total
+        - shipper_replay_request_current
+        - shipper_replay_request_file_count
+        - shipper_replay_request_error_total
+        - shipper_replay_request_abandon_files_total
+        - shipper_replay_request_abandon_files_error_total
+        - shipper_disk_total_size_bytes
+        - shipper_current_disk_usage_bytes
+        - shipper_current_disk_usage_percentage
+        - shipper_current_disk_unsent_file
+        - shipper_current_disk_sent_file
+        - shipper_disk_replay_request_current
+        - shipper_disk_cleanup_failure_total
+        - shipper_disk_cleanup_success_total
+        - shipper_disk_cleanup_percentage
+      prefix: []
+      suffix: []
+      contains: []
+      regex: []
+      additionalExact: []
+      additionalPrefix: []
+      additionalSuffix: []
+      additionalContains: []
+      additionalRegex: []
+    labels:
+      exact: []
+      prefix: []
+      suffix: []
+      contains: []
+      regex: []
+      additionalExact: []
+      additionalPrefix: []
+      additionalSuffix: []
+      additionalContains: []
+      additionalRegex: []
 
 prometheusConfig:
   configMapNameOverride: ''
@@ -138,6 +365,9 @@ prometheusConfig:
     prometheus:
       enabled: true
       scrapeInterval: 120s  # Scrape interval for prometheus job
+    aggregator:
+      enabled: true
+      scrapeInterval: 120s  # Scrape interval for aggregator job
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 
@@ -208,6 +438,9 @@ kubeStateMetrics:
 # -- Annotations to be added to the Secret, if the chart is configured to create one
 secretAnnotations: {}
 imagePullSecrets: []
+
+scheme: https
+endpoint: /v1/container-metrics
 
 # environment validator image allows for CI to use a different image in testing
 validator:
@@ -315,7 +548,7 @@ insightsController:
     # imagePullSecrets: []
     image:
       repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-      tag: 0.1.2
+      tag: 0.2.0
       pullPolicy: Always
     port: 8443
     read_timeout: 10s
@@ -396,3 +629,87 @@ configmapReload:
 
     containerSecurityContext: {}
     resources: {}
+
+# The aggregator provides an intermediary between the CloudZero Agent and the CloudZero API.
+# It is composed of two applications, the collector and the shipper.
+
+# The collector application provides an endpoint for the CloudZero Agent to write metrics to.
+# It filters out any unwanted metrics as it receives them, aggregates the wanted metrics,
+# and stores them in a compressed format on disk until they are ready to be uploaded to the
+# CloudZero servers. Once the collector has aggregated sufficient metrics (or a given amount of time has elapsed)
+# the data is sent to the shipper.
+
+# The shipper will process the completed metrics files and push them to the remote server.
+# It will also handle any requests from the server to re-send any missing or incomplete data,
+# ensuring that there is no data loss in the event of any loss of communication with the CloudZero API,
+# even when a misconfiguration (such as an incorrect API key) prevents it.
+aggregator:
+  enabled: false
+  replicas: 1
+  logging:
+    # Logging level that will be posted to stdout.
+    # Valid values are: 'debug', 'info', 'warn', 'error'
+    level: info
+  # Top-level directory containing CloudZero data. There will be subdirectories for configuration (the mounted ConfigMap)
+  # and the API key (typically a mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
+  # This value is really only visible internally in the container, so you shouldn't generally need to change it.
+  # Set `aggregator.database.purgeRules` to control the cleanup behavior of this directory
+  mountRoot: /cloudzero
+  image:
+    repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+    tag: 0.2.0
+    pullPolicy: IfNotPresent
+  cloudzero:
+    # Interval between attempts to ship metrics to the remote endpoint.
+    sendInterval: 1m
+    # Max time the aggregator will spend attempting to ship metrics to the remote endpoint.
+    sendTimeout: 30s
+    rotateInterval: 30m
+  database:
+    # Max number of records per file. Use this to adjust file sizes uploaded to the server. The default value is good in most cases.
+    maxRecords: 1500000
+    # Max interval to flush a metrics file. This is mostly useful for smaller clusters with little activity.
+    maxInterval: 10m
+    # Compression level to use when compressing metrics files on-disk.
+    # Valid value range from 0-11, with higher values yielding improved compression ratios
+    # at the expense of speed and memory usage.
+    # Read more about brotli compression here: https://github.com/google/brotli/blob/master/c/tools/brotli.md#options
+    compressionLevel: 8
+    # The rules that the application will follow in respect to cleaning up old files that have been uploaded to the
+    # Cloudzero platform.
+    # Generally, the defaults will be okay for the majority of use cases. But, the options are here for more advanced
+    # users to optimize disk usage. For example, the default case is to keep uploaded files around for 90 days, as this
+    # falls in line with most customer's data tolerance policies. But, if deployed on a more active and/or larger cluster,
+    # this value can be lowered to keep disk usage lower with the tradeoff of less data-retention. Regardless of what you
+    # define here if there is disk pressure detected, files will be deleted (oldest first) to free space.
+    purgeRules:
+      # How long to keep uploaded files. This option can be useful to optimize the storage required by the collector/shipper
+      # architecture on your nodes.
+      # `2160h` is 90 days, and is a reasonable default. This can reasonably be any value, as the application will force
+      # remove files if space is constrained.
+      # `0s` is also a valid option and can signify that you do not want to keep uploaded files at all. Though do note
+      # that this could possibly result in data loss if there are transient upload failures during the lifecycle of the application.
+      metricsOlderThan: 2160h
+      # If set to true (default), then files older than `metricsOlderThan` will not be deleted unless there is detected storage pressure.
+      # For example, if there are files older than `metricsOlderThan` but only 30% of storage space is used, the files will not be deleted.
+      lazy: true
+      # This controls the percentage of files the application will remove when there is critical storage pressure.
+      # This is defined by >95% of storage usage.
+      percent: 20
+  collector:
+    port: 8080
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "1024Mi"
+        cpu: "2000m"
+  shipper:
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "1024Mi"
+        cpu: "2000m"

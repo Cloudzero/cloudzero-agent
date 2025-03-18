@@ -13,3 +13,19 @@ spec:
       name: http
   selector:
     {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ include "cloudzero-agent.aggregator.name" . }}
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 4 }}
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: {{ .Values.aggregator.collector.port }}
+  type: ClusterIP
