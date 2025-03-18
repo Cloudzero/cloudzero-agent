@@ -32,4 +32,4 @@ jobs:
 
       # smoke tests hit alfa.
       - name: Run smoke tests
-        run: sudo make test-smoke
+        run: sudo -E make test-smoke
