@@ -102,19 +102,11 @@ jobs:
           PLATFORMS: "linux/amd64,linux/arm64"
           CONTROLLER_DOCKERFILE: docker/Dockerfile
           CONTOLLER_CONTEXT: .
-        with:
-          push: true
-          context: ${{ env.CONTOLLER_CONTEXT }}
-          file: ${{ env.CONTROLLER_DOCKERFILE }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ env.PLATFORMS }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_TIME=${{ env.BUILD_TIME }}
-            REVISION=${{ env.REVISION }}
-            TAG=${{ env.TAG }}
+
+      - name: TEST - Build image
+        run: |
+          BUILD_TIME=${{ env.BUILD_TIME }} REVISION=${{ env.REVISION }} REPO_NAME=cloudzero-insights-controller IMAGE_NAME=${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }} TAG=${{ env.TAG }} make package
+
       - name: SECURITY - Grype Docker Image Scan
         uses: anchore/scan-action@v6
         with:
