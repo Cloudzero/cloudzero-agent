@@ -334,12 +334,12 @@ insightsController:
       timeoutSeconds: 3
       successThreshold: 1
       failureThreshold: 5
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
   volumeMounts: []
   volumes: []
   resources: {}
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
   podAnnotations: {}
   podLabels: {}
   service:
