@@ -48,7 +48,7 @@ spec:
           image: "{{ .Values.insightsController.server.image.repository }}:{{ .Values.insightsController.server.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.insightsController.server.image.pullPolicy }}
           command:
-            - /app/controller
+            - /app/cloudzero-insights-controller
           args:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
