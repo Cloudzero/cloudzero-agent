@@ -3,6 +3,13 @@ name: CI
 on: [push]
 
 jobs:
+  custom-checks: # Assorted custom checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run custom checks
+        run: ./scripts/ci-checks.sh
+
   test: # Run tests
     runs-on: ubuntu-latest
     steps:

@@ -1,8 +1,6 @@
 module github.com/cloudzero/cloudzero-insights-controller
 
-go 1.23.2
-
-toolchain go1.23.5
+go 1.24.1
 
 require (
 	github.com/andybalholm/brotli v1.1.0

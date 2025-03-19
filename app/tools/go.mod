@@ -1,6 +1,6 @@
 module github.com/go-obvious/server-example/tools
 
-go 1.23
+go 1.24.1
 
 require honnef.co/go/tools v0.2.2
 

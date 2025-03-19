@@ -3,8 +3,8 @@
 # docker buildx build --builder=container --platform linux/amd64,linux/arm64 --push -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile .
 #
 # Stage 1: Build the Go binary
-# FROM golang:1.22 AS builder
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine3.20 AS builder
+# FROM golang:1.24 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.20 AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 ARG REPO_NAME=cloudzero-insights-controller
