@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/build"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog/log"
 )
@@ -75,6 +76,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
 		req.Header.Set(shipperIDRequestHeader, shipperID)
+		req.Header.Set(appVersionRequestHeader, build.GetVersion())
 
 		// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 		q := req.URL.Query()

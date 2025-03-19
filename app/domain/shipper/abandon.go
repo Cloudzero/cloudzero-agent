@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/build"
 	"github.com/rs/zerolog/log"
 )
 
@@ -63,6 +64,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
 		req.Header.Set(shipperIDRequestHeader, shipperID)
+		req.Header.Set(appVersionRequestHeader, build.GetVersion())
 
 		// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 		q := req.URL.Query()
