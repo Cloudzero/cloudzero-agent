@@ -129,7 +129,7 @@ var (
 
 	metricCurrentDiskUsageBytes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_usage_bytes",
+			Name: "shipper_disk_current_usage_bytes",
 			Help: "Size (bytes) currently used in the pv",
 		},
 		[]string{},
@@ -137,7 +137,7 @@ var (
 
 	metricCurrentDiskUsagePercentage = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_usage_percentage",
+			Name: "shipper_disk_current_usage_percentage",
 			Help: "Percentage currently used in the pv",
 		},
 		[]string{},
@@ -145,7 +145,7 @@ var (
 
 	metricCurrentDiskUnsentFile = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_unsent_file",
+			Name: "shipper_disk_current_unsent_file",
 			Help: "Current number of unsent files found in the pv",
 		},
 		[]string{},
@@ -153,7 +153,7 @@ var (
 
 	metricCurrentDiskSentFile = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "shipper_current_disk_sent_file",
+			Name: "shipper_disk_current_sent_file",
 			Help: "Current number of sent files found in the pv",
 		},
 		[]string{},

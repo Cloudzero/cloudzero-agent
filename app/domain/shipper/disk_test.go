@@ -123,10 +123,10 @@ func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 
 	// ensure the metrics are set
 	require.Contains(t, string(body), "shipper_disk_total_size_bytes")
-	require.Contains(t, string(body), "shipper_current_disk_usage_bytes")
-	require.Contains(t, string(body), "shipper_current_disk_usage_percentage")
-	require.Contains(t, string(body), "shipper_current_disk_unsent_file")
-	require.Contains(t, string(body), "shipper_current_disk_sent_file")
+	require.Contains(t, string(body), "shipper_disk_current_usage_bytes")
+	require.Contains(t, string(body), "shipper_disk_current_usage_percentage")
+	require.Contains(t, string(body), "shipper_disk_current_unsent_file")
+	require.Contains(t, string(body), "shipper_disk_current_sent_file")
 	require.Contains(t, string(body), "shipper_disk_replay_request_current")
 }
 
