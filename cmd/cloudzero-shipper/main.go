@@ -44,7 +44,13 @@ func main() {
 		if parseErr != nil {
 			log.Fatal().Err(parseErr).Msg("failed to parse log level")
 		}
-		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Caller().Logger()
+
+		logger = zerolog.New(os.Stdout).Level(logLevel).With().
+			Str("version", build.GetVersion()).
+			Timestamp().
+			Caller().
+			Logger()
+
 		ctx = logger.WithContext(ctx)
 		zerolog.DefaultContextLogger = &logger
 	}
