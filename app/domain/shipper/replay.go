@@ -128,7 +128,7 @@ func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 
 func (m *MetricShipper) ProcessReplayRequests() error {
 	return m.metrics.Span("shipper_ProcessReplayRequests", func() error {
-		log.Ctx(m.ctx).Info().Msg("Processing replay requests")
+		log.Ctx(m.ctx).Debug().Msg("Processing replay requests")
 
 		// ensure the directory is created
 		if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
@@ -159,7 +159,7 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 		}
 
 		if len(requests) == 0 {
-			log.Ctx(m.ctx).Info().Msg("No replay requests found, skipping")
+			log.Ctx(m.ctx).Debug().Msg("No replay requests found, skipping")
 			return nil
 		}
 
@@ -176,7 +176,7 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 			metricReplayRequestCurrent.WithLabelValues().Dec()
 		}
 
-		log.Ctx(m.ctx).Info().Msg("Successfully handled all replay requests")
+		log.Ctx(m.ctx).Debug().Msg("Successfully handled all replay requests")
 
 		return nil
 	})
@@ -258,14 +258,14 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		for _, item := range total {
 			found.Add(GetRemoteFileID(item))
 		}
-		log.Ctx(m.ctx).Info().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
+		log.Ctx(m.ctx).Debug().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
 
 		// compare the results and discover which files were not found
 		missing := rr.ReferenceIDs.Diff(found)
 
 		// send abandon requests for the non-found files
 		if missing.Size() > 0 {
-			log.Info().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
+			log.Debug().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
 			if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
 				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to send the abandon file request: %w", err)
@@ -282,7 +282,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 			return fmt.Errorf("failed to delete the replay request file: %w", err)
 		}
 
-		log.Ctx(m.ctx).Info().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
+		log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
 
 		return nil
 	})

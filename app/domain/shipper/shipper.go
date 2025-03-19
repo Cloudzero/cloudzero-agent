@@ -87,7 +87,7 @@ func (m *MetricShipper) Run() error {
 	ticker := time.NewTicker(m.setting.Cloudzero.SendInterval)
 	defer ticker.Stop()
 
-	log.Ctx(m.ctx).Info().Msg("Shipper service starting")
+	log.Ctx(m.ctx).Info().Msg("Shipper service starting ...")
 
 	// run at the start
 	if err := m.runShipper(); err != nil {
@@ -125,7 +125,7 @@ func (m *MetricShipper) Run() error {
 
 func (m *MetricShipper) runShipper() error {
 	return m.metrics.Span("shipper_runShipper", func() error {
-		log.Ctx(m.ctx).Info().Msg("Running shipper application")
+		log.Ctx(m.ctx).Debug().Msg("Running shipper cycle ...")
 
 		// run the base request
 		if err := m.ProcessNewFiles(); err != nil {
@@ -145,7 +145,7 @@ func (m *MetricShipper) runShipper() error {
 
 		// used as a marker in tests to signify that the shipper was complete.
 		// if you change this string, then change in the smoke tests as well.
-		log.Ctx(m.ctx).Info().Msg("Successfully ran the shipper application")
+		log.Ctx(m.ctx).Debug().Msg("Successfully ran the shipper cycle")
 
 		return nil
 	})
@@ -153,7 +153,7 @@ func (m *MetricShipper) runShipper() error {
 
 func (m *MetricShipper) ProcessNewFiles() error {
 	return m.metrics.Span("shipper_ProcessNewFiles", func() error {
-		log.Ctx(m.ctx).Info().Msg("Processing new files ...")
+		log.Ctx(m.ctx).Debug().Msg("Processing new files ...")
 
 		// lock the base dir for the duration of the new file handling
 		log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
@@ -195,7 +195,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 		}
 
 		// NOTE: used as a hook in integration tests to validate that the application worked
-		log.Ctx(m.ctx).Info().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
+		log.Ctx(m.ctx).Debug().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
 		metricNewFilesProcessingCurrent.WithLabelValues().Set(float64(len(paths)))
 		return nil
 	})
@@ -207,7 +207,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(files []types.File) error {
 	return m.metrics.Span("shipper_handle_request", func() error {
-		log.Ctx(m.ctx).Info().Int("numFiles", len(files)).Msg("Handling request")
+		log.Ctx(m.ctx).Debug().Int("numFiles", len(files)).Msg("Handling request")
 		metricHandleRequestFileCount.Observe(float64(len(files)))
 		if len(files) == 0 {
 			return nil
@@ -215,7 +215,7 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 
 		// chunk into more reasonable sizes to mangage
 		chunks := Chunk(files, filesChunkSize)
-		log.Ctx(m.ctx).Info().Int("chunks", len(chunks)).Msg("Processing files")
+		log.Ctx(m.ctx).Debug().Int("chunks", len(chunks)).Msg("Processing files")
 
 		for i, chunk := range chunks {
 			log.Ctx(m.ctx).Debug().Int("chunk", i).Msg("Handling chunk")
@@ -257,7 +257,7 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Info().Msg("Successfully processed all of the files")
+		log.Ctx(m.ctx).Debug().Msg("Successfully processed all of the files")
 		metricHandleRequestSuccessTotal.WithLabelValues().Inc()
 
 		return nil

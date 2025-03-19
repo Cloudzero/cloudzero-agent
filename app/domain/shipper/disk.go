@@ -28,7 +28,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		warn := usage.GetStorageWarning()
 
 		// log the storage warning
-		log.Ctx(m.ctx).Info().
+		log.Ctx(m.ctx).Debug().
 			Uint64("used", usage.Used).
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
@@ -136,7 +136,7 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 }
 
 func (m *MetricShipper) handleStorageWarningHigh(before time.Time) error {
-	log.Ctx(m.ctx).Info().Msg("Handling high storage usage ...")
+	log.Ctx(m.ctx).Debug().Msg("Handling high storage usage ...")
 	return m.PurgeMetricsBefore(before)
 }
 
@@ -148,7 +148,7 @@ func (m *MetricShipper) handleStorageWarningCritical() error {
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`
 func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 	return m.metrics.Span("shipper_PurgeMetricsBefore", func() error {
-		log.Ctx(m.ctx).Info().Time("cutoff", before).Msg("Purging old metrics")
+		log.Ctx(m.ctx).Debug().Time("cutoff", before).Msg("Purging old metrics")
 		oldFiles := make([]string, 0)
 		if err := m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
@@ -170,7 +170,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 		}
 
 		if len(oldFiles) == 0 {
-			log.Ctx(m.ctx).Info().Msg("No files to purge found")
+			log.Ctx(m.ctx).Debug().Msg("No files to purge found")
 			return nil
 		}
 
@@ -181,7 +181,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Info().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
+		log.Ctx(m.ctx).Debug().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
 
 		return nil
 	})
@@ -190,7 +190,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 // PurgeOldestPercentage removes the oldest `percent` of files
 func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 	return m.metrics.Span("shipper_PurgeOldestNPercentage", func() error {
-		log.Ctx(m.ctx).Info().Int("percent", percent).Msg("Purging oldest percentage of files")
+		log.Ctx(m.ctx).Debug().Int("percent", percent).Msg("Purging oldest percentage of files")
 
 		if percent <= 0 || percent > 100 {
 			return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
@@ -220,7 +220,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 		}
 
 		if len(files) == 0 {
-			log.Ctx(m.ctx).Info().Msg("No files to purge found")
+			log.Ctx(m.ctx).Debug().Msg("No files to purge found")
 			return nil
 		}
 
@@ -248,7 +248,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Info().
+		log.Ctx(m.ctx).Debug().
 			Int("numFiles", n).
 			Int("totalFiles", len(files)).
 			Int("percentage", percent).

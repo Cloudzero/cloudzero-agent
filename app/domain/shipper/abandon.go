@@ -75,7 +75,7 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		q.Add("shipper_id", shipperID)
 		req.URL.RawQuery = q.Encode()
 
-		log.Ctx(m.ctx).Info().Int("numFiles", len(referenceIDs)).Str("url", req.URL.String()).Msg("Abandoning files")
+		log.Ctx(m.ctx).Debug().Int("numFiles", len(referenceIDs)).Str("url", req.URL.String()).Msg("Abandoning files")
 
 		// Send the request
 		httpSpan := m.metrics.StartSpan("shipper_AbandonFiles_httpRequest")
