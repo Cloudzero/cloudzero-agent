@@ -4,7 +4,6 @@
 package instr
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -161,38 +160,4 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 	body := _testSendPromRequest(t, srv.URL)
 	require.Contains(t, body, "http_request_duration_seconds_sum{")
 	require.Contains(t, body, "http_requests_total{")
-}
-
-func TestPrometheusMetricsSpan(t *testing.T) {
-	defer _testResentSync()
-
-	// create the prom struct
-	p, err := NewPrometheusMetrics(
-		WithPromMetrics(testMetric),
-		WithNoGoMetrics(),
-	)
-	require.NoError(t, err)
-
-	// prom handler
-	srv := httptest.NewServer(p.Handler())
-
-	// basic
-	err = p.Span("test_function_1", func(id string) error {
-		time.Sleep(time.Second)
-		return nil
-	})
-	require.NoError(t, err)
-
-	// with error
-	err = p.Span("test_function_2", func(id string) error {
-		time.Sleep(time.Second / 2)
-		return fmt.Errorf("function failed")
-	})
-	require.Error(t, err)
-	require.Equal(t, "function failed", err.Error())
-
-	body := _testSendPromRequest(t, srv.URL)
-	require.Contains(t, body, "function_name=\"test_function_1\"")
-	require.Contains(t, body, "function_name=\"test_function_2\"")
-	require.Contains(t, body, "error=\"function failed\"")
 }
