@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
+	"github.com/ccoveille/go-safecast"
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
@@ -356,8 +357,8 @@ func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	}
 
 	// basic stats
-	total := stat.Blocks * uint64(stat.Bsize)     //nolint:gosec // not an issue in 1.24
-	available := stat.Bavail * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
+	total := safecast.MustConvert[uint64](stat.Blocks) * safecast.MustConvert[uint64](stat.Bsize)
+	available := safecast.MustConvert[uint64](stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
 	used := total - available
 	var percentUsed float64
 	if total > 0 {
@@ -365,7 +366,7 @@ func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 	}
 
 	// This is USUALLY true
-	reserved := (stat.Bfree - stat.Bavail) * uint64(stat.Bsize) //nolint:gosec // not an issue in 1.24
+	reserved := safecast.MustConvert[uint64](stat.Bfree-stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
 
 	// set inode information
 	inodeTotal := stat.Files
@@ -380,7 +381,7 @@ func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 		Available:      available,
 		Used:           used,
 		PercentUsed:    percentUsed,
-		BlockSize:      uint32(stat.Bsize), //nolint:gosec // not an issue in 1.24
+		BlockSize:      safecast.MustConvert[uint32](stat.Bsize),
 		Reserved:       reserved,
 		InodeTotal:     inodeTotal,
 		InodeUsed:      inodeUsed,
