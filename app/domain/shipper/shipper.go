@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,7 +52,17 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, store types.Reada
 	metrics, err := InitMetrics()
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("failed to init metrics: %s", err)
+		return nil, fmt.Errorf("failed to init metrics: %w", err)
+	}
+
+	// dump the config
+	if log.Ctx(ctx).GetLevel() <= zerolog.DebugLevel {
+		enc, err := json.MarshalIndent(s, "", "  ")
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to marshal the config as json: %w", err)
+		}
+		fmt.Println(string(enc))
 	}
 
 	return &MetricShipper{
