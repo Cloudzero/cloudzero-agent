@@ -17,7 +17,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
 	github.com/minio/minio-go/v7 v7.0.88
-	github.com/parquet-go/parquet-go v0.24.0
+	github.com/parquet-go/parquet-go v0.25.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/prometheus v0.302.1
