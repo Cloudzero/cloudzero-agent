@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package instr
 
 import (
@@ -77,7 +80,8 @@ func TestUnit_Instr_Span_Context(t *testing.T) {
 
 	// Span execution that returns an error.
 	err = p.SpanCtx(context.Background(), "test_function_2", func(ctx context.Context,
-		id string) error {
+		id string,
+	) error {
 		time.Sleep(time.Second / 2)
 		return fmt.Errorf("function failed")
 	})
