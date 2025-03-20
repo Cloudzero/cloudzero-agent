@@ -3,7 +3,7 @@ module github.com/cloudzero/cloudzero-insights-controller
 go 1.24.1
 
 require (
-	github.com/andybalholm/brotli v1.1.0
+	github.com/andybalholm/brotli v1.1.1
 	github.com/ccoveille/go-safecast v1.6.0
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/docker/go-connections v0.5.0
