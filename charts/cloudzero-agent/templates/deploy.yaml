@@ -38,6 +38,10 @@ spec:
             - /bin/sh
             - -c
             - cp -r /app /checks/bin/ && cloudzero-agent-validator d pre-start -f /checks/config/validator.yml
+          {{- with .Values.validator.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
