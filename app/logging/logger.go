@@ -10,10 +10,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Attr is a custom type to enable dynamic passing of function overloads on the
+// logger to enable for a dynamic list of zerolog attributes onto a logger.
+type Attr func(zerolog.Context) zerolog.Context
+
 type internalLogger struct {
 	level   zerolog.Level
 	sinks   []io.Writer
 	hooks   []zerolog.Hook
+	attrs   []Attr
 	version string
 }
 
@@ -52,6 +57,29 @@ func WithHook(hook zerolog.Hook) LoggerOpt {
 func WithVersion(version string) LoggerOpt {
 	return func(logger *internalLogger) error {
 		logger.version = version
+		return nil
+	}
+}
+
+/*
+WithAttrs adds a list of attributes to add to the logger.
+
+Example:
+
+	logger := NewLogger(
+		WithAttrs(
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Str("app", "my-application")
+			},
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Int("version", 1)
+			},
+		),
+	)
+*/
+func WithAttrs(attrs ...Attr) LoggerOpt {
+	return func(logger *internalLogger) error {
+		logger.attrs = attrs
 		return nil
 	}
 }
@@ -96,6 +124,13 @@ func NewLogger(opts ...LoggerOpt) (*zerolog.Logger, error) {
 	for _, hook := range ilogger.hooks {
 		zlogger = zlogger.Hook(hook)
 	}
+
+	// apply the attributes
+	ctx := zlogger.With()
+	for _, attr := range ilogger.attrs {
+		ctx = attr(ctx)
+	}
+	zlogger = ctx.Logger()
 
 	// set as default context logger
 	zerolog.DefaultContextLogger = &zlogger
