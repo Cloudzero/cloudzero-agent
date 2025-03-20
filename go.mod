@@ -6,6 +6,7 @@ toolchain go1.23.5
 
 require (
 	github.com/andybalholm/brotli v1.1.0
+	github.com/ccoveille/go-safecast v1.6.0
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.8.0
