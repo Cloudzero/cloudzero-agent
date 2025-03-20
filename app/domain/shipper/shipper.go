@@ -90,8 +90,9 @@ func (m *MetricShipper) Run() error {
 	log.Ctx(m.ctx).Info().Msg("Shipper service starting ...")
 
 	// run at the start
-	if err := m.runShipper(); err != nil {
+	if err := m.runShipper(m.ctx); err != nil {
 		log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
+		return fmt.Errorf("failed to run the shipper: %w", err)
 	}
 
 	for {
@@ -104,7 +105,7 @@ func (m *MetricShipper) Run() error {
 			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
 
 			// flush
-			if err := m.ProcessNewFiles(); err != nil {
+			if err := m.ProcessNewFiles(m.ctx); err != nil {
 				metricNewFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to ship the metrics: %w", err)
 			}
@@ -116,47 +117,49 @@ func (m *MetricShipper) Run() error {
 			return nil
 
 		case <-ticker.C:
-			if err := m.runShipper(); err != nil {
+			if err := m.runShipper(m.ctx); err != nil {
 				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
 			}
 		}
 	}
 }
 
-func (m *MetricShipper) runShipper() error {
-	return m.metrics.Span("shipper_runShipper", func(id string) error {
-		log.Ctx(m.ctx).Debug().Msg("Running shipper cycle ...")
+func (m *MetricShipper) runShipper(ctx context.Context) error {
+	return m.metrics.SpanCtx(ctx, "shipper_runShipper", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Msg("Running shipper cycle ...")
 
 		// run the base request
-		if err := m.ProcessNewFiles(); err != nil {
+		if err := m.ProcessNewFiles(ctx); err != nil {
 			metricNewFilesErrorTotal.WithLabelValues().Inc()
 			return fmt.Errorf("failed to ship the metrics: %w", err)
 		}
 
 		// run the replay request
-		if err := m.ProcessReplayRequests(); err != nil {
+		if err := m.ProcessReplayRequests(ctx); err != nil {
 			return fmt.Errorf("failed to process the replay requests: %w", err)
 		}
 
 		// check the disk usage
-		if err := m.HandleDisk(time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
+		if err := m.HandleDisk(ctx, time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
 			return fmt.Errorf("failed to handle the disk usage: %w", err)
 		}
 
 		// used as a marker in tests to signify that the shipper was complete.
 		// if you change this string, then change in the smoke tests as well.
-		log.Ctx(m.ctx).Debug().Msg("Successfully ran the shipper cycle")
+		logger.Debug().Msg("Successfully ran the shipper cycle")
 
 		return nil
 	})
 }
 
-func (m *MetricShipper) ProcessNewFiles() error {
-	return m.metrics.Span("shipper_ProcessNewFiles", func(id string) error {
-		log.Ctx(m.ctx).Debug().Msg("Processing new files ...")
+func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
+	return m.metrics.SpanCtx(ctx, "shipper_ProcessNewFiles", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Msg("Processing new files ...")
 
 		// lock the base dir for the duration of the new file handling
-		log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
+		logger.Debug().Msg("Aquiring file lock")
 		l := lock.NewFileLock(
 			m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
 			lock.WithStaleTimeout(time.Second*30), // detects stale timeout
@@ -164,20 +167,25 @@ func (m *MetricShipper) ProcessNewFiles() error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
+			logger.Err(err).Msg("failed to aquire the lock file")
 			return fmt.Errorf("failed to acquire the lock: %w", err)
 		}
 		defer func() {
 			if err := l.Release(); err != nil {
-				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+				logger.Err(err).Msg("Failed to release the lock")
 			}
 		}()
+
+		logger.Debug().Msg("Successfully aquired lock file")
+		logger.Debug().Msg("Fetching the files from the disk store")
 
 		// Process new files in parallel
 		paths, err := m.store.GetFiles()
 		if err != nil {
 			return fmt.Errorf("failed to list files: %w", err)
 		}
-		log.Ctx(m.ctx).Debug().Int("files", len(paths)).Msg("Found files to ship")
+		logger.Debug().Int("files", len(paths)).Msg("Found files to ship")
+		logger.Debug().Msg("Creating a list of metric files")
 
 		// create a list of metric files
 		files := make([]types.File, 0)
@@ -190,12 +198,12 @@ func (m *MetricShipper) ProcessNewFiles() error {
 		}
 
 		// handle the file request
-		if err := m.HandleRequest(files); err != nil {
+		if err := m.HandleRequest(ctx, files); err != nil {
 			return err
 		}
 
 		// NOTE: used as a hook in integration tests to validate that the application worked
-		log.Ctx(m.ctx).Debug().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
+		logger.Debug().Int("numNewFiles", len(paths)).Msg("Successfully uploaded new files")
 		metricNewFilesProcessingCurrent.WithLabelValues().Set(float64(len(paths)))
 		return nil
 	})
@@ -205,20 +213,22 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Generate presigned URL
 // - Upload to the remote API
 // - Rename the file to indicate upload
-func (m *MetricShipper) HandleRequest(files []types.File) error {
-	return m.metrics.Span("shipper_handle_request", func(id string) error {
-		log.Ctx(m.ctx).Debug().Int("numFiles", len(files)).Msg("Handling request")
+func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) error {
+	return m.metrics.SpanCtx(ctx, "shipper_handle_request", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Int("numFiles", len(files)).Msg("Handling request")
 		metricHandleRequestFileCount.Observe(float64(len(files)))
 		if len(files) == 0 {
+			logger.Debug().Msg("there were no files in the request")
 			return nil
 		}
 
 		// chunk into more reasonable sizes to mangage
 		chunks := Chunk(files, filesChunkSize)
-		log.Ctx(m.ctx).Debug().Int("chunks", len(chunks)).Msg("Processing files")
+		logger.Debug().Int("chunks", len(chunks)).Msg("Processing files")
 
 		for i, chunk := range chunks {
-			log.Ctx(m.ctx).Debug().Int("chunk", i).Msg("Handling chunk")
+			logger.Debug().Int("chunk", i).Msg("Handling chunk")
 			pm := parallel.New(shipperWorkerCount)
 			defer pm.Close()
 
@@ -233,12 +243,12 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 			for _, file := range chunk {
 				fn := func() error {
 					// Upload the file
-					if err := m.UploadFile(file, urlMap[GetRemoteFileID(file)]); err != nil {
+					if err := m.UploadFile(ctx, file, urlMap[GetRemoteFileID(file)]); err != nil {
 						return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
 					}
 
 					// mark the file as uploaded
-					if err := m.MarkFileUploaded(file); err != nil {
+					if err := m.MarkFileUploaded(ctx, file); err != nil {
 						return fmt.Errorf("failed to mark the file as uploaded: %w", err)
 					}
 
@@ -257,7 +267,7 @@ func (m *MetricShipper) HandleRequest(files []types.File) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Debug().Msg("Successfully processed all of the files")
+		logger.Debug().Msg("Successfully processed all of the files")
 		metricHandleRequestSuccessTotal.WithLabelValues().Inc()
 
 		return nil

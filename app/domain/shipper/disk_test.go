@@ -45,7 +45,7 @@ func TestShipper_Unit_Disk_StorageWarnings(t *testing.T) {
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err)
 
-			err = metricShipper.HandleDisk(time.Now())
+			err = metricShipper.HandleDisk(context.Background(), time.Now())
 			if tt.expectedError != "" {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -76,7 +76,7 @@ func TestShipper_Unit_Disk_DeletesOldFiles(t *testing.T) {
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 	require.NoError(t, err, "failed to create metric shipper")
 
-	require.NoError(t, metricShipper.PurgeMetricsBefore(time.Now().AddDate(0, 0, -1)))
+	require.NoError(t, metricShipper.PurgeMetricsBefore(context.Background(), time.Now().AddDate(0, 0, -1)))
 
 	// verify old file deleted
 	_, err = os.Stat(oldFile)
@@ -111,7 +111,7 @@ func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 	require.NoError(t, err, "failed to create metric shipper")
 
 	// get disk usage
-	_, err = metricShipper.GetDiskUsage()
+	_, err = metricShipper.GetDiskUsage(context.Background())
 	require.NoError(t, err, "failed to get disk usage")
 
 	// fetch metrics from the mock handler
@@ -165,7 +165,7 @@ func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err, "failed to create metric shipper")
 
-			_, err = metricShipper.GetDiskUsage()
+			_, err = metricShipper.GetDiskUsage(context.Background())
 			require.ErrorContains(t, err, tt.expectedError)
 		})
 	}

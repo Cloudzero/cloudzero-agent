@@ -4,6 +4,7 @@
 package shipper
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,11 +14,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/lock"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/go-obvious/timestamp"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 type ReplayRequest struct {
@@ -49,8 +51,8 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 }
 
 // Saves a reply-request from the remote to disk to be picked up on next iteration
-func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
-	return m.metrics.Span("shipper_SaveReplayRequest", func(id string) error {
+func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest) error {
+	return m.metrics.SpanCtx(ctx, "shipper_SaveReplayRequest", func(ctx context.Context, id string) error {
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
@@ -76,10 +78,10 @@ func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
 }
 
 // gets all active replay request files
-func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
+func (m *MetricShipper) GetActiveReplayRequests(ctx context.Context) ([]*ReplayRequest, error) {
 	requests := make([]*ReplayRequest, 0)
 
-	err := m.metrics.Span("shipper_GetActiveReplayRequests", func(id string) error {
+	err := m.metrics.SpanCtx(ctx, "shipper_GetActiveReplayRequests", func(ctx context.Context, id string) error {
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
@@ -126,9 +128,10 @@ func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 	return requests, nil
 }
 
-func (m *MetricShipper) ProcessReplayRequests() error {
-	return m.metrics.Span("shipper_ProcessReplayRequests", func(id string) error {
-		log.Ctx(m.ctx).Debug().Msg("Processing replay requests")
+func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
+	return m.metrics.SpanCtx(ctx, "shipper_ProcessReplayRequests", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Msg("Processing replay requests")
 
 		// ensure the directory is created
 		if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
@@ -136,7 +139,7 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 		}
 
 		// lock the replay request dir for the duration of the replay request processing
-		log.Ctx(m.ctx).Debug().Msg("Aquiring file lock")
+		logger.Debug().Msg("Aquiring replay request file lock")
 		l := lock.NewFileLock(
 			m.ctx, filepath.Join(m.GetReplayRequestDir(), ".lock"),
 			lock.WithStaleTimeout(time.Second*30), // detects stale timeout
@@ -148,47 +151,62 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 		}
 		defer func() {
 			if err := l.Release(); err != nil {
-				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to release the lock")
+				logger.Error().Err(err).Msg("Failed to release the lock")
 			}
 		}()
 
+		logger.Debug().Msg("Successfully aquired file lock")
+
 		// read all valid replay request files
-		requests, err := m.GetActiveReplayRequests()
+		requests, err := m.GetActiveReplayRequests(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get replay requests: %w", err)
 		}
 
 		if len(requests) == 0 {
-			log.Ctx(m.ctx).Debug().Msg("No replay requests found, skipping")
+			logger.Debug().Msg("No replay requests found, skipping")
 			return nil
 		}
 
+		logger.Debug().Int("length", len(requests)).Msg("Processing replay requests")
+
 		// handle all valid replay requests
 		for _, rr := range requests {
+			logger.Debug().Str("replayRequestFilepath", rr.Filepath).Int("referenceIds", rr.ReferenceIDs.Size()).Msg("Processing replay request")
 			metricReplayRequestFileCount.Observe(float64(rr.ReferenceIDs.Size()))
 
-			if err := m.HandleReplayRequest(rr); err != nil {
+			if err := m.HandleReplayRequest(ctx, rr); err != nil {
 				metricReplayRequestErrorTotal.WithLabelValues(err.Error()).Inc()
 				return fmt.Errorf("failed to process replay request '%s': %w", rr.Filepath, err)
 			}
 
 			// decrease the current queue for this replay request
+			logger.Debug().Str("replayRequestFilepath", rr.Filepath).Msg("Successfully processed replay request")
 			metricReplayRequestCurrent.WithLabelValues().Dec()
 		}
 
-		log.Ctx(m.ctx).Debug().Msg("Successfully handled all replay requests")
+		logger.Debug().Msg("Successfully handled all replay requests")
 
 		return nil
 	})
 }
 
-func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
-	return m.metrics.Span("shipper_HandleReplayRequest", func(id string) error {
-		log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size()).Msg("Handling replay request")
+func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayRequest) error {
+	return m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id,
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Str("rr", rr.Filepath)
+			},
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Int("numfiles", rr.ReferenceIDs.Size())
+			},
+		)
+		logger.Debug().Msg("Handling replay request ...")
 
 		// fetch the new files that match these ids
+		logger.Debug().Msg("Searching for new files in the disk store")
 		newFiles := make([]types.File, 0)
-		if err := m.metrics.Span("shipper_HandleReplayRequest_listNewFiles", func(id string) error {
+		if err := m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest_listNewFiles", func(ctx context.Context, id string) error {
 			return m.store.Walk("", func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return err
@@ -215,11 +233,12 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		}); err != nil {
 			return fmt.Errorf("failed to get matching new files: %w", err)
 		}
-		log.Ctx(m.ctx).Debug().Int("newFiles", len(newFiles)).Send()
+		logger.Debug().Int("files", len(newFiles)).Msg("found new files")
 
 		// fetch the already uploadedFiles files that match these ids
+		logger.Debug().Msg("Searching for previously uploaded files ...")
 		uploadedFiles := make([]types.File, 0)
-		if err := m.metrics.Span("shipper_HandleReplayRequest_listUploadedFiles", func(id string) error {
+		if err := m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest_listUploadedFiles", func(ctx context.Context, id string) error {
 			return m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return err
@@ -246,9 +265,10 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		}); err != nil {
 			return fmt.Errorf("failed to get matching uploaded files: %w", err)
 		}
-		log.Ctx(m.ctx).Debug().Int("uploadedFiles", len(uploadedFiles)).Send()
+		logger.Debug().Int("files", len(uploadedFiles)).Msg("found uploaded files")
 
 		// create a file array of all the files found to send to the remote
+		logger.Debug().Msg("Combining all files into an array")
 		total := make([]types.File, 0)
 		total = append(total, newFiles...)
 		total = append(total, uploadedFiles...)
@@ -258,31 +278,33 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 		for _, item := range total {
 			found.Add(GetRemoteFileID(item))
 		}
-		log.Ctx(m.ctx).Debug().Msgf("Replay request '%s': %d/%d files found", rr.Filepath, found.Size(), rr.ReferenceIDs.Size())
+		logger.Debug().Int("found", found.Size()).Int("totalRequested", rr.ReferenceIDs.Size()).Msg("Replay request files found")
 
 		// compare the results and discover which files were not found
 		missing := rr.ReferenceIDs.Diff(found)
 
 		// send abandon requests for the non-found files
 		if missing.Size() > 0 {
-			log.Debug().Msgf("Replay request '%s': %d files missing, sending abandon request for these files", rr.Filepath, missing.Size())
-			if err := m.AbandonFiles(missing.List(), "not found"); err != nil {
+			logger.Debug().Int("numNotFound", missing.Size()).Msg("Sending abandon requests for not found files")
+			if err := m.AbandonFiles(ctx, missing.List(), "not found"); err != nil {
 				metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
 				return fmt.Errorf("failed to send the abandon file request: %w", err)
 			}
+			logger.Debug().Msg("Successfully sent the abandon requests")
 		}
 
 		// run the `HandleRequest` function for the found files
-		if err := m.HandleRequest(total); err != nil {
+		if err := m.HandleRequest(ctx, total); err != nil {
 			return fmt.Errorf("failed to upload replay request files: %w", err)
 		}
 
 		// delete the replay request
+		logger.Debug().Msg("Deleting the replay request")
 		if err := os.Remove(rr.Filepath); err != nil {
 			return fmt.Errorf("failed to delete the replay request file: %w", err)
 		}
 
-		log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
+		logger.Debug().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
 
 		return nil
 	})

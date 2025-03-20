@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,8 +13,9 @@ import (
 	"strconv"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/build"
+	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 type PresignedURLAPIPayload struct {
@@ -34,7 +36,12 @@ type PresignedURLAPIResponse = map[string]string
 func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
 	var response PresignedURLAPIResponse
 
-	err := m.metrics.Span("shipper_AllocatePresignedURLs", func(id string) error {
+	err := m.metrics.SpanCtx(m.ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
+			return ctx.Int("numFiles", len(files))
+		})
+		logger.Debug().Msg("Allocating pre-signed URLs ...")
+
 		// create the payload with the files
 		bodyFiles := make([]*PresignedURLAPIPayloadFile, len(files))
 		for i, file := range files {
@@ -88,16 +95,19 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		q.Add("shipper_id", shipperID)
 		req.URL.RawQuery = q.Encode()
 
-		log.Ctx(m.ctx).Debug().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
+		logger.Debug().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
 
 		// Send the request
-		httpSpan := m.metrics.StartSpan("shipper_AllocatePresignedURLs_httpRequest")
+		httpSpan := m.metrics.StartSpan(ctx, "shipper_AllocatePresignedURLs_httpRequest")
+		httpSpanLogger := httpSpan.Logger()
+		httpSpanLogger.Debug().Msg("Sending the http request ...")
 		defer httpSpan.End()
 		resp, err := m.HTTPClient.Do(req)
 		if err != nil {
-			log.Error().Err(err).Msg("HTTP request failed")
+			httpSpanLogger.Err(err).Msg("HTTP request failed")
 			return httpSpan.Error(fmt.Errorf("HTTP request failed: %w", err))
 		}
+		httpSpanLogger.Debug().Msg("Successfully sent http request")
 		httpSpan.End()
 		defer resp.Body.Close()
 
@@ -128,9 +138,9 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 			rr, err := NewReplayRequestFromHeader(rrh)
 			if err == nil {
 				// save the replay request to disk
-				if err = m.SaveReplayRequest(rr); err != nil {
+				if err = m.SaveReplayRequest(ctx, rr); err != nil {
 					// do not fail here
-					log.Ctx(m.ctx).Err(err).Msg("failed to save the replay request to disk")
+					logger.Err(err).Msg("failed to save the replay request to disk")
 				}
 
 				// observe the presence of the replay request
@@ -138,9 +148,11 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 				metricReplayRequestCurrent.WithLabelValues().Inc()
 			} else {
 				// do not fail the operation here
-				log.Ctx(m.ctx).Err(err).Msg("failed to parse the replay request header")
+				logger.Err(err).Msg("failed to parse the replay request header")
 			}
 		}
+
+		logger.Debug().Msg("Successfully allocated presigned urls")
 
 		return nil
 	})

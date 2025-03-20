@@ -30,7 +30,7 @@ func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 		// wait for the log message
 		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
 			Container: shipper,
-			Log:       "Successfully ran the shipper application",
+			Log:       "Successfully ran the shipper cycle",
 		})
 		require.NoError(t, err, "failed to find log message")
 	}, withConfigOverride(func(settings *config.Settings) {
@@ -59,7 +59,7 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		// wait for the log message
 		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
 			Container: shipper,
-			Log:       "Successfully ran the shipper application",
+			Log:       "Successfully ran the shipper cycle",
 		})
 		require.NoError(t, err, "failed to find log message")
 
@@ -104,7 +104,7 @@ func TestSmoke_Shipper_LoadTest(t *testing.T) {
 		// wait for the log message
 		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
 			Container: t.shipper,
-			Log:       "Successfully ran the shipper application",
+			Log:       "Successfully ran the shipper cycle",
 			Timeout:   time.Duration(5) * time.Minute,
 		})
 		require.NoError(t, err, "failed to find log message")

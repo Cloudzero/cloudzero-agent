@@ -34,7 +34,7 @@ func TestShipper_Unit_ReplayRequestCreate(t *testing.T) {
 
 	// save the request
 	rr := &shipper.ReplayRequest{ReferenceIDs: referenceIDs}
-	err = metricShipper.SaveReplayRequest(rr)
+	err = metricShipper.SaveReplayRequest(context.Background(), rr)
 	require.NoError(t, err)
 	require.NotNil(t, rr)
 
@@ -56,7 +56,7 @@ func TestShipper_Unit_ReplayRequestCreate(t *testing.T) {
 	// ensure reading the active requests works
 	t.Run("TestShipper_ReplayCreate_ReadActive", func(t *testing.T) {
 		// get active requests
-		requests, err := metricShipper.GetActiveReplayRequests()
+		requests, err := metricShipper.GetActiveReplayRequests(context.Background())
 		require.NoError(t, err)
 		enc, _ := json.Marshal(requests)
 		fmt.Println(string(enc))
@@ -108,16 +108,16 @@ func TestShipper_Unit_ReplayRequestRun(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// save the replay request
-	err = metricShipper.SaveReplayRequest(&shipper.ReplayRequest{ReferenceIDs: refIDs})
+	err = metricShipper.SaveReplayRequest(context.Background(), &shipper.ReplayRequest{ReferenceIDs: refIDs})
 	require.NoError(t, err)
 
 	// ensure the replay request can be found
-	requests, err := metricShipper.GetActiveReplayRequests()
+	requests, err := metricShipper.GetActiveReplayRequests(context.Background())
 	require.NoError(t, err)
 	require.NotEmpty(t, requests)
 
 	// process the active replay requests
-	err = metricShipper.ProcessReplayRequests()
+	err = metricShipper.ProcessReplayRequests(context.Background())
 	require.NoError(t, err)
 
 	// ensure files got uploaded

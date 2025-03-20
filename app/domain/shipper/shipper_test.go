@@ -311,7 +311,7 @@ func TestShipper_Unit_UploadFile_Success(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
 
 	// Verify
 	assert.NoError(t, err)
@@ -337,7 +337,7 @@ func TestShipper_Unit_UploadFile_HTTPError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)
@@ -357,7 +357,7 @@ func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)
@@ -382,7 +382,7 @@ func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
 
 	// Verify
 	assert.Error(t, err)
@@ -425,6 +425,6 @@ func TestShipper_Unit_AbandonFiles_Success(t *testing.T) {
 	metricShipper.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	err = metricShipper.AbandonFiles([]string{"file1", "file2"}, "file not found")
+	err = metricShipper.AbandonFiles(context.Background(), []string{"file1", "file2"}, "file not found")
 	require.NoError(t, err)
 }

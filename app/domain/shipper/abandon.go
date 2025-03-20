@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,8 @@ import (
 	"strconv"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/build"
-	"github.com/rs/zerolog/log"
+	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
+	"github.com/rs/zerolog"
 )
 
 type AbandonAPIPayloadFile struct {
@@ -22,8 +24,15 @@ type AbandonAPIPayloadFile struct {
 }
 
 // sends an abandon request for a list of files with a given reason
-func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error {
-	return m.metrics.Span("shipper_AbandonFiles", func(id string) error {
+func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string, reason string) error {
+	return m.metrics.SpanCtx(ctx, "shipper_AbandonFiles", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id,
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Int("numFiles", len(referenceIDs))
+			},
+		)
+		logger.Debug().Msg("Abandoning files ...")
+
 		if len(referenceIDs) == 0 {
 			return errors.New("cannot send in an empty slice")
 		}
@@ -75,16 +84,19 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 		q.Add("shipper_id", shipperID)
 		req.URL.RawQuery = q.Encode()
 
-		log.Ctx(m.ctx).Debug().Int("numFiles", len(referenceIDs)).Str("url", req.URL.String()).Msg("Abandoning files")
+		logger.Debug().Str("url", req.URL.String()).Msg("Abandoning files")
 
 		// Send the request
-		httpSpan := m.metrics.StartSpan("shipper_AbandonFiles_httpRequest")
+		httpSpan := m.metrics.StartSpan(ctx, "shipper_AbandonFiles_httpRequest")
+		httpSpanLogger := httpSpan.Logger()
+		httpSpanLogger.Debug().Msg("Sending the http request ...")
 		defer httpSpan.End()
 		resp, err := m.HTTPClient.Do(req)
 		if err != nil {
-			log.Error().Err(err).Msg("HTTP request failed")
+			httpSpanLogger.Err(err).Msg("HTTP request failed")
 			return httpSpan.Error(fmt.Errorf("HTTP request failed: %w", err))
 		}
+		httpSpanLogger.Debug().Msg("Successfully sent http request")
 		httpSpan.End()
 		defer resp.Body.Close()
 
@@ -100,6 +112,8 @@ func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error
 
 		// log the number of success abandoned files
 		metricReplayRequestAbandonFilesTotal.WithLabelValues().Add(float64(len(referenceIDs)))
+
+		logger.Debug().Msg("Successfully abandoned files")
 
 		// success
 		return nil
