@@ -19,7 +19,7 @@ import (
 
 // UploadFile uploads the specified file to S3 using the provided presigned URL.
 func (m *MetricShipper) UploadFile(file types.File, presignedURL string) error {
-	return m.metrics.Span("shipper_UploadFile", func() error {
+	return m.metrics.Span("shipper_UploadFile", func(id string) error {
 		log.Ctx(m.ctx).Debug().Str("fileId", GetRemoteFileID(file)).Msg("Uploading file")
 
 		// Create a unique context with a timeout for the upload
@@ -55,7 +55,7 @@ func (m *MetricShipper) UploadFile(file types.File, presignedURL string) error {
 }
 
 func (m *MetricShipper) MarkFileUploaded(file types.File) error {
-	return m.metrics.Span("shipper_MarkFileUploaded", func() error {
+	return m.metrics.Span("shipper_MarkFileUploaded", func(id string) error {
 		log.Ctx(m.ctx).Debug().Str("fileId", GetRemoteFileID(file)).Msg("Marking file as uploaded")
 
 		// create the uploaded dir if needed

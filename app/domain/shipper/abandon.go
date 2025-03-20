@@ -23,7 +23,7 @@ type AbandonAPIPayloadFile struct {
 
 // sends an abandon request for a list of files with a given reason
 func (m *MetricShipper) AbandonFiles(referenceIDs []string, reason string) error {
-	return m.metrics.Span("shipper_AbandonFiles", func() error {
+	return m.metrics.Span("shipper_AbandonFiles", func(id string) error {
 		if len(referenceIDs) == 0 {
 			return errors.New("cannot send in an empty slice")
 		}

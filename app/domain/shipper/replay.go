@@ -50,7 +50,7 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 
 // Saves a reply-request from the remote to disk to be picked up on next iteration
 func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
-	return m.metrics.Span("shipper_SaveReplayRequest", func() error {
+	return m.metrics.Span("shipper_SaveReplayRequest", func(id string) error {
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
@@ -79,7 +79,7 @@ func (m *MetricShipper) SaveReplayRequest(rr *ReplayRequest) error {
 func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 	requests := make([]*ReplayRequest, 0)
 
-	err := m.metrics.Span("shipper_GetActiveReplayRequests", func() error {
+	err := m.metrics.Span("shipper_GetActiveReplayRequests", func(id string) error {
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
@@ -127,7 +127,7 @@ func (m *MetricShipper) GetActiveReplayRequests() ([]*ReplayRequest, error) {
 }
 
 func (m *MetricShipper) ProcessReplayRequests() error {
-	return m.metrics.Span("shipper_ProcessReplayRequests", func() error {
+	return m.metrics.Span("shipper_ProcessReplayRequests", func(id string) error {
 		log.Ctx(m.ctx).Debug().Msg("Processing replay requests")
 
 		// ensure the directory is created
@@ -183,12 +183,12 @@ func (m *MetricShipper) ProcessReplayRequests() error {
 }
 
 func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
-	return m.metrics.Span("shipper_HandleReplayRequest", func() error {
+	return m.metrics.Span("shipper_HandleReplayRequest", func(id string) error {
 		log.Ctx(m.ctx).Debug().Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size()).Msg("Handling replay request")
 
 		// fetch the new files that match these ids
 		newFiles := make([]types.File, 0)
-		if err := m.metrics.Span("shipper_HandleReplayRequest_listNewFiles", func() error {
+		if err := m.metrics.Span("shipper_HandleReplayRequest_listNewFiles", func(id string) error {
 			return m.store.Walk("", func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return err
@@ -219,7 +219,7 @@ func (m *MetricShipper) HandleReplayRequest(rr *ReplayRequest) error {
 
 		// fetch the already uploadedFiles files that match these ids
 		uploadedFiles := make([]types.File, 0)
-		if err := m.metrics.Span("shipper_HandleReplayRequest_listUploadedFiles", func() error {
+		if err := m.metrics.Span("shipper_HandleReplayRequest_listUploadedFiles", func(id string) error {
 			return m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return err

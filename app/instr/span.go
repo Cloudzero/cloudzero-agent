@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -24,6 +25,7 @@ var (
 )
 
 type Span struct {
+	id    string
 	name  string
 	start time.Time
 	err   error
@@ -38,6 +40,7 @@ func (p *PrometheusMetrics) StartSpan(name string) *Span {
 	})
 
 	return &Span{
+		id:    uuid.NewString(),
 		name:  name,
 		start: time.Now(),
 	}
@@ -66,7 +69,7 @@ func (s *Span) End() {
 // in certain cases.
 //
 // In addition, this function transiently passes the error to the caller
-func (p *PrometheusMetrics) Span(name string, fn func() error) error {
+func (p *PrometheusMetrics) Span(name string, fn func(id string) error) error {
 	spanOnce.Do(func() {
 		p.registry.MustRegister(functionDuration)
 		(*p.metrics) = append((*p.metrics), functionDuration)
@@ -74,6 +77,6 @@ func (p *PrometheusMetrics) Span(name string, fn func() error) error {
 
 	span := p.StartSpan(name)
 	defer span.End()
-	err := fn() // run the actual function
+	err := fn(span.id) // run the actual function
 	return span.Error(err)
 }

@@ -17,7 +17,7 @@ import (
 )
 
 func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
-	return m.metrics.Span("shipper_HandleDisk", func() error {
+	return m.metrics.Span("shipper_HandleDisk", func(id string) error {
 		// get the disk usage
 		usage, err := m.GetDiskUsage()
 		if err != nil {
@@ -92,7 +92,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 	var usage *types.StoreUsage
 
-	err := m.metrics.Span("shipper_GetDiskUsage", func() error {
+	err := m.metrics.Span("shipper_GetDiskUsage", func(id string) error {
 		log.Ctx(m.ctx).Debug().Msg("Fetching disk info")
 		var err error
 
@@ -147,7 +147,7 @@ func (m *MetricShipper) handleStorageWarningCritical() error {
 
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`
 func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
-	return m.metrics.Span("shipper_PurgeMetricsBefore", func() error {
+	return m.metrics.Span("shipper_PurgeMetricsBefore", func(id string) error {
 		log.Ctx(m.ctx).Debug().Time("cutoff", before).Msg("Purging old metrics")
 		oldFiles := make([]string, 0)
 		if err := m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
@@ -189,7 +189,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 
 // PurgeOldestPercentage removes the oldest `percent` of files
 func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
-	return m.metrics.Span("shipper_PurgeOldestNPercentage", func() error {
+	return m.metrics.Span("shipper_PurgeOldestNPercentage", func(id string) error {
 		log.Ctx(m.ctx).Debug().Int("percent", percent).Msg("Purging oldest percentage of files")
 
 		if percent <= 0 || percent > 100 {

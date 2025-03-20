@@ -124,7 +124,7 @@ func (m *MetricShipper) Run() error {
 }
 
 func (m *MetricShipper) runShipper() error {
-	return m.metrics.Span("shipper_runShipper", func() error {
+	return m.metrics.Span("shipper_runShipper", func(id string) error {
 		log.Ctx(m.ctx).Debug().Msg("Running shipper cycle ...")
 
 		// run the base request
@@ -152,7 +152,7 @@ func (m *MetricShipper) runShipper() error {
 }
 
 func (m *MetricShipper) ProcessNewFiles() error {
-	return m.metrics.Span("shipper_ProcessNewFiles", func() error {
+	return m.metrics.Span("shipper_ProcessNewFiles", func(id string) error {
 		log.Ctx(m.ctx).Debug().Msg("Processing new files ...")
 
 		// lock the base dir for the duration of the new file handling
@@ -206,7 +206,7 @@ func (m *MetricShipper) ProcessNewFiles() error {
 // - Upload to the remote API
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(files []types.File) error {
-	return m.metrics.Span("shipper_handle_request", func() error {
+	return m.metrics.Span("shipper_handle_request", func(id string) error {
 		log.Ctx(m.ctx).Debug().Int("numFiles", len(files)).Msg("Handling request")
 		metricHandleRequestFileCount.Observe(float64(len(files)))
 		if len(files) == 0 {

@@ -34,7 +34,7 @@ type PresignedURLAPIResponse = map[string]string
 func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
 	var response PresignedURLAPIResponse
 
-	err := m.metrics.Span("shipper_AllocatePresignedURLs", func() error {
+	err := m.metrics.Span("shipper_AllocatePresignedURLs", func(id string) error {
 		// create the payload with the files
 		bodyFiles := make([]*PresignedURLAPIPayloadFile, len(files))
 		for i, file := range files {
