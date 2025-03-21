@@ -193,14 +193,9 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 
 func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id,
-			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Str("rr", rr.Filepath)
-			},
-			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Int("numfiles", rr.ReferenceIDs.Size())
-			},
-		)
+		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
+			return ctx.Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size())
+		})
 		logger.Debug().Msg("Handling replay request ...")
 
 		// fetch the new files that match these ids

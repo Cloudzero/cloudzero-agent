@@ -161,13 +161,7 @@ build-$1:
 	go build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/pkg/build.Time=$(BUILD_TIME)" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/pkg/build.Rev=${REVISION}" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/pkg/build.Tag=${TAG}" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/app/build.Time=$(BUILD_TIME)" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/app/build.Rev=${REVISION}" \
-		-ldflags="-X github.com/cloudzero/$(REPO_NAME)/app/build.Tag=${TAG}" \
+		-ldflags="-s -w -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Tag=${TAG} -X github.com/cloudzero/$(REPO_NAME)/app/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/app/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/app/build.Tag=${TAG}" \
 		-tags 'netgo osusergo' \
 		-o ${OUTPUT_BIN_DIR}/$1 \
 		./cmd/$1/

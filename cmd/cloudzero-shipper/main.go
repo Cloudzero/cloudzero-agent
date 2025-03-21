@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/go-obvious/server"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
@@ -44,6 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create the logger")
 	}
+	zerolog.DefaultContextLogger = logger
 	ctx = logger.WithContext(ctx)
 
 	store, err := store.NewDiskStore(settings.Database)

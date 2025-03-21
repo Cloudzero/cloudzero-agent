@@ -4,7 +4,6 @@
 package logging
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -72,10 +71,7 @@ Example:
 	logger := NewLogger(
 		WithAttrs(
 			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Str("app", "my-application")
-			},
-			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Int("version", 1)
+				return ctx.Str("app", "my-application").Int("version", 1)
 			},
 		),
 	)
@@ -139,9 +135,4 @@ func NewLogger(opts ...LoggerOpt) (*zerolog.Logger, error) {
 	zerolog.DefaultContextLogger = &zlogger
 
 	return &zlogger, nil
-}
-
-// bind the zerologger to the current context
-func BindDefaultLoggerToContext(ctx context.Context) context.Context {
-	return zerolog.DefaultContextLogger.WithContext(ctx)
 }
