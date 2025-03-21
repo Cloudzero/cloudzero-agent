@@ -326,7 +326,8 @@ metricFilters:
         - shipper_disk_cleanup_failure_total
         - shipper_disk_cleanup_success_total
         - shipper_disk_cleanup_percentage
-      prefix: []
+      prefix:
+        - czo_
       suffix: []
       contains: []
       regex: []
