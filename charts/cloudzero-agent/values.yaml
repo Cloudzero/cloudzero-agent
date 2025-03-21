@@ -117,32 +117,6 @@ prometheusMetrics:
   - prometheus_target_scrape_pools_total
   - prometheus_target_sync_failed_total
   - prometheus_target_sync_length_seconds
-aggregatorMetrics:
-  - go_gc_duration_seconds
-  - go_gc_duration_seconds_count
-  - go_gc_duration_seconds_sum
-  - go_gc_gogc_percent
-  - go_gc_gomemlimit_bytes
-  - go_goroutines
-  - go_memstats_alloc_bytes
-  - go_memstats_heap_alloc_bytes
-  - go_memstats_heap_idle_bytes
-  - go_memstats_heap_inuse_bytes
-  - go_memstats_heap_objects
-  - go_memstats_last_gc_time_seconds
-  - go_memstats_alloc_bytes
-  - go_memstats_stack_inuse_bytes
-  - go_threads
-  - http_request_duration_seconds_bucket
-  - http_request_duration_seconds_count
-  - http_request_duration_seconds_sum
-  - http_requests_total
-  - prometheus_remote_storage_exemplars_in_total
-  - prometheus_remote_storage_histograms_in_total
-  - prometheus_remote_storage_samples_in_total
-  - prometheus_remote_storage_string_interner_zero_reference_releases_total
-  - promhttp_metric_handler_requests_in_flight
-  - promhttp_metric_handler_requests_total
 # -- Any items added to this array will be added to the metrics that are sent to CloudZero, in addition to the minimal labels that CloudZero requires.
 additionalMetricLabels: []
 

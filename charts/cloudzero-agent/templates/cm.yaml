@@ -151,7 +151,7 @@ data:
         metrics_path: /metrics
         metric_relabel_configs:
           - source_labels: [__name__]
-            regex: "^({{ join "|" .Values.aggregatorMetrics }})$"
+            regex: "{{ include "cloudzero-agent.generateMetricNameFilterRegex" .Values }}"
             action: keep
       {{- end }}
       {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}

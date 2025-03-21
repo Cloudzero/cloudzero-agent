@@ -191,6 +191,69 @@ Combine metric lists
 {{- end -}}
 
 {{/*
+Internal helper function for generating a metric filter regex
+*/}}
+{{- define "cloudzero-agent.generateMetricFilterRegexInternal" -}}
+{{- $patterns := list -}}
+{{/* Handle exact matches */}}
+{{- $exactPatterns := uniq .exact -}}
+{{- if gt (len $exactPatterns) 0 -}}
+{{- $exactPattern := printf "^(%s)$" (join "|" $exactPatterns) -}}
+{{- $patterns = append $patterns $exactPattern -}}
+{{- end -}}
+
+{{/* Handle prefix matches */}}
+{{- $prefixPatterns := uniq .prefix -}}
+{{- if gt (len $prefixPatterns) 0 -}}
+{{- $prefixPattern := printf "^(%s)" (join "|" $prefixPatterns) -}}
+{{- $patterns = append $patterns $prefixPattern -}}
+{{- end -}}
+
+{{/* Handle suffix matches */}}
+{{- $suffixPatterns := uniq .suffix -}}
+{{- if gt (len $suffixPatterns) 0 -}}
+{{- $suffixPattern := printf "(%s)$" (join "|" $suffixPatterns) -}}
+{{- $patterns = append $patterns $suffixPattern -}}
+{{- end -}}
+
+{{/* Handle contains matches */}}
+{{- $containsPatterns := uniq .contains -}}
+{{- if gt (len $containsPatterns) 0 -}}
+{{- $containsPattern := printf "(%s)" (join "|" $containsPatterns) -}}
+{{- $patterns = append $patterns $containsPattern -}}
+{{- end -}}
+
+{{/* Handle regex matches */}}
+{{- $regexPatterns := uniq .regex -}}
+{{- if gt (len $regexPatterns) 0 -}}
+{{- $regexPattern := printf "(%s)" (join "|" $regexPatterns) -}}
+{{- $patterns = append $patterns $regexPattern -}}
+{{- end -}}
+
+{{- join "|" $patterns -}}
+{{- end -}}
+
+{{- define "cloudzero-agent.generateMetricNameFilterRegex" -}}
+{{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
+  "exact"    (uniq (concat .metricFilters.cost.name.exact    .metricFilters.observability.name.exact    .metricFilters.cost.name.additionalExact    .metricFilters.observability.name.additionalExact))
+  "prefix"   (uniq (concat .metricFilters.cost.name.prefix   .metricFilters.observability.name.prefix   .metricFilters.cost.name.additionalPrefix   .metricFilters.observability.name.additionalPrefix))
+  "suffix"   (uniq (concat .metricFilters.cost.name.suffix   .metricFilters.observability.name.suffix   .metricFilters.cost.name.additionalSuffix   .metricFilters.observability.name.additionalSuffix))
+  "contains" (uniq (concat .metricFilters.cost.name.contains .metricFilters.observability.name.contains .metricFilters.cost.name.additionalContains .metricFilters.observability.name.additionalContains))
+  "regex"    (uniq (concat .metricFilters.cost.name.regex    .metricFilters.observability.name.regex    .metricFilters.cost.name.additionalRegex    .metricFilters.observability.name.additionalRegex))
+) -}}
+{{- end -}}
+
+{{- define "cloudzero-agent.generateMetricLabelFilterRegex" -}}
+{{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
+  "exact"    (uniq (concat .metricFilters.cost.labels.exact    .metricFilters.observability.labels.exact    .metricFilters.cost.labels.additionalExact    .metricFilters.observability.labels.additionalExact))
+  "prefix"   (uniq (concat .metricFilters.cost.labels.prefix   .metricFilters.observability.labels.prefix   .metricFilters.cost.labels.additionalPrefix   .metricFilters.observability.labels.additionalPrefix))
+  "suffix"   (uniq (concat .metricFilters.cost.labels.suffix   .metricFilters.observability.labels.suffix   .metricFilters.cost.labels.additionalSuffix   .metricFilters.observability.labels.additionalSuffix))
+  "contains" (uniq (concat .metricFilters.cost.labels.contains .metricFilters.observability.labels.contains .metricFilters.cost.labels.additionalContains .metricFilters.observability.labels.additionalContains))
+  "regex"    (uniq (concat .metricFilters.cost.labels.regex    .metricFilters.observability.labels.regex    .metricFilters.cost.labels.additionalRegex    .metricFilters.observability.labels.additionalRegex))
+) -}}
+{{- end -}}
+
+{{/*
 Generate metric filters
 */}}
 {{- define "cloudzero-agent.generateMetricFilters" -}}
