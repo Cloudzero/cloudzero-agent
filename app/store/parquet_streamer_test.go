@@ -85,7 +85,9 @@ func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 
 	decodedParquetMetrics := make([]types.ParquetMetric, len(testMetrics))
 	rowsRead, err := parquetReader.Read(decodedParquetMetrics)
-	assert.NoError(t, err)
+	if err != nil {
+		assert.ErrorIs(t, err, io.EOF)
+	}
 	assert.Equal(t, len(testMetrics), rowsRead)
 
 	decodedMetrics := make([]types.Metric, 0, len(decodedParquetMetrics))
