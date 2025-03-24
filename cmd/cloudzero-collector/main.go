@@ -105,6 +105,15 @@ func main() {
 		})
 	}
 
+	apis := []server.API{
+		handlers.NewRemoteWriteAPI("/collector", domain),
+		handlers.NewPromMetricsAPI("/metrics"),
+	}
+
+	if settings.Server.Profiling {
+		apis = append(apis, handlers.NewProfilingAPI("/debug/pprof/"))
+	}
+
 	// Expose the service
 	logger.Info().Msg("Starting service")
 	server.New(
@@ -113,8 +122,7 @@ func main() {
 			loggerMiddleware,
 			handlers.PromHTTPMiddleware,
 		},
-		handlers.NewRemoteWriteAPI("/collector", domain),
-		handlers.NewPromMetricsAPI("/metrics"),
+		apis...,
 	).Run(ctx)
 	logger.Info().Msg("Service stopping")
 }

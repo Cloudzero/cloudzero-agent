@@ -71,8 +71,9 @@ type PurgeRules struct {
 }
 
 type Server struct {
-	Mode string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
-	Port uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
+	Mode      string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
+	Port      uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
+	Profiling bool   `yaml:"profiling" default:"false" env:"SERVER_PROFILING" env-description:"enable profiling"`
 }
 
 type Cloudzero struct {
