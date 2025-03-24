@@ -269,6 +269,7 @@ data:
     server:
       mode: http
       port: {{ .Values.aggregator.collector.port }}
+      profiling: {{ .Values.aggregator.profiling }}
 
     logging:
       level: "{{ .Values.aggregator.logging.level }}"
