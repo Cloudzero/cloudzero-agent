@@ -26,7 +26,7 @@ func NewMetricFilter(cfg *config.Metrics) (*MetricFilter, error) {
 	mf := &MetricFilter{}
 	haveFilter := false
 
-	if cfg.Cost != nil {
+	if len(cfg.Cost) != 0 {
 		mf.cost, err = filter.NewFilterChecker(cfg.Cost)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile cost filter: %w", err)
@@ -34,7 +34,7 @@ func NewMetricFilter(cfg *config.Metrics) (*MetricFilter, error) {
 		haveFilter = true
 	}
 
-	if cfg.CostLabels != nil {
+	if len(cfg.CostLabels) != 0 {
 		mf.costLabels, err = filter.NewFilterChecker(cfg.CostLabels)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile cost labels filter: %w", err)
@@ -42,7 +42,7 @@ func NewMetricFilter(cfg *config.Metrics) (*MetricFilter, error) {
 		haveFilter = true
 	}
 
-	if cfg.Observability != nil {
+	if len(cfg.Observability) != 0 {
 		mf.observability, err = filter.NewFilterChecker(cfg.Observability)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile observability filter: %w", err)
@@ -50,7 +50,7 @@ func NewMetricFilter(cfg *config.Metrics) (*MetricFilter, error) {
 		haveFilter = true
 	}
 
-	if cfg.ObservabilityLabels != nil {
+	if len(cfg.ObservabilityLabels) != 0 {
 		mf.observabilityLabels, err = filter.NewFilterChecker(cfg.ObservabilityLabels)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile observability labels filter: %w", err)

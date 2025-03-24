@@ -35,6 +35,10 @@ type FilterChecker struct {
 }
 
 func NewFilterChecker(filters []FilterEntry) (*FilterChecker, error) {
+	if len(filters) == 0 {
+		return nil, nil //nolint:nilnil // methods handle nil properly, returning nil allows us to elide code
+	}
+
 	chk := &FilterChecker{
 		exactMatches: map[string]bool{},
 	}
@@ -65,6 +69,10 @@ func NewFilterChecker(filters []FilterEntry) (*FilterChecker, error) {
 }
 
 func (chk *FilterChecker) Test(value string) bool {
+	if chk == nil {
+		return true
+	}
+
 	if _, found := chk.exactMatches[value]; found {
 		return true
 	}
