@@ -75,7 +75,6 @@ ENV PATH=/app:$PATH
 
 # Copy the Go binary from the builder stage
 COPY --from=builder /go/bin/cloudzero-insights-controller /app/cloudzero-insights-controller
-COPY --from=builder /go/bin/cloudzero-insights-controller /app/controller
 COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 
