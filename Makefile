@@ -251,7 +251,7 @@ generate: ## (Re)generate generated code
 
 # ----------- HELM ------------
 
-lint: lint-helm
-.PHONY: lint-helm
-lint-helm: ## Lint the helm chart
-	@helm lint ./helm/
+# lint: lint-helm
+# .PHONY: lint-helm
+# lint-helm: ## Lint the helm chart
+# 	@helm lint ./helm/

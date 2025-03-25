@@ -1,2 +1,0 @@
-extraArgs:
-  - --metric-labels-allowlist=pods=[*]

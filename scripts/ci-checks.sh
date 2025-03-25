@@ -15,7 +15,6 @@ function check_go_version() {
 
     # Dockerfiles
     for DOCKERFILE in \
-            app/docker/Dockerfile \
             docker/Dockerfile \
             tests/docker/Dockerfile.collector \
             tests/docker/Dockerfile.shipper \
@@ -28,7 +27,9 @@ function check_go_version() {
     done
 
     # go.mod
-    for GO_MOD in go.mod app/tools/go.mod tests/integration/test_server/go.mod; do
+    for GO_MOD in \
+            go.mod \
+            tests/integration/test_server/go.mod; do
         git grep -q "^go ${DESIRED_GO_VERSION}\$" ${GO_MOD} || {
             echo "${GO_MOD} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2
             FAILED=true
