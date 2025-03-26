@@ -152,10 +152,11 @@ else
 endif
 
 define generate-go-command-target
-.PHONY: build-$1
-build: build-$1
-build-$1:
-	mkdir -p bin && \
+build: $(OUTPUT_BIN_DIR)/$(notdir $1)
+
+.PHONY: $(OUTPUT_BIN_DIR)/$(notdir $1)
+$(OUTPUT_BIN_DIR)/$(notdir $1):
+	@mkdir -p $(OUTPUT_BIN_DIR)
 	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) \
 	CC=$(TOOLCHAIN_CC) CXX=$(TOOLCHAIN_CXX) \
 	CGO_ENABLED=1 \
@@ -164,19 +165,27 @@ build-$1:
 		-trimpath \
 		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
 		-tags 'netgo osusergo' \
-		-o ${OUTPUT_BIN_DIR}/$1 \
-		./cmd/$1/
+		-o $$@ \
+		./$1/
 
 endef
 
-GO_COMMAND_TARGETS = \
-	cloudzero-collector \
-	cloudzero-insights-controller \
-	cloudzero-shipper \
+GO_BINARY_DIRS = \
+	cmd \
+	app/functions \
 	$(NULL)
 
-$(eval $(foreach target,$(GO_COMMAND_TARGETS),$(call generate-go-command-target,$(target))))
-CLEANFILES += $(foreach file,$(GO_COMMAND_TARGETS),$(OUTPUT_BIN_DIR)/$(file))
+GO_COMMAND_PACKAGE_DIRS = \
+	$(foreach parent_dir,$(GO_BINARY_DIRS),$(foreach src_dir,$(wildcard $(parent_dir)/*/),$(patsubst %/,%,$(src_dir)))) \
+	$(NULL)
+
+GO_BINARIES = \
+	$(foreach bin,$(GO_COMMAND_PACKAGE_DIRS),$(OUTPUT_BIN_DIR)/$(notdir $(bin))) \
+	$(NULL)
+
+$(eval $(foreach target,$(GO_COMMAND_PACKAGE_DIRS),$(call generate-go-command-target,$(target))))
+
+CLEANFILES += $(GO_BINARIES)
 
 CLEANFILES += \
 	log.json \
