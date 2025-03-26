@@ -3,11 +3,10 @@
 # docker buildx build --builder=container --platform linux/amd64,linux/arm64 --push -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile .
 #
 # Stage 1: Build the Go binary
-# FROM golang:1.22 AS builder
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine3.20 AS builder
+# FROM golang:1.24 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.20 AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
-ARG REPO_NAME=cloudzero-insights-controller
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -18,7 +17,7 @@ RUN cat /etc/passwd | grep nobody > /etc/passwd_nobody
 # Copy the Go module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download \
-    && apk add build-base git make zig
+    && apk add build-base make zig
 
 # Copy the source code
 COPY . .
@@ -35,9 +34,8 @@ ARG BUILD_TIME=unknown
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
 RUN make build OUTPUT_BIN_DIR=/go/bin \
-    TARGETOS=$TARGETOS TARGETARCH=$TARGETARCH \
+    TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
     ENABLE_ZIG=true \
-    REPO_NAME=${REPO_NAME} \
     BUILD_TIME=${BUILD_TIME} \
     REVISION=${REVISION} TAG=${TAG}
 
@@ -75,7 +73,6 @@ ENV PATH=/app:$PATH
 
 # Copy the Go binary from the builder stage
 COPY --from=builder /go/bin/cloudzero-insights-controller /app/cloudzero-insights-controller
-COPY --from=builder /go/bin/cloudzero-insights-controller /app/controller
 COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 

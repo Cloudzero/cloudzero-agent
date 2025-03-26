@@ -1,32 +1,6 @@
 # Allow overriding local variables by setting them in local-config.mk
 -include local-config.mk
 
-REPO_NAME ?= $(shell basename `git rev-parse --show-toplevel`)
-IMAGE_PREFIX ?= ghcr.io/cloudzero/$(REPO_NAME)
-IMAGE_NAME ?= $(IMAGE_PREFIX)/$(REPO_NAME)
-TARGET_ARCH ?= $(shell uname -m)
-
-BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
-REVISION ?= $(shell git rev-parse HEAD)
-TAG ?= dev-$(REVISION)
-
-# Directories
-OUTPUT_BIN_DIR ?= bin
-
-# Default Go environment
-TARGETOS   ?= $(shell go env GOOS)
-TARGETARCH ?= $(shell go env GOARCH)
-
-# Need to use the correct names for the musl libs - which don't conform to the TARGETARCH values
-# SEE: https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63
-ifeq ($(TARGETARCH),amd64)
-ZIG_ARCH ?= x86_64
-else ifeq ($(TARGETARCH),arm64)
-ZIG_ARCH ?= aarch64
-else
-ZIG_ARCH ?= $(TARGETARCH)
-endif
-
 # Dependency executables
 #
 # These are dependencies that are expected to be installed system-wide. For
@@ -43,6 +17,30 @@ NPM    ?= npm
 PROTOC ?= protoc
 RM     ?= rm
 XARGS  ?= xargs
+
+# Build configuration
+GO_MODULE      ?= $(shell $(GO) list -m)
+IMAGE_PREFIX   ?= $(subst github.com,ghcr.io,$(GO_MODULE))
+IMAGE_NAME     ?= $(IMAGE_PREFIX)/$(notdir $(GO_MODULE))
+BUILD_TIME     ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
+REVISION       ?= $(shell git rev-parse HEAD)
+TAG            ?= dev-$(REVISION)
+OUTPUT_BIN_DIR ?= bin
+TARGET_OS      ?= $(shell go env GOOS)
+TARGET_ARCH    ?= $(shell go env GOARCH)
+
+# The name of the architecture used by the toolchain often doesn't match the
+# name of the architecture in GOARCH. This maps from the GOARCH name to the
+# toolchain name. For additional details about the various architectures
+# supported by go (i.e., GOARCH values), see:
+# https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63
+ifeq ($(TARGET_ARCH),amd64)
+  TOOLCHAIN_ARCH ?= x86_64
+else ifeq ($(TARGET_ARCH),arm64)
+  TOOLCHAIN_ARCH ?= aarch64
+else
+  TOOLCHAIN_ARCH ?= $(TARGET_ARCH)
+endif
 
 # Colors
 ERROR_COLOR ?= \033[1;31m
@@ -146,8 +144,11 @@ analyze: ## Run static analysis
 build: ## Build the binaries
 
 ifeq ($(ENABLE_ZIG),true)
-CCTARGET  ?= "zig cc  -target $(ZIG_ARCH)-$(TARGETOS)-musl"
-CXXTARGET ?= "zig c++ -target $(ZIG_ARCH)-$(TARGETOS)-musl"
+  TOOLCHAIN_CC  ?= "zig cc  -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
+  TOOLCHAIN_CXX ?= "zig c++ -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
+else
+  TOOLCHAIN_CC  ?= $(CC)
+  TOOLCHAIN_CXX ?= $(CXX)
 endif
 
 define generate-go-command-target
@@ -155,13 +156,13 @@ define generate-go-command-target
 build: build-$1
 build-$1:
 	mkdir -p bin && \
-	GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) \
-	CC=$(CCTARGET) CXX=$(CXXTARGET) \
+	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) \
+	CC=$(TOOLCHAIN_CC) CXX=$(TOOLCHAIN_CXX) \
 	CGO_ENABLED=1 \
-	go build \
+	$(GO) build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/pkg/build.Tag=${TAG} -X github.com/cloudzero/$(REPO_NAME)/app/build.Time=$(BUILD_TIME) -X github.com/cloudzero/$(REPO_NAME)/app/build.Rev=${REVISION} -X github.com/cloudzero/$(REPO_NAME)/app/build.Tag=${TAG}" \
+		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
 		-tags 'netgo osusergo' \
 		-o ${OUTPUT_BIN_DIR}/$1 \
 		./cmd/$1/
@@ -210,7 +211,6 @@ endif
 		--build-arg REVISION=$(REVISION) \
 		--build-arg TAG=$(TAG) \
 		--build-arg BUILD_TIME=$(BUILD_TIME) \
-		--build-arg REPO_NAME=$(REPO_NAME) \
 		--$2 -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
 	echo -e "$(INFO_COLOR)Image $(IMAGE_NAME):$(TAG) built successfully$(NO_COLOR)"
 endef
@@ -251,7 +251,7 @@ generate: ## (Re)generate generated code
 
 # ----------- HELM ------------
 
-lint: lint-helm
-.PHONY: lint-helm
-lint-helm: ## Lint the helm chart
-	@helm lint ./helm/
+# lint: lint-helm
+# .PHONY: lint-helm
+# lint-helm: ## Lint the helm chart
+# 	@helm lint ./helm/

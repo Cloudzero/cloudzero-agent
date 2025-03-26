@@ -1,13 +1,11 @@
 module github.com/cloudzero/cloudzero-insights-controller
 
-go 1.23.2
-
-toolchain go1.23.5
+go 1.24.1
 
 require (
-	github.com/andybalholm/brotli v1.1.0
-	github.com/ccoveille/go-safecast v1.6.0
-	github.com/docker/docker v27.4.1+incompatible
+	github.com/andybalholm/brotli v1.1.1
+	github.com/ccoveille/go-safecast v1.6.1
+	github.com/docker/docker v28.0.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-chi/chi v4.1.2+incompatible
@@ -18,12 +16,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
-	github.com/minio/minio-go/v7 v7.0.87
-	github.com/parquet-go/parquet-go v0.24.0
+	github.com/minio/minio-go/v7 v7.0.88
+	github.com/parquet-go/parquet-go v0.25.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/prometheus v0.302.1
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.35.0
@@ -82,7 +80,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

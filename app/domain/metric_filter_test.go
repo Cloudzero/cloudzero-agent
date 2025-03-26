@@ -199,6 +199,24 @@ func TestMetricFilter_Filter(t *testing.T) {
 				defaultTestMetric,
 			},
 		},
+		{
+			name: "empty-allow",
+			cfg: config.Metrics{
+				Cost:                []filter.FilterEntry{},
+				Observability:       []filter.FilterEntry{},
+				CostLabels:          []filter.FilterEntry{},
+				ObservabilityLabels: []filter.FilterEntry{},
+			},
+			metrics: []types.Metric{
+				defaultTestMetric,
+			},
+			cost: []types.Metric{
+				defaultTestMetric,
+			},
+			observability: []types.Metric{
+				defaultTestMetric,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

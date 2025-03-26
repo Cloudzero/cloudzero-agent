@@ -20,6 +20,7 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
 	"github.com/prometheus/prometheus/storage/remote"
+	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
@@ -139,6 +140,12 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	metricsReceived.WithLabelValues().Add(float64(len(metrics)))
 	metricsReceivedCost.WithLabelValues().Add(float64(len(costMetrics)))
 	metricsReceivedObservability.WithLabelValues().Add(float64(len(observabilityMetrics)))
+
+	log.Ctx(ctx).Debug().
+		Int("metrics", len(metrics)).
+		Int("costMetrics", len(costMetrics)).
+		Int("observabilityMetrics", len(observabilityMetrics)).
+		Msg("metrics received")
 
 	if costMetrics != nil && d.costStore != nil {
 		if err := d.costStore.Put(ctx, costMetrics...); err != nil {

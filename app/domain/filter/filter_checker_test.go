@@ -173,6 +173,18 @@ func TestFilterChecker_Test(t *testing.T) {
 			want:    false,
 			wantErr: true,
 		},
+		{
+			name:    "empty filters",
+			filters: []util.FilterEntry{},
+			value:   "testing",
+			want:    true,
+		},
+		{
+			name:    "nil filters",
+			filters: nil,
+			value:   "testing",
+			want:    true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
