@@ -16,3 +16,15 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+
+  - package-ecosystem: "docker"
+    directory: "/docker/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+
+  - package-ecosystem: "npm"
+    directory: "/.tools/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
