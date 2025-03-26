@@ -7,9 +7,12 @@ import "errors"
 
 // public
 const (
-	ReplaySubDirectory   = "replay"
-	UploadedSubDirectory = "uploaded"
-	CriticalPurgePercent = 20
+	ReplaySubDirectory      = "replay"
+	UploadedSubDirectory    = "uploaded"
+	CriticalPurgePercent    = 20
+	ReplayRequestHeader     = "X-CloudZero-Replay"
+	ShipperIDRequestHeader  = "X-CloudZero-Shipper-ID"
+	AppVersionRequestHeader = "X-CloudZero-Version"
 )
 
 // private
@@ -22,11 +25,8 @@ const (
 	filesChunkSize      = 200
 	remoteFileExtension = ".parquet"
 
-	abandonAPIPath          = "/abandon"
-	uploadAPIPath           = "/upload"
-	replayRequestHeader     = "X-CloudZero-Replay"
-	shipperIDRequestHeader  = "X-CloudZero-Shipper-ID"
-	appVersionRequestHeader = "X-CloudZero-Version"
+	abandonAPIPath = "/abandon"
+	uploadAPIPath  = "/upload"
 )
 
 var (

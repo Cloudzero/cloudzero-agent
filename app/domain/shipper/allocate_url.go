@@ -16,6 +16,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type PresignedURLAPIPayload struct {
@@ -35,7 +36,6 @@ type PresignedURLAPIResponse = map[string]string
 // Allocates a set of pre-signed urls for the passed file objects
 func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
 	var response PresignedURLAPIResponse
-
 	err := m.metrics.SpanCtx(m.ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
 			return ctx.Int("numFiles", len(files))
@@ -82,8 +82,8 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// Set necessary headers
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
-		req.Header.Set(shipperIDRequestHeader, shipperID)
-		req.Header.Set(appVersionRequestHeader, build.GetVersion())
+		req.Header.Set(ShipperIDRequestHeader, shipperID)
+		req.Header.Set(AppVersionRequestHeader, build.GetVersion())
 
 		// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
 		q := req.URL.Query()
@@ -132,8 +132,10 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		}
 
 		// check for a replay request
-		rrh := resp.Header.Get(replayRequestHeader)
+		rrh := resp.Header.Get(ReplayRequestHeader)
 		if rrh != "" {
+			log.Ctx(m.ctx).Debug().Msg("Saving replay request to disk ...")
+
 			// parse the replay request
 			rr, err := NewReplayRequestFromHeader(rrh)
 			if err == nil {
@@ -146,6 +148,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 				// observe the presence of the replay request
 				metricReplayRequestTotal.WithLabelValues().Inc()
 				metricReplayRequestCurrent.WithLabelValues().Inc()
+				log.Ctx(m.ctx).Debug().Msg("Successfully saved replay request")
 			} else {
 				// do not fail the operation here
 				logger.Err(err).Msg("failed to parse the replay request header")

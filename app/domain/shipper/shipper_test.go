@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -57,6 +60,58 @@ func TestShipper_Unit_PerformShipping(t *testing.T) {
 
 	// ensure no errors when running
 	require.NotContains(t, stdout, `"level":"error"`)
+}
+
+func TestShipper_Unit_Shutdown(t *testing.T) {
+	stdout, _ := captureOutput(func() {
+		tmpDir := t.TempDir()
+		logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+		ctx := logger.WithContext(context.Background())
+		settings := &config.Settings{
+			Cloudzero: config.Cloudzero{
+				SendTimeout:  10,
+				SendInterval: time.Second,
+				Host:         "http://example.com",
+			},
+			Database: config.Database{
+				StoragePath: tmpDir,
+			},
+		}
+
+		mockLister := &MockAppendableFiles{baseDir: tmpDir}
+		mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: 49}, nil)
+		mockLister.On("GetFiles", mock.Anything).Return([]string{}, nil)
+		mockLister.On("Walk", mock.Anything, mock.Anything).Return(nil)
+
+		var wg sync.WaitGroup
+
+		// run in a thread
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+			metricShipper, err := shipper.NewMetricShipper(ctx, settings, mockLister)
+			require.NoError(t, err)
+			err = metricShipper.Run()
+			require.NoError(t, err)
+		}()
+
+		// wait
+		time.Sleep(time.Second)
+
+		// send the sigint
+		process, err := os.FindProcess(os.Getpid())
+		require.NoError(t, err)
+		err = process.Signal(syscall.SIGINT)
+		require.NoError(t, err)
+
+		// wait for the container to clean up
+		wg.Wait()
+	})
+
+	// ensure no errors when running
+	require.Contains(t, stdout, `Received signal. Initiating shutdown.`)
 }
 
 func TestShipper_Unit_GetMetrics(t *testing.T) {
@@ -123,6 +178,52 @@ func TestShipper_Unit_AllocatePresignedURL_Success(t *testing.T) {
 
 	// Verify
 	require.Equal(t, mockResponseBody, urlResponse)
+}
+
+func TestShipper_Unit_AllocatePresignedURL_ReplayRequestHeader(t *testing.T) {
+	// Setup
+	mockURL := "https://example.com/upload"
+
+	// create some test files
+	tmpDir := getTmpDir(t)
+	testFiles := createTestFiles(t, tmpDir, 2)
+
+	// create the expected response
+	mockResponseBody := map[string]string{}
+	for _, item := range testFiles {
+		mockResponseBody[shipper.GetRemoteFileID(item)] = "https://s3.amazonaws.com/bucket/file.parquet?signature=abc123"
+	}
+
+	// create a replay request header
+	headers := http.Header{}
+	headers.Add(shipper.ReplayRequestHeader, `[{"ref_id":"id-1"},{"ref_id":"id-2"},{"ref_id":"id-3"}]`)
+
+	mockRoundTripper := &MockRoundTripper{
+		status:           http.StatusOK,
+		mockResponseBody: mockResponseBody,
+		mockError:        nil,
+		headers:          headers,
+	}
+
+	settings := getMockSettings(mockURL, tmpDir)
+
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
+	require.NoError(t, err)
+	metricShipper.HTTPClient.Transport = mockRoundTripper
+
+	// Execute
+	require.NoError(t, err)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(testFiles)
+	require.NoError(t, err)
+
+	// Verify
+	require.Equal(t, mockResponseBody, urlResponse)
+
+	// ensure the replay request was parsed and saved to disk
+	elems, err := os.ReadDir(filepath.Join(metricShipper.GetBaseDir(), shipper.ReplaySubDirectory))
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(elems))
 }
 
 func TestShipper_Unit_AllocatePresignedURL_NoFiles(t *testing.T) {

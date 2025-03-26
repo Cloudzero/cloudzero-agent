@@ -65,6 +65,7 @@ type MockRoundTripper struct {
 	mockResponseBody       any
 	mockResponseBodyString string
 	mockError              error
+	headers                http.Header
 }
 
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -72,6 +73,7 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		return &http.Response{
 			StatusCode: m.status,
 			Body:       io.NopCloser(bytes.NewBuffer([]byte(m.mockResponseBodyString))),
+			Header:     m.headers,
 		}, m.mockError
 	} else {
 		enc, err := json.Marshal(m.mockResponseBody)
@@ -81,6 +83,7 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		return &http.Response{
 			StatusCode: m.status,
 			Body:       io.NopCloser(bytes.NewBuffer(enc)),
+			Header:     m.headers,
 		}, m.mockError
 	}
 }
@@ -100,6 +103,9 @@ func getMockSettings(mockURL, dir string) *config.Settings {
 		ClusterName:    "test-cluster",
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
+		Logging: config.Logging{
+			Level: "debug",
+		},
 		Cloudzero: config.Cloudzero{
 			Host:        mockURL,
 			SendTimeout: time.Millisecond * 1000,
