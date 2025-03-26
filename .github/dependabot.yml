@@ -4,7 +4,8 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -12,7 +13,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
