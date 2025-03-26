@@ -20,8 +20,8 @@ function check_go_version() {
             tests/docker/Dockerfile.shipper \
             tests/docker/Dockerfile.remotewrite \
             tests/integration/test_server/Dockerfile; do
-        git grep -q " golang:${DESIRED_GO_VERSION_NO_MICRO}[- ]" ${DOCKERFILE} || {
-            echo "${DOCKERFILE} does not have the desired Go version (${DESIRED_GO_VERSION_NO_MICRO})" >&2
+        git grep -q " golang:${DESIRED_GO_VERSION}" ${DOCKERFILE} || {
+            echo "${DOCKERFILE} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2
             FAILED=true
         }
     done
