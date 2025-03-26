@@ -7,7 +7,6 @@
 FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.20 AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
-ARG REPO_NAME=cloudzero-insights-controller
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -18,7 +17,7 @@ RUN cat /etc/passwd | grep nobody > /etc/passwd_nobody
 # Copy the Go module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download \
-    && apk add build-base git make zig
+    && apk add build-base make zig
 
 # Copy the source code
 COPY . .
@@ -35,9 +34,8 @@ ARG BUILD_TIME=unknown
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
 RUN make build OUTPUT_BIN_DIR=/go/bin \
-    TARGETOS=$TARGETOS TARGETARCH=$TARGETARCH \
+    TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
     ENABLE_ZIG=true \
-    REPO_NAME=${REPO_NAME} \
     BUILD_TIME=${BUILD_TIME} \
     REVISION=${REVISION} TAG=${TAG}
 

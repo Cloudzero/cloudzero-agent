@@ -6,9 +6,9 @@ package build
 
 // These values are replaced at compile time using the -X build flag:
 //
-//	-X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION}
-//	-X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
-//	-X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME}
+//	-X $(go list -m)/pkg/build.Rev=${REVISION}
+//	-X $(go list -m)/pkg/build.Tag=${TAG}"
+//	-X $(go list -m)/pkg/build.Time=${BUILD_TIME}
 //
 // Example:
 //   BUILD_TIME="$(date -u '+%Y-%m-%d_%I:%M:%S%p')"
@@ -20,7 +20,7 @@ package build
 //     REVISION="$(git rev-parse HEAD)"
 //   fi
 //
-//   LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
+//   LD_FLAGS="-s -w -X $(go list -m)/pkg/build.Time=${BUILD_TIME} -X $(go list -m)/pkg/build.Rev=${REVISION} -X $(go list -m)/pkg/build.Tag=${TAG}"
 //   CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 
 var (
