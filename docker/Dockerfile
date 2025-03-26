@@ -4,7 +4,7 @@
 #
 # Stage 1: Build the Go binary
 # FROM golang:1.24 AS builder
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.20 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.1-alpine AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 

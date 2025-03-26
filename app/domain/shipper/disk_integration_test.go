@@ -200,7 +200,7 @@ func TestShipper_Integration_Disk_PurgeMetricsBefore(t *testing.T) {
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 	require.NoError(t, err)
 
-	err = metricShipper.PurgeMetricsBefore(cutoffDate)
+	err = metricShipper.PurgeMetricsBefore(context.Background(), cutoffDate)
 	assert.NoError(t, err)
 
 	// Verify only old files were deleted
@@ -236,7 +236,7 @@ func TestShipper_Integration_Disk_PurgeOldestPercentage(t *testing.T) {
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 	require.NoError(t, err)
 
-	err = metricShipper.PurgeOldestNPercentage(shipper.CriticalPurgePercent)
+	err = metricShipper.PurgeOldestNPercentage(context.Background(), shipper.CriticalPurgePercent)
 	assert.NoError(t, err)
 
 	// Verify shipper.CriticalPurgePercent files were deleted (shipper.CriticalPurgePercent% of 100)
@@ -288,7 +288,7 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		require.NoError(t, err)
 
 		fsTester.SimulateDiskUsage(50) // 50% usage
-		err = metricShipper.HandleDisk(cutoffDate)
+		err = metricShipper.HandleDisk(context.Background(), cutoffDate)
 		assert.NoError(t, err)
 
 		// Verify no files were deleted
@@ -318,7 +318,7 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		require.NoError(t, err)
 
 		fsTester.SimulateDiskUsage(85) // 85% usage - should trigger high warning
-		err = metricShipper.HandleDisk(cutoffDate)
+		err = metricShipper.HandleDisk(context.Background(), cutoffDate)
 		assert.NoError(t, err)
 
 		// Verify only the old files were deleted
@@ -352,7 +352,7 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		require.NoError(t, err)
 
 		fsTester.SimulateDiskUsage(95) // 95% usage - should trigger critical warning
-		err = metricShipper.HandleDisk(cutoffDate)
+		err = metricShipper.HandleDisk(context.Background(), cutoffDate)
 		assert.NoError(t, err)
 
 		// Verify 20% of files were deleted

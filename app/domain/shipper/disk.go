@@ -4,6 +4,7 @@
 package shipper
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -12,28 +13,37 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
-func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
-	return m.metrics.Span("shipper_HandleDisk", func() error {
+func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) error {
+	return m.metrics.SpanCtx(ctx, "shipper_HandleDisk", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id,
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Time("metricCutoff", metricCutoff)
+			},
+		)
+		logger.Debug().Msg("Handling the disk usage ...")
+
 		// get the disk usage
-		usage, err := m.GetDiskUsage()
+		usage, err := m.GetDiskUsage(ctx)
 		if err != nil {
 			return err
 		}
 
 		// get the storage warning level
+		logger.Debug().Msg("Getting the storage warning")
 		warn := usage.GetStorageWarning()
 
 		// log the storage warning
-		log.Ctx(m.ctx).Info().
+		logger.Debug().
 			Uint64("used", usage.Used).
 			Float64("percentUsed", usage.PercentUsed).
 			Uint64("total", usage.Total).
 			Any("warningLevel", warn).
-			Msg("Storage usage")
+			Msg("Current storage usage")
 
 		switch warn {
 		case types.StoreWarningNone:
@@ -43,12 +53,12 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 		case types.StoreWarningMed:
 			// purge old metrics if not in lazy mode
 			if !m.setting.Database.PurgeRules.Lazy {
-				if err = m.PurgeMetricsBefore(metricCutoff); err != nil {
+				if err = m.PurgeMetricsBefore(ctx, metricCutoff); err != nil {
 					return fmt.Errorf("failed to purge older metrics: %w", err)
 				}
 			}
 		case types.StoreWarningHigh:
-			if err = m.handleStorageWarningHigh(metricCutoff); err != nil {
+			if err = m.handleStorageWarningHigh(ctx, metricCutoff); err != nil {
 				// note the error in prom
 				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
 				return err
@@ -58,7 +68,7 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 			metricDiskCleanupSuccessTotal.WithLabelValues(strconv.Itoa(int(warn))).Inc()
 
 		case types.StoreWarningCrit:
-			if err = m.handleStorageWarningCritical(); err != nil {
+			if err = m.handleStorageWarningCritical(ctx); err != nil {
 				// note the error in prom
 				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
 				return err
@@ -89,11 +99,12 @@ func (m *MetricShipper) HandleDisk(metricCutoff time.Time) error {
 
 // GetDiskUsage gets the storage usage of the attached volume, and also reports
 // the usage to prometheus.
-func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
+func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, error) {
 	var usage *types.StoreUsage
 
-	err := m.metrics.Span("shipper_GetDiskUsage", func() error {
-		log.Ctx(m.ctx).Debug().Msg("Fetching disk info")
+	err := m.metrics.SpanCtx(ctx, "shipper_GetDiskUsage", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Msg("Fetching disk info")
 		var err error
 
 		// get the disk usage
@@ -126,6 +137,8 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 		metricCurrentDiskSentFile.WithLabelValues().Set(float64(len(sent)))
 		metricCurrentDiskReplayRequest.WithLabelValues().Set(float64(len(rr)))
 
+		logger.Debug().Msg("Successfully fetched disk usage")
+
 		return nil
 	})
 	if err != nil {
@@ -135,20 +148,20 @@ func (m *MetricShipper) GetDiskUsage() (*types.StoreUsage, error) {
 	return usage, nil
 }
 
-func (m *MetricShipper) handleStorageWarningHigh(before time.Time) error {
-	log.Ctx(m.ctx).Info().Msg("Handling high storage usage ...")
-	return m.PurgeMetricsBefore(before)
+func (m *MetricShipper) handleStorageWarningHigh(ctx context.Context, before time.Time) error {
+	return m.PurgeMetricsBefore(ctx, before)
 }
 
-func (m *MetricShipper) handleStorageWarningCritical() error {
-	log.Ctx(m.ctx).Info().Msg("Handling critical storage usage ...")
-	return m.PurgeOldestNPercentage(m.setting.Database.PurgeRules.Percent)
+func (m *MetricShipper) handleStorageWarningCritical(ctx context.Context) error {
+	return m.PurgeOldestNPercentage(ctx, m.setting.Database.PurgeRules.Percent)
 }
 
 // PurgeMetricsBefore deletes all uploaded metric files older than `before`
-func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
-	return m.metrics.Span("shipper_PurgeMetricsBefore", func() error {
-		log.Ctx(m.ctx).Info().Time("cutoff", before).Msg("Purging old metrics")
+func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time) error {
+	return m.metrics.SpanCtx(ctx, "shipper_PurgeMetricsBefore", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+		logger.Debug().Msg("Purging old metrics")
+
 		oldFiles := make([]string, 0)
 		if err := m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
@@ -170,7 +183,7 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 		}
 
 		if len(oldFiles) == 0 {
-			log.Ctx(m.ctx).Info().Msg("No files to purge found")
+			logger.Debug().Msg("No files to purge found")
 			return nil
 		}
 
@@ -181,16 +194,21 @@ func (m *MetricShipper) PurgeMetricsBefore(before time.Time) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Info().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
+		logger.Debug().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
 
 		return nil
 	})
 }
 
 // PurgeOldestPercentage removes the oldest `percent` of files
-func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
-	return m.metrics.Span("shipper_PurgeOldestNPercentage", func() error {
-		log.Ctx(m.ctx).Info().Int("percent", percent).Msg("Purging oldest percentage of files")
+func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int) error {
+	return m.metrics.SpanCtx(ctx, "shipper_PurgeOldestNPercentage", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id,
+			func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Int("percentage", percent)
+			},
+		)
+		logger.Debug().Msg("Purging oldest percentage of files")
 
 		if percent <= 0 || percent > 100 {
 			return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
@@ -220,7 +238,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 		}
 
 		if len(files) == 0 {
-			log.Ctx(m.ctx).Info().Msg("No files to purge found")
+			logger.Debug().Msg("No files to purge found")
 			return nil
 		}
 
@@ -248,10 +266,9 @@ func (m *MetricShipper) PurgeOldestNPercentage(percent int) error {
 			}
 		}
 
-		log.Ctx(m.ctx).Info().
+		logger.Debug().
 			Int("numFiles", n).
 			Int("totalFiles", len(files)).
-			Int("percentage", percent).
 			Msg("Successfully purged oldest percentage of files")
 
 		return nil

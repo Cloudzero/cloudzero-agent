@@ -18,6 +18,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
+	"github.com/cloudzero/cloudzero-insights-controller/app/logging"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
@@ -41,16 +42,14 @@ func main() {
 	clock := &utils.Clock{}
 
 	ctx := context.Background()
-	var logger zerolog.Logger
-	{
-		logLevel, parseErr := zerolog.ParseLevel(settings.Logging.Level)
-		if parseErr != nil {
-			log.Fatal().Err(parseErr).Msg("failed to parse log level")
-		}
-		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Caller().Logger()
-		ctx = logger.WithContext(ctx)
-		zerolog.DefaultContextLogger = &logger
+	logger, err := logging.NewLogger(
+		logging.WithLevel(settings.Logging.Level),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create the logger")
 	}
+	zerolog.DefaultContextLogger = logger
+	ctx = logger.WithContext(ctx)
 
 	costMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.CostContentIdentifier))
 	if err != nil {

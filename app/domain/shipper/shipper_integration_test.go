@@ -87,7 +87,7 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 
 	// upload to s3
 	for _, file := range files {
-		err = metricShipper.UploadFile(file, urlResponse[shipper.GetRemoteFileID(file)])
+		err = metricShipper.UploadFile(context.Background(), file, urlResponse[shipper.GetRemoteFileID(file)])
 		require.NoError(t, err)
 	}
 }
@@ -125,7 +125,7 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	}
 
 	// abandon these files
-	err = metricShipper.AbandonFiles(refIDs, "integration-test-abandon")
+	err = metricShipper.AbandonFiles(context.Background(), refIDs, "integration-test-abandon")
 	require.NoError(t, err)
 }
 
