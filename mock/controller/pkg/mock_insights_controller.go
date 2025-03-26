@@ -12,7 +12,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"
 	"github.com/cloudzero/cloudzero-insights-controller/app/utils"
-	"github.com/cloudzero/cloudzero-insights-controller/tests/metrics"
+	"github.com/cloudzero/cloudzero-insights-controller/mock/metrics"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 	"google.golang.org/protobuf/proto"
