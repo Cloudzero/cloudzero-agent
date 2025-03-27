@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
+	"github.com/cloudzero/cloudzero-insights-controller/app/build"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/backfiller"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/housekeeper"

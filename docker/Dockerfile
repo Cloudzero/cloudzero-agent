@@ -24,13 +24,13 @@ COPY . .
 
 # These values are replaced at compile time using the -X build flag:
 #
-# -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION}
-# -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
-# -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME}
+# -X github.com/cloudzero/cloudzero-insights-controller/app/build.Rev=${REVISION}
+# -X github.com/cloudzero/cloudzero-insights-controller/app/build.Tag=${TAG}"
+# -X github.com/cloudzero/cloudzero-insights-controller/app/build.Time=${BUILD_TIME}
 ARG REVISION=unknown
 ARG TAG=unknown
 ARG BUILD_TIME=unknown
-# LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=${TAG}"
+# LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-insights-controller/app/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/app/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/app/build.Tag=${TAG}"
 # CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
 # Build the Go binary
 RUN make build OUTPUT_BIN_DIR=/go/bin \

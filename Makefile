@@ -163,7 +163,7 @@ $(OUTPUT_BIN_DIR)/$(notdir $1):
 	$(GO) build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
+		-ldflags="-s -w -X $(GO_MODULE)/app/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/app/build.Rev=$(REVISION) -X $(GO_MODULE)/app/build.Tag=$(TAG)" \
 		-tags 'netgo osusergo' \
 		-o $$@ \
 		./$1/
@@ -204,7 +204,7 @@ test-integration: ## Run the integration tests
 
 .PHONY: test-smoke
 test-smoke: ## Run the smoke tests
-	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/*.go
+	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
 # ----------- DOCKER IMAGE ------------
 

@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/build"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/build"
 )
 
 func TestGetVersion(t *testing.T) {
