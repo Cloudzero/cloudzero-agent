@@ -40,7 +40,7 @@ RUN make build OUTPUT_BIN_DIR=/go/bin \
     REVISION=${REVISION} TAG=${TAG}
 
 # Stage 2: Access current certs
-FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
+FROM gcr.io/distroless/static-debian12:debug@sha256:19ae23d1914b9c43bbf8fb71397c84b62bb9444213f7a1abe4915112424951ff AS certs
 
 # TODO: use busybox for development - switch to "scratch" before release
 #FROM busybox:1.36.1-uclibc
