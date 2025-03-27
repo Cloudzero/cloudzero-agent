@@ -435,10 +435,10 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 		duration := time.Since(start).Seconds()
 		RemoteWriteRequestDuration.WithLabelValues(endpoint).Observe(duration)
 
-		if err == nil && resp.StatusCode == http.StatusOK {
+		if err == nil && (resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 			defer resp.Body.Close()
 			// Instrument: response code 200
-			RemoteWriteResponseCodes.WithLabelValues(endpoint, "200").Inc()
+			RemoteWriteResponseCodes.WithLabelValues(endpoint, "2xx").Inc()
 			return nil
 		}
 
@@ -449,7 +449,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			log.Error().
 				Int("status_code", resp.StatusCode).
 				Str("status_text", resp.Status).
-				Msg("Received non-200 response, retrying...")
+				Msg("Received non-2xx response, retrying...")
 		} else {
 			// If resp is nil, we can track it as a failure as well
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
@@ -459,7 +459,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 		time.Sleep(backoff + jitter)
 	}
 
-	return fmt.Errorf("received non-200 response: %v after %d retries", err, h.maxRetries)
+	return fmt.Errorf("received non-2xx response: %v after %d retries", err, h.maxRetries)
 }
 
 func (h *MetricsPusher) maxTime(t1, t2 time.Time) time.Time {
