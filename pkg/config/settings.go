@@ -26,7 +26,7 @@ type Settings struct {
 	CloudAccountID    string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
 	Region            string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
 	ClusterName       string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
-	Host              string      `yaml:"host" env:"HOST" default:"api.cloudzero.com" env-description:"host to send metrics to"`
+	Destination       string      `yaml:"destination" env:"DESTINATION" env-default:"https://api.cloudzero.com/v1/container-metrics" env-description:"location to send metrics to"`
 	APIKeyPath        string      `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
 	Server            Server      `yaml:"server"`
 	Certificate       Certificate `yaml:"certificate"`
@@ -117,15 +117,14 @@ func (s *Settings) SetAPIKey() error {
 }
 
 func (s *Settings) setRemoteWriteURL() {
-	if s.Host == "" {
-		log.Fatal().Msg("Host is required")
+	if s.Destination == "" {
+		s.Destination = "https://api.cloudzero.com/v1/container-metrics"
 	}
-	baseURL, err := url.Parse("https://" + s.Host)
+	baseURL, err := url.Parse(s.Destination)
 	if err != nil {
 		fmt.Println("Malformed URL: ", err.Error())
 		return
 	}
-	baseURL.Path += "/v1/container-metrics"
 	params := url.Values{}
 	params.Add("cluster_name", s.ClusterName)
 	params.Add("cloud_account_id", s.CloudAccountID)

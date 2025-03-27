@@ -43,7 +43,7 @@ remote_write:
 cloud_account_id: "123456789012"
 region: "us-west-2"
 cluster_name: "test-cluster"
-host: "api.cloudzero.com"
+destination: "https://api.cloudzero.com/v1/container-metrics"
 `
 		tmpFile, err := os.CreateTemp("", "config-*.yaml")
 		require.NoError(t, err)
@@ -79,7 +79,7 @@ host: "api.cloudzero.com"
 		assert.Equal(t, "123456789012", settings.CloudAccountID)
 		assert.Equal(t, "us-west-2", settings.Region)
 		assert.Equal(t, "test-cluster", settings.ClusterName)
-		assert.Equal(t, "api.cloudzero.com", settings.Host)
+		assert.Equal(t, "https://api.cloudzero.com/v1/container-metrics", settings.Destination)
 		assert.Equal(t, apiKeyContent, settings.GetAPIKey())
 		assert.Equal(t, "https://api.cloudzero.com/v1/container-metrics?cloud_account_id=123456789012&cluster_name=test-cluster&region=us-west-2", settings.RemoteWrite.Host)
 		assert.Equal(t, 10000000, settings.RemoteWrite.MaxBytesPerSend)
