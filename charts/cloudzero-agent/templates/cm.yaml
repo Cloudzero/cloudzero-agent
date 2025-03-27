@@ -171,11 +171,7 @@ data:
       {{- end}}
   {{- end}}
     remote_write:
-      {{ if .Values.aggregator.enabled }}
-      - url: 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
-      {{ else }}
-      - url: '{{ .Values.scheme }}://{{ include "cloudzero-agent.cleanString" .Values.host }}{{ .Values.endpoint }}?cluster_name={{ include "cloudzero-agent.cleanString" .Values.clusterName | urlquery }}&cloud_account_id={{ include "cloudzero-agent.cleanString" .Values.cloudAccountId | urlquery }}&region={{ include "cloudzero-agent.cleanString" .Values.region | urlquery }}'
-      {{ end }}
+      - url: {{ include "cloudzero-agent.metricsDestination" . }}
         authorization:
           credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
         write_relabel_configs:
@@ -217,7 +213,7 @@ data:
     cloud_account_id: {{ .Values.cloudAccountId }}
     region: {{ .Values.region }}
     cluster_name: {{ .Values.clusterName }}
-    host: {{ .Values.host }}
+    destination: {{ include "cloudzero-agent.metricsDestination" . }}
     logging:
       level: {{ .Values.insightsController.server.logging.level }}
     remote_write:
