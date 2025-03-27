@@ -5,7 +5,7 @@ COPY . .
 
 RUN go build \
     -trimpath \
-    -ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=0 -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=0.0.0-dev -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=smoke-test" \
+    -ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/app/build.Time=0 -X github.com/cloudzero/cloudzero-insights-controller/app/build.Rev=0.0.0-dev -X github.com/cloudzero/cloudzero-insights-controller/app/build.Tag=smoke-test" \
     -tags 'netgo osusergo' \
     -o /go/bin/remotewrite \
     ./mock/remotewrite/*.go
