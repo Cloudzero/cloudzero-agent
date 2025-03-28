@@ -88,3 +88,9 @@ jobs:
         run: make generate
       - name: Check file format
         run: git diff --exit-code --color
+
+  validate-dependabot: # Validate Dependabot configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: marocchino/validate-dependabot@v3
