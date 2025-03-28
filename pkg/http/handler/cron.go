@@ -20,14 +20,16 @@ import (
 type CronJobHandler struct {
 	hook.Handler
 	settings *config.Settings
+	clock    types.TimeProvider
 }
 
-func NewCronJobHandler(store types.ResourceStore, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewCronJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
 	h := &CronJobHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
 	h.Handler.ErrorChan = errChan
+	h.clock = clock
 	return h.Handler
 }
 
@@ -82,6 +84,7 @@ func (h *CronJobHandler) writeDataToStorage(ctx context.Context, o *batchv1.Cron
 		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			record.ID = found.ID
 			record.RecordCreated = found.RecordCreated
+			record.RecordUpdated = h.clock.GetCurrentTime()
 			record.SentAt = nil // reset send
 			return h.Store.Update(txCtx, &record)
 		}); err != nil {

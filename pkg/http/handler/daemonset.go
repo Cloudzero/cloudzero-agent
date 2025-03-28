@@ -20,9 +20,10 @@ import (
 type DaemonSetHandler struct {
 	hook.Handler
 	settings *config.Settings
-} // &v1.DaemonSet{}
+	clock    types.TimeProvider
+}
 
-func NewDaemonSetHandler(store types.ResourceStore, settings *config.Settings, errChan chan<- error,
+func NewDaemonSetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error,
 ) hook.Handler {
 	// Need little trick to protect internal data
 	h := &DaemonSetHandler{settings: settings}
@@ -30,6 +31,7 @@ func NewDaemonSetHandler(store types.ResourceStore, settings *config.Settings, e
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
 	h.Handler.ErrorChan = errChan
+	h.clock = clock
 	return h.Handler
 }
 
@@ -84,6 +86,7 @@ func (h *DaemonSetHandler) writeDataToStorage(ctx context.Context, o *v1.DaemonS
 		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			record.ID = found.ID
 			record.RecordCreated = found.RecordCreated
+			record.RecordUpdated = h.clock.GetCurrentTime()
 			record.SentAt = nil // reset send
 			return h.Store.Update(txCtx, &record)
 		}); err != nil {

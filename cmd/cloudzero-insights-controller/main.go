@@ -120,14 +120,14 @@ func main() {
 	server := http.NewServer(settings,
 		nil,
 		[]http.AdmissionRouteSegment{
-			{Route: "/validate/pod", Hook: handler.NewPodHandler(store, settings, errChan)},
-			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(store, settings, errChan)},
-			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(store, settings, errChan)},
-			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(store, settings, errChan)},
-			{Route: "/validate/node", Hook: handler.NewNodeHandler(store, settings, errChan)},
-			{Route: "/validate/job", Hook: handler.NewJobHandler(store, settings, errChan)},
-			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(store, settings, errChan)},
-			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(store, settings, errChan)},
+			{Route: "/validate/pod", Hook: handler.NewPodHandler(store, settings, clock, errChan)},
+			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(store, settings, clock, errChan)},
+			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(store, settings, clock, errChan)},
+			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(store, settings, clock, errChan)},
+			{Route: "/validate/node", Hook: handler.NewNodeHandler(store, settings, clock, errChan)},
+			{Route: "/validate/job", Hook: handler.NewJobHandler(store, settings, clock, errChan)},
+			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(store, settings, clock, errChan)},
+			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(store, settings, clock, errChan)},
 		}..., // variadic arguments expansion
 	)
 

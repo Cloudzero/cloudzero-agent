@@ -205,8 +205,8 @@ func TestNewDaemonSetHandler(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
-
-			handler := NewDaemonSetHandler(writer, tt.settings, tt.errChan)
+			mockClock := mocks.NewMockClock(time.Now())
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, tt.errChan)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
 			assert.Equal(t, tt.errChan, handler.ErrorChan)
@@ -288,8 +288,8 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
-
-			handler := NewDaemonSetHandler(writer, tt.settings, make(chan error))
+			mockClock := mocks.NewMockClock(time.Now())
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -417,8 +417,8 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 				}
 			}
-
-			handler := NewDaemonSetHandler(writer, tt.settings, make(chan error))
+			mockClock := mocks.NewMockClock(time.Now())
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
