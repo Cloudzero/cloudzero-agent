@@ -230,24 +230,6 @@ $(eval $(call generate-container-build-target,package,push))
 package-build: ## Build the Docker image
 $(eval $(call generate-container-build-target,package-build,load))
 
-# ----------- DEPLOYMENT ------------
-
-.PHONY: deploy-admission-controller
-deploy-admission-controller: ## Deploy the admission controller
-	@bash cloudzero-insights-controller/scripts/deploy-admission-controller.sh
-
-.PHONY: undeploy-admission-controller
-undeploy-admission-controller: ## Undeploy the admission controller
-	@bash docker/Dockerfile/scripts/undeploy-admission-controller.sh
-
-.PHONY: deploy-test-app
-deploy-test-app: ## Deploy the test app
-	@bash docker/Dockerfile/scripts/deploy-test-app.sh
-
-.PHONY: undeploy-test-app
-undeploy-test-app: ## Undeploy the test app
-	@bash docker/Dockerfile/scripts/undeploy-test-app.sh
-
 # ----------- CODE GENERATION ------------
 
 MAINTAINER_CLEANFILES += \
