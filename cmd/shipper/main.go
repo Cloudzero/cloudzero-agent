@@ -20,7 +20,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/logging"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/monitor"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/monitor"
 )
 
 func main() {

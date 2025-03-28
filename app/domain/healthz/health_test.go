@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/healthz"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/healthz"
 )
 
 func TestEndpointHandler(t *testing.T) {

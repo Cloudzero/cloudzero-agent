@@ -24,8 +24,8 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/backfiller"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/k8s"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/backfiller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
