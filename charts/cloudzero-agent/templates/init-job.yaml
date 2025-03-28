@@ -10,7 +10,6 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
-  ttlSecondsAfterFinished: {{ $backFillValues.ttlSecondsAfterFinished }}
   template:
     metadata:
       name: {{ include "cloudzero-agent.initBackfillJobName" . }}
@@ -90,7 +89,6 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
-  ttlSecondsAfterFinished: {{ .Values.initCertJob.ttlSecondsAfterFinished }}
   template:
     metadata:
       name: {{ include "cloudzero-agent.initCertJobName" . }}

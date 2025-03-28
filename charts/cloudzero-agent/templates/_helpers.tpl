@@ -514,12 +514,17 @@ Map for initBackfillJob values; this allows us to preferably use initBackfillJob
 {{- end }}
 
 {{/*
+Name for a job resource
+*/}}
+{{- define "cloudzero-agent.jobName" -}}
+{{- printf "%s-%s-%s" .Release .Name (. | toYaml | sha256sum) | trunc 61 -}}
+{{- end }}
+
+{{/*
 Name for the backfill job resource
 */}}
 {{- define "cloudzero-agent.initBackfillJobName" -}}
-{{- $name := printf "%s-backfill-%s" .Release.Name .Chart.Version }}
-{{- $imageRef := splitList ":" (include  "cloudzero-agent.initBackfillJob.imageReference" .) | last }}
-{{- printf "%s-%s" $name ($imageRef | trunc 6) | trunc 61 | replace "." "-" | trimSuffix "-" -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "backfill" "Version" .Chart.Version "Values" .Values) -}}
 {{- end }}
 
 {{/*
@@ -536,9 +541,7 @@ annotations:
 Name for the certificate init job resource. Should be a new name each installation/upgrade.
 */}}
 {{- define "cloudzero-agent.initCertJobName" -}}
-{{ $version := .Chart.Version | replace "." "-" }}
-{{- $name := (printf "%s-init-cert-%s" (include "cloudzero-agent.insightsController.server.webhookFullname" .) $version | trunc 60) -}}
-{{- $name -}}-{{ .Release.Revision }}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "init-cert" "Version" .Chart.Version "Values" .Values) -}}
 {{- end }}
 
 {{/*

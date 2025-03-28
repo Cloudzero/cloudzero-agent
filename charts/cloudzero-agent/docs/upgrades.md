@@ -44,12 +44,8 @@ See the ArgoCD [Hook Deletion](https://argo-cd.readthedocs.io/en/stable/user-gui
 ```sh
 Error: UPGRADE FAILED: failed to replace object: Job.batch "cloudzero-agent-backfill"
 ```
-**Solution:**  
-1. **Wait for the `backfill` Job to complete**  
-   - The Job will be **automatically deleted after 180 seconds** (`ttlSecondsAfterFinished`).
-   - Once the Job is removed, retry the Helm upgrade.
-
-2. **Manually delete the running Jobs and retry the upgrade**  
+**Solution:**
+1. **Manually delete the running Jobs and retry the upgrade**
    ```sh
    kubectl delete job -n <NAMESPACE> -l app.kubernetes.io/component=webhook-server
    helm upgrade --install <RELEASE_NAME> cloudzero/cloudzero-agent -n <NAMESPACE> --version <version> --force
@@ -58,8 +54,6 @@ Error: UPGRADE FAILED: failed to replace object: Job.batch "cloudzero-agent-back
 
 ---
 ## **Implementation Notes**
-1. **`backfill` Job Cleanup:** The Job includes a `ttlSecondsAfterFinished: 180` to automatically remove itself.
-2. **`init-cert` Job Cleanup:** Uses `ttlSecondsAfterFinished: 180` for cleanup.
-3. **Deployment Rollout:** The `init-cert` Job includes a mechanism to force a Deployment restart when it completes.
+1. **Deployment Rollout:** The `init-cert` Job includes a mechanism to force a Deployment restart when it completes.
 
 

@@ -369,7 +369,6 @@ initBackfillJob:
   #   tag: 0.1.1
   #   pullPolicy: Always
   enabled: true
-  ttlSecondsAfterFinished: 180
 
 # -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
 # initScrapeJob:
@@ -394,7 +393,6 @@ initCertJob:
     serviceAccountName: ""
     clusterRoleName: ""
     clusterRoleBindingName: ""
-  ttlSecondsAfterFinished: 5
 
 kubeStateMetrics:
   enabled: true
