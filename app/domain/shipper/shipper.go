@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/instr"
 	"github.com/cloudzero/cloudzero-insights-controller/app/lock"
 	"github.com/cloudzero/cloudzero-insights-controller/app/parallel"

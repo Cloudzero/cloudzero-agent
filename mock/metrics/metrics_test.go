@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	imocks "github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"

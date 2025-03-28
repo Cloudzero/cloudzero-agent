@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"

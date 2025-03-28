@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	remotewrite "github.com/cloudzero/cloudzero-insights-controller/mock/remotewrite/pkg"
 	"github.com/cloudzero/cloudzero-insights-controller/tests/test_utils"
 	"github.com/stretchr/testify/require"

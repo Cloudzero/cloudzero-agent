@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"

@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/build"
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/logging"

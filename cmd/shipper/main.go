@@ -15,12 +15,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/build"
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
+	"github.com/cloudzero/cloudzero-insights-controller/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/logging"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
-	"github.com/cloudzero/cloudzero-insights-controller/app/domain/monitor"
 )
 
 func main() {

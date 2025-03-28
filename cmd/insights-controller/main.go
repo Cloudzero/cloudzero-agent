@@ -14,12 +14,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/build"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/pusher"
+	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
