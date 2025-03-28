@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
+	"github.com/cloudzero/cloudzero-insights-controller/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 

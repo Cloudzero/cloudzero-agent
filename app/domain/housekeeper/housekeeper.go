@@ -15,7 +15,7 @@ import (
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
+	"github.com/cloudzero/cloudzero-insights-controller/app/utils"
 )
 
 type HouseKeeper struct {
