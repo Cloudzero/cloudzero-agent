@@ -12,19 +12,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
-func makeDaemonSetRequest(record TestRecord) *hook.Request {
-	daemonset := &appsv1.DaemonSet{
+func makeNodeRequest(record TestRecord) *hook.Request {
+	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
 			Labels:      record.Labels,
@@ -32,15 +32,11 @@ func makeDaemonSetRequest(record TestRecord) *hook.Request {
 		},
 	}
 
-	if record.Namespace != nil {
-		daemonset.Namespace = *record.Namespace
-	}
-
 	scheme := runtime.NewScheme()
-	appsv1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(appsv1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, daemonset)
+	encoder := codecs.LegacyCodec(corev1.SchemeGroupVersion)
+	raw, _ := runtime.Encode(encoder, node)
 
 	return &hook.Request{
 		Object: runtime.RawExtension{
@@ -49,19 +45,18 @@ func makeDaemonSetRequest(record TestRecord) *hook.Request {
 	}
 }
 
-func TestFormatDaemonSetData(t *testing.T) {
+func TestFormatNodeData(t *testing.T) {
 	tests := []struct {
-		name      string
-		daemonset *appsv1.DaemonSet
-		settings  *config.Settings
-		expected  types.ResourceTags
+		name     string
+		node     *corev1.Node
+		settings *config.Settings
+		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
-			daemonset: &appsv1.DaemonSet{
+			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-daemonset",
-					Namespace: "default",
+					Name: "test-node",
 					Labels: map[string]string{
 						"app": "test",
 					},
@@ -75,13 +70,13 @@ func TestFormatDaemonSetData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 				},
@@ -93,13 +88,11 @@ func TestFormatDaemonSetData(t *testing.T) {
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.DaemonSet,
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+				Type: config.Node,
+				Name: "test-node",
 				MetricLabels: &config.MetricLabels{
-					"daemonset":     "test-daemonset",
-					"namespace":     "default",
-					"resource_type": "daemonset",
+					"node":          "test-node",
+					"resource_type": "node",
 				},
 				Labels: &config.MetricLabelTags{
 					"app": "test",
@@ -111,10 +104,9 @@ func TestFormatDaemonSetData(t *testing.T) {
 		},
 		{
 			name: "Test with labels and annotations disabled",
-			daemonset: &appsv1.DaemonSet{
+			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-daemonset",
-					Namespace: "default",
+					Name: "test-node",
 				},
 			},
 			settings: &config.Settings{
@@ -122,25 +114,23 @@ func TestFormatDaemonSetData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.DaemonSet,
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+				Type: config.Node,
+				Name: "test-node",
 				MetricLabels: &config.MetricLabels{
-					"daemonset":     "test-daemonset",
-					"namespace":     "default",
-					"resource_type": "daemonset",
+					"node":          "test-node",
+					"resource_type": "node",
 				},
 				Labels:      &config.MetricLabelTags{},
 				Annotations: &config.MetricLabelTags{},
@@ -150,24 +140,23 @@ func TestFormatDaemonSetData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatDaemonSetData(tt.daemonset, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
+			result := FormatNodeData(tt.node, tt.settings)
+			if !reflect.DeepEqual(tt.expected.MetricLabels, result.MetricLabels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, result.MetricLabels)
 			}
-			if !reflect.DeepEqual(tt.expected.Labels, tt.expected.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, tt.expected.Labels)
+			if !reflect.DeepEqual(tt.expected.Labels, result.Labels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, result.Labels)
 			}
-			if !reflect.DeepEqual(tt.expected.Annotations, tt.expected.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, tt.expected.Annotations)
+			if !reflect.DeepEqual(tt.expected.Annotations, result.Annotations) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, result.Annotations)
 			}
 			assert.Equal(t, tt.expected.Type, result.Type)
 			assert.Equal(t, tt.expected.Name, result.Name)
-			assert.Equal(t, tt.expected.Namespace, result.Namespace)
 		})
 	}
 }
 
-func TestNewDaemonSetHandler(t *testing.T) {
+func TestNewNodeHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -180,13 +169,13 @@ func TestNewDaemonSetHandler(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 				},
@@ -206,7 +195,7 @@ func TestNewDaemonSetHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, tt.errChan)
+			handler := NewNodeHandler(writer, tt.settings, mockClock, tt.errChan)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
 			assert.Equal(t, tt.errChan, handler.ErrorChan)
@@ -214,7 +203,7 @@ func TestNewDaemonSetHandler(t *testing.T) {
 	}
 }
 
-func TestDaemonSetHandler_Create(t *testing.T) {
+func TestNodeHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -228,20 +217,19 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -258,20 +246,19 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -289,7 +276,7 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewNodeHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -297,7 +284,7 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 	}
 }
 
-func TestDaemonSetHandler_Update(t *testing.T) {
+func TestNodeHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -315,20 +302,19 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -345,30 +331,30 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							DaemonSets: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
 				Annotations: map[string]string{
 					"annotation-key": "annotation-value",
 				},
-			}), dbresult: &types.ResourceTags{
+			}),
+			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.DaemonSet,
-				Name:          "test-daemonset",
+				Type:          config.Node,
+				Name:          "test-node",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -383,20 +369,19 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							DaemonSets: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -418,7 +403,7 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewNodeHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

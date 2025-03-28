@@ -12,19 +12,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
-func makeStatefulSetRequest(record TestRecord) *hook.Request {
-	statefulset := &appsv1.StatefulSet{
+func makePodRequest(record TestRecord) *hook.Request {
+	namespace := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
 			Labels:      record.Labels,
@@ -33,14 +33,14 @@ func makeStatefulSetRequest(record TestRecord) *hook.Request {
 	}
 
 	if record.Namespace != nil {
-		statefulset.Namespace = *record.Namespace
+		namespace.Namespace = *record.Namespace
 	}
 
 	scheme := runtime.NewScheme()
-	appsv1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(appsv1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, statefulset)
+	encoder := codecs.LegacyCodec(corev1.SchemeGroupVersion)
+	raw, _ := runtime.Encode(encoder, namespace)
 
 	return &hook.Request{
 		Object: runtime.RawExtension{
@@ -49,18 +49,18 @@ func makeStatefulSetRequest(record TestRecord) *hook.Request {
 	}
 }
 
-func TestFormatStatefulSetData(t *testing.T) {
+func TestFormatPodData(t *testing.T) {
 	tests := []struct {
 		name     string
-		sts      *appsv1.StatefulSet
+		pod      *corev1.Pod
 		settings *config.Settings
 		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
-			sts: &appsv1.StatefulSet{
+			pod: &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-sts",
+					Name:      "test-pod",
 					Namespace: "default",
 					Labels: map[string]string{
 						"app": "test",
@@ -75,13 +75,13 @@ func TestFormatStatefulSetData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 				},
@@ -93,13 +93,13 @@ func TestFormatStatefulSetData(t *testing.T) {
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.StatefulSet,
-				Name:      "test-sts",
+				Type:      config.Pod,
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 				MetricLabels: &config.MetricLabels{
-					"statefulset":   "test-sts",
+					"pod":           "test-pod",
 					"namespace":     "default",
-					"resource_type": "statefulset",
+					"resource_type": "pod",
 				},
 				Labels: &config.MetricLabelTags{
 					"app": "test",
@@ -111,9 +111,9 @@ func TestFormatStatefulSetData(t *testing.T) {
 		},
 		{
 			name: "Test with labels and annotations disabled",
-			sts: &appsv1.StatefulSet{
+			pod: &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-sts",
+					Name:      "test-pod",
 					Namespace: "default",
 				},
 			},
@@ -122,25 +122,25 @@ func TestFormatStatefulSetData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.StatefulSet,
-				Name:      "test-sts",
+				Type:      config.Pod,
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 				MetricLabels: &config.MetricLabels{
-					"statefulset":   "test-sts",
+					"pod":           "test-pod",
 					"namespace":     "default",
-					"resource_type": "statefulset",
+					"resource_type": "pod",
 				},
 				Labels:      &config.MetricLabelTags{},
 				Annotations: &config.MetricLabelTags{},
@@ -150,7 +150,7 @@ func TestFormatStatefulSetData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatStatefulsetData(tt.sts, tt.settings)
+			result := FormatPodData(tt.pod, tt.settings)
 			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
 				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
 			}
@@ -167,7 +167,7 @@ func TestFormatStatefulSetData(t *testing.T) {
 	}
 }
 
-func TestNewStatefulSetHandler(t *testing.T) {
+func TestNewPodHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -180,13 +180,13 @@ func TestNewStatefulSetHandler(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 				},
@@ -206,7 +206,7 @@ func TestNewStatefulSetHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewStatefulsetHandler(writer, tt.settings, mockClock, tt.errChan)
+			handler := NewPodHandler(writer, tt.settings, mockClock, tt.errChan)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
 			assert.Equal(t, tt.errChan, handler.ErrorChan)
@@ -214,7 +214,7 @@ func TestNewStatefulSetHandler(t *testing.T) {
 	}
 }
 
-func TestStatefulSetHandler_Create(t *testing.T) {
+func TestPodHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -228,19 +228,19 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 				},
 			},
-			request: makeStatefulSetRequest(TestRecord{
-				Name:      "test-sts",
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -258,19 +258,19 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 				},
 			},
-			request: makeStatefulSetRequest(TestRecord{
-				Name:      "test-sts",
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 			}),
 			expected: &hook.Result{Allowed: true},
@@ -289,7 +289,7 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewStatefulsetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewPodHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -297,7 +297,7 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 	}
 }
 
-func TestStatefulSetHandler_Update(t *testing.T) {
+func TestPodHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -315,19 +315,19 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 				},
 			},
-			request: makeStatefulSetRequest(TestRecord{
-				Name:      "test-sts",
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -345,19 +345,19 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							StatefulSets: true,
+							Pods: true,
 						},
 					},
 				},
 			},
-			request: makeStatefulSetRequest(TestRecord{
-				Name:      "test-sts",
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -368,8 +368,8 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 			}),
 			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.StatefulSet,
-				Name:          "test-sts",
+				Type:          config.Pod,
+				Name:          "test-pod",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -384,19 +384,19 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							StatefulSets: false,
+							Pods: false,
 						},
 					},
 				},
 			},
-			request: makeStatefulSetRequest(TestRecord{
-				Name:      "test-sts",
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
 				Namespace: stringPtr("default"),
 			}),
 			expected: &hook.Result{Allowed: true},
@@ -419,10 +419,15 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewStatefulsetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewPodHandler(writer, tt.settings, mockClock, make(chan error))
+
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func stringPtr(s string) *string {
+	return &s
 }

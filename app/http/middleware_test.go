@@ -14,7 +14,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 
-	requestMiddleware "github.com/cloudzero/cloudzero-insights-controller/pkg/http"
+	requestMiddleware "github.com/cloudzero/cloudzero-insights-controller/app/http"
 )
 
 // TestMetricsMiddlewareWrapper ensures that our instrumentation produces the expected Prometheus metrics.

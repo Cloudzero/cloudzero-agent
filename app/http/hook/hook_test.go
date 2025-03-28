@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 )
 
 func TestHandler_Execute(t *testing.T) {

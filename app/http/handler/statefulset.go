@@ -10,21 +10,21 @@ import (
 	"errors"
 
 	"github.com/rs/zerolog/log"
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/apps/v1"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
-type NamespaceHandler struct {
+type StatefulSetHandler struct {
 	hook.Handler
 	settings *config.Settings
 	clock    types.TimeProvider
 }
 
-func NewNamespaceHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
-	h := &NamespaceHandler{settings: settings}
+func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+	h := &StatefulSetHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
@@ -33,10 +33,10 @@ func NewNamespaceHandler(store types.ResourceStore, settings *config.Settings, c
 	return h.Handler
 }
 
-func (h *NamespaceHandler) Create() hook.AdmitFunc {
+func (h *StatefulSetHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -45,10 +45,10 @@ func (h *NamespaceHandler) Create() hook.AdmitFunc {
 	}
 }
 
-func (h *NamespaceHandler) Update() hook.AdmitFunc {
+func (h *StatefulSetHandler) Update() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -57,16 +57,16 @@ func (h *NamespaceHandler) Update() hook.AdmitFunc {
 	}
 }
 
-func (h *NamespaceHandler) parseV1(data []byte) (*corev1.Namespace, error) {
-	var o corev1.Namespace
+func (h *StatefulSetHandler) parseV1(data []byte) (*v1.StatefulSet, error) {
+	var o v1.StatefulSet
 	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
 	return &o, nil
 }
 
-func (h *NamespaceHandler) writeDataToStorage(ctx context.Context, o *corev1.Namespace) {
-	record := FormatNamespaceData(o, h.settings)
+func (h *StatefulSetHandler) writeDataToStorage(ctx context.Context, o *v1.StatefulSet) {
+	record := FormatStatefulsetData(o, h.settings)
 	conditions := []interface{}{}
 	if record.Namespace != nil {
 		conditions = append(conditions, "type = ? AND name = ? AND namespace = ?", record.Type, record.Name, *record.Namespace)
@@ -95,28 +95,28 @@ func (h *NamespaceHandler) writeDataToStorage(ctx context.Context, o *corev1.Nam
 	}
 }
 
-func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) types.ResourceTags {
+func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
-		namespace   = h.GetName()
+		namespace   = o.GetNamespace()
+		workload    = o.GetName()
 	)
-
-	if settings.Filters.Labels.Resources.Namespaces {
-		labels = config.Filter(h.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Namespaces), settings)
+	if settings.Filters.Labels.Resources.StatefulSets {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
 	}
-	if settings.Filters.Annotations.Resources.Namespaces {
-		annotations = config.Filter(h.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Namespaces), settings)
+	if settings.Filters.Annotations.Resources.StatefulSets {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
 	}
-
 	metricLabels := config.MetricLabels{
-		"namespace":     namespace, // standard metric labels to attach to metric
-		"resource_type": config.ResourceTypeToMetricName[config.Namespace],
+		"workload":      workload, // standard metric labels to attach to metric
+		"namespace":     namespace,
+		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
 	}
 	return types.ResourceTags{
-		Name:         namespace,
-		Namespace:    nil,
-		Type:         config.Namespace,
+		Name:         workload,
+		Type:         config.StatefulSet,
+		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 		Annotations:  &annotations,

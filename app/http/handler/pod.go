@@ -10,21 +10,21 @@ import (
 	"errors"
 
 	"github.com/rs/zerolog/log"
-	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
-type StatefulSetHandler struct {
+type PodHandler struct {
 	hook.Handler
 	settings *config.Settings
 	clock    types.TimeProvider
 }
 
-func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
-	h := &StatefulSetHandler{settings: settings}
+func NewPodHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+	h := &PodHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
@@ -33,10 +33,10 @@ func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings,
 	return h.Handler
 }
 
-func (h *StatefulSetHandler) Create() hook.AdmitFunc {
+func (h *PodHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -45,10 +45,10 @@ func (h *StatefulSetHandler) Create() hook.AdmitFunc {
 	}
 }
 
-func (h *StatefulSetHandler) Update() hook.AdmitFunc {
+func (h *PodHandler) Update() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -57,16 +57,16 @@ func (h *StatefulSetHandler) Update() hook.AdmitFunc {
 	}
 }
 
-func (h *StatefulSetHandler) parseV1(data []byte) (*v1.StatefulSet, error) {
-	var o v1.StatefulSet
+func (h *PodHandler) parseV1(data []byte) (*corev1.Pod, error) {
+	var o corev1.Pod
 	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
 	return &o, nil
 }
 
-func (h *StatefulSetHandler) writeDataToStorage(ctx context.Context, o *v1.StatefulSet) {
-	record := FormatStatefulsetData(o, h.settings)
+func (h *PodHandler) writeDataToStorage(ctx context.Context, o *corev1.Pod) {
+	record := FormatPodData(o, h.settings)
 	conditions := []interface{}{}
 	if record.Namespace != nil {
 		conditions = append(conditions, "type = ? AND name = ? AND namespace = ?", record.Type, record.Name, *record.Namespace)
@@ -95,27 +95,27 @@ func (h *StatefulSetHandler) writeDataToStorage(ctx context.Context, o *v1.State
 	}
 }
 
-func FormatStatefulsetData(o *v1.StatefulSet, settings *config.Settings) types.ResourceTags {
+func FormatPodData(o *corev1.Pod, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
 		namespace   = o.GetNamespace()
-		workload    = o.GetName()
+		podName     = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.StatefulSets {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
+	if settings.Filters.Labels.Resources.Pods {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
 	}
-	if settings.Filters.Annotations.Resources.StatefulSets {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
+	if settings.Filters.Annotations.Resources.Pods {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
 	}
 	metricLabels := config.MetricLabels{
-		"workload":      workload, // standard metric labels to attach to metric
+		"pod":           podName, // standard metric labels to attach to metric
 		"namespace":     namespace,
-		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
+		"resource_type": config.ResourceTypeToMetricName[config.Pod],
 	}
 	return types.ResourceTags{
-		Name:         workload,
-		Type:         config.StatefulSet,
+		Type:         config.Pod,
+		Name:         podName,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,

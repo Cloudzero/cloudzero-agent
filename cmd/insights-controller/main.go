@@ -20,9 +20,9 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/pusher"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/app/utils"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
 )
 

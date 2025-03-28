@@ -10,21 +10,21 @@ import (
 	"errors"
 
 	"github.com/rs/zerolog/log"
-	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/hook"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
-type JobHandler struct {
+type NodeHandler struct {
 	hook.Handler
 	settings *config.Settings
 	clock    types.TimeProvider
 }
 
-func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
-	h := &JobHandler{settings: settings}
+func NewNodeHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+	h := &NodeHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
@@ -33,10 +33,10 @@ func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock t
 	return h.Handler
 }
 
-func (h *JobHandler) Create() hook.AdmitFunc {
+func (h *NodeHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -45,10 +45,10 @@ func (h *JobHandler) Create() hook.AdmitFunc {
 	}
 }
 
-func (h *JobHandler) Update() hook.AdmitFunc {
+func (h *NodeHandler) Update() hook.AdmitFunc {
 	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
 		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
 			if o, err := h.parseV1(r.Object.Raw); err == nil {
 				h.writeDataToStorage(ctx, o)
 			}
@@ -57,16 +57,16 @@ func (h *JobHandler) Update() hook.AdmitFunc {
 	}
 }
 
-func (h *JobHandler) parseV1(data []byte) (*batchv1.Job, error) {
-	var o batchv1.Job
+func (h *NodeHandler) parseV1(data []byte) (*corev1.Node, error) {
+	var o corev1.Node
 	if err := json.Unmarshal(data, &o); err != nil {
 		return nil, err
 	}
 	return &o, nil
 }
 
-func (h *JobHandler) writeDataToStorage(ctx context.Context, o *batchv1.Job) {
-	record := FormatJobData(o, h.settings)
+func (h *NodeHandler) writeDataToStorage(ctx context.Context, o *corev1.Node) {
+	record := FormatNodeData(o, h.settings)
 	conditions := []interface{}{}
 	if record.Namespace != nil {
 		conditions = append(conditions, "type = ? AND name = ? AND namespace = ?", record.Type, record.Name, *record.Namespace)
@@ -95,29 +95,28 @@ func (h *JobHandler) writeDataToStorage(ctx context.Context, o *batchv1.Job) {
 	}
 }
 
-func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags {
+func FormatNodeData(o *corev1.Node, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
-		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.Jobs {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Jobs), settings)
+
+	if settings.Filters.Labels.Resources.Nodes {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Nodes), settings)
 	}
-	if settings.Filters.Annotations.Resources.Jobs {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Jobs), settings)
+	if settings.Filters.Annotations.Resources.Nodes {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Nodes), settings)
 	}
 
 	metricLabels := config.MetricLabels{
-		"workload":      workload, // standard metric labels to attach to metric
-		"namespace":     namespace,
-		"resource_type": config.ResourceTypeToMetricName[config.Job],
+		"node":          workload, // standard metric labels to attach to metric
+		"resource_type": config.ResourceTypeToMetricName[config.Node],
 	}
 	return types.ResourceTags{
-		Type:         config.Job,
 		Name:         workload,
-		Namespace:    &namespace,
+		Namespace:    nil,
+		Type:         config.Node,
 		MetricLabels: &metricLabels,
 		Labels:       &labels,
 		Annotations:  &annotations,

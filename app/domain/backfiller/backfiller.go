@@ -33,8 +33,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-insights-controller/app/http/handler"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
 )
 
 type Backfiller struct {
