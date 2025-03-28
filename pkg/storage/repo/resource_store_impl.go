@@ -16,9 +16,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/core"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/sqlite"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 )

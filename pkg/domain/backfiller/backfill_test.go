@@ -21,12 +21,12 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/homedir"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/backfiller"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/domain/k8s"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 

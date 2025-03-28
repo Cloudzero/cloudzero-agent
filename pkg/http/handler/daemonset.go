@@ -12,9 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/apps/v1"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 type DaemonSetHandler struct {

@@ -24,7 +24,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
 var DefaultRefreshInterval = 1 * time.Minute

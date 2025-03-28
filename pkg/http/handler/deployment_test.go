@@ -12,10 +12,10 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -14,7 +14,7 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/store"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestDiskStore_PutAndPending(t *testing.T) {
 	defer ps.Flush()
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	// Add metrics less than the row limit
 	metric := types.Metric{
@@ -65,7 +65,7 @@ func TestDiskStore_Flush(t *testing.T) {
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	// Add metrics and verify they are pending
 	metric := types.Metric{
@@ -99,7 +99,7 @@ func TestDiskStore_FlushTimeout(t *testing.T) {
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	// Add metrics and verify they are pending
 	metric := types.Metric{
@@ -137,7 +137,7 @@ func TestDiskStore_Compact(t *testing.T) {
 	defer ps.Flush()
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	for i := 0; i < recordCount; i++ {
 		id := fmt.Sprintf("test_metric_%d", i)
@@ -184,7 +184,7 @@ func TestDiskStore_GetFiles(t *testing.T) {
 	defer ps.Flush()
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	addRecords := func() {
 		for i := 0; i < recordCount; i++ {

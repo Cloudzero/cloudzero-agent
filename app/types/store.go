@@ -4,7 +4,7 @@
 //coverage:ignore
 package types
 
-//go:generate mockgen -destination=./mocks/mock_store.go -package=mocks github.com/cloudzero/cloudzero-insights-controller/app/types Store
+//go:generate mockgen -destination=./mocks/store_mock.go -package=mocks github.com/cloudzero/cloudzero-insights-controller/app/types Store
 
 import (
 	"context"

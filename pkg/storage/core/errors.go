@@ -8,7 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
 // TranslateError maps GORM errors to application-specific errors.

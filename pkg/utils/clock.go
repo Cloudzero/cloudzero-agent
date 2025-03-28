@@ -7,7 +7,7 @@ package utils
 import (
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
 var _ types.TimeProvider = (*Clock)(nil)

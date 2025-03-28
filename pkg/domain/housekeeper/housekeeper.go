@@ -13,8 +13,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 

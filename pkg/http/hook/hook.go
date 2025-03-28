@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )
 
 type Request = v1.AdmissionRequest

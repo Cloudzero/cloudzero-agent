@@ -24,7 +24,6 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/config"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	itypes "github.com/cloudzero/cloudzero-insights-controller/pkg/types"
 )
 
 var (
@@ -72,12 +71,12 @@ type MetricCollector struct {
 	costStore          types.WritableStore
 	observabilityStore types.WritableStore
 	filter             *MetricFilter
-	clock              itypes.TimeProvider
+	clock              types.TimeProvider
 	cancelFunc         context.CancelFunc
 }
 
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
-func NewMetricCollector(s *config.Settings, clock itypes.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
+func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
 	filter, err := NewMetricFilter(&s.Metrics)
 	if err != nil {
 		return nil, err
