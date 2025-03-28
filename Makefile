@@ -152,10 +152,10 @@ else
 endif
 
 define generate-go-command-target
-build: $(OUTPUT_BIN_DIR)/$(notdir $1)
+build: $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1)
 
-.PHONY: $(OUTPUT_BIN_DIR)/$(notdir $1)
-$(OUTPUT_BIN_DIR)/$(notdir $1):
+.PHONY: $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1)
+$(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1):
 	@mkdir -p $(OUTPUT_BIN_DIR)
 	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) \
 	CC=$(TOOLCHAIN_CC) CXX=$(TOOLCHAIN_CXX) \
@@ -180,7 +180,7 @@ GO_COMMAND_PACKAGE_DIRS = \
 	$(NULL)
 
 GO_BINARIES = \
-	$(foreach bin,$(GO_COMMAND_PACKAGE_DIRS),$(OUTPUT_BIN_DIR)/$(notdir $(bin))) \
+	$(foreach bin,$(GO_COMMAND_PACKAGE_DIRS),$(OUTPUT_BIN_DIR)/cloudzero-$(notdir $(bin))) \
 	$(NULL)
 
 $(eval $(foreach target,$(GO_COMMAND_PACKAGE_DIRS),$(call generate-go-command-target,$(target))))
