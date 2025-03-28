@@ -15,7 +15,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/core"
+	"github.com/cloudzero/cloudzero-insights-controller/app/storage/core"
 )
 
 type MockWriter struct {

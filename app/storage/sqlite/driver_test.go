@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/sqlite"
+	"github.com/cloudzero/cloudzero-insights-controller/app/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

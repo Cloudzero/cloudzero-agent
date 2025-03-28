@@ -22,8 +22,8 @@ import (
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/pusher"
 	"github.com/cloudzero/cloudzero-insights-controller/app/http"
 	"github.com/cloudzero/cloudzero-insights-controller/app/http/handler"
+	"github.com/cloudzero/cloudzero-insights-controller/app/storage/repo"
 	"github.com/cloudzero/cloudzero-insights-controller/app/utils"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/repo"
 )
 
 func main() {

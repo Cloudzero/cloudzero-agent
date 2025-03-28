@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/storage/core"
+	"github.com/cloudzero/cloudzero-insights-controller/app/storage/core"
 )
 
 func TestBaseRepoImpl_Context(t *testing.T) {
