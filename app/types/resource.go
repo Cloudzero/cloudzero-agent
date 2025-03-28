@@ -6,7 +6,7 @@ package types
 import (
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 )
 
 type (

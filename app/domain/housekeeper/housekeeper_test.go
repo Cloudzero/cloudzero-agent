@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 )
 
 func TestHouseKeeper_Start(t *testing.T) {

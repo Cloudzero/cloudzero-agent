@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/stretchr/testify/assert"
 )
 

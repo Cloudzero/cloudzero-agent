@@ -32,8 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/handler"
 )
 

@@ -12,8 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 
+	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 

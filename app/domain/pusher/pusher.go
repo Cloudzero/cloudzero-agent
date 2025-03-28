@@ -26,8 +26,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 
+	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 )
 
 // -------------------- Prometheus Metrics --------------------

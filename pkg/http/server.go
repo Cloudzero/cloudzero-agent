@@ -9,8 +9,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	config "github.com/cloudzero/cloudzero-insights-controller/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/healthz"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/http/hook"
 )
 
