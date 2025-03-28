@@ -20,14 +20,16 @@ import (
 type NamespaceHandler struct {
 	hook.Handler
 	settings *config.Settings
-} // &corev1.nsd{}
+	clock    types.TimeProvider
+}
 
-func NewNamespaceHandler(store types.ResourceStore, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewNamespaceHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
 	h := &NamespaceHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
 	h.Handler.ErrorChan = errChan
+	h.clock = clock
 	return h.Handler
 }
 
@@ -82,6 +84,7 @@ func (h *NamespaceHandler) writeDataToStorage(ctx context.Context, o *corev1.Nam
 		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			record.ID = found.ID
 			record.RecordCreated = found.RecordCreated
+			record.RecordUpdated = h.clock.GetCurrentTime()
 			record.SentAt = nil // reset send
 			return h.Store.Update(txCtx, &record)
 		}); err != nil {

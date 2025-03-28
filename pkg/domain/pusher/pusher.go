@@ -28,7 +28,6 @@ import (
 
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/config"
 	"github.com/cloudzero/cloudzero-insights-controller/pkg/types"
-	"github.com/cloudzero/cloudzero-insights-controller/pkg/utils"
 )
 
 // -------------------- Prometheus Metrics --------------------
@@ -268,12 +267,7 @@ func (h *MetricsPusher) Flush() error {
 	log.Debug().Msg("Starting flush operation")
 	ctx := context.Background()
 	currentTime := h.clock.GetCurrentTime()
-	ctf := utils.FormatForStorage(currentTime)
-	whereClause := fmt.Sprintf(`
-		(record_updated < '%[1]s' AND record_created < '%[1]s' AND sent_at IS NULL)
-		OR
-		(sent_at IS NOT NULL AND record_updated > sent_at)
-		`, ctf)
+	whereClause := "sent_at IS NULL"
 	found, err := h.store.FindAllBy(ctx, whereClause)
 	if err != nil {
 		RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()

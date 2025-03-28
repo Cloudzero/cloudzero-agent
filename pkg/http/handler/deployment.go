@@ -20,16 +20,18 @@ import (
 type DeploymentHandler struct {
 	hook.Handler
 	settings *config.Settings
-} // &v1.Deployment{}
+	clock    types.TimeProvider
+}
 
 // NewDeploymentHandler creates a new instance of deployment validation hook
-func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, errChan chan<- error) hook.Handler {
+func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
 	d.Handler.Update = d.Update()
 	d.Handler.Store = store
 	d.Handler.ErrorChan = errChan
+	d.clock = clock
 	return d.Handler
 }
 
@@ -84,6 +86,7 @@ func (h *DeploymentHandler) writeDataToStorage(ctx context.Context, o *v1.Deploy
 		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
 			record.ID = found.ID
 			record.RecordCreated = found.RecordCreated
+			record.RecordUpdated = h.clock.GetCurrentTime()
 			record.SentAt = nil // reset send
 			return h.Store.Update(txCtx, &record)
 		}); err != nil {

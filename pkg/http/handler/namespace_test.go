@@ -115,8 +115,8 @@ func TestNamespaceHandler_Create(t *testing.T) {
 				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
-
-			handler := NewNamespaceHandler(writer, tt.settings, make(chan error))
+			mockClock := mocks.NewMockClock(time.Now())
+			handler := NewNamespaceHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -242,8 +242,8 @@ func TestNamespaceHandler_Update(t *testing.T) {
 					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 				}
 			}
-
-			handler := NewNamespaceHandler(writer, tt.settings, make(chan error))
+			mockClock := mocks.NewMockClock(time.Now())
+			handler := NewNamespaceHandler(writer, tt.settings, mockClock, make(chan error))
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
