@@ -202,7 +202,14 @@ test: ## Run the unit tests
 test-integration: ## Run the integration tests
 	@$(GO) test -run Integration -timeout 60s -race ./... 
 
+CLOUDZERO_HOST ?= dev-api.cloudzero.com
+
+.PHONY: smoke-tests-check-env
+smoke-tests-check-env:
+	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests. Consider adding to local-config.mk." && exit 1 || true
+
 .PHONY: test-smoke
+test-smoke: smoke-tests-check-env
 test-smoke: ## Run the smoke tests
 	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
