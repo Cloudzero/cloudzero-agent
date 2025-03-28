@@ -68,7 +68,7 @@ func main() {
 	defer cancel()
 
 	secretMon := monitor.NewSecretMonitor(ctx, settings)
-	if err = secretMon.Start(); err != nil {
+	if err = secretMon.Run(); err != nil {
 		log.Fatal().Err(err).Msg("failed to run secret monitor") //nolint:gocritic // It's okay if the `defer cancel()` doesn't run since we're exiting.
 	}
 	defer func() {
@@ -79,7 +79,7 @@ func main() {
 
 	// create remote metrics writer
 	dataPusher := pusher.New(ctx, store, clock, settings)
-	if err = dataPusher.Start(); err != nil {
+	if err = dataPusher.Run(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start remote metrics writer")
 	}
 	defer func() {
@@ -94,7 +94,7 @@ func main() {
 
 	// start the housekeeper to delete old data
 	hk := housekeeper.New(ctx, store, clock, settings)
-	if err = hk.Start(); err != nil {
+	if err = hk.Run(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start database housekeeper")
 	}
 	defer func() {

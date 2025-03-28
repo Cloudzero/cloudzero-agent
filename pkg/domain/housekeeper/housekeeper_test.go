@@ -39,7 +39,7 @@ func TestHouseKeeper_Start(t *testing.T) {
 
 	t.Run("Start HouseKeeper", func(t *testing.T) {
 		mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-		err := hk.Start()
+		err := hk.Run()
 		require.NoError(t, err)
 		assert.True(t, hk.IsRunning())
 		hk.Shutdown()
@@ -56,7 +56,7 @@ func TestHouseKeeper_Start(t *testing.T) {
 		mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(expiredRecords, nil).AnyTimes()
 		mockStore.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		err := hk.Start()
+		err := hk.Run()
 		require.NoError(t, err)
 		assert.True(t, hk.IsRunning())
 
@@ -70,7 +70,7 @@ func TestHouseKeeper_Start(t *testing.T) {
 	t.Run("Start HouseKeeper with FindAllBy error", func(t *testing.T) {
 		mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).AnyTimes()
 
-		err := hk.Start()
+		err := hk.Run()
 		require.NoError(t, err)
 		assert.True(t, hk.IsRunning())
 
@@ -90,7 +90,7 @@ func TestHouseKeeper_Start(t *testing.T) {
 		mockStore.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(assert.AnError).AnyTimes()
 		mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(expiredRecords, nil).AnyTimes()
 
-		err := hk.Start()
+		err := hk.Run()
 		require.NoError(t, err)
 		assert.True(t, hk.IsRunning())
 

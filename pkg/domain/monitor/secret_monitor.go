@@ -60,7 +60,7 @@ func NewSecretMonitor(ctx context.Context, settings MonitoredAPIKey) types.Runna
 }
 
 // Run implements types.Runnable.
-func (s *secretsMonitor) Start() error {
+func (s *secretsMonitor) Run() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.running {

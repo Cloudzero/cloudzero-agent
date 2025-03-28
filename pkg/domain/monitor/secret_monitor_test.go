@@ -20,7 +20,7 @@ type MockFileMonitor struct {
 	mock.Mock
 }
 
-func (m *MockFileMonitor) Start() {
+func (m *MockFileMonitor) Run() {
 	m.Called()
 }
 
@@ -58,7 +58,7 @@ func TestSecretsMonitor_Start(t *testing.T) {
 	// update the interval to cause faster refresh
 	monitor.DefaultRefreshInterval = 100 * time.Millisecond
 
-	err = m.Start()
+	err = m.Run()
 	assert.NoError(t, err)
 
 	// update file content to bar

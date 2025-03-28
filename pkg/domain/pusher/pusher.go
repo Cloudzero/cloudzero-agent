@@ -176,7 +176,7 @@ func (h *MetricsPusher) ResetStats() {
 	RemoteWriteDBFailures.Reset()
 }
 
-func (h *MetricsPusher) Start() error {
+func (h *MetricsPusher) Run() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.running {

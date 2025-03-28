@@ -105,7 +105,7 @@ func Test_SupportsRunnableInterface(t *testing.T) {
 
 	mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return([]*types.ResourceTags{}, nil).AnyTimes()
 
-	err := p.Start()
+	err := p.Run()
 	assert.NoError(t, err)
 	assert.True(t, p.IsRunning())
 

@@ -7,7 +7,7 @@ package types
 
 type Runnable interface {
 	// Start starts the runnable.
-	Start() error
+	Run() error
 	// IsRunning returns true if the runnable is running.
 	IsRunning() bool
 	// Shutdown shuts down the runnable.

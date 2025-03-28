@@ -50,7 +50,7 @@ func New(
 	}
 }
 
-func (h *HouseKeeper) Start() error {
+func (h *HouseKeeper) Run() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.running {

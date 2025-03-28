@@ -60,7 +60,7 @@ func main() {
 			logger.Err(err).Msg("failed to shutdown secret monitor")
 		}
 	}()
-	if err = m.Start(); err != nil {
+	if err = m.Run(); err != nil {
 		logger.Err(err).Msg("failed to run secret monitor")
 		exitCode = 1
 		return

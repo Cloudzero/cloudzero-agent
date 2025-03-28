@@ -53,6 +53,20 @@ func (mr *MockRunnableMockRecorder) IsRunning() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockRunnable)(nil).IsRunning))
 }
 
+// Run mocks base method.
+func (m *MockRunnable) Run() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockRunnableMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRunnable)(nil).Run))
+}
+
 // Shutdown mocks base method.
 func (m *MockRunnable) Shutdown() error {
 	m.ctrl.T.Helper()
@@ -65,18 +79,4 @@ func (m *MockRunnable) Shutdown() error {
 func (mr *MockRunnableMockRecorder) Shutdown() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockRunnable)(nil).Shutdown))
-}
-
-// Start mocks base method.
-func (m *MockRunnable) Start() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockRunnableMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockRunnable)(nil).Start))
 }
