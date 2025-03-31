@@ -6,7 +6,7 @@ package smoke
 import (
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/tests/test_utils"
+	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +21,7 @@ func TestSmoke_Collector_Runs(t *testing.T) {
 		require.NotNil(t, collector, "collector is null")
 
 		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: collector,
 			Log:       "Starting service",
 		})

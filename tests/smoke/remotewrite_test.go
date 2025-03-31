@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/tests/test_utils"
+	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func TestSmoke_RemoteWrite_Runs(t *testing.T) {
 		require.NotNil(t, remotewrite, "remotewrite is null")
 
 		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: remotewrite,
 			Log:       fmt.Sprintf("Mock remotewrite is listening on: 'localhost:%s", t.remoteWritePort),
 		})

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/tests/test_utils"
+	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +28,7 @@ func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 		require.NotNil(t, shipper, "shipper is null")
 
 		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: shipper,
 			Log:       "Successfully ran the shipper cycle",
 		})
@@ -57,7 +57,7 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		require.NotNil(t, shipper, "shipper is null")
 
 		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: shipper,
 			Log:       "Successfully ran the shipper cycle",
 		})
@@ -102,7 +102,7 @@ func TestSmoke_Shipper_LoadTest(t *testing.T) {
 		require.NotNil(t, shipper, "shipper is null")
 
 		// wait for the log message
-		err := test_utils.ContainerWaitForLog(t.ctx, &test_utils.WaitForLogInput{
+		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: t.shipper,
 			Log:       "Successfully ran the shipper cycle",
 			Timeout:   time.Duration(5) * time.Minute,

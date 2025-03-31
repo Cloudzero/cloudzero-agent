@@ -12,7 +12,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	remotewrite "github.com/cloudzero/cloudzero-agent-validator/mock/remotewrite/pkg"
-	"github.com/cloudzero/cloudzero-agent-validator/tests/test_utils"
+	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -121,7 +121,7 @@ func (t *testContext) QueryMinio() *remotewrite.QueryMinioResponse {
 		t.Fatalf("the remotewrite is null")
 	}
 
-	host, err := test_utils.ContainerExternalHost(t.ctx, (*t.remotewrite), t.remoteWritePort)
+	host, err := utils.ContainerExternalHost(t.ctx, (*t.remotewrite), t.remoteWritePort)
 	require.NoError(t, err, "failed to create the external host")
 
 	// create the request

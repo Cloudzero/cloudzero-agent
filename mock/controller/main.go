@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	mock_controller "github.com/cloudzero/cloudzero-agent-validator/mock/controller/pkg"
+	mock_controller "github.com/cloudzero/cloudzero-agent-validator/mock/controller/controller"
 )
 
 func main() {
