@@ -195,13 +195,38 @@ CLEANFILES += \
 
 # ----------- TESTING ------------
 
+CLOUDZERO_HOST   ?= dev-api.cloudzero.com
+CLOUD_ACCOUNT_ID ?= "12345"
+CSP_REGION       ?= "us-east-1"
+CLUSTER_NAME     ?= "insights-controller-integration-test"
+
+.PHONY: api-tests-check-env
+api-tests-check-env:
+	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests. Consider adding to local-config.mk." && exit 1 || true
+
 .PHONY: test
 test: ## Run the unit tests
-	$(GO) test -short -timeout 60s ./... -race -cover
+	$(GO) test -test.short -timeout 60s ./... -race -cover
 
 .PHONY: test-integration
+test-integration: api-tests-check-env
 test-integration: ## Run the integration tests
+	@CLOUDZERO_HOST=$(CLOUDZERO_HOST) \
+	CLOUDZERO_DEV_API_KEY=$(CLOUDZERO_DEV_API_KEY) \
+	CLOUD_ACCOUNT_ID=$(CLOUD_ACCOUNT_ID) \
+	CSP_REGION=$(CSP_REGION) \
+	CLUSTER_NAME=$(CLUSTER_NAME) \
 	$(GO) test -run Integration -timeout 60s -race ./...
+
+.PHONY: test-smoke
+test-smoke: api-tests-check-env
+test-smoke: ## Run the smoke tests
+	@CLOUDZERO_HOST=$(CLOUDZERO_HOST) \
+	CLOUDZERO_DEV_API_KEY=$(CLOUDZERO_DEV_API_KEY) \
+	CLOUD_ACCOUNT_ID=$(CLOUD_ACCOUNT_ID) \
+	CSP_REGION=$(CSP_REGION) \
+	CLUSTER_NAME=$(CLUSTER_NAME) \
+	$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
 # ----------- DOCKER IMAGE ------------
 

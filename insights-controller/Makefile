@@ -194,6 +194,8 @@ CLEANFILES += \
 
 # ----------- TESTING ------------
 
+CLOUDZERO_HOST ?= dev-api.cloudzero.com
+
 .PHONY: test
 test: ## Run the unit tests
 	@$(GO) test -test.short -timeout 60s ./... -race -cover
@@ -201,8 +203,6 @@ test: ## Run the unit tests
 .PHONY: test-integration
 test-integration: ## Run the integration tests
 	@$(GO) test -run Integration -timeout 60s -race ./... 
-
-CLOUDZERO_HOST ?= dev-api.cloudzero.com
 
 .PHONY: smoke-tests-check-env
 smoke-tests-check-env:
