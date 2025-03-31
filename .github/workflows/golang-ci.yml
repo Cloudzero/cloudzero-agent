@@ -3,8 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  # Run tests
-  test:
+  test: # Run tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,13 +15,13 @@ jobs:
         run: |
           go mod download
       - name: Run go tests
-        run: |
-          make test-integration
+        run: make test
 
-  # Run golangci-lint
+  # Run linters
   #
-  # golangci-lint is a linter for Go. It is a wrapper around a number of
-  # linters, and is the default linter for this project.
+  # The primary linter we use here is golangci-lint, which is a linter framework
+  # for Go which allows you to run a large number of linters to check for
+  # specific issues.
   #
   # Note that we intentionally do not use the golangci-lint GitHub Action here
   # since there is a good chance it will get out of sync with the version used
@@ -39,11 +38,10 @@ jobs:
           go-version-file: go.mod
       - name: Install golangci-lint
         run: make install-tools-golangci-lint
-      - name: Run golangci-lint
+      - name: Run linters
         run: make lint
 
-  # Run static analysis
-  analyze:
+  analyze: # Run static analysis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -76,8 +74,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-  # Format code and data
-  format:
+  format: # Format code and data
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,6 +89,19 @@ jobs:
       - name: Check file format
         run: git diff --exit-code --color
 
+  tidy: # Run go mod tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run go mod tidy
+        run: go mod tidy
+      - name: Check for differences
+        run: git diff --exit-code --color
+
   generate: # Generate code
     runs-on: ubuntu-latest
     steps:
@@ -100,13 +110,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Install tools
         run: make install-tools
       - name: Generate code
         run: make generate
-      - name: Check for modified files
+      - name: Check file format
         run: git diff --exit-code --color
-      - name: Debug
-        run: git ls-files --others
-      - name: Check for untracked files
-        run: test -z "$(git ls-files --others --exclude-standard)"
+
+  validate-dependabot: # Validate Dependabot configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: marocchino/validate-dependabot@v3

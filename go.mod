@@ -1,8 +1,6 @@
 module github.com/cloudzero/cloudzero-agent-validator
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.24
 
 require (
 	github.com/google/go-cmp v0.7.0

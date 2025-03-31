@@ -4,7 +4,7 @@
 
 Before getting started with the development of the CloudZero Agent Validator, make sure you have the following prerequisites installed on your system:
 
-- [Go 1.23+](https://go.dev/doc/install)
+- [Go 1.24+](https://go.dev/doc/install)
 - [Docker](https://docs.docker.com/engine/install/)
 - [Rancher Desktop - recommended for testing](https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade)
 - [Github Actions Utility - for local ci/cd testing](https://github.com/nektos/act)

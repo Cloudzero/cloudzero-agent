@@ -1,39 +1,47 @@
-# export IMAGE_NAME=ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
-# export TAG=golang
-# docker buildx build --builder=container --platform linux/amd64,linux/arm64 --push -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile .
-#
 # Stage 1: Build the Go binary
-FROM golang:1.23 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.1-alpine AS builder
+ARG TARGETPLATFORM
+ARG TARGETOS TARGETARCH
+ARG REVISION=unknown
+ARG TAG=unknown
+ARG BUILD_TIME=unknown
 
 # Set the working directory inside the container
 WORKDIR /app
 
+# Steal the nobody user for the scratch image
+RUN grep nobody /etc/passwd > /etc/passwd_nobody
+
 # Copy the Go module files and download dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod download \
+    && apk add build-base make zig
 
 # Copy the source code
 COPY . .
 
-# These values are replaced at compile time using the -X build flag:
-#
-# -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Rev=${REVISION}
-# -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Tag=${TAG}"
-# -X github.com/cloudzero/cloudzero-agent-validator/pkg/build.Time=${BUILD_TIME}
-ARG REVISION=unknown
-ARG TAG=unknown
-ARG BUILD_TIME=unknown
-RUN make build GO_BUILD_FLAGS="-tags 'netgo osusergo'" OUTPUT_BIN_DIR=/go/bin BUILD_TIME=${BUILD_TIME} REVISION=${REVISION} TAG=${TAG}
-RUN ls -rR /go/bin
+# Build the Go binary
+RUN make build OUTPUT_BIN_DIR=/go/bin \
+    TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
+    ENABLE_ZIG=true \
+    REVISION=${REVISION} \
+    TAG=${TAG} \
+    BUILD_TIME=${BUILD_TIME}
 
 # Stage 2: Access current certs
-FROM gcr.io/distroless/static-debian11:debug@sha256:a0a404776dec98be120089ae42bbdfbe48c177921d856937d124d48eb8c0b951 AS certs
+FROM gcr.io/distroless/static-debian12:debug@sha256:19ae23d1914b9c43bbf8fb71397c84b62bb9444213f7a1abe4915112424951ff AS certs
 
-# Stage32: Create the distroless image
-FROM busybox:1.37.0-uclibc
+# TODO: use busybox for development - switch to "scratch" before release
+#FROM busybox:1.36.1-uclibc
+FROM scratch
 
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# TODO: Add default configuration file
+
+# Copy the /etc/passwd file with the nobody user
+COPY --from=builder /etc/passwd_nobody /etc/passwd
 
 USER nobody
 
