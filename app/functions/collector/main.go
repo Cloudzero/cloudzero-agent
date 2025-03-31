@@ -5,7 +5,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent-validator/app/build"
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
 	"github.com/cloudzero/cloudzero-agent-validator/app/handlers"
 	"github.com/cloudzero/cloudzero-agent-validator/app/logging"
@@ -50,6 +52,15 @@ func main() {
 	}
 	zerolog.DefaultContextLogger = logger
 	ctx = logger.WithContext(ctx)
+
+	// print settings on debug
+	if logger.GetLevel() <= zerolog.DebugLevel {
+		enc, err := json.MarshalIndent(settings, "", "  ") //nolint:govet // I actively and vehemently disagree with `shadowing` of `err` in golang
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to encode the config")
+		}
+		fmt.Println(string(enc))
+	}
 
 	costMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.CostContentIdentifier))
 	if err != nil {

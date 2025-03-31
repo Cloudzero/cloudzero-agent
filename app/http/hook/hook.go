@@ -10,6 +10,7 @@ import (
 
 	v1 "k8s.io/api/admission/v1"
 
+	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
 )
 
@@ -36,18 +37,34 @@ type Handler struct {
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.
 func (h *Handler) Execute(ctx context.Context, r *Request) (*Result, error) {
+	var res *Result
+	var err error
 	switch r.Operation {
 	case v1.Create:
-		return middleware(ctx, h.Create, r)
+		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Create", func(ctx context.Context, span *instr.Span) error {
+			res, err = middleware(ctx, h.Create, r)
+			return err
+		})
 	case v1.Update:
-		return middleware(ctx, h.Update, r)
+		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Update", func(ctx context.Context, span *instr.Span) error {
+			res, err = middleware(ctx, h.Update, r)
+			return err
+		})
 	case v1.Delete:
-		return middleware(ctx, h.Delete, r)
+		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Delete", func(ctx context.Context, span *instr.Span) error {
+			res, err = middleware(ctx, h.Delete, r)
+			return err
+		})
 	case v1.Connect:
-		return middleware(ctx, h.Connect, r)
+		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Connect", func(ctx context.Context, span *instr.Span) error {
+			res, err = middleware(ctx, h.Connect, r)
+			return err
+		})
+	default:
+		return &Result{Msg: fmt.Sprintf("Invalid operation: %s", r.Operation)}, nil
 	}
 
-	return &Result{Msg: fmt.Sprintf("Invalid operation: %s", r.Operation)}, nil
+	return res, err
 }
 
 func middleware(ctx context.Context, fn AdmitFunc, r *Request) (*Result, error) {

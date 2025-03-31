@@ -4,8 +4,6 @@
 package config
 
 import (
-	"os"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -16,17 +14,12 @@ type Logging struct {
 
 func setLoggingOptions(l *Logging) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	// Set the logging level
-	switch l.Level {
-	case "debug":
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	default:
+
+	logLevel, err := zerolog.ParseLevel(l.Level)
+	if err != nil {
 		log.Warn().Str("level", l.Level).Msg("Unknown log level, defaulting to info")
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	} else {
+		zerolog.SetGlobalLevel(logLevel)
 	}
 }

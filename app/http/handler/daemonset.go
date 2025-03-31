@@ -1,15 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint:dupl // There is currently substantial duplication in the handlers :(
 package handler
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
-	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/apps/v1"
 
 	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
@@ -68,33 +65,7 @@ func (h *DaemonSetHandler) parseV1(data []byte) (*v1.DaemonSet, error) {
 }
 
 func (h *DaemonSetHandler) writeDataToStorage(ctx context.Context, o *v1.DaemonSet) {
-	record := FormatDaemonSetData(o, h.settings)
-	conditions := []interface{}{}
-	if record.Namespace != nil {
-		conditions = append(conditions, "type = ? AND name = ? AND namespace = ?", record.Type, record.Name, *record.Namespace)
-	} else {
-		conditions = append(conditions, "type = ? AND name = ?", record.Type, record.Name)
-	}
-
-	if found, err := h.Store.FindFirstBy(ctx, conditions...); (err != nil && errors.Is(err, types.ErrNotFound)) || found == nil {
-		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
-			return h.Store.Create(txCtx, &record)
-		}); err != nil {
-			log.Err(err).Msg("failed to write data to storage")
-		}
-	} else if found != nil {
-		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
-			record.ID = found.ID
-			record.RecordCreated = found.RecordCreated
-			record.RecordUpdated = h.clock.GetCurrentTime()
-			record.SentAt = nil // reset send
-			return h.Store.Update(txCtx, &record)
-		}); err != nil {
-			log.Err(err).Msg("failed to write data to storage")
-		}
-	} else {
-		log.Err(err).Msg("failed to write data to storage")
-	}
+	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDaemonSetData(o, h.settings))
 }
 
 func FormatDaemonSetData(o *v1.DaemonSet, settings *config.Settings) types.ResourceTags {

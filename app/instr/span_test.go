@@ -29,14 +29,14 @@ func TestUnit_Instr_Span_PrometheusMetrics(t *testing.T) {
 	srv := httptest.NewServer(p.Handler())
 
 	// basic
-	err = p.Span("test_function_1", func(id string) error {
+	err = p.SpanCtx(t.Context(), "test_function_1", func(ctx context.Context, id string) error {
 		time.Sleep(time.Second)
 		return nil
 	})
 	require.NoError(t, err)
 
 	// with error
-	err = p.Span("test_function_2", func(id string) error {
+	err = p.SpanCtx(t.Context(), "test_function_2", func(ctx context.Context, id string) error {
 		time.Sleep(time.Second / 2)
 		return fmt.Errorf("function failed")
 	})
@@ -64,7 +64,7 @@ func TestUnit_Instr_Span_Context(t *testing.T) {
 	defer srv.Close()
 
 	// Basic span execution.
-	err = p.SpanCtx(context.Background(), "test_function_1", func(ctx context.Context, id string) error {
+	err = p.SpanCtx(t.Context(), "test_function_1", func(ctx context.Context, id string) error {
 		// Verify that the context contains the span id.
 		val := ctx.Value(spanIDKey)
 		require.NotNil(t, val, "expected span id value in context")
@@ -79,7 +79,7 @@ func TestUnit_Instr_Span_Context(t *testing.T) {
 	require.NoError(t, err)
 
 	// Span execution that returns an error.
-	err = p.SpanCtx(context.Background(), "test_function_2", func(ctx context.Context,
+	err = p.SpanCtx(t.Context(), "test_function_2", func(ctx context.Context,
 		id string,
 	) error {
 		time.Sleep(time.Second / 2)
@@ -103,7 +103,7 @@ func TestUnit_Instr_Span_ParentSpanID(t *testing.T) {
 	testLogger := zerolog.New(&buf).With().Timestamp().Logger()
 
 	// Create a context with the test logger attached.
-	ctx := testLogger.WithContext(context.Background())
+	ctx := testLogger.WithContext(t.Context())
 
 	// Set a parent span id in the context.
 	parentID := "parent-1234"
