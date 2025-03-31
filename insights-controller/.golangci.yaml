@@ -1,0 +1,117 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  issues-exit-code: 2
+  tests: false
+
+output:
+  print-issued-lines: false
+  print-linter-name: true
+  path-prefix: ""
+  sort-results: true
+
+linters:
+  disable-all: true
+
+  enable:
+    # bugs/error
+    - staticcheck
+    - revive
+    - govet
+    - copyloopvar
+    - errcheck
+    - gosec
+    - dupl
+    - nilnil
+    - paralleltest
+    - promlinter
+    - sqlclosecheck
+    - tparallel
+    - zerologlint
+
+    # performance
+    - gocritic
+    - prealloc
+    - perfsprint
+
+    # style, formatting
+    - stylecheck
+    - goconst
+    - gofumpt
+    - goheader
+    - intrange
+    - nolintlint
+    - tagliatelle
+
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-type-assertions: true
+  gofumpt:
+    # Apply the rewrite rules to the source before reformatting.
+    # https://github.com/mvdan/gofumpt
+    # Default: []
+    rewrite-rules:
+      - pattern: "interface{}"
+        replacement: "any"
+      - pattern: "a[b:len(a)]"
+        replacement: "a[b:]"
+  goheader:
+    template: |-
+      SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+      SPDX-License-Identifier: Apache-2.0
+  govet:
+    enable:
+      - shadow
+  dupl:
+    # Tokens count to trigger issue, Default: 150
+    threshold: 100
+  nolintlint:
+    require-specific: true
+    require-explanation: true
+  revive:
+    rules:
+      - name: add-constant
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2,3,10,8,16,32,64,100,128,192,256,512,1024,2048,4096,8192,16384,32768,65536"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
+      - name: atomic
+      - name: comment-spacings
+      - name: confusing-naming
+      - name: confusing-results
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: datarace
+      - name: deep-exit
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "disableStutteringCheck"
+          - "checkPublicInterface"
+          - "disableChecksOnFunctions"
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        # Any struct tag type can be used.
+        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`.
+        yaml: snake
+
+issues:
+  uniq-by-line: false
+  exclude-dirs:
+    - pkg/status
+    - .go
+    - .git
+    - pkg/types/mocks
+    - mock/
+    - tests/
+  exclude-rules:
+    - path: pkg/types/mocks
+      linters:
+        - goheader

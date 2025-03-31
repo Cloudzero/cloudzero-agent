@@ -1,0 +1,171 @@
+name: DockerBuild
+on:
+  push:
+    branches:
+      - develop
+      - main
+    tags:
+      - "*"
+  # tag is pr-<number>
+  pull_request:
+  release:
+    types:
+      - created
+      - published
+      - released
+
+env:
+  REGISTRY_LOCAL_ADDR: localhost:5000
+  REGISTRY_PROD_ADDR: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/cloudzero-insights-controller
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      # Checkout the repository code
+      - name: SETUP - Checkout
+        id: checkout_code
+        uses: actions/checkout@v4
+
+      - # Install buildx for multi-platform builds
+        name: SETUP - Docker Buildx
+        id: install_buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        with:
+          driver-opts: network=host
+
+      # Sanity Check: Validate the k8s and Registry is Running
+      - name: SANITY CHECK - Registry are running
+        id: validate_kind_install
+        run: |
+          docker pull busybox
+          docker tag busybox ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
+          docker push ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
+
+      # Format the image name to OCI compatable format
+      - name: INPUT PREP - image name formatting
+        id: image_name
+        run: |
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+
+      # Extract metadata (tags, labels) the docker image build
+      - name: INPUT PREP - Extract Docker metadata from git repository
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        env:
+          IMAGE_DESCRIPTION: "CloudZero Insights Controller"
+        with:
+          # ONLY use the local registry address for the image until it is tested
+          images: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}
+          # Tag generation rules:
+          # 1. branch name (used for develop or main)
+          # 2. PR number (used for PRs)
+          # 3. version to match the semver pattern for the chart
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+          labels: |
+            maintainer=CloudZero
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            org.opencontainers.image.vendor=CloudZero
+            image.name=${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}
+          # https://github.com/docker/metadata-action?tab=readme-ov-file#latest-tag
+          # should only occur whtn a semver or raw when we are on master
+          flavor: |
+            latest=false
+
+      - name: INPUT PREP - Set build time revision
+        run: |
+          REVISION=$(git rev-parse --short HEAD)
+          TAG=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+          BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "REVISION=${REVISION}" >>${GITHUB_ENV}
+          echo "TAG=${TAG}" >>${GITHUB_ENV}
+          echo "BUILD_TIME=${BUILD_TIME}" >>${GITHUB_ENV}
+
+      - name: TEST - Build image
+        id: build_image
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        env:
+          PLATFORMS: "linux/amd64,linux/arm64"
+          CONTROLLER_DOCKERFILE: docker/Dockerfile
+          CONTOLLER_CONTEXT: .
+        with:
+          push: true
+          context: ${{ env.CONTOLLER_CONTEXT }}
+          file: ${{ env.CONTROLLER_DOCKERFILE }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ env.PLATFORMS }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_TIME=${{ env.BUILD_TIME }}
+            REVISION=${{ env.REVISION }}
+            TAG=${{ env.TAG }}
+      - name: SECURITY - Grype Docker Image Scan
+        uses: anchore/scan-action@v6
+        with:
+          image: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          fail-build: true
+          severity-cutoff: high
+
+      # DISABLE TRIVY DUE TO DB DOWNLOAD FAILURES
+      #- name: SECURITY - Trivy Docker Image Scan
+      #  uses: aquasecurity/trivy-action@0.28.0
+      #  with:
+      #    image-ref: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      #    format: 'table'
+      #    exit-code: '1'
+      #    ignore-unfixed: true
+      #    vuln-type: 'os,library'
+      #    severity: 'CRITICAL,HIGH'
+
+      ###########################################################################
+      # PRODUCTION ONLY STEPS BEYOND THIS POINT
+      #
+      # install regctl for registry management operations
+      - name: PRODUCTION STEP - Install Regctl for registry management
+        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        id: install_regctl
+        uses: iarekylew00t/regctl-installer@v3
+
+      # Login to product docker registry
+      - name: PRODUCTION STEP - login to container registry
+        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        id: prod_registry_login
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            regctl registry login ${{ env.REGISTRY_PROD_ADDR }} \
+              --user "${{ github.actor }}" \
+              --pass-stdin
+
+      # Copy the image from the local registry
+      # to the production registry (retagging at the same time)
+      # only allow on main, develop branches, or a version tag
+      - name: PRODUCTION STEP - Publish Image to Production
+        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        id: prod_publish_image
+        run: |
+          regctl registry set --tls=disabled ${{ env.REGISTRY_LOCAL_ADDR }}
+          regctl image copy \
+            ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+            ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+
+          if [[ ${{ steps.meta.outputs.version }} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            regctl image copy \
+              ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+              ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:latest
+          fi

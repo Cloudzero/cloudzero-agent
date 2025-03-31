@@ -1,0 +1,11 @@
+FROM golang:1.24.1 AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN make /go/bin/cloudzero-collector OUTPUT_BIN_DIR=/go/bin
+
+FROM alpine:latest AS collector
+COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
+WORKDIR /app
+ENTRYPOINT ["/app/cloudzero-collector"]

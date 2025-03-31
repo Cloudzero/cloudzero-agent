@@ -1,0 +1,11 @@
+FROM golang:1.24.1 AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN make /go/bin/cloudzero-shipper OUTPUT_BIN_DIR=/go/bin
+
+FROM alpine:latest AS shipper
+COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
+WORKDIR /app
+ENTRYPOINT ["/app/cloudzero-shipper"]
