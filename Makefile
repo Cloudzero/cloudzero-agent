@@ -164,7 +164,7 @@ $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1):
 	$(GO) build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
+		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/app/build.Rev=$(REVISION) -X $(GO_MODULE)/app/build.Tag=$(TAG) -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
 		-tags 'netgo osusergo' \
 		-o $$@ \
 		./$1/
@@ -173,6 +173,7 @@ endef
 
 GO_BINARY_DIRS = \
 	cmd \
+	app/functions \
 	$(NULL)
 
 GO_COMMAND_PACKAGE_DIRS = \
