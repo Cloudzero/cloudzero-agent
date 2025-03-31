@@ -28,37 +28,37 @@ func main() {
 	apiKey := os.Getenv("API_KEY")
 
 	// read number values
-	totalhours, err := strconv.ParseInt(os.Getenv("TOTAL_HOURS"), 10, 64)
+	totalhours, err := strconv.ParseInt(os.Getenv("TOTAL_HOURS"), 10, 32)
 	if err != nil {
 		log.Fatalf("failed to parse `TOTAL_HOURS`")
 	}
 
-	numNodes, err := strconv.ParseInt(os.Getenv("NUM_NODES"), 10, 64)
+	numNodes, err := strconv.ParseInt(os.Getenv("NUM_NODES"), 10, 32)
 	if err != nil {
 		log.Fatalf("failed to parse `NUM_NODES`")
 	}
 
-	podsPerNode, err := strconv.ParseInt(os.Getenv("PODS_PER_NODE"), 10, 64)
+	podsPerNode, err := strconv.ParseInt(os.Getenv("PODS_PER_NODE"), 10, 32)
 	if err != nil {
 		log.Fatalf("failed to parse `PODS_PER_NODE`")
 	}
 
-	cpuPerNode, err := strconv.ParseInt(os.Getenv("CPU_PER_NODE"), 10, 64)
+	cpuPerNode, err := strconv.ParseInt(os.Getenv("CPU_PER_NODE"), 10, 32)
 	if err != nil {
 		log.Fatalf("failed to parse `CPU_PER_NODE`")
 	}
 
-	memPerNode, err := strconv.ParseInt(os.Getenv("MEM_PER_NODE"), 10, 64)
+	memPerNode, err := strconv.ParseInt(os.Getenv("MEM_PER_NODE"), 10, 32)
 	if err != nil {
 		log.Fatalf("failed to parse `MEM_PER_NODE`")
 	}
 
-	numBatches, err := strconv.ParseInt(os.Getenv("NUM_BATCHES"), 10, 64)
+	numBatches, err := strconv.ParseInt(os.Getenv("NUM_BATCHES"), 10, 32)
 	if err != nil {
 		numBatches = 1
 	}
 
-	chunkSize, err := strconv.ParseInt(os.Getenv("CHUNK_SIZE"), 10, 64)
+	chunkSize, err := strconv.ParseInt(os.Getenv("CHUNK_SIZE"), 10, 32)
 	if err != nil {
 		chunkSize = 20_000
 	}
