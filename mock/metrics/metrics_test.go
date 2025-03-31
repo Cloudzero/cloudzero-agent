@@ -12,7 +12,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
-	imocks "github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/proto"
@@ -84,7 +83,7 @@ func TestUnit_Metrics_ToPromb(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	storage := mocks.NewMockStore(ctrl)
-	mockClock := imocks.NewMockClock(time.Now())
+	mockClock := mocks.NewMockClock(time.Now())
 	require.NoError(t, err, "failed to create the store")
 	collector, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
 	require.NoError(t, err, "failed to create the metric collector")
