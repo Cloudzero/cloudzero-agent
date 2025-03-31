@@ -33,7 +33,7 @@ func (s *Cloudzero) Validate() error {
 	}
 	s.CredentialsFile = location
 
-	if _, err := os.Stat(s.CredentialsFile); os.IsNotExist(err) {
+	if _, err = os.Stat(s.CredentialsFile); os.IsNotExist(err) {
 		return errors.Wrap(err, "no key file")
 	}
 

@@ -36,14 +36,14 @@ func (s *Prometheus) Validate() error {
 			if location == "" {
 				continue
 			}
-			location, err := absFilePath(location)
+			absLocation, err := absFilePath(location)
 			if err != nil {
 				return err
 			}
-			if slices.Contains(cleanedPaths, location) {
+			if slices.Contains(cleanedPaths, absLocation) {
 				continue
 			}
-			cleanedPaths = append(cleanedPaths, location)
+			cleanedPaths = append(cleanedPaths, absLocation)
 		}
 		s.Configurations = cleanedPaths
 	}

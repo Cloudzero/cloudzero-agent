@@ -69,7 +69,7 @@ func NewCommand() *cli.Command {
 					if err != nil {
 						logrus.WithError(err).Fatal("Failed to load configuration")
 					}
-					if err := cfg.Validate(); err != nil {
+					if err = cfg.Validate(); err != nil {
 						logrus.WithError(err).Fatal("Invalid configuration")
 					}
 
@@ -150,7 +150,7 @@ func runDiagnostics(c *cli.Context, stage string) error {
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to load configuration")
 	}
-	if err := cfg.Validate(); err != nil {
+	if err = cfg.Validate(); err != nil {
 		logrus.WithError(err).Fatal("Invalid configuration")
 	}
 	if cfg.Logging.Location != "" {
