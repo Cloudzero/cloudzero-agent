@@ -10,9 +10,6 @@ import (
 )
 
 func TestFilterChecker_Test(t *testing.T) {
-	type args struct {
-		value string
-	}
 	tests := []struct {
 		name    string
 		filters []util.FilterEntry
