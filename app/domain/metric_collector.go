@@ -175,17 +175,14 @@ func (d *MetricCollector) Close() {
 
 // rotateCachePeriodically runs a background goroutine that flushes metrics at regular intervals.
 func (d *MetricCollector) rotateCachePeriodically(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			// Perform a final flush before exiting
-			// flushCtx, cancel := context.WithTimeout(context.Background(), d.flushInterval)
-			// if err := d.Flush(flushCtx); err != nil {
-			// 	log.Ctx(ctx).Err(err).Msg("Error during final flush")
-			// }
-			// cancel()
-			return
-		}
+	for range ctx.Done() {
+		// Perform a final flush before exiting
+		// flushCtx, cancel := context.WithTimeout(context.Background(), d.flushInterval)
+		// if err := d.Flush(flushCtx); err != nil {
+		// 	log.Ctx(ctx).Err(err).Msg("Error during final flush")
+		// }
+		// cancel()
+		return
 	}
 }
 

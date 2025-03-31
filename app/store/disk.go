@@ -111,11 +111,8 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 	}
 
 	go func() {
-		for {
-			select {
-			case <-store.ticker.C:
-				store.Flush()
-			}
+		for range store.ticker.C {
+			store.Flush()
 		}
 	}()
 
