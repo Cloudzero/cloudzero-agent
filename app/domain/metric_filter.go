@@ -6,7 +6,7 @@ package domain
 import (
 	"fmt"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/filter"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 )

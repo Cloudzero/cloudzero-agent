@@ -29,7 +29,7 @@ func (t *testContext) StartCollector() *testcontainers.Container {
 			HostConfigModifier: func(hc *container.HostConfig) {
 				hc.Binds = append(hc.Binds, fmt.Sprintf("%s:%s", t.tmpDir, t.tmpDir)) // bind the tmp dir to the container
 			},
-			Entrypoint: []string{"/app/collector", "-config", t.configFile},
+			Entrypoint: []string{"/app/cloudzero-collector", "-config", t.configFile},
 			Env:        map[string]string{},
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Consumers: []testcontainers.LogConsumer{&stdoutLogConsumer{}},

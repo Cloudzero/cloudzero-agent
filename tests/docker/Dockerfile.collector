@@ -3,14 +3,9 @@ FROM golang:1.24.1 AS builder
 WORKDIR /app
 COPY . .
 
-RUN go build \
-    -trimpath \
-    -ldflags="-s -w -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Time=0 -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Rev=0.0.0-dev -X github.com/cloudzero/cloudzero-insights-controller/pkg/build.Tag=smoke-test" \
-    -tags 'netgo osusergo' \
-    -o /go/bin/collector \
-    ./cmd/cloudzero-collector/main.go
+RUN make /go/bin/cloudzero-collector OUTPUT_BIN_DIR=/go/bin
 
 FROM alpine:latest AS collector
-COPY --from=builder /go/bin/collector /app/collector
+COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
 WORKDIR /app
-ENTRYPOINT ["/app/collector"]
+ENTRYPOINT ["/app/cloudzero-collector"]

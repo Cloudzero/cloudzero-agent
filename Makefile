@@ -152,31 +152,40 @@ else
 endif
 
 define generate-go-command-target
-.PHONY: build-$1
-build: build-$1
-build-$1:
-	mkdir -p bin && \
+build: $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1)
+
+.PHONY: $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1)
+$(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1):
+	@mkdir -p $(OUTPUT_BIN_DIR)
 	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) \
 	CC=$(TOOLCHAIN_CC) CXX=$(TOOLCHAIN_CXX) \
 	CGO_ENABLED=1 \
 	$(GO) build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
+		-ldflags="-s -w -X $(GO_MODULE)/app/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/app/build.Rev=$(REVISION) -X $(GO_MODULE)/app/build.Tag=$(TAG)" \
 		-tags 'netgo osusergo' \
-		-o ${OUTPUT_BIN_DIR}/$1 \
-		./cmd/$1/
+		-o $$@ \
+		./$1/
 
 endef
 
-GO_COMMAND_TARGETS = \
-	cloudzero-collector \
-	cloudzero-insights-controller \
-	cloudzero-shipper \
+GO_BINARY_DIRS = \
+	cmd \
+	app/functions \
 	$(NULL)
 
-$(eval $(foreach target,$(GO_COMMAND_TARGETS),$(call generate-go-command-target,$(target))))
-CLEANFILES += $(foreach file,$(GO_COMMAND_TARGETS),$(OUTPUT_BIN_DIR)/$(file))
+GO_COMMAND_PACKAGE_DIRS = \
+	$(foreach parent_dir,$(GO_BINARY_DIRS),$(foreach src_dir,$(wildcard $(parent_dir)/*/),$(patsubst %/,%,$(src_dir)))) \
+	$(NULL)
+
+GO_BINARIES = \
+	$(foreach bin,$(GO_COMMAND_PACKAGE_DIRS),$(OUTPUT_BIN_DIR)/cloudzero-$(notdir $(bin))) \
+	$(NULL)
+
+$(eval $(foreach target,$(GO_COMMAND_PACKAGE_DIRS),$(call generate-go-command-target,$(target))))
+
+CLEANFILES += $(GO_BINARIES)
 
 CLEANFILES += \
 	log.json \
@@ -193,9 +202,16 @@ test: ## Run the unit tests
 test-integration: ## Run the integration tests
 	@$(GO) test -run Integration -timeout 60s -race ./... 
 
+CLOUDZERO_HOST ?= dev-api.cloudzero.com
+
+.PHONY: smoke-tests-check-env
+smoke-tests-check-env:
+	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests. Consider adding to local-config.mk." && exit 1 || true
+
 .PHONY: test-smoke
+test-smoke: smoke-tests-check-env
 test-smoke: ## Run the smoke tests
-	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/*.go
+	@$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
 # ----------- DOCKER IMAGE ------------
 
@@ -220,24 +236,6 @@ $(eval $(call generate-container-build-target,package,push))
 
 package-build: ## Build the Docker image
 $(eval $(call generate-container-build-target,package-build,load))
-
-# ----------- DEPLOYMENT ------------
-
-.PHONY: deploy-admission-controller
-deploy-admission-controller: ## Deploy the admission controller
-	@bash cloudzero-insights-controller/scripts/deploy-admission-controller.sh
-
-.PHONY: undeploy-admission-controller
-undeploy-admission-controller: ## Undeploy the admission controller
-	@bash docker/Dockerfile/scripts/undeploy-admission-controller.sh
-
-.PHONY: deploy-test-app
-deploy-test-app: ## Deploy the test app
-	@bash docker/Dockerfile/scripts/deploy-test-app.sh
-
-.PHONY: undeploy-test-app
-undeploy-test-app: ## Undeploy the test app
-	@bash docker/Dockerfile/scripts/undeploy-test-app.sh
 
 # ----------- CODE GENERATION ------------
 

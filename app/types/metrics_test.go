@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
-	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
+	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMetric(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 	timeStamp := mockClock.GetCurrentTime()
 
 	name := "test_metric"
@@ -46,7 +46,7 @@ func TestNewMetric(t *testing.T) {
 
 func TestMetricRange(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	metrics := []types.Metric{
 		{

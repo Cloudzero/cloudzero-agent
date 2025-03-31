@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types"
 	"github.com/stretchr/testify/mock"

@@ -14,12 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-insights-controller/app/handlers"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
-	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
 )
 
 const MountBase = "/"
@@ -36,7 +35,7 @@ func TestRemoteWriteMethods(t *testing.T) {
 	defer ctrl.Finish()
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := imocks.NewMockClock(initialTime)
+	mockClock := mocks.NewMockClock(initialTime)
 
 	storage := mocks.NewMockStore(ctrl)
 

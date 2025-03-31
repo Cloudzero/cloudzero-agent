@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-insights-controller/app/config"
+	"github.com/cloudzero/cloudzero-insights-controller/app/config/gator"
 	"github.com/cloudzero/cloudzero-insights-controller/app/domain"
 	"github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
-	imocks "github.com/cloudzero/cloudzero-insights-controller/pkg/types/mocks"
+	imocks "github.com/cloudzero/cloudzero-insights-controller/app/types/mocks"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/proto"
