@@ -72,8 +72,8 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// Set necessary headers
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", m.setting.GetAPIKey())
-		req.Header.Set(shipperIDRequestHeader, shipperID)
-		req.Header.Set(appVersionRequestHeader, build.GetVersion())
+		req.Header.Set(ShipperIDRequestHeader, shipperID)
+		req.Header.Set(AppVersionRequestHeader, build.GetVersion())
 
 		// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 		q := req.URL.Query()
