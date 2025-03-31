@@ -72,11 +72,11 @@ func main() {
 	// create a mock insights controller
 	controller := mock_controller.MockInsightsController{
 		CollectorEndpoint: collectorEndpoint,
-		ApiKey:            apiKey,
+		APIKey:            apiKey,
 		TotalHours:        int(totalhours),
 		NumNodes:          int(numNodes),
 		PodsPerNode:       int(podsPerNode),
-		CpuPerNode:        cpuPerNode,
+		CPUPerNode:        cpuPerNode,
 		MemPerNode:        memPerNode,
 		NumBatches:        int(numBatches),
 		ChunkSize:         int(chunkSize),

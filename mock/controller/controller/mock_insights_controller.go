@@ -24,9 +24,9 @@ import (
 )
 
 type MockInsightsController struct {
-	CollectorEndpoint, ApiKey         string
+	CollectorEndpoint, APIKey         string
 	TotalHours, NumNodes, PodsPerNode int
-	CpuPerNode, MemPerNode            int64
+	CPUPerNode, MemPerNode            int64
 
 	NumBatches, ChunkSize int
 }
@@ -48,7 +48,7 @@ func (c *MockInsightsController) Run() error {
 		start := end.Add(-time.Hour * time.Duration(c.TotalHours))
 
 		// generate the metrics
-		m := metrics.GenerateClusterMetrics("org-123", "acc-123", fmt.Sprintf("cluster-%d", i), start, end, c.CpuPerNode, c.MemPerNode, c.NumNodes, c.PodsPerNode)
+		m := metrics.GenerateClusterMetrics("org-123", "acc-123", fmt.Sprintf("cluster-%d", i), start, end, c.CPUPerNode, c.MemPerNode, c.NumNodes, c.PodsPerNode)
 
 		// chunk
 		chunks := utils.Chunk(m, c.ChunkSize)
@@ -121,7 +121,7 @@ func (c *MockInsightsController) pushMetrics(timeSeries []prompb.TimeSeries) err
 
 	req.Header.Set("Content-Type", "application/x-protobuf")
 	req.Header.Set("Content-Encoding", "snappy")
-	req.Header.Set("Authorization", "Bearer "+c.ApiKey)
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

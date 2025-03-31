@@ -14,7 +14,7 @@ import (
 func GeneratePodRecords(
 	input *MetricRecordInput,
 	nodeName, podName, namespace, workload string,
-	maxCpu, maxMemory int64,
+	maxCPU, maxMemory int64,
 	numContainers int,
 ) []types.Metric {
 	labels := createPodInfoLabels(workload, nodeName, namespace, podName)
@@ -37,14 +37,14 @@ func GeneratePodRecords(
 
 		// generate some container requests
 		for i := range numContainers {
-			metrics = append(metrics, GenerateContainerRecords(input, currTime, fmt.Sprintf("container-%d", i), nodeName, podName, namespace, workload, maxCpu/int64(numContainers)/2, maxCpu/int64(numContainers), maxMemory/int64(numContainers)/2, maxMemory/int64(numContainers))...)
+			metrics = append(metrics, GenerateContainerRecords(input, currTime, fmt.Sprintf("container-%d", i), nodeName, podName, namespace, workload, maxCPU/int64(numContainers)/2, maxCPU/int64(numContainers), maxMemory/int64(numContainers)/2, maxMemory/int64(numContainers))...)
 		}
 
 		currTime = currTime.Add(time.Minute * 2)
 	}
 
 	// generate cpu and memory requests for this container
-	metrics = append(metrics, GenerateCPUUsageRecords(input, int(maxCpu), 0.6, 60, nodeName, namespace, podName)...)
+	metrics = append(metrics, GenerateCPUUsageRecords(input, int(maxCPU), 0.6, 60, nodeName, namespace, podName)...)
 	metrics = append(metrics, GenerateMemoryUsageRecords(input, maxMemory, 0.85, 60, nodeName, namespace, podName)...)
 
 	return metrics

@@ -14,7 +14,7 @@ import (
 func GenerateNodeRecords(
 	input *MetricRecordInput,
 	nodeName, region string,
-	maxCpu, maxMemory int64,
+	maxCPU, maxMemory int64,
 	totalPods int,
 ) []types.Metric {
 	metrics := make([]types.Metric, 0)
@@ -54,7 +54,7 @@ func GenerateNodeRecords(
 				"resource": "cpu",
 				"unit":     "core",
 			},
-			Value: fmt.Sprintf("%d", maxCpu),
+			Value: fmt.Sprintf("%d", maxCPU),
 		})
 		metrics = append(metrics, types.Metric{
 			ID:             uuid.New(),
@@ -78,7 +78,7 @@ func GenerateNodeRecords(
 
 	// generate the pod data
 	for i := range totalPods {
-		metrics = append(metrics, GeneratePodRecords(input, nodeName, fmt.Sprintf("pod-%d", i), fmt.Sprintf("namespace-%d", i), "", maxCpu/int64(totalPods), maxMemory/int64(totalPods), i+1)...)
+		metrics = append(metrics, GeneratePodRecords(input, nodeName, fmt.Sprintf("pod-%d", i), fmt.Sprintf("namespace-%d", i), "", maxCPU/int64(totalPods), maxMemory/int64(totalPods), i+1)...)
 	}
 
 	return metrics
