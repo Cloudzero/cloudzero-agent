@@ -18,7 +18,18 @@ jobs:
       id-token: write
       actions: 'read'
     runs-on: ubuntu-latest
+    env:
+      RELEASE_BRANCH: ''
+
     steps:
+      # Set RELEASE_BRANCH based on the current branch
+      - name: Set RELEASE_BRANCH
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "develop" ]]; then
+            echo "RELEASE_BRANCH=main" >> $GITHUB_ENV
+          else
+            echo "RELEASE_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
 
       # Step 1: Checkout and Setup
       - name: Checkout Code
@@ -40,9 +51,11 @@ jobs:
         run: |
           git checkout develop
           git pull --rebase origin develop
-          git checkout main
-          git pull --rebase origin main
-          git merge develop
+          git checkout ${{ env.RELEASE_BRANCH }}
+          git pull --rebase origin ${{ env.RELEASE_BRANCH }}
+          if ${{ env.RELEASE_BRANCH == 'main' }}; then
+            git merge develop
+          fi
 
       # Step 3: Helm Setup
       - name: Install Helm
@@ -83,7 +96,7 @@ jobs:
         run: |
           git add .
           git commit -m "Update Chart.yaml to version ${{ env.NEW_VERSION }}"
-          git push origin main
+          git push origin ${{ env.RELEASE_BRANCH }}
           COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
         continue-on-error: true
