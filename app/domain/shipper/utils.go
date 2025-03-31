@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package shipper provides domain logic for for the shipper.
 package shipper
 
 import "github.com/cloudzero/cloudzero-agent-validator/app/types"
