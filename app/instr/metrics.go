@@ -59,8 +59,9 @@ func WithNoGoMetrics() PrometheusMetricsOpt {
 	}
 }
 
-// Create a new prometheus metrics object. This will setup sane default prometheus
-// metrics, with additional configuration with `...PrometheusMetricsOpt`.
+// NewPrometheusMetrics creates a new prometheus metrics object. This will setup
+// sane default prometheus metrics, with additional configuration with
+// `...PrometheusMetricsOpt`.
 func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, error) {
 	p := &PrometheusMetrics{}
 
@@ -108,9 +109,9 @@ func NewPrometheusMetrics(opts ...PrometheusMetricsOpt) (*PrometheusMetrics, err
 	return p, nil
 }
 
-// Get the http handler for this specific instance of the prometheus
-// metrics registry. If the `WithDefaultRegistry` option was used,
-// then calling `promhttp.Handler()` will return the same handler
+// Handler returns the HTTP handler for this specific instance of the Prometheus
+// metrics registry. If the `WithDefaultRegistry` option was used, then calling
+// `promhttp.Handler()` will return the same handler.
 func (p *PrometheusMetrics) Handler() http.Handler {
 	return promhttp.HandlerFor(p.registry, promhttp.HandlerOpts{})
 }

@@ -19,11 +19,12 @@ import (
 )
 
 type AbandonAPIPayloadFile struct {
-	ReferenceID string `json:"reference_id"` //nolint:tagliatelle // downstream expects cammel case
+	ReferenceID string `json:"reference_id"` //nolint:tagliatelle // downstream expects camel case
 	Reason      string `json:"reason"`
 }
 
-// sends an abandon request for a list of files with a given reason
+// AbandonFiles sends an abandon request for a list of files with a given
+// reason.
 func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string, reason string) error {
 	return m.metrics.SpanCtx(ctx, "shipper_AbandonFiles", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id,

@@ -221,7 +221,8 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 	})
 }
 
-// Takes in a list of files and runs them through the following:
+// HandleRequest takes in a list of files and runs them through the following:
+//
 // - Generate presigned URL
 // - Upload to the remote API
 // - Rename the file to indicate upload

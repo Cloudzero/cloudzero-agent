@@ -43,7 +43,8 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
-// Http middleware that tracks request count and duration
+// Middleware returns an HTTP middleware handler that tracks request count and
+// duration.
 func (p *PrometheusMetrics) Middleware(next http.Handler) http.Handler {
 	// register the middleware-specific routes
 	httpMiddlewareStatsOnce.Do(func() {

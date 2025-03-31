@@ -25,7 +25,7 @@ type FilterEntry struct {
 	Match   FilterMatchType
 }
 
-// filterChecker is a small utility which allows us to check if a value matches
+// FilterChecker is a small utility which allows us to check if a value matches
 // a test pattern, using various methods.
 type FilterChecker struct {
 	exactMatches    map[string]bool

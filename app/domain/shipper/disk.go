@@ -200,7 +200,7 @@ func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time
 	})
 }
 
-// PurgeOldestPercentage removes the oldest `percent` of files
+// PurgeOldestNPercentage removes the oldest `percent` of files
 func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int) error {
 	return m.metrics.SpanCtx(ctx, "shipper_PurgeOldestNPercentage", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id,

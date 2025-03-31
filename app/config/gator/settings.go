@@ -252,8 +252,8 @@ func (s *Settings) SetRemoteUploadAPI() error {
 	return nil
 }
 
-// Sanitizes the input host from the config, and returns a standard
-// `url.URL` type to build the query from
+// GetRemoteAPIBase sanitizes the input host from the config, and returns a
+// standard `url.URL` type to build the query from
 func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 	if s.Cloudzero._host == "" {
 		s.Cloudzero._host = s.Cloudzero.Host

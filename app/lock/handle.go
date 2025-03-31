@@ -9,15 +9,17 @@ import (
 	"path/filepath"
 )
 
-// `LockFile` acquires a lock for the specified file, executes the function, then releases the lock.
-// The lock file is created in the same directory as `${filepath}.lock`
+// LockFile acquires a lock for the specified file, executes the function, then
+// releases the lock. The lock file is created in the same directory as
+// `${filepath}.lock`
 func LockFile(ctx context.Context, filePath string, fn func() error, opts ...FileLockOption) error {
 	lockPath := getFileLockPath(filePath)
 	return withLock(ctx, lockPath, fn, opts...)
 }
 
-// `LockDir` acquires a lock for the specified directory, executes the function, then releases the lock.
-// The lock file is created within the target directory as `.dir.lock`.
+// LockDir acquires a lock for the specified directory, executes the function,
+// then releases the lock. The lock file is created within the target directory
+// as `.dir.lock`.
 func LockDir(ctx context.Context, dirPath string, fn func() error, opts ...FileLockOption) error {
 	lockPath := getDirLockPath(dirPath)
 	return withLock(ctx, lockPath, fn, opts...)

@@ -30,10 +30,12 @@ type PresignedURLAPIPayloadFile struct {
 	Size        int64  `json:"size,omitempty"`
 }
 
-// format of: `{reference_id: presigned_url}`
+// PresignedURLAPIResponse is the format of the response from the remote API.
+// The format of the response is: `{reference_id: presigned_url}`.
 type PresignedURLAPIResponse = map[string]string
 
-// Allocates a set of pre-signed urls for the passed file objects
+// AllocatePresignedURLs allocates a set of pre-signed urls for the passed file
+// objects.
 func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
 	var response PresignedURLAPIResponse
 	err := m.metrics.SpanCtx(m.ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {

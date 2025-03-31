@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Wait for a specific condition to return true
+// WaitForCondition waits for a specific condition to return true.
 func WaitForCondition(
 	ctx context.Context,
 	timeout time.Duration,

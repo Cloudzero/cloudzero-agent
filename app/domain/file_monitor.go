@@ -25,6 +25,9 @@ const (
 	FileRenamed = "file_rename"
 )
 
+// FileMonitor is responsible for monitoring changes in the secret file,
+// and will notify components in the application that depend on the secret
+// filePath can be a directory or a single file
 type FileMonitor struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -36,9 +39,7 @@ type FileMonitor struct {
 	bus      types.Bus
 }
 
-// This structure is responsible for monitoring changes in the secret file,
-// and will notify components in the application that depend on the secret
-// filePath can be a directory or a single file
+// NewFileMonitor creates a new file monitor.
 func NewFileMonitor(ctx context.Context, bus types.Bus, filePath string) (*FileMonitor, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err

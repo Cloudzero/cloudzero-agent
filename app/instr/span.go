@@ -90,7 +90,7 @@ func SpanLogger(ctx context.Context, id string, attrs ...logging.Attr) zerolog.L
 	return builder.Logger()
 }
 
-// See: SpanLogger
+// Logger returns a new logger for the span.
 func (s *Span) Logger(attrs ...logging.Attr) zerolog.Logger {
 	return SpanLogger(s.ctx, s.id, attrs...)
 }
@@ -127,10 +127,10 @@ func (p *PrometheusMetrics) StartSpan(ctx context.Context, name string) *Span {
 	}
 }
 
-// An extremely basic span function wrapper to track execution time.
-// This is NOT a replacement for otel, just a simple exercise that may prove useful
-// in certain cases. The function provides the spanId as the argument `id` in the
-// function.
+// Span provides an extremely basic span function wrapper to track execution
+// time. This is NOT a replacement for otel, just a simple exercise that may
+// prove useful in certain cases. The function provides the spanId as the
+// argument `id` in the function.
 //
 // In addition, this function transiently passes the error to the caller
 func (p *PrometheusMetrics) Span(name string, fn func(id string) error) error {

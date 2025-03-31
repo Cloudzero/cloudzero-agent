@@ -50,7 +50,8 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 	return &rr, nil
 }
 
-// Saves a reply-request from the remote to disk to be picked up on next iteration
+// SaveReplayRequest saves a reply-request from the remote to disk to be picked
+// up on next iteration.
 func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_SaveReplayRequest", func(ctx context.Context, id string) error {
 		// create the directory if needed
@@ -77,7 +78,7 @@ func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest
 	})
 }
 
-// gets all active replay request files
+// GetActiveReplayRequests gets all active replay request files
 func (m *MetricShipper) GetActiveReplayRequests(ctx context.Context) ([]*ReplayRequest, error) {
 	requests := make([]*ReplayRequest, 0)
 
