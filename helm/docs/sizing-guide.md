@@ -17,12 +17,9 @@ It is recommended to consider the shape and size of your prometheus cluster when
 ![sizing formula](./assets/sizing-formula.png)
 
 > This guide uses a basic formula based on number of nodes in the cluster. Please note, your mileage may vary if you have:
-> 
-> * Very large machines, with a large number of pods
-> 
-> * High churn pods or jobs. Each pod started triggers allocation of a memory for that pods metrics cache in the agent's memory. If the pod restarts, a new cache is created for the new pod instance. [More details on the cache can be found in the prometheus documentation.](https://prometheus.io/docs/practices/remote_write/). This cache is maintained for 2 hours to handle failure recovery of remote writes.
-> 
-
+>
+> - Very large machines, with a large number of pods
+> - High churn pods or jobs. Each pod started triggers allocation of a memory for that pods metrics cache in the agent's memory. If the pod restarts, a new cache is created for the new pod instance. [More details on the cache can be found in the prometheus documentation.](https://prometheus.io/docs/practices/remote_write/). This cache is maintained for 2 hours to handle failure recovery of remote writes.
 
 #### Sample values-override.yml Configuration
 
@@ -40,15 +37,14 @@ server:
 
 When using Helm, you can provide specific values in a separate `values-override.yml` file to override the defaults specified in the original `values.yml`. This approach allows you to override only the necessary values rather than providing the entire block.
 
-
 #### Example Configuration for 200 Nodes
 
 Calculate the memory limit based on the number of nodes, for example 200 nodes, the configuration would be:
 
-![Example](./assets/sizing-formula-eg.png) 
-
+![Example](./assets/sizing-formula-eg.png)
 
 Example `values-override.yml`:
+
 ```yaml
 server:
   resources:
@@ -60,6 +56,5 @@ server:
 ```
 
 This file only includes the overrides for the server resources size limit.
-
 
 By following these instructions, you can ensure your Prometheus agent is properly sized to handle your cluster's load, preventing potential memory issues and ensuring smooth operation.
