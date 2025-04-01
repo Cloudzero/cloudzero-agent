@@ -105,7 +105,8 @@ func NewLogger(opts ...LoggerOpt) (*zerolog.Logger, error) {
 
 	// add a default sink
 	if len(ilogger.sinks) == 0 {
-		ilogger.sinks = append(ilogger.sinks, os.Stdout)
+		filteredStdout := NewFieldFilterWriter(os.Stdout, []string{"spanId", "parentSpanId"})
+		ilogger.sinks = append(ilogger.sinks, filteredStdout)
 	}
 
 	// create a multi-sink
