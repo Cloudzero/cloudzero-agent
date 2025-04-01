@@ -1,22 +1,12 @@
-name: Test Chart
-on:
-  push:
-    # Only create "develop" branch tagged image
-    branches:
-      - develop
-    # Only create "version tag" tagged image
-    tags:
-      - "v*.*.*"
-  # create any PR image (tag is pr-<number>)
-  # these should be cleaned once merged using the docker-clean.yml
-  pull_request:
+name: Test Helm Chart
+on: [push]
 
 env:
   SKIP_VALIDATIONS: false
 
-jobs:  
+jobs:
   # This job lints the chart
-  lint:
+  helm-chart-lint:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,20 +29,20 @@ jobs:
           CZ_CHART_REPO: https://cloudzero.github.io/cloudzero-charts
           CZ_CHART_BETA_REPO: https://cloudzero.github.io/cloudzero-charts/beta
           CLUSTER_NAME: cz-node-agent-ci
-          CLOUD_ACCOUNT_ID: '00000000'
-          CZ_API_TOKEN: 'fake-api-token'
-          REGION: 'us-east-1'
+          CLOUD_ACCOUNT_ID: "00000000"
+          CZ_API_TOKEN: "fake-api-token"
+          REGION: "us-east-1"
         run: |
-          cd charts/cloudzero-agent
+          cd helm/
           helm dependency update
           ct lint --debug --charts . \
             --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
             --helm-lint-extra-args "--set=existingSecretName=api-token,clusterName=$CLUSTER_NAME,cloudAccountId=$CLOUD_ACCOUNT_ID,region=$REGION"
 
   # This job tests the chart on a KinD cluster
-  # and if we are in the develop or tag branch, it will 
+  # and if we are in the develop or tag branch, it will
   # publish the image to the production registry
-  install:
+  helm-chart-install:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -97,7 +87,7 @@ jobs:
         id: skip_validation
         run: |
           # Skip if secret is not defined
-          if [[ -z "${{ secrets.CZ_API_TOKEN }}" ]]; then
+          if [[ -z "${{ secrets.CZ_DEV_API_TOKEN }}" ]]; then
             echo "SKIP_VALIDATIONS=true" >>${GITHUB_ENV}
           fi
 
@@ -112,13 +102,13 @@ jobs:
           CZ_CHART_REPO: https://cloudzero.github.io/cloudzero-charts
           CZ_CHART_BETA_REPO: https://cloudzero.github.io/cloudzero-charts/beta
           CLUSTER_NAME: cz-node-agent-ci
-          CLOUD_ACCOUNT_ID: '00000000'
-          CZ_API_TOKEN: ${{ secrets.CZ_API_TOKEN || 'fake-api-token' }}
-          REGION: 'us-east-1'
+          CLOUD_ACCOUNT_ID: "00000000"
+          CZ_API_TOKEN: ${{ secrets.CZ_DEV_API_TOKEN || 'fake-api-token' }}
+          REGION: "us-east-1"
         run: |
           kubectl create namespace $NAMESPACE
           kubectl create secret -n $NAMESPACE generic api-token --from-literal=value=$CZ_API_TOKEN
-          cd charts/cloudzero-agent
+          cd helm/
           helm dependency update
           ct install --charts . \
             --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
