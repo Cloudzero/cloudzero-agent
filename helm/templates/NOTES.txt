@@ -1,0 +1,50 @@
+{{- if and .Values.kubeStateMetrics.targetOverride .Values.kubeStateMetrics.enabled }}
+***************
+
+
+****WARNING****
+
+This chart has been installed with both `kubeStateMetrics.targetOverride` and `kubeStateMetrics.enabled`. This is almost certainly not a correct configuration.
+
+The purpose of targetOverride is for you to bring your own kube-state-metrics. If `kubeStateMetrics.enabled` is true, and `kubeStateMetrics.targetOverride` is not null, 
+it is likely you will not receive the required metrics and data in the CloudZero platform since the agent may be looking for the wrong service address for KSM.
+
+Please refer to the documentation for guidance on `kubeStateMetrics` settings.
+
+***************
+{{- end }}
+
+
+                    73                 32                  
+                 0008 0000         0000 6000               
+              000        6000   0000        000            
+           000              50009              000         
+           048000         000 05000               00       
+           042220000   000    02220000              00     
+           042222220008       02222220000            00    
+           04222222220        0222222222000            00  
+           05222222220        022222222222000          80  
+          000000222220      000000222222222200          00 
+       000     0000220   000     00002222222200          0 
+   3000           0020000           000022222200         0 
+   08              000                 0222222200        0 
+   250000      0000 30                 0222222220        0 
+   222220000000     00                 0222222220        0 
+   2222222240       00                 02222222204       0 
+   2222222220       00                 02222222202       0 
+   5222222220       00                 00422222202       0 
+   0222222220     000 000           000 8000622202    0000 
+   0222222220  000       000     000       700090  0007    
+   00222222200              00000              9600        
+    092222222900          000002004          00000         
+    300222222220000    000    02260000    000   00         
+      00222222222280000       022222400001      00         
+       008222222222220        0222222220        00         
+         0002222222220        0222222220        00         
+           00002222220       00005222220       000         
+              00002220   6000   00004220    000            
+                 000000000         800000000        
+
+                      Install Successful
+
+Your data will be available in the CloudZero portal after 48 hours. 
