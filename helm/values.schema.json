@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "host": {
+        "type": "string"
+    },
+    "clusterName": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$"
+    },
+    "cloudAccountId": {
+        "type": "string"
+    },
+    "region": {
+        "type": "string"
+    }
+},
+"required": [
+    "host",
+    "clusterName",
+    "cloudAccountId",
+    "region"
+]
+}

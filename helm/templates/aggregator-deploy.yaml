@@ -1,0 +1,156 @@
+{{- if .Values.aggregator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+{{- if .Values.aggregator.deploymentAnnotations }}
+  annotations:
+    {{- toYaml .Values.aggregator.deploymentAnnotations | nindent 4 }}
+{{- end }}
+  name: {{ include "cloudzero-agent.aggregator.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 6 }}
+  replicas: {{ .Values.aggregator.replicas }}
+  template:
+    metadata:
+      {{- with .Values.aggregator.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "cloudzero-agent.aggregator.labels" . | nindent 8 }}
+        {{- with .Values.aggregator.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+{{- if .Values.server.priorityClassName }}
+      priorityClassName: "{{ .Values.server.priorityClassName }}"
+{{- end }}
+      serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
+      containers:
+        - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
+          image: "{{ .Values.aggregator.image.repository }}:{{ .Values.aggregator.image.tag }}"
+          imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.aggregator.collector.port }}
+          command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.aggregator.collector.port }}"
+          volumeMounts:
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+            - name: aggregator-config-volume
+              mountPath: {{ .Values.aggregator.mountRoot }}/config
+              readOnly: true
+            - name: aggregator-persistent-storage
+              mountPath: {{ .Values.aggregator.mountRoot }}/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.aggregator.collector.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.aggregator.collector.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.aggregator.collector.resources | nindent 12 }}
+
+        - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
+          image: "{{ .Values.aggregator.image.repository }}:{{ .Values.aggregator.image.tag }}"
+          imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          command: ["/app/cloudzero-shipper", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+          volumeMounts:
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+            - name: aggregator-config-volume
+              mountPath: {{ .Values.aggregator.mountRoot }}/config
+              readOnly: true
+            - name: aggregator-persistent-storage
+              mountPath: {{ .Values.aggregator.mountRoot }}/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.aggregator.collector.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.aggregator.collector.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.aggregator.shipper.resources | nindent 12 }}
+
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+      dnsPolicy: ClusterFirst
+      {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
+
+      {{- with .Values.aggregator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aggregator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aggregator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  
+    {{- with .Values.server.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      terminationGracePeriodSeconds: {{ default 300 .Values.server.terminationGracePeriodSeconds }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ template "cloudzero-agent.configMapName" . }}
+        - name: validator-config-volume
+          configMap:
+            name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
+        - name: lifecycle-volume
+          emptyDir: {}
+        {{- if or .Values.existingSecretName .Values.apiKey }}
+        - name: cloudzero-api-key
+          secret:
+            secretName: {{ include "cloudzero-agent.secretName" . }}
+        {{- end }}
+        - name: cloudzero-agent-storage-volume
+        {{- if .Values.server.persistentVolume.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ if .Values.server.persistentVolume.existingClaim }}{{ .Values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
+        {{- else }}
+          emptyDir:
+          {{- if .Values.server.emptyDir.sizeLimit }}
+            sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
+          {{- else }}
+            {}
+          {{- end }}
+        {{- end }}
+        - name: aggregator-config-volume
+          configMap:
+            name: {{ include "cloudzero-agent.aggregator.name" . }}
+        - name: aggregator-persistent-storage
+          emptyDir: {}
+{{- end }}

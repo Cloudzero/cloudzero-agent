@@ -1,0 +1,28 @@
+{{ if .Values.insightsController.tls.useCertManager }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cloudzero-agent.certificateName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ include "cloudzero-agent.tlsSecretName" .}}
+  secretTemplate:
+    {{- with .Values.secretAnnotations }}
+    annotations:
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    labels:
+      {{- include "cloudzero-agent.insightsController.labels" . | nindent 6 }}
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  duration: 2160h # 90d
+  renewBefore: 360h # 15d
+  dnsNames:
+    - {{ include "cloudzero-agent.serviceName" . }}.{{ .Release.Namespace }}.svc
+  issuerRef:
+    name: {{ include "cloudzero-agent.issuerName" . }}
+    kind: Issuer
+{{ end }}
