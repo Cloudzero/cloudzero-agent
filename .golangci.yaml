@@ -7,7 +7,6 @@ run:
 output:
   print-issued-lines: false
   print-linter-name: true
-  uniq-by-line: false
   path-prefix: ""
   sort-results: true
 
@@ -48,14 +47,24 @@ linters-settings:
   #
   # Bugs & Errors
   #
+
   dupl:
     # Tokens count to trigger issue, Default: 150
     threshold: 100
+
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
     # Such cases aren't reported by default.
     # Default: false
     check-type-assertions: true
+
+  govet:
+    enable:
+      - shadow
+
+  nolintlint:
+    require-specific: true
+    require-explanation: true
 
   # For a full list of Revive linters, see https://github.com/mgechev/revive
   revive:
@@ -67,8 +76,10 @@ linters-settings:
         arguments:
           - maxLitCount: "3"
             allowStrs: '""'
-            allowInts: "0,1,2,3"
+            allowInts: "0,1,2,3,10,8,16,32,64,100,128,192,256,512,1024,2048,4096,8192,16384,32768,65536"
             allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
+      # Check for common mistaken usages of the sync/atomic package
+      - name: atomic
       # Warns on malformed comments
       - name: comment-spacings
       # Warns on methods with names that differ only by capitalization
@@ -100,6 +111,7 @@ linters-settings:
   #
   # Style & Formatting
   #
+
   gofumpt:
     # Apply the rewrite rules to the source before reformatting.
     # https://github.com/mvdan/gofumpt
@@ -109,19 +121,12 @@ linters-settings:
         replacement: "any"
       - pattern: "a[b:len(a)]"
         replacement: "a[b:]"
+
   goheader:
     template: |-
       SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
       SPDX-License-Identifier: Apache-2.0
-    exclude-dirs:
-      - pkg/types/mocks
-  nolintlint:
-    # Always require //nolint instead of // nolint
-    require-machine: true
-    # Always require //nolint:mylinter instead of just //nolint
-    require-specific: true
-    # Always require //nolint // my explanation instead of just //nolint
-    require-explanation: true
+
   tagliatelle:
     case:
       use-field-name: true
@@ -131,10 +136,15 @@ linters-settings:
         yaml: snake
 
 issues:
+  uniq-by-line: false
   exclude-dirs:
-    - pkg/status
-    - .go
-    - .git
+    # Generated files
+    - pkg/status/cluster_status.pb.go
+    - pkg/types/mocks
+
+    # These should not be excluded, but that's a tomorrow problem.
+    - mock/
+    - tests/
   exclude-rules:
     - path: pkg/types/mocks
       linters:

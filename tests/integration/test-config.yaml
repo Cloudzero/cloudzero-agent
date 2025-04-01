@@ -1,0 +1,52 @@
+cloud_account_id: test-account-id
+region: us-east-1
+cluster_name: integration-test-cluster
+host: mock-remote-write:8081
+logging:
+  level: debug
+remote_write:
+  send_interval: 5s
+  max_bytes_per_send: 500000
+  send_timeout: 1m
+  max_retries: 3
+k8s_client:
+  timeout: 30s
+database:
+  retention_time: 24h
+  cleanup_interval: 3h
+  batch_update_size: 500
+api_key_path: /etc/config/secrets/fake-api-key
+server:
+  port: 8000
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 120s
+filters:
+  labels:
+    enabled: true
+    patterns:
+      - ^foo-label$
+      - ^bar-label$
+    resources:
+      cronjobs: false
+      daemonsets: false
+      deployments: true
+      jobs: false
+      namespaces: true
+      nodes: false
+      pods: true
+      statefulsets: false
+  annotations:
+    enabled: true
+    patterns:
+      - ^foo-annotation$
+      - ^bar-annotation$
+    resources:
+      cronjobs: false
+      daemonsets: false
+      deployments: false
+      jobs: false
+      namespaces: true
+      nodes: false
+      pods: true
+      statefulsets: false

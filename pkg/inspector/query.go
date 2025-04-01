@@ -68,7 +68,7 @@ func (cache *gojqQueryCache) JSONMatch(query string, data any) (bool, error) {
 		return false, nil
 	}
 
-	if err, ok := v.(error); ok {
+	if err, ok = v.(error); ok {
 		return false, fmt.Errorf("JQ query returned error: %w", err)
 	}
 

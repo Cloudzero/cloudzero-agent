@@ -3,19 +3,12 @@ name: CI
 on: [push]
 
 jobs:
-  test: # Run tests
+  custom-checks: # Assorted custom checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Golang
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Install dependencies
-        run: |
-          go mod download
-      - name: Run go tests
-        run: make test
+      - name: Run custom checks
+        run: ./scripts/ci-checks.sh
 
   # Run linters
   #
@@ -124,3 +117,65 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: marocchino/validate-dependabot@v3
+
+  test: # Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install dependencies
+        run: |
+          go mod download
+      - name: Run go tests
+        run: make test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    # references local file ".secrets"
+    env:
+      CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go mod tidy
+
+        # TODO: Currently the only real integration test is TestRemoteWrite.
+        # There's an issue with some of the other Tests running in a Linux container,
+        # so the command only runs the single test for now.
+      - name: Run integration tests
+        run: make test-integration
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+
+    # references local file ".secrets"
+    env:
+      CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      # smoke tests hit alfa.
+      - name: Run smoke tests
+        run: sudo -E make test-smoke

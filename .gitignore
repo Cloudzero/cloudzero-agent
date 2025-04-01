@@ -3,10 +3,10 @@ go.work
 go.work.sum
 .tool-versions
 
-/.local-config.mk
+/local-config.mk
 
 # app configuration
-/.cloudzero-agent-validator.yaml
+/.cloudzero-insights-controller.yaml
 
 # tool and bin directories
 .tmp/
@@ -20,6 +20,7 @@ bin/
 /.task
 /.config
 log.json
+certs
 
 # changelog generation
 CHANGELOG.md
@@ -74,3 +75,7 @@ cosign.pub
 __pycache__/
 *.py[cod]
 *$py.class
+
+# drawio temp files
+*.drawio.bkp
+*.drawio.dtmp

@@ -13,8 +13,11 @@ var _ interface {
 
 // Accessor allows for low-level access to the Report
 type Accessor interface {
+	// AddCheck adds a check to the report.
 	AddCheck(...*StatusCheck)
+	// WriteToReport writes to the report.
 	WriteToReport(func(*ClusterStatus))
+	// ReadFromReport reads from the report.
 	ReadFromReport(func(*ClusterStatus))
 }
 
