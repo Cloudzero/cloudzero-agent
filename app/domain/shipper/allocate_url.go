@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -55,7 +54,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// get the shipper id
 		shipperID, err := m.GetShipperID()
 		if err != nil {
-			return fmt.Errorf("failed to get the shipper id: %w", err)
+			return ErrInvalidShipperID
 		}
 
 		// create the http request body
@@ -67,18 +66,21 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// marshal to json
 		enc, err := json.Marshal(body)
 		if err != nil {
-			return fmt.Errorf("failed to encode the body into json: %w", err)
+			logger.Err(err).Msg(ErrEncodeBody.Error())
+			return ErrEncodeBody
 		}
 
 		// Create a new HTTP request
 		uploadEndpoint, err := m.setting.GetRemoteAPIBase()
 		if err != nil {
-			return fmt.Errorf("failed to get remote base: %w", err)
+			logger.Err(err).Msg(ErrGetRemoteBase.Error())
+			return ErrGetRemoteBase
 		}
 		uploadEndpoint.Path += uploadAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
-			return fmt.Errorf("failed to create HTTP request: %w", err)
+			logger.Err(err).Msg("failed to create the HTTP request")
+			return ErrHTTPUnknown
 		}
 
 		// Set necessary headers
@@ -100,17 +102,22 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		logger.Debug().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
 
 		// Send the request
-		httpSpan := m.metrics.StartSpan(ctx, "shipper_AllocatePresignedURLs_httpRequest")
-		httpSpanLogger := httpSpan.Logger()
-		httpSpanLogger.Debug().Msg("Sending the http request ...")
-		defer httpSpan.End()
-		resp, err := m.HTTPClient.Do(req)
+		var resp *http.Response
+		err = m.metrics.SpanCtx(ctx, "shipper_AllocatePresignedURLs_httpRequest", func(ctx context.Context, id string) error {
+			spanLogger := instr.SpanLogger(ctx, id)
+			spanLogger.Debug().Msg("Sending the http request ...")
+			resp, err = m.HTTPClient.Do(req)
+			if err != nil {
+				return err
+			}
+			spanLogger.Debug().Msg("Successfully sent http request")
+			return nil
+		})
 		if err != nil {
-			httpSpanLogger.Err(err).Msg("HTTP request failed")
-			return httpSpan.Error(fmt.Errorf("HTTP request failed: %w", err))
+			logger.Err(err).Msg("HTTP request failed")
+			return ErrHTTPRequestFailed
 		}
-		httpSpanLogger.Debug().Msg("Successfully sent http request")
-		httpSpan.End()
+
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
@@ -120,16 +127,19 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// Check for HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+			logger.Err(err).Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
+			return ErrHTTPUnknown
 		}
 
 		// Parse the response
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			return fmt.Errorf("failed to decode response: %w", err)
+			logger.Err(err).Msg("failed to decode the response")
+			return ErrInvalidBody
 		}
 
 		// validation
 		if len(response) == 0 {
+			logger.Warn().Msg(ErrNoURLs.Error())
 			return ErrNoURLs
 		}
 
@@ -144,6 +154,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 				// save the replay request to disk
 				if err = m.SaveReplayRequest(ctx, rr); err != nil {
 					// do not fail here
+					metricReplayRequestSaveErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 					logger.Err(err).Msg("failed to save the replay request to disk")
 				}
 

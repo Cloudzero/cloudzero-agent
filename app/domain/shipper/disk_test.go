@@ -143,7 +143,7 @@ func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 			func(m *MockAppendableFiles) {
 				m.On("GetUsage").Return((*types.StoreUsage)(nil), errors.New("disk error"))
 			},
-			"failed to get the usage",
+			shipper.ErrGetDiskUsage.Error(),
 		},
 		{
 			"GetFilesError",
@@ -151,7 +151,7 @@ func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 				m.On("GetUsage").Return(&types.StoreUsage{}, nil)
 				m.On("GetFiles", []string(nil)).Return([]string{}, errors.New("file error"))
 			},
-			"failed to get the unsent files",
+			shipper.ErrFilesList.Error(),
 		},
 	}
 

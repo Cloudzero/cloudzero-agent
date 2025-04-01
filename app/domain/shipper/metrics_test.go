@@ -21,9 +21,10 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 
 	// other
 	metricShutdownTotal.WithLabelValues().Inc()
+	metricShipperRunFailTotal.WithLabelValues("err").Inc()
 
 	// new files
-	metricNewFilesErrorTotal.WithLabelValues().Inc()
+	metricNewFilesErrorTotal.WithLabelValues("err").Inc()
 	metricNewFilesProcessingCurrent.WithLabelValues().Inc()
 
 	// generic request handling
@@ -31,15 +32,20 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	metricHandleRequestSuccessTotal.WithLabelValues().Inc()
 
 	// presigned urls
-	metricPresignedURLErrorTotal.WithLabelValues().Inc()
+	metricPresignedURLErrorTotal.WithLabelValues("err").Inc()
+
+	// file uploading
+	metricFileUploadErrorTotal.WithLabelValues("err").Inc()
+	metricMarkFileUploadedErrorTotal.WithLabelValues("err").Inc()
 
 	// replay requests
 	metricReplayRequestTotal.WithLabelValues().Inc()
 	metricReplayRequestCurrent.WithLabelValues().Inc()
 	metricReplayRequestFileCount.Observe(100)
+	metricReplayRequestSaveErrorTotal.WithLabelValues("err").Inc()
 	metricReplayRequestErrorTotal.WithLabelValues().Inc()
 	metricReplayRequestAbandonFilesTotal.WithLabelValues().Inc()
-	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues().Inc()
+	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues("err").Inc()
 
 	// disk usage
 	metricDiskTotalSizeBytes.WithLabelValues().Inc()
@@ -51,6 +57,7 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	metricDiskCleanupFailureTotal.WithLabelValues("80", "error").Inc()
 	metricDiskCleanupSuccessTotal.WithLabelValues("40").Inc()
 	metricDiskCleanupPercentage.Observe(20)
+	metricDiskHandleErrorTotal.WithLabelValues("err").Inc()
 
 	// fetch metrics from the mock handler
 	resp, err := http.Get(srv.URL)
@@ -62,6 +69,7 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	// validate
 
 	require.Contains(t, string(body), "shipper_shutdown_total")
+	require.Contains(t, string(body), "shipper_run_fail_total")
 
 	require.Contains(t, string(body), "shipper_new_files_error_total")
 	require.Contains(t, string(body), "shipper_new_files_processing_current")
@@ -69,12 +77,18 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	require.Contains(t, string(body), "shipper_handle_request_file_count")
 	require.Contains(t, string(body), "shipper_handle_request_success_total")
 
+	// presigned url
 	require.Contains(t, string(body), "shipper_presigned_url_error_total")
+
+	// file uploading
+	require.Contains(t, string(body), "shipper_file_upload_error_total")
+	require.Contains(t, string(body), "shipper_mark_file_uploaded_error_total")
 
 	// replay requests
 	require.Contains(t, string(body), "shipper_replay_request_total")
 	require.Contains(t, string(body), "shipper_replay_request_current")
 	require.Contains(t, string(body), "shipper_replay_request_file_count")
+	require.Contains(t, string(body), "shipper_replay_request_save_error_total")
 	require.Contains(t, string(body), "shipper_replay_request_error_total")
 	require.Contains(t, string(body), "shipper_replay_request_abandon_files_total")
 	require.Contains(t, string(body), "shipper_replay_request_abandon_files_error_total")
@@ -89,4 +103,5 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	require.Contains(t, string(body), "shipper_disk_cleanup_failure_total")
 	require.Contains(t, string(body), "shipper_disk_cleanup_success_total")
 	require.Contains(t, string(body), "shipper_disk_cleanup_percentage")
+	require.Contains(t, string(body), "shipper_disk_handle_error_total")
 }

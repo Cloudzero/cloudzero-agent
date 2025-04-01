@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-agent-validator/app/store"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
@@ -277,7 +277,7 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected status code 400")
+	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
 	assert.Empty(t, presignedURL)
 }
 
@@ -361,7 +361,7 @@ func TestShipper_Unit_AllocatePresignedURL_RequestCreationError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get remote base")
+	assert.ErrorIs(t, err, shipper.ErrGetRemoteBase)
 	assert.Empty(t, presignedURL)
 }
 
@@ -388,7 +388,7 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPClientError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "HTTP request failed")
+	assert.ErrorIs(t, err, shipper.ErrHTTPRequestFailed)
 	assert.Empty(t, presignedURL)
 }
 
@@ -442,7 +442,7 @@ func TestShipper_Unit_UploadFile_HTTPError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected upload status code 400: Bad Request")
+	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
 }
 
 func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
@@ -462,7 +462,7 @@ func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to create upload HTTP request")
+	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
 }
 
 func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {

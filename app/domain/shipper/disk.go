@@ -54,14 +54,15 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 			// purge old metrics if not in lazy mode
 			if !m.setting.Database.PurgeRules.Lazy {
 				if err = m.PurgeMetricsBefore(ctx, metricCutoff); err != nil {
-					return fmt.Errorf("failed to purge older metrics: %w", err)
+					metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
+					return ErrStorageCleanup
 				}
 			}
 		case types.StoreWarningHigh:
 			if err = m.handleStorageWarningHigh(ctx, metricCutoff); err != nil {
 				// note the error in prom
-				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
-				return err
+				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
+				return ErrStorageCleanup
 			}
 
 			// note the success in prom
@@ -70,8 +71,8 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 		case types.StoreWarningCrit:
 			if err = m.handleStorageWarningCritical(ctx); err != nil {
 				// note the error in prom
-				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), err.Error()).Inc()
-				return err
+				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
+				return ErrStorageCleanup
 			}
 
 			// note the success in prom
@@ -84,7 +85,7 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 		// fetch the usage again
 		usage2, err := m.store.GetUsage()
 		if err != nil {
-			return fmt.Errorf("failed to get the disk usage: %w", err)
+			return ErrGetDiskUsage
 		}
 
 		// log how much storage was purged
@@ -110,7 +111,7 @@ func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, er
 		// get the disk usage
 		usage, err = m.store.GetUsage()
 		if err != nil {
-			return fmt.Errorf("failed to get the usage: %w", err)
+			return ErrGetDiskUsage
 		}
 
 		// report all of the metrics
@@ -121,15 +122,18 @@ func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, er
 		// read file counts
 		unsent, err := m.store.GetFiles()
 		if err != nil {
-			return fmt.Errorf("failed to get the unsent files: %w", err)
+			logger.Err(err).Msg("failed to get the unsent files")
+			return ErrFilesList
 		}
 		sent, err := m.store.GetFiles(UploadedSubDirectory)
 		if err != nil {
-			return fmt.Errorf("failed to get the uploaded files; %w", err)
+			logger.Err(err).Msg("failed to get the uploaded files")
+			return ErrFilesList
 		}
 		rr, err := m.store.GetFiles(ReplaySubDirectory)
 		if err != nil {
-			return fmt.Errorf("failed to get the replay request files: %w", err)
+			logger.Err(err).Msg("failed to get the replay request files")
+			return ErrFilesList
 		}
 
 		// set the file metrics
@@ -179,7 +183,8 @@ func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time
 			}
 			return nil
 		}); err != nil {
-			return fmt.Errorf("failed to walk the filestore: %w", err)
+			logger.Err(err).Msg("failed to walk the uploaded filestore")
+			return ErrFilesList
 		}
 
 		if len(oldFiles) == 0 {
@@ -190,7 +195,8 @@ func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time
 		// delete all files
 		for _, file := range oldFiles {
 			if err := os.Remove(file); err != nil {
-				return fmt.Errorf("failed to delete the file: %w", err)
+				logger.Err(err).Str("file", file).Msg("failed to delete a file during disk cleanup")
+				return ErrFileRemove
 			}
 		}
 
@@ -216,7 +222,8 @@ func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int)
 
 		entries, err := m.store.ListFiles(UploadedSubDirectory)
 		if err != nil {
-			return fmt.Errorf("failed to list files: %w", err)
+			logger.Err(err).Msg("failed to list the uploaded files")
+			return ErrFilesList
 		}
 
 		type fileData struct {
@@ -262,7 +269,8 @@ func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int)
 		// remove all these files
 		for _, item := range toRemove {
 			if err := os.Remove(item); err != nil {
-				return fmt.Errorf("failed to remove file '%s': %w", item, err)
+				logger.Err(err).Str("file", item).Msg("failed to remote the file during a file purge")
+				return ErrFileRemove
 			}
 		}
 

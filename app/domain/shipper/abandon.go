@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -41,7 +40,8 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// get the shipper id
 		shipperID, err := m.GetShipperID()
 		if err != nil {
-			return fmt.Errorf("failed to get the shipper id: %w", err)
+			logger.Err(err).Msg("failed to get the shipper id")
+			return ErrInvalidShipperID
 		}
 
 		// create the body
@@ -56,18 +56,21 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// serialize the body
 		enc, err := json.Marshal(body)
 		if err != nil {
-			return fmt.Errorf("failed to encode the body: %w", err)
+			logger.Err(err).Msg("failed to encode the body")
+			return ErrEncodeBody
 		}
 
 		// Create a new HTTP request
 		abandonEndpoint, err := m.setting.GetRemoteAPIBase()
 		if err != nil {
-			return fmt.Errorf("failed to get the abandon endpoint: %w", err)
+			logger.Err(err).Msg("failed to get the abandon endpoint")
+			return ErrGetRemoteBase
 		}
 		abandonEndpoint.Path += abandonAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
-			return fmt.Errorf("failed to create HTTP request: %w", err)
+			logger.Err(err).Msg("failed to create the HTTP request")
+			return ErrHTTPUnknown
 		}
 
 		// Set necessary headers
@@ -88,17 +91,22 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		logger.Debug().Str("url", req.URL.String()).Msg("Abandoning files")
 
 		// Send the request
-		httpSpan := m.metrics.StartSpan(ctx, "shipper_AbandonFiles_httpRequest")
-		httpSpanLogger := httpSpan.Logger()
-		httpSpanLogger.Debug().Msg("Sending the http request ...")
-		defer httpSpan.End()
-		resp, err := m.HTTPClient.Do(req)
+		var resp *http.Response
+		err = m.metrics.SpanCtx(ctx, "shipper_AbandonFiles_httpRequest", func(ctx context.Context, id string) error {
+			spanLogger := instr.SpanLogger(ctx, id)
+			spanLogger.Debug().Msg("Sending the http request ...")
+			resp, err = m.HTTPClient.Do(req)
+			if err != nil {
+				return err
+			}
+			spanLogger.Debug().Msg("Successfully sent http request")
+			return nil
+		})
 		if err != nil {
-			httpSpanLogger.Err(err).Msg("HTTP request failed")
-			return httpSpan.Error(fmt.Errorf("HTTP request failed: %w", err))
+			logger.Err(err).Msg("HTTP request failed")
+			return ErrHTTPRequestFailed
 		}
-		httpSpanLogger.Debug().Msg("Successfully sent http request")
-		httpSpan.End()
+
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
@@ -108,11 +116,9 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// Check for HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+			logger.Err(err).Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
+			return ErrHTTPUnknown
 		}
-
-		// log the number of success abandoned files
-		metricReplayRequestAbandonFilesTotal.WithLabelValues().Add(float64(len(referenceIDs)))
 
 		logger.Debug().Msg("Successfully abandoned files")
 

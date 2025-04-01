@@ -32,33 +32,41 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 
 		data, err := io.ReadAll(file)
 		if err != nil {
-			return fmt.Errorf("failed to read the file: %w", err)
+			logger.Err(err).Msg("failed to read the file")
+			return ErrEncodeBody
 		}
 
 		// Create a new HTTP PUT request with the file as the body
 		req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
 		if err != nil {
-			return fmt.Errorf("failed to create upload HTTP request: %w", err)
+			logger.Err(err).Msg("failed to create upload HTTP request")
+			return ErrHTTPUnknown
 		}
 
 		// Send the request
-		httpSpan := m.metrics.StartSpan(ctx, "shipper_UploadFile_httpRequest")
-		httpSpanLogger := httpSpan.Logger()
-		httpSpanLogger.Debug().Msg("Sending the http request ...")
-		defer httpSpan.End()
-		resp, err := m.HTTPClient.Do(req)
+		var resp *http.Response
+		err = m.metrics.SpanCtx(ctx, "shipper_UploadFile_httpRequest", func(ctx context.Context, id string) error {
+			spanLogger := instr.SpanLogger(ctx, id)
+			spanLogger.Debug().Msg("Sending the http request ...")
+			resp, err = m.HTTPClient.Do(req)
+			if err != nil {
+				return err
+			}
+			spanLogger.Debug().Msg("Successfully sent http request")
+			return nil
+		})
 		if err != nil {
-			httpSpanLogger.Err(err).Msg("HTTP request failed")
-			return fmt.Errorf("file upload HTTP request failed: %w", err)
+			logger.Err(err).Msg("HTTP request failed")
+			return ErrHTTPRequestFailed
 		}
-		httpSpanLogger.Debug().Msg("Successfully sent http request")
-		httpSpan.End()
+
 		defer resp.Body.Close()
 
 		// Check for successful upload
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("unexpected upload status code %d: %s", resp.StatusCode, string(bodyBytes))
+			logger.Err(err).Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected upload status code")
+			return ErrHTTPUnknown
 		}
 
 		return nil
@@ -75,7 +83,8 @@ func (m *MetricShipper) MarkFileUploaded(ctx context.Context, file types.File) e
 		// create the uploaded dir if needed
 		uploadDir := m.GetUploadedDir()
 		if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
-			return fmt.Errorf("failed to create the upload directory: %w", err)
+			logger.Err(err).Msg("failed to create the upload directory")
+			return ErrCreateDirectory
 		}
 
 		// if the filepath already contains the uploaded location,
