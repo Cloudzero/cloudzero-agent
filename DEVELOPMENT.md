@@ -48,7 +48,6 @@ To quickly get started with the development of the CloudZero Agent Validator, fo
 
    ```sh
    $ go mod download
-   $ make install-tools
    ```
 
 2. Generate the status protobuf definition package:
@@ -68,7 +67,7 @@ To quickly get started with the development of the CloudZero Agent Validator, fo
 To run the go formatter, go linter, unit tests to verify code changes, use the following command:
 
 ```sh
-make format lint test
+make fmt lint test
 ```
 
 ### 4. CI/CD Testing
@@ -142,6 +141,6 @@ Finally - we will publish the `draft-release`. Make sure you:
 
 ![](./docs/assets/release-3.png)
 
-When this is done, it will cause an automated release of the `docker image` for the release value, and `latest` to be created in GHCR.
+When this is done, it will cause an automated release of teh `docker image` for the release value, and `latest` to be created in GHCR.
 
 That's it, Happy coding!
