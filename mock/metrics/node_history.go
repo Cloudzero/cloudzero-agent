@@ -78,7 +78,7 @@ func GenerateNodeRecords(
 
 	// generate the pod data
 	for i := range totalPods {
-		metrics = append(metrics, GeneratePodRecords(input, nodeName, fmt.Sprintf("pod-%d", i), fmt.Sprintf("namespace-%d", i), "", maxCPU/int64(totalPods), maxMemory/int64(totalPods), i+1)...)
+		metrics = append(metrics, GeneratePodRecords(input, nodeName, fmt.Sprintf("pod-%s", uuid.NewString()[:6]), fmt.Sprintf("namespace-%d", i), "", maxCPU/int64(totalPods), maxMemory/int64(totalPods), i+1)...)
 	}
 
 	return metrics

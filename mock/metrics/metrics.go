@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/google/uuid"
 	"github.com/prometheus/prometheus/prompb"
 )
 
@@ -43,14 +44,14 @@ func GenerateClusterMetrics(
 	input := &MetricRecordInput{
 		OrganizationID: organizationID,
 		CloudAccountID: cloudAccountID,
-		ClusterName:    clusterName,
+		ClusterName:    fmt.Sprintf("%s-%s", clusterName, uuid.NewString()[:6]),
 		StartTime:      startTime,
 		EndTime:        endTime,
 	}
 
 	// create the node records
 	for i := range numNodes {
-		metrics = append(metrics, GenerateNodeRecords(input, fmt.Sprintf("node-%d", i), fmt.Sprintf("us-west-%d", i+1), cpuPerNode, memPerNode, podsPerNode)...)
+		metrics = append(metrics, GenerateNodeRecords(input, fmt.Sprintf("node-%s", uuid.NewString()[:6]), fmt.Sprintf("us-west-%d", i+1), cpuPerNode, memPerNode, podsPerNode)...)
 	}
 
 	return metrics
