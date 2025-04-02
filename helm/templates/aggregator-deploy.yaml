@@ -101,7 +101,10 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      dnsPolicy: ClusterFirst
+      dnsPolicy: {{ .Values.aggregator.dnsPolicy }}
+      {{- if .Values.aggregator.dnsConfig }}
+      dnsConfig: {{ .Values.aggregator.dnsConfig | nindent 8 }}
+      {{- end }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
 
       {{- with .Values.aggregator.nodeSelector }}

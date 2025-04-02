@@ -391,6 +391,8 @@ initCertJob:
     repository: bitnami/kubectl
     pullPolicy: Always
     tag: "1.32.0"
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   rbac:
     create: true
     serviceAccountName: ""
@@ -455,6 +457,8 @@ server:
       memory: 1024Mi
   deploymentAnnotations: {}
   podAnnotations: {}
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   agentMode: true
   args:
     - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
@@ -553,6 +557,8 @@ insightsController:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    dnsPolicy: ClusterFirst
+    dnsConfig: {}
   volumeMounts: []
   volumes: []
   resources: {}
@@ -645,6 +651,8 @@ aggregator:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
     tag: 0.2.1
     pullPolicy: IfNotPresent
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   cloudzero:
     # Interval between attempts to ship metrics to the remote endpoint.
     sendInterval: 1m
