@@ -135,13 +135,15 @@ spec:
             - name: validator-config-volume
               mountPath: /check/app/config/
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      dnsPolicy: ClusterFirst
+      dnsPolicy: {{ .Values.server.dnsPolicy }}
+      {{- if .Values.server.dnsConfig }}
+      dnsConfig: {{ toYaml .Values.server.dnsConfig | nindent 8 }}
+      {{- end }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
     {{- if .Values.server.nodeSelector }}
       nodeSelector:

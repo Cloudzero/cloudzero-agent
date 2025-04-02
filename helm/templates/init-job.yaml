@@ -20,6 +20,10 @@ spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure
       {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" . | nindent 6 }}
+      dnsPolicy: {{ .Values.insightsController.server.dnsPolicy }}
+      {{- if .Values.insightsController.server.dnsConfig }}
+      dnsConfig: {{ toYaml .Values.insightsController.server.dnsConfig | nindent 8 }}
+      {{- end }}
       containers:
         - name: init-scrape
           image: "{{ include  "cloudzero-agent.initBackfillJob.imageReference" . }}"
@@ -110,6 +114,10 @@ spec:
       serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
+      dnsPolicy: {{ .Values.initCertJob.dnsPolicy }}
+      {{- if .Values.initCertJob.dnsConfig }}
+      dnsConfig: {{ toYaml .Values.initCertJob.dnsConfig | nindent 8 }}
+      {{- end }}
       containers:
         - name: init-cert
           image: {{ .Values.initCertJob.image.repository }}:{{ .Values.initCertJob.image.tag }}
