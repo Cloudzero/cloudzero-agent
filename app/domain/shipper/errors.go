@@ -67,7 +67,7 @@ var (
 	ErrInvalidBody       = NewShipperError("err-invalid-body", "decoding a response/object failed")
 
 	ErrCreateDirectory = NewShipperError("err-dir-create", "failed to create the requested directory")
-	ErrCreateLock      = NewShipperError("err-lock-create", "failed to create or aquire the lock")
+	ErrCreateLock      = NewShipperError("err-lock-create", "failed to create or acquire the lock")
 	ErrReleaseLock     = NewShipperError("err-lock-release", "failed to release the lock")
 
 	ErrFilesList  = NewShipperError("err-files-walk", "failed to list/walk the files")

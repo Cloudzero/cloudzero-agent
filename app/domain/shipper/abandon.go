@@ -116,7 +116,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// Check for HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			logger.Err(err).Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
+			logger.Error().Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
 			return ErrHTTPUnknown
 		}
 

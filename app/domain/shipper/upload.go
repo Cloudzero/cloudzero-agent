@@ -65,7 +65,7 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 		// Check for successful upload
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			logger.Err(err).Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected upload status code")
+			logger.Error().Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected upload status code")
 			return ErrHTTPUnknown
 		}
 

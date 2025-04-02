@@ -185,7 +185,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
-			logger.Err(err).Msg("failed to aquire the lock file")
+			logger.Err(err).Msg("failed to acquire the lock file")
 			return ErrCreateLock
 		}
 		defer func() {
@@ -194,7 +194,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 			}
 		}()
 
-		logger.Debug().Msg("Successfully aquired lock file")
+		logger.Debug().Msg("Successfully acquired lock file")
 		logger.Debug().Msg("Fetching the files from the disk store")
 
 		// Process new files in parallel
