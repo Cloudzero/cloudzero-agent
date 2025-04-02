@@ -25,7 +25,7 @@ var (
 			Name: "shipper_run_fail_total",
 			Help: "Total number of times the shipper failed to run",
 		},
-		[]string{"error_Status_cude"},
+		[]string{"error_status_code"},
 	)
 
 	// New File Processing

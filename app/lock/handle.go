@@ -43,7 +43,7 @@ func withLock(ctx context.Context, lockPath string, fn func() error, opts ...Fil
 	fl := NewFileLock(ctx, lockPath, opts...)
 	err := fl.Acquire()
 	if err != nil {
-		return fmt.Errorf("failed to aquire the lock: %w", err)
+		return fmt.Errorf("failed to acquire the lock: %w", err)
 	}
 
 	// run the user defined function

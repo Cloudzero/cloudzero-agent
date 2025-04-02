@@ -160,7 +160,7 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
-			logger.Err(err).Msg("failed to aquire replay request lock")
+			logger.Err(err).Msg("failed to acquire replay request lock")
 			return ErrCreateLock
 		}
 		defer func() {
@@ -169,7 +169,7 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 			}
 		}()
 
-		logger.Debug().Msg("Successfully aquired file lock")
+		logger.Debug().Msg("Successfully acquired file lock")
 
 		// read all valid replay request files
 		requests, err := m.GetActiveReplayRequests(ctx)
