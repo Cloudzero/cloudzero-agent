@@ -363,8 +363,8 @@ We'll now use the synced secret in deploying the CloudZero agent.
          "chartVersion": "0.0.0-dev",
          "validatorVersion": "cloudzero-agent-validator.x.y.z",
          "checks": [
-           {"name": "egress_reachable", "passing": true},
-           {"name": "api_key_valid", "passing": true}
+           { "name": "egress_reachable", "passing": true },
+           { "name": "api_key_valid", "passing": true }
          ]
        }
        ```
@@ -456,4 +456,3 @@ If you encounter issues, here are steps to help diagnose and resolve them.
 - **AWS EKS Documentation**: [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/)
 - **IAM Roles for Service Accounts**: [IAM Roles for Service Accounts Documentation](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
 - **Helm Charts for External Secrets**: [Helm Chart Repository](https://github.com/external-secrets/external-secrets/tree/main/charts/external-secrets)
-

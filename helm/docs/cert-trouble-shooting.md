@@ -7,16 +7,16 @@ This guide provides comprehensive steps to troubleshoot certificate-related issu
 1. [Understanding Certificate Management](#understanding-certificate-management)
 2. [Common Certificate Issues](#common-certificate-issues)
 3. [Diagnostic Steps](#diagnostic-steps)
-    - [1. Verify Certificate Configuration](#1-verify-certificate-configuration)
-    - [2. Check Certificate Status](#2-check-certificate-status)
-    - [3. Inspect Admission Webhook Configuration](#3-inspect-admission-webhook-configuration)
-    - [4. Review Pod Logs](#4-review-pod-logs)
-    - [5. Validate Secret Contents](#5-validate-secret-contents)
+   - [1. Verify Certificate Configuration](#1-verify-certificate-configuration)
+   - [2. Check Certificate Status](#2-check-certificate-status)
+   - [3. Inspect Admission Webhook Configuration](#3-inspect-admission-webhook-configuration)
+   - [4. Review Pod Logs](#4-review-pod-logs)
+   - [5. Validate Secret Contents](#5-validate-secret-contents)
 4. [Resolution Strategies](#resolution-strategies)
-    - [1. Reinstall or Update `cert-manager`](#1-reinstall-or-update-cert-manager)
-    - [2. Regenerate Certificates Using `cloudzero-certificate` Chart](#2-regenerate-certificates-using-cloudzero-certificate-chart)
-    - [3. Use a Custom Certificate](#3-use-a-custom-certificate)
-    - [4. Correct Certificate References in Configuration](#4-correct-certificate-references-in-configuration)
+   - [1. Reinstall or Update `cert-manager`](#1-reinstall-or-update-cert-manager)
+   - [2. Regenerate Certificates Using `cloudzero-certificate` Chart](#2-regenerate-certificates-using-cloudzero-certificate-chart)
+   - [3. Use a Custom Certificate](#3-use-a-custom-certificate)
+   - [4. Correct Certificate References in Configuration](#4-correct-certificate-references-in-configuration)
 5. [Best Practices](#best-practices)
 6. [Additional Resources](#additional-resources)
 
@@ -56,8 +56,8 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
     tls:
       useCertManager: true
   ```
-  
 - **Using `cloudzero-certificate` Chart**:
+
   ```yaml
   insightsController:
     tls: # fetch these values from the output of the `cloudzero-certificate` chart
@@ -83,18 +83,20 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
       caBundle: <base64-encoded-caBundle-value>
   ```
 
-
 ### 2. Check Certificate Status
 
 #### If Using `cert-manager`:
 
 - **Verify `cert-manager` is Running**:
+
   ```bash
   kubectl get pods -n <YOUR_NAMESPACE>
   ```
+
   Ensure all `cert-manager` pods are in the `Running` state. Replace the `-n <YOUR_NAMESPACE>` with the cert-manager namespace. eg. `-n cert-manager`.
-  
+
   eg.
+
   ```bash
   $ kubectl get pods -n cert-manager
   NAME                                       READY   STATUS    RESTARTS   AGE
@@ -104,22 +106,27 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
   ```
 
 - **Check the Certificate Manager Logs**
+
   ```bash
   kubectl logs -n <YOUR_NAMESPACE> <CERTIFICATE_MANAGER_POD>
   ```
 
   eg.
+
   ```
   $ kubectl logs -n cert-manager cert-manager-57d855897b-v5f5s
   ```
 
 - **Check Certificate Resources**:
+
   ```bash
   kubectl get certificates -n <YOUR_NAMESPACE>
   ```
+
   Ensure that the certificate for the webhook is in the `Ready` condition.
 
   eg.
+
   ```bash
   $ kubectl get certificates -n default
   NAME                                         READY   SECRET                               AGE
@@ -127,6 +134,7 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
   ```
 
 - **Describe Certificate**:
+
   ```bash
   kubectl describe certificate <CERTIFICATE_NAME> -n <YOUR_NAMESPACE>
   ```
@@ -134,6 +142,7 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
   Look for any error messages or issues in the events section.
 
   eg.
+
   ```yaml
   $ kubectl describe certificate cloudzero-agent-webhook-server-certificate
   Name:         cloudzero-agent-webhook-server-certificate
@@ -187,9 +196,11 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 #### If Using `cloudzero-certificate` Chart or Custom Certificates:
 
 - **Check Secret Existence**:
+
   ```bash
   kubectl get secret -n <YOUR_NAMESPACE> <YOUR_TLS_SECRET_NAME>
   ```
+
   Ensure the secret exists and contains `tls.crt`, `tls.key`, and `ca.crt`.
 
 - **Inspect Secret Data**:
@@ -201,17 +212,19 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 ### 3. Inspect Admission Webhook Configuration
 
 - **Retrieve Webhook Configuration**:
+
   ```bash
   kubectl get validatingwebhookconfigurations
   kubectl describe validatingwebhookconfiguration <WEBHOOK_CONFIGURATION_NAME>
   ```
 
   eg.
+
   ```bash
   kubectl describe validatingwebhookconfiguration  cloudzero-agent-webhook-server-webhook-namespaces
   kubectl describe validatingwebhookconfiguration  cloudzero-agent-webhook-server-webhook-pods
   ```
-  
+
 - **Verify CA Bundle**:
   Ensure that the `caBundle` field matches the CA certificate used to sign the webhook server certificate.
 
@@ -221,7 +234,6 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
   ```bash
   kubectl get pods -n <YOUR_NAMESPACE>
   ```
-  
 - **Check Logs for Errors**:
   ```bash
   kubectl logs <POD_NAME> -n <YOUR_NAMESPACE>
@@ -236,7 +248,6 @@ Ensure that the Kubernetes Secret containing the certificates has the correct ke
   ```bash
   kubectl get secret <YOUR_TLS_SECRET_NAME> -n <YOUR_NAMESPACE> -o jsonpath='{.data.tls\.crt}' | base64 --decode | openssl x509 -text -noout
   ```
-  
 - **Check for Validity and Expiry**:
   Verify that the certificate is not expired and the details (such as Common Name) are correct.
 
@@ -249,11 +260,13 @@ Ensure that the Kubernetes Secret containing the certificates has the correct ke
 If using `cert-manager`, ensure it is correctly installed and up to date.
 
 - **Install `cert-manager` CRDs**:
+
   ```bash
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml
   ```
 
 - **Update `cert-manager`**:
+
   ```bash
   helm repo update
   helm upgrade cert-manager jetstack/cert-manager --namespace cert-manager --version v1.16.2
@@ -269,11 +282,13 @@ If using `cert-manager`, ensure it is correctly installed and up to date.
 If using the `cloudzero-certificate` chart, regenerate the certificates to ensure validity.
 
 1. **Uninstall Existing Certificates**:
+
    ```bash
    helm uninstall <YOUR_RELEASE_NAME> -n <YOUR_NAMESPACE>
    ```
 
 2. **Reinstall the `cloudzero-certificate` Chart**:
+
    ```bash
    helm upgrade --install <YOUR_RELEASE_NAME> cloudzero/cloudzero-certificate \
      --namespace <YOUR_NAMESPACE> \
@@ -281,6 +296,7 @@ If using the `cloudzero-certificate` chart, regenerate the certificates to ensur
    ```
 
 3. **Retrieve and Update CA Bundle**:
+
    ```bash
    CA_BUNDLE=$(kubectl get secret -n <YOUR_NAMESPACE> <YOUR_RELEASE_NAME>-cloudzero-certificate -o jsonpath='{.data.ca\.crt}')
    ```
@@ -296,6 +312,7 @@ If you prefer to use your own certificate:
    Ensure the Common Name is `<RELEASE_NAME>.<RELEASE_NAMESPACE>.cluster.local`.
 
 2. **Create Kubernetes Secret**:
+
    ```bash
    kubectl create secret tls <YOUR_TLS_SECRET_NAME> \
      --cert=path/to/tls.crt \
@@ -304,6 +321,7 @@ If you prefer to use your own certificate:
    ```
 
    Additionally, create a secret for the CA bundle:
+
    ```bash
    kubectl create secret generic <YOUR_CA_SECRET_NAME> \
      --from-file=ca.crt=path/to/ca.crt \
@@ -312,6 +330,7 @@ If you prefer to use your own certificate:
 
 3. **Update Configuration**:
    Modify `configuration.example.yaml` to reference your custom secrets:
+
    ```yaml
    insightsController:
      server:

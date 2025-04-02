@@ -24,7 +24,7 @@ helm search repo cloudzero-beta/cloudzero-agent --devel
 **Example Output:**
 
 ```
-NAME                            CHART VERSION   APP VERSION     DESCRIPTION                                       
+NAME                            CHART VERSION   APP VERSION     DESCRIPTION
 cloudzero-beta/cloudzero-agent  0.0.29-beta     v2.50.1         A chart for using Prometheus in agent mode to s...
 ```
 
@@ -67,7 +67,7 @@ helm search repo cloudzero-beta/cloudzero-agent --versions --devel
 **Example Output:**
 
 ```
-NAME                            CHART VERSION   APP VERSION     DESCRIPTION                                       
+NAME                            CHART VERSION   APP VERSION     DESCRIPTION
 cloudzero-beta/cloudzero-agent  0.0.29-beta     v2.50.1         Cloudzero Agent with feature to s...
 cloudzero-beta/cloudzero-agent  0.0.28-beta     v2.50.0         Cloudzero Agent with feature to u...
 ```
