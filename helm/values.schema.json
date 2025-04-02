@@ -3,23 +3,18 @@
   "type": "object",
   "properties": {
     "host": {
-        "type": "string"
+      "type": "string"
     },
     "clusterName": {
-        "type": "string",
-        "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$"
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$"
     },
     "cloudAccountId": {
-        "type": "string"
+      "type": "string"
     },
     "region": {
-        "type": "string"
+      "type": "string"
     }
-},
-"required": [
-    "host",
-    "clusterName",
-    "cloudAccountId",
-    "region"
-]
+  },
+  "required": ["host", "clusterName", "cloudAccountId", "region"]
 }

@@ -14,28 +14,28 @@ Our architecture employs multiple horizontally scalable "Collector" applications
 
 ### Storage Capacity & Data Access Patterns
 
-| **Metric**                     | **Value** | **Description**                                                  |
-|--------------------------------|-----------|------------------------------------------------------------------|
-| **Desired Storage Capacity**   | 1 TB      | Sufficient for 90 days of data from the expected cluster workload|
-| **Frequent Access**            | 5%        | Data accessed multiple times during the initial write/read cycle |
-| **Archive Storage**            | 95%       | Data typically accessed once a year before the cleanup cycle     |
+| **Metric**                   | **Value** | **Description**                                                   |
+| ---------------------------- | --------- | ----------------------------------------------------------------- |
+| **Desired Storage Capacity** | 1 TB      | Sufficient for 90 days of data from the expected cluster workload |
+| **Frequent Access**          | 5%        | Data accessed multiple times during the initial write/read cycle  |
+| **Archive Storage**          | 95%       | Data typically accessed once a year before the cleanup cycle      |
 
 ### Throughput Requirements
 
 | **Data Type** | **Monthly Volume** |
-|---------------|--------------------|
+| ------------- | ------------------ |
 | **Read**      | 333 GB             |
 | **Write**     | 333 GB             |
 
 ### Estimated Monthly Costs
 
 | **Cost Component**           | **Amount (USD)** |
-|------------------------------|------------------|
-| **Throughput Cost**          | ~$29.97         |
-| **Storage & Access Charges** | ~$15.26         |
-| **Total Monthly Cost**       | **~$45.23**     |
+| ---------------------------- | ---------------- |
+| **Throughput Cost**          | ~$29.97          |
+| **Storage & Access Charges** | ~$15.26          |
+| **Total Monthly Cost**       | **~$45.23**      |
 
-Using the [AWS Calculator](https://calculator.aws/#/createCalculator/EFS), these estimates confirm that EFS is both technically and economically well-suited to support the CloudZero Agent’s persistent storage requirements. 
+Using the [AWS Calculator](https://calculator.aws/#/createCalculator/EFS), these estimates confirm that EFS is both technically and economically well-suited to support the CloudZero Agent’s persistent storage requirements.
 
 Below is an improved version of the "System Overview" section that highlights how each component supports the CloudZero Agent and its requirements. This version uses a Markdown table for clarity.
 
@@ -51,26 +51,26 @@ Below is the updated version of your "System Overview" section with clarificatio
 
 The diagram above illustrates all the elements of the architecture. The table below details the purpose of each component and explains how it supports the CloudZero Agent.
 
-| **Component**                          | **Description & Role in Supporting the CloudZero Agent**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **POD**                                | The CloudZero Agent pod is a group of one or more application containers that share a common network namespace and storage. Pods serve as the basic deployable unit, ensuring that all containers within a pod can work together—such as one container writing data and another reading it. |
-| **CONTAINER**                          | A container is a lightweight, standalone executable that runs the CloudZero Agent application and its dependencies. Each container mounts the shared `/data` volume provided by the PVC, enabling the agent to persist and share data between its internal processes (e.g., the Collector and Shipper). |
-| **CONTAINER MOUNT POINT**              | The designated directory inside a container where an external volume is attached. For the CloudZero Agent, the `/data` mount point provides access to the shared storage that holds metrics and payload files, ensuring data persistence and facilitating inter-container communication.  |
-| **PERSISTENT VOLUME CLAIM (PVC)**      | A user’s request for storage that abstracts the details of the underlying storage. The PVC binds to a pre-defined Persistent Volume (PV) that meets its requirements. For CloudZero, the PVC ensures that every pod gets consistent access to a shared storage resource, which is essential for both the Collector and Shipper functions. **Note:** The PVC must reside in the same namespace as the CloudZero Agent pod deployment. |
-| **PERSISTENT VOLUME (PV)**             | A provisioned piece of storage in the cluster, created either statically or dynamically, that backs one or more PVCs. In our setup, it represents the allocated portion of Amazon EFS that the CloudZero Agent uses to store and retrieve data. **Note:** PVs are cluster-scoped resources and do not reside in any specific namespace. |
-| **STORAGE CLASS**                      | A Kubernetes resource that defines storage parameters (such as reclaim policies and performance characteristics) and enables dynamic provisioning of PVs. The storage class specifies the use of the AWS EFS CSI driver, which is critical for allowing multiple pods to share the same persistent volume across nodes—a key requirement for the CloudZero Agent’s multi-writer/reader scenario. **Note:** The storage class is typically deployed in the `kube-system` namespace. |
+| **Component**                               | **Description & Role in Supporting the CloudZero Agent**                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **POD**                                     | The CloudZero Agent pod is a group of one or more application containers that share a common network namespace and storage. Pods serve as the basic deployable unit, ensuring that all containers within a pod can work together—such as one container writing data and another reading it.                                                                                                                                                                                                                           |
+| **CONTAINER**                               | A container is a lightweight, standalone executable that runs the CloudZero Agent application and its dependencies. Each container mounts the shared `/data` volume provided by the PVC, enabling the agent to persist and share data between its internal processes (e.g., the Collector and Shipper).                                                                                                                                                                                                               |
+| **CONTAINER MOUNT POINT**                   | The designated directory inside a container where an external volume is attached. For the CloudZero Agent, the `/data` mount point provides access to the shared storage that holds metrics and payload files, ensuring data persistence and facilitating inter-container communication.                                                                                                                                                                                                                              |
+| **PERSISTENT VOLUME CLAIM (PVC)**           | A user’s request for storage that abstracts the details of the underlying storage. The PVC binds to a pre-defined Persistent Volume (PV) that meets its requirements. For CloudZero, the PVC ensures that every pod gets consistent access to a shared storage resource, which is essential for both the Collector and Shipper functions. **Note:** The PVC must reside in the same namespace as the CloudZero Agent pod deployment.                                                                                  |
+| **PERSISTENT VOLUME (PV)**                  | A provisioned piece of storage in the cluster, created either statically or dynamically, that backs one or more PVCs. In our setup, it represents the allocated portion of Amazon EFS that the CloudZero Agent uses to store and retrieve data. **Note:** PVs are cluster-scoped resources and do not reside in any specific namespace.                                                                                                                                                                               |
+| **STORAGE CLASS**                           | A Kubernetes resource that defines storage parameters (such as reclaim policies and performance characteristics) and enables dynamic provisioning of PVs. The storage class specifies the use of the AWS EFS CSI driver, which is critical for allowing multiple pods to share the same persistent volume across nodes—a key requirement for the CloudZero Agent’s multi-writer/reader scenario. **Note:** The storage class is typically deployed in the `kube-system` namespace.                                    |
 | **PV PROVISIONER<br/>(aws-efs-csi-driver)** | The AWS EFS CSI Driver implements the Kubernetes Container Storage Interface (CSI) to manage the lifecycle of Amazon EFS file systems. It supports both dynamic and static provisioning by creating access points for each PV. CloudZero Agent uses dynamic provisioning to automatically create the necessary access points in EFS, ensuring that all pods can mount a consistent, shared `/data` volume for storing metrics and payload files. This component is typically deployed in the `kube-system` namespace. |
-| **SERVICE ACCOUNT**                    | A Kubernetes identity that allows pods to interact securely with the Kubernetes API and AWS services. Service accounts are namespace-scoped. For system components such as the AWS EFS CSI driver, the service account is typically created in the `kube-system` namespace. For CloudZero Agent pods, the service account should reside in the same namespace as the deployment. |
-| **IAM POLICY**                         | An AWS policy that defines the permissions required to interact with AWS services such as EFS. This policy is attached to the service account to authorize necessary operations for provisioning, mounting, and managing the EFS file system. This ensures that the CloudZero Agent can operate securely within the AWS environment. |
-| **NFS**                                | The Network File System (NFS) protocol facilitates shared file access over a network. Amazon EFS uses NFS to enable multiple pods to read from and write to the shared storage simultaneously, which is essential for the CloudZero Agent’s need to handle data concurrently across its Collector and Shipper components. |
-| **SUBNETS**                            | The network segments that connect the Kubernetes nodes. The EFS file system is deployed within the same subnets as the nodes to ensure proper routing and communication. This connectivity is crucial for the CloudZero Agent, as it relies on efficient network access to the shared storage provided by EFS via NFS. |
-| **SECURITY GROUP**                     | A virtual firewall that controls inbound and outbound traffic. The security group associated with the EFS file system is configured to allow NFS traffic between Kubernetes nodes and the EFS instance, ensuring that the CloudZero Agent’s data operations (read and write) occur seamlessly and securely across the cluster. |
+| **SERVICE ACCOUNT**                         | A Kubernetes identity that allows pods to interact securely with the Kubernetes API and AWS services. Service accounts are namespace-scoped. For system components such as the AWS EFS CSI driver, the service account is typically created in the `kube-system` namespace. For CloudZero Agent pods, the service account should reside in the same namespace as the deployment.                                                                                                                                      |
+| **IAM POLICY**                              | An AWS policy that defines the permissions required to interact with AWS services such as EFS. This policy is attached to the service account to authorize necessary operations for provisioning, mounting, and managing the EFS file system. This ensures that the CloudZero Agent can operate securely within the AWS environment.                                                                                                                                                                                  |
+| **NFS**                                     | The Network File System (NFS) protocol facilitates shared file access over a network. Amazon EFS uses NFS to enable multiple pods to read from and write to the shared storage simultaneously, which is essential for the CloudZero Agent’s need to handle data concurrently across its Collector and Shipper components.                                                                                                                                                                                             |
+| **SUBNETS**                                 | The network segments that connect the Kubernetes nodes. The EFS file system is deployed within the same subnets as the nodes to ensure proper routing and communication. This connectivity is crucial for the CloudZero Agent, as it relies on efficient network access to the shared storage provided by EFS via NFS.                                                                                                                                                                                                |
+| **SECURITY GROUP**                          | A virtual firewall that controls inbound and outbound traffic. The security group associated with the EFS file system is configured to allow NFS traffic between Kubernetes nodes and the EFS instance, ensuring that the CloudZero Agent’s data operations (read and write) occur seamlessly and securely across the cluster.                                                                                                                                                                                        |
 
 ---
+
 ---
 
 ## Part 1: CSI DRIVER SETUP
-
 
 ### 1. Create the IAM Policy File
 
@@ -92,9 +92,7 @@ Create a file named `aws-efs-csi-driver-iam-policy.json` with the following cont
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "elasticfilesystem:CreateAccessPoint"
-      ],
+      "Action": ["elasticfilesystem:CreateAccessPoint"],
       "Resource": "*",
       "Condition": {
         "StringLike": {
@@ -104,9 +102,7 @@ Create a file named `aws-efs-csi-driver-iam-policy.json` with the following cont
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "elasticfilesystem:TagResource"
-      ],
+      "Action": ["elasticfilesystem:TagResource"],
       "Resource": "*",
       "Condition": {
         "StringLike": {
@@ -229,18 +225,21 @@ This command returns a JSON response that includes the new security group’s ID
 Authorize inbound traffic for the required ports (111, 1110, and 2049) for both TCP and UDP protocols. Replace `<security-group-id>` with your security group ID and `<vpc-cidr>` with your VPC CIDR (e.g., `192.168.0.0/16`).
 
 For port 111:
+
 ```bash
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol tcp --port 111 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol udp --port 111 --cidr <vpc-cidr>
 ```
 
 For port 1110:
+
 ```bash
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol tcp --port 1110 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol udp --port 1110 --cidr <vpc-cidr>
 ```
 
 For port 2049:
+
 ```bash
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol tcp --port 2049 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protocol udp --port 2049 --cidr <vpc-cidr>
@@ -251,18 +250,21 @@ aws ec2 authorize-security-group-ingress --group-id <security-group-id> --protoc
 Similarly, authorize outbound traffic for the same ports and protocols. Replace `<security-group-id>` and `<vpc-cidr>` accordingly.
 
 For port 111:
+
 ```bash
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol tcp --port 111 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol udp --port 111 --cidr <vpc-cidr>
 ```
 
 For port 1110:
+
 ```bash
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol tcp --port 1110 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol udp --port 1110 --cidr <vpc-cidr>
 ```
 
 For port 2049:
+
 ```bash
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol tcp --port 2049 --cidr <vpc-cidr>
 aws ec2 authorize-security-group-egress --group-id <security-group-id> --protocol udp --port 2049 --cidr <vpc-cidr>
@@ -302,7 +304,8 @@ aws eks update-nodegroup-config \
 
 This updates your node group configuration so that new nodes (or nodes undergoing replacement) will use the updated launch template, which now includes the enhanced security group.
 
-> **Note:**  
+> **Note:**
+>
 > - If you are not using a launch template (for example, if your node group was created with default settings), you’ll need to update the node group via the AWS Management Console or your infrastructure-as-code tool to include the new security group.
 > - For managed node groups, security group settings are defined at creation time. Using a launch template to update these settings is the recommended approach.
 
@@ -390,12 +393,12 @@ metadata:
 provisioner: efs.csi.aws.com
 parameters:
   provisioningMode: efs-ap
-  fileSystemId: fs-079a359a9886e7ac1  # Replace with your actual EFS File System ID
+  fileSystemId: fs-079a359a9886e7ac1 # Replace with your actual EFS File System ID
   directoryPerms: "700"
-  gidRangeStart: "1000"    # optional
-  gidRangeEnd: "2000"      # optional
+  gidRangeStart: "1000" # optional
+  gidRangeEnd: "2000" # optional
   basePath: "/dynamic_provisioning"
-  subPathPattern: "${.PVC.namespace}/${.PVC.name}"  # optional
+  subPathPattern: "${.PVC.namespace}/${.PVC.name}" # optional
   ensureUniqueDirectory: "true"
   reuseAccessPoint: "false"
 ```
@@ -422,7 +425,7 @@ metadata:
   # Ensure this resource is created in the same namespace as your CloudZero Agent deployment
 spec:
   accessModes:
-    - ReadWriteMany  # Essential for horizontal scaling
+    - ReadWriteMany # Essential for horizontal scaling
   storageClassName: cloudzero-efs-sc
   resources:
     requests:
@@ -450,7 +453,7 @@ metadata:
   name: cloudzero-fake-agent-app
   # Ensure this Pod is created in the same namespace as the PVC
 spec:
-  serviceAccountName: <your-service-account>  # Replace with the appropriate service account if needed
+  serviceAccountName: <your-service-account> # Replace with the appropriate service account if needed
   containers:
     - name: app
       image: centos
@@ -474,7 +477,6 @@ kubectl apply -f specs/cloudzero-agent.yaml
 > **CIRRUS TEAM NOTES:**  
 > We will add Helm support in a future release to allow clients to easily use the PVC with configurable parameters.
 
-
 ---
 
 # Troubleshooting
@@ -486,6 +488,7 @@ Issues can arise for a number of reasons, and unfortunately, online resources ar
 This error indicates that the client (either on a pod or a node) is unable to mount the EFS file system within the expected time frame. Common causes include:
 
 ### a. Routing Issues
+
 - **VPC Mismatch:**  
   Ensure that the EFS file system is created in the same VPC as your EKS cluster.
 - **Subnet Mismatch:**  
@@ -494,30 +497,34 @@ This error indicates that the client (either on a pod or a node) is unable to mo
   Check that your VPC’s routing tables and network ACLs are not blocking traffic between your nodes and the EFS mount targets.
 
 ### b. Security Group Misconfigurations
+
 - **EFS Mount Target Rules:**  
   Confirm that the security group attached to your EFS mount targets allows inbound traffic on the required ports (TCP and UDP on ports 111, 1110, and 2049) from your node subnets.
 - **Node Group Rules:**  
   Ensure that the security groups associated with your EKS nodes allow outbound traffic to the EFS file system on these ports.
 
 ### c. NFS and CSI Driver Issues
+
 - **NFS Protocol:**  
   Verify that the NFS protocol is supported and enabled in your environment.
 - **CSI Driver Logs:**  
   Check the logs of the AWS EFS CSI Driver (typically running in the `kube-system` namespace) for any error messages or additional context:
-  
+
   ```bash
   kubectl logs -n kube-system -l app=efs-csi-driver
   ```
 
 ### d. General Debugging Steps
+
 - **Pod Events and Logs:**  
   Use the following command to inspect events for the affected pod:
-  
+
   ```bash
   kubectl describe pod <pod-name>
   ```
-  
+
   Review these events for clues regarding mount failures.
+
 - **Manual Mount Test:**  
   From an affected node, attempt to manually mount the EFS file system using an NFS client. This can help verify if the issue is due to network connectivity or security group settings.
 - **AWS Console Verification:**  
