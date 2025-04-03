@@ -6,6 +6,7 @@ package shipper
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,15 +33,13 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 
 		data, err := io.ReadAll(file)
 		if err != nil {
-			logger.Err(err).Msg("failed to read the file")
-			return ErrEncodeBody
+			return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
 		}
 
 		// Create a new HTTP PUT request with the file as the body
 		req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
 		if err != nil {
-			logger.Err(err).Msg("failed to create upload HTTP request")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", err))
 		}
 
 		// Send the request
@@ -56,8 +55,7 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 			return nil
 		})
 		if err != nil {
-			logger.Err(err).Msg("HTTP request failed")
-			return ErrHTTPRequestFailed
+			return errors.Join(ErrHTTPRequestFailed, fmt.Errorf("HTTP request failed: %w", err))
 		}
 
 		defer resp.Body.Close()
@@ -65,8 +63,7 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 		// Check for successful upload
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			logger.Error().Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected upload status code")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected upload status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
 		}
 
 		return nil
@@ -83,8 +80,7 @@ func (m *MetricShipper) MarkFileUploaded(ctx context.Context, file types.File) e
 		// create the uploaded dir if needed
 		uploadDir := m.GetUploadedDir()
 		if err := os.MkdirAll(uploadDir, filePermissions); err != nil {
-			logger.Err(err).Msg("failed to create the upload directory")
-			return ErrCreateDirectory
+			return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the upload directory: %w", err))
 		}
 
 		// if the filepath already contains the uploaded location,

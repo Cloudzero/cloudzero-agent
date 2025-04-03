@@ -5,6 +5,7 @@ package shipper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -122,18 +123,15 @@ func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, er
 		// read file counts
 		unsent, err := m.store.GetFiles()
 		if err != nil {
-			logger.Err(err).Msg("failed to get the unsent files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the unsent files: %w", err))
 		}
 		sent, err := m.store.GetFiles(UploadedSubDirectory)
 		if err != nil {
-			logger.Err(err).Msg("failed to get the uploaded files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the uploaded files: %w", err))
 		}
 		rr, err := m.store.GetFiles(ReplaySubDirectory)
 		if err != nil {
-			logger.Err(err).Msg("failed to get the replay request files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the replay request files: %w", err))
 		}
 
 		// set the file metrics
@@ -183,8 +181,7 @@ func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time
 			}
 			return nil
 		}); err != nil {
-			logger.Err(err).Msg("failed to walk the uploaded filestore")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to walk the uploaded filestore: %w", err))
 		}
 
 		if len(oldFiles) == 0 {
@@ -195,8 +192,7 @@ func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time
 		// delete all files
 		for _, file := range oldFiles {
 			if err := os.Remove(file); err != nil {
-				logger.Err(err).Str("file", file).Msg("failed to delete a file during disk cleanup")
-				return ErrFileRemove
+				return errors.Join(ErrFileRemove, fmt.Errorf("failed to delete a file during disk cleanup: file=%s, err=%w", file, err))
 			}
 		}
 
@@ -222,8 +218,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int)
 
 		entries, err := m.store.ListFiles(UploadedSubDirectory)
 		if err != nil {
-			logger.Err(err).Msg("failed to list the uploaded files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the uploaded files: %w", err))
 		}
 
 		type fileData struct {
@@ -269,8 +264,7 @@ func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int)
 		// remove all these files
 		for _, item := range toRemove {
 			if err := os.Remove(item); err != nil {
-				logger.Err(err).Str("file", item).Msg("failed to remote the file during a file purge")
-				return ErrFileRemove
+				return errors.Join(ErrFileRemove, fmt.Errorf("failed to remove the file during a file purge: file=%s, err=%w", item, err))
 			}
 		}
 
