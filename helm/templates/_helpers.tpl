@@ -405,23 +405,6 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
-
-{{/*
-Get the full container image reference for the init scrape job pod
-*/}}
-{{- define "cloudzero-agent.initBackfillJob.imageReference" -}}
-{{ $backFillValues := (include "cloudzero-agent.backFill" .) | fromYaml }}
-{{- $repository := .Values.insightsController.server.image.repository -}}
-{{ $tag := .Values.insightsController.server.image.tag -}}
-{{- if and $backFillValues.image $backFillValues.image.repository -}}
-{{- $repository = $backFillValues.image.repository }}
-{{- end }}
-{{- if and $backFillValues.image $backFillValues.image.tag -}}
-{{- $tag = $backFillValues.image.tag -}}
-{{- end }}
-{{- printf "%s:%s" $repository $tag }}
-{{- end }}
-
 {{/*
 Service selector labels
 */}}
@@ -598,4 +581,20 @@ Otherwise, it will be the CloudZero API endpoint.
 {{- else -}}
 '{{ .Values.scheme }}://{{ include "cloudzero-agent.cleanString" .Values.host }}{{ .Values.endpoint }}'
 {{- end -}}
+{{- end -}}
+
+{{/*
+Generate image configuration with defaults.
+*/}}
+{{- define "cloudzero-agent.generateImage" -}}
+{{- if .image.digest -}}
+image: "{{ .image.repository | default .defaults.repository }}@{{ .image.digest }}"
+{{- else if .image.tag -}}
+image: "{{ .image.repository | default .defaults.repository }}:{{ .image.tag }}"
+{{- else if .defaults.digest -}}
+image: "{{ .image.repository | default .defaults.repository }}@{{ .defaults.digest }}"
+{{- else -}}
+image: "{{ .image.repository | default .defaults.repository }}:{{ .defaults.tag }}"
+{{- end }}
+imagePullPolicy: "{{ .image.pullPolicy | default .defaults.pullPolicy }}"
 {{- end -}}

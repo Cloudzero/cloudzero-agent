@@ -120,6 +120,17 @@ prometheusMetrics:
 # -- Any items added to this array will be added to the metrics that are sent to CloudZero, in addition to the minimal labels that CloudZero requires.
 additionalMetricLabels: []
 
+# Agent largely contains top-level settings which are often shared by multiple
+# components within this chart, or used as defaults in case values are not
+# explicitly set per-component.
+agent:
+  # The container image used for most CloudZero components.
+  image:
+    repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
+    tag: 0.10.0
+    digest:
+    pullPolicy: IfNotPresent
+
 # metricFilters is used to determine which metrics are sent to CloudZero, as
 # well as whether they are considered to be cost metrics or observability
 # metrics.
@@ -368,10 +379,11 @@ serverConfig:
 initBackfillJob:
   # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
   # imagePullSecrets: []
-  # image:
-  #   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-  #   tag: 0.1.1
-  #   pullPolicy: Always
+  image:
+    repository:
+    tag:
+    digest:
+    pullPolicy:
   enabled: true
 
 # -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
@@ -380,8 +392,8 @@ initBackfillJob:
 # imagePullSecrets: []
 # image:
 #   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-#   tag: 0.1.1
-#   pullPolicy: Always
+#   tag:
+#   pullPolicy:
 
 initCertJob:
   enabled: true
@@ -389,7 +401,8 @@ initCertJob:
   # imagePullSecrets: []
   image:
     repository: bitnami/kubectl
-    pullPolicy: Always
+    pullPolicy:
+    digest:
     tag: "1.32.0"
   dnsPolicy: ClusterFirst
   dnsConfig: {}
@@ -405,6 +418,7 @@ kubeStateMetrics:
     registry: registry.k8s.io
     repository: kube-state-metrics/kube-state-metrics
     tag: "v2.10.1"
+    digest:
   nameOverride: "cloudzero-state-metrics"
   # Disable CloudZero KSM as a Scrape Target since the service endpoint is explicitly defined
   # by the Validators config file.
@@ -434,20 +448,20 @@ validator:
   # -- Flag to skip validator failure if unable to connect to the CloudZero API.
   name: env-validator
   image:
-    repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
-    tag: 0.10.0
+    repository:
+    tag:
     digest:
-    pullPolicy: Always
+    pullPolicy:
 
 server:
   name: server
   image:
     repository: quay.io/prometheus/prometheus
     # if not set appVersion field from Chart.yaml is used
-    tag: ""
+    tag:
     # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
-    digest: ""
-    pullPolicy: IfNotPresent
+    digest:
+    pullPolicy:
   nodeSelector: {}
   resources:
     requests:
@@ -536,7 +550,7 @@ insightsController:
     image:
       repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
       tag: 0.2.1
-      pullPolicy: Always
+      pullPolicy:
     port: 8443
     read_timeout: 10s
     write_timeout: 10s
@@ -650,7 +664,8 @@ aggregator:
   image:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
     tag: 0.2.1
-    pullPolicy: IfNotPresent
+    digest:
+    pullPolicy:
   dnsPolicy: ClusterFirst
   dnsConfig: {}
   cloudzero:
