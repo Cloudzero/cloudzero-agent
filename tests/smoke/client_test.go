@@ -5,7 +5,6 @@ package smoke
 
 import (
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,44 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Testing utility to optimize build times for containers.
-// This is NOT meant to be a test we run, simply pre-building the
-// test container images to be used in later tests
-func TestUtil_BuildClientApps(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	runTest(t, func(t *testContext) {
-		var wg sync.WaitGroup
-
-		wg.Add(4)
-		go func() {
-			defer wg.Done()
-			t.StartMockRemoteWrite()
-		}()
-		go func() {
-			defer wg.Done()
-			t.StartShipper()
-		}()
-		go func() {
-			defer wg.Done()
-			t.StartCollector()
-		}()
-		go func() {
-			defer wg.Done()
-			t.StartController(controllerArgs{})
-		}()
-
-		wg.Wait()
-	})
-}
-
 func TestSmoke_ClientApplication_Runs(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// start the remote write

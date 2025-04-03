@@ -17,7 +17,6 @@ func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// write files to the data directory
@@ -43,7 +42,6 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// write files to the data directory

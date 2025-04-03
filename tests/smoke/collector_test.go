@@ -16,7 +16,6 @@ func TestSmoke_Collector_Runs(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// start the collector
@@ -36,7 +35,6 @@ func TestSmoke_Controller_FileRotate(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// start the collector

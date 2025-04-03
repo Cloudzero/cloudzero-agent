@@ -15,7 +15,6 @@ func TestLoad_Shipper(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// write files to the data directory
@@ -66,7 +65,6 @@ func TestLoad_ClientApplication(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// start the remote write
