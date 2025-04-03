@@ -6,6 +6,7 @@ package shipper
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -83,12 +84,10 @@ func (m *MetricShipper) GetMetricHandler() http.Handler {
 func (m *MetricShipper) Run() error {
 	// create the required directories for this application
 	if err := os.Mkdir(m.GetUploadedDir(), filePermissions); err != nil {
-		log.Ctx(m.ctx).Err(err).Msg("failed to create the uploaded directory")
-		return ErrCreateDirectory
+		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the uploaded directory: %w", err))
 	}
 	if err := os.Mkdir(m.GetReplayRequestDir(), filePermissions); err != nil {
-		log.Ctx(m.ctx).Err(err).Msg("failed to create the replay request directory")
-		return ErrCreateDirectory
+		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 	}
 
 	// Set up channel to listen for OS signals
@@ -185,8 +184,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
-			logger.Err(err).Msg("failed to acquire the lock file")
-			return ErrCreateLock
+			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire the lock file: %w", err))
 		}
 		defer func() {
 			if err := l.Release(); err != nil {
@@ -200,8 +198,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 		// Process new files in parallel
 		paths, err := m.store.GetFiles()
 		if err != nil {
-			logger.Err(err).Msg("failed to list the new files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the new files: %w", err))
 		}
 		logger.Debug().Int("files", len(paths)).Msg("Found files to ship")
 		logger.Debug().Msg("Creating a list of metric files")

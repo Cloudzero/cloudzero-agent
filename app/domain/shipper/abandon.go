@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -40,8 +41,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// get the shipper id
 		shipperID, err := m.GetShipperID()
 		if err != nil {
-			logger.Err(err).Msg("failed to get the shipper id")
-			return ErrInvalidShipperID
+			return errors.Join(ErrInvalidShipperID, fmt.Errorf("failed to get the shipper id: %w", err))
 		}
 
 		// create the body
@@ -56,21 +56,18 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// serialize the body
 		enc, err := json.Marshal(body)
 		if err != nil {
-			logger.Err(err).Msg("failed to encode the body")
-			return ErrEncodeBody
+			return errors.Join(ErrEncodeBody, fmt.Errorf("failed to encode the body: %w", err))
 		}
 
 		// Create a new HTTP request
 		abandonEndpoint, err := m.setting.GetRemoteAPIBase()
 		if err != nil {
-			logger.Err(err).Msg("failed to get the abandon endpoint")
-			return ErrGetRemoteBase
+			return errors.Join(ErrGetRemoteBase, fmt.Errorf("failed to get the abandon endpoint: %w", err))
 		}
 		abandonEndpoint.Path += abandonAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
-			logger.Err(err).Msg("failed to create the HTTP request")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
 		}
 
 		// Set necessary headers
@@ -103,8 +100,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 			return nil
 		})
 		if err != nil {
-			logger.Err(err).Msg("HTTP request failed")
-			return ErrHTTPRequestFailed
+			return errors.Join(ErrHTTPRequestFailed, fmt.Errorf("HTTP request failed: %w", err))
 		}
 
 		defer resp.Body.Close()
@@ -116,8 +112,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		// Check for HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			logger.Error().Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
 		}
 
 		logger.Debug().Msg("Successfully abandoned files")

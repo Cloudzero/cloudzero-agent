@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -79,8 +81,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		uploadEndpoint.Path += uploadAPIPath
 		req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
-			logger.Err(err).Msg("failed to create the HTTP request")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
 		}
 
 		// Set necessary headers
@@ -114,8 +115,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 			return nil
 		})
 		if err != nil {
-			logger.Err(err).Msg("HTTP request failed")
-			return ErrHTTPRequestFailed
+			return errors.Join(ErrHTTPRequestFailed, fmt.Errorf("HTTP request failed: %w", err))
 		}
 
 		defer resp.Body.Close()
@@ -127,14 +127,12 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		// Check for HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			logger.Error().Str("body", string(bodyBytes)).Int("statusCode", resp.StatusCode).Msg("unexpected status code")
-			return ErrHTTPUnknown
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
 		}
 
 		// Parse the response
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			logger.Err(err).Msg("failed to decode the response")
-			return ErrInvalidBody
+			return errors.Join(ErrInvalidBody, fmt.Errorf("failed to decode the response: %w", err))
 		}
 
 		// validation

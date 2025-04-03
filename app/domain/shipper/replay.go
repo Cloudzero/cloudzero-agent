@@ -54,13 +54,10 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 // up on next iteration.
 func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_SaveReplayRequest", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id)
-
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
-			logger.Err(err).Msg("failed to create the replay request directory")
-			return ErrCreateDirectory
+			return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 		}
 
 		// compose the filename
@@ -69,14 +66,12 @@ func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest
 		// encode to json
 		enc, err := json.Marshal(rr)
 		if err != nil {
-			logger.Err(err).Msg("failed to encode the replay request to json")
-			return ErrEncodeBody
+			return errors.Join(ErrEncodeBody, fmt.Errorf("failed to encode the replay request to json: %w", err))
 		}
 
 		// write the file
 		if err := os.WriteFile(rr.Filepath, enc, filePermissions); err != nil {
-			logger.Err(err).Msg("failed to write the replay request to file")
-			return ErrFileCreate
+			return errors.Join(ErrFileCreate, fmt.Errorf("failed to write the replay request to file: %w", err))
 		}
 
 		return nil
@@ -88,20 +83,16 @@ func (m *MetricShipper) GetActiveReplayRequests(ctx context.Context) ([]*ReplayR
 	requests := make([]*ReplayRequest, 0)
 
 	err := m.metrics.SpanCtx(ctx, "shipper_GetActiveReplayRequests", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id)
-
 		// create the directory if needed
 		replayDir := m.GetReplayRequestDir()
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
-			logger.Err(err).Msg("failed to create the replay request directory")
-			return ErrCreateDirectory
+			return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 		}
 
 		// list all files
 		entries, err := os.ReadDir(replayDir)
 		if err != nil {
-			logger.Err(err).Msg("failed to list the replay request directory")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the replay request directory: %w", err))
 		}
 
 		// iterate and parse files
@@ -119,15 +110,13 @@ func (m *MetricShipper) GetActiveReplayRequests(ctx context.Context) ([]*ReplayR
 			fullpath := filepath.Join(m.GetReplayRequestDir(), item.Name())
 			data, err := os.ReadFile(fullpath)
 			if err != nil {
-				logger.Err(err).Str("path", fullpath).Msg("failed to read the replay request file")
-				return ErrFileRead
+				return errors.Join(ErrFileRead, fmt.Errorf("failed to read the replay request file: path=%s, err=%w", fullpath, err))
 			}
 
 			// unserialize
 			rr := ReplayRequest{}
 			if err := json.Unmarshal(data, &rr); err != nil {
-				logger.Err(err).Msg("failed to decode the replay request")
-				return ErrInvalidBody
+				return errors.Join(ErrInvalidBody, fmt.Errorf("failed to decode the replay request: %w", err))
 			}
 			requests = append(requests, &rr)
 		}
@@ -147,8 +136,7 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 
 		// ensure the directory is created
 		if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
-			logger.Err(err).Msg("failed to create the replay request file directory")
-			return ErrCreateDirectory
+			return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request file directory: %w", err))
 		}
 
 		// lock the replay request dir for the duration of the replay request processing
@@ -160,8 +148,7 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
-			logger.Err(err).Msg("failed to acquire replay request lock")
-			return ErrCreateLock
+			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire replay request lock: %w", err))
 		}
 		defer func() {
 			if err := l.Release(); err != nil {
@@ -239,8 +226,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 				return nil
 			})
 		}); err != nil {
-			logger.Err(err).Msg("failed to get the matching new files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the matching new files: %w", err))
 		}
 		logger.Debug().Int("files", len(newFiles)).Msg("found new files")
 
@@ -272,8 +258,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 				return nil
 			})
 		}); err != nil {
-			logger.Err(err).Msg("failed to get matching uploaded files")
-			return ErrFilesList
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to get matching uploaded files: %w", err))
 		}
 		logger.Debug().Int("files", len(uploadedFiles)).Msg("found uploaded files")
 
@@ -314,8 +299,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 		// delete the replay request
 		logger.Debug().Msg("Deleting the replay request")
 		if err := os.Remove(rr.Filepath); err != nil {
-			logger.Err(err).Msg("failed to delete the replay request file")
-			return ErrFileRemove
+			return errors.Join(ErrFileRemove, fmt.Errorf("failed to delete the replay request file: %w", err))
 		}
 
 		logger.Debug().Str("rr", rr.Filepath).Msg("Successfully handled replay request")
