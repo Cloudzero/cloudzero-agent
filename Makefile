@@ -226,6 +226,7 @@ test-smoke: ## Run the smoke tests
 	CLOUD_ACCOUNT_ID=$(CLOUD_ACCOUNT_ID) \
 	CSP_REGION=$(CSP_REGION) \
 	CLUSTER_NAME=$(CLUSTER_NAME) \
+	$(GO) test -run TestUtil_BuildClientApps -v -timeout 5m ./tests/smoke/... && \
 	$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
 # ----------- DOCKER IMAGE ------------

@@ -19,6 +19,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/store"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -151,11 +152,11 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		apiKey:          apiKey,
 		apiKeyFile:      apiKeyFile,
 		dataLocation:    dataLocation,
-		collectorName:   "cz-insights-controller-mock-collector",
-		shipperName:     "cz-insights-controller-mock-shipper",
-		s3instanceName:  "cz-insights-controller-mock-s3instance",
-		remotewriteName: "cz-insights-controller-mock-remotewrite",
-		controllerName:  "cz-insights-controller-mock-controller",
+		collectorName:   uuid.NewString(),
+		shipperName:     uuid.NewString(),
+		s3instanceName:  uuid.NewString(),
+		remotewriteName: uuid.NewString(),
+		controllerName:  uuid.NewString(),
 	}
 
 	// run the options

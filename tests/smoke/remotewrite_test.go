@@ -15,6 +15,7 @@ func TestSmoke_RemoteWrite_Runs(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	runTest(t, func(t *testContext) {
 		// start the collector
