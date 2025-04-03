@@ -1,4 +1,6 @@
 # local development tailoring
+*ignore*
+.secrets
 go.work
 go.work.sum
 .tool-versions
