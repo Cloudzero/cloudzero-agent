@@ -26,8 +26,7 @@ spec:
       {{- end }}
       containers:
         - name: init-scrape
-          image: "{{ include  "cloudzero-agent.initBackfillJob.imageReference" . }}"
-          imagePullPolicy: {{ .Values.insightsController.server.image.pullPolicy }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.insightsController.server.image) | nindent 10 }}
           command:
             - /app/cloudzero-insights-controller
           args:
@@ -120,7 +119,7 @@ spec:
       {{- end }}
       containers:
         - name: init-cert
-          image: {{ .Values.initCertJob.image.repository }}:{{ .Values.initCertJob.image.tag }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.initCertJob.image) | nindent 10 }}
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
           args:
