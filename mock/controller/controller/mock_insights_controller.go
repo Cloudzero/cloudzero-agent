@@ -18,17 +18,22 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/app/utils"
 	"github.com/cloudzero/cloudzero-agent-validator/mock/metrics"
 	"github.com/golang/snappy"
+	"github.com/google/uuid"
 	"github.com/prometheus/prometheus/prompb"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 )
 
 type MockInsightsController struct {
-	CollectorEndpoint, APIKey         string
-	TotalHours, NumNodes, PodsPerNode int
-	CPUPerNode, MemPerNode            int64
-
-	NumBatches, ChunkSize int
+	CollectorEndpoint string // endpoint to send metrics to
+	APIKey            string // api key to use as auth for the collector
+	TotalHours        int    // number of hours calculated as time.Now() - (time.Hour * `env.TOTAL_HOURS`)
+	NumNodes          int    // total number of nodes
+	PodsPerNode       int    // number of pods to generate data per node
+	CPUPerNode        int64  // number of CPUs to use for each node
+	MemPerNode        int64  // number of memory in bytes for each node
+	NumBatches        int    // number of times to send the data
+	ChunkSize         int    // size to break the metrics into when sending to the collector
 }
 
 func (c *MockInsightsController) Run() error {
@@ -48,7 +53,7 @@ func (c *MockInsightsController) Run() error {
 		start := end.Add(-time.Hour * time.Duration(c.TotalHours))
 
 		// generate the metrics
-		m := metrics.GenerateClusterMetrics("org-123", "acc-123", fmt.Sprintf("cluster-%d", i), start, end, c.CPUPerNode, c.MemPerNode, c.NumNodes, c.PodsPerNode)
+		m := metrics.GenerateClusterMetrics("org-mock-controller", uuid.NewString()[:10], fmt.Sprintf("cluster-%s", uuid.NewString()[:6]), start, end, c.CPUPerNode, c.MemPerNode, c.NumNodes, c.PodsPerNode)
 
 		// chunk
 		chunks := utils.Chunk(m, c.ChunkSize)

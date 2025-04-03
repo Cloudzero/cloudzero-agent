@@ -1,0 +1,24 @@
+FROM golang:1.24.1 AS builder
+
+WORKDIR /app
+
+# Download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY app ./app
+COPY mock/metrics ./mock/metrics
+COPY mock/controller/ ./mock/controller
+
+# Build the app
+RUN CGO_ENABLED=0 go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /go/bin/controller \
+    ./mock/controller/*.go
+
+FROM alpine:latest AS remotewrite
+COPY --from=builder /go/bin/controller /app/controller
+WORKDIR /app
+ENTRYPOINT ["/app/controller"]
