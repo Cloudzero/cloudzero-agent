@@ -7,9 +7,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
-	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 
 	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
@@ -66,33 +64,7 @@ func (h *NamespaceHandler) parseV1(data []byte) (*corev1.Namespace, error) {
 }
 
 func (h *NamespaceHandler) writeDataToStorage(ctx context.Context, o *corev1.Namespace) {
-	record := FormatNamespaceData(o, h.settings)
-	conditions := []interface{}{}
-	if record.Namespace != nil {
-		conditions = append(conditions, "type = ? AND name = ? AND namespace = ?", record.Type, record.Name, *record.Namespace)
-	} else {
-		conditions = append(conditions, "type = ? AND name = ?", record.Type, record.Name)
-	}
-
-	if found, err := h.Store.FindFirstBy(ctx, conditions...); (err != nil && errors.Is(err, types.ErrNotFound)) || found == nil {
-		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
-			return h.Store.Create(txCtx, &record)
-		}); err != nil {
-			log.Err(err).Msg("failed to write data to storage")
-		}
-	} else if found != nil {
-		if err = h.Store.Tx(ctx, func(txCtx context.Context) error {
-			record.ID = found.ID
-			record.RecordCreated = found.RecordCreated
-			record.RecordUpdated = h.clock.GetCurrentTime()
-			record.SentAt = nil // reset send
-			return h.Store.Update(txCtx, &record)
-		}); err != nil {
-			log.Err(err).Msg("failed to write data to storage")
-		}
-	} else {
-		log.Err(err).Msg("failed to write data to storage")
-	}
+	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
 }
 
 func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) types.ResourceTags {

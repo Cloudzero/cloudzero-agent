@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 )
@@ -51,12 +52,12 @@ func MetricsMiddlewareWrapper(next http.Handler) http.Handler {
 	})
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
+		span := instr.StartSpan(r.Context(), "metricsHttpMiddleware")
+		defer span.End()
 		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 
 		next.ServeHTTP(recorder, r)
 
-		duration := time.Since(startTime).Seconds()
 		statusCode := strconv.Itoa(recorder.status)
 		route := r.URL.Path
 		method := r.Method
@@ -65,7 +66,7 @@ func MetricsMiddlewareWrapper(next http.Handler) http.Handler {
 		RequestCount.WithLabelValues(route, method, statusCode).Inc()
 
 		// Observe the request duration
-		RequestDuration.WithLabelValues(route, method, statusCode).Observe(duration)
+		RequestDuration.WithLabelValues(route, method, statusCode).Observe(span.GetDuration().Seconds())
 	})
 }
 
@@ -82,7 +83,7 @@ func LoggingMiddlewareWrapper(next http.Handler) http.Handler {
 		method := r.Method
 
 		// Log the request details
-		log.Debug().
+		log.Ctx(r.Context()).Debug().
 			Str("method", method).
 			Str("route", route).
 			Int("status_code", statusCode).

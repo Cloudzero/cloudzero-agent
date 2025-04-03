@@ -38,10 +38,62 @@ type Span struct {
 	ended    bool
 }
 
+// StartSpan starts a span using the default prometheus registry
+func StartSpan(ctx context.Context, name string) *Span {
+	spanOnce.Do(func() {
+		prometheus.MustRegister(functionDuration)
+	})
+
+	return &Span{
+		ctx:      ctx,
+		id:       uuid.NewString(),
+		parentID: getParentID(ctx), // search context for a parent span
+		name:     name,
+		start:    time.Now(),
+	}
+}
+
+// RunSpan will wrap a function with a span to automatically handle
+// error tracking and ending
+func RunSpan(ctx context.Context, name string, fn func(ctx context.Context, span *Span) error) error {
+	spanOnce.Do(func() {
+		prometheus.MustRegister(functionDuration)
+	})
+
+	// run the span in as a handler
+	span := StartSpan(ctx, name)
+	defer span.End()
+
+	// create a new context with the span id as the context key
+	ctxWithSpan := context.WithValue(ctx, spanIDKey, span.id)
+
+	// call the function wrapped with span error handler
+	return span.Error(fn(ctxWithSpan, span))
+}
+
 // Error observes an error and optionally transiently passes it to the caller
 func (s *Span) Error(err error) error {
 	s.err = err
 	return err
+}
+
+// GetDuration returns the current duration of the span in seconds
+func (s *Span) GetDuration() time.Duration {
+	return time.Since(s.start)
+}
+
+// TraceLog will print a trace log record using the default zerolog logger reporting
+// status about the span
+func (s *Span) TraceLog() {
+	log.Ctx(s.ctx).Trace().
+		Str("spanId", s.id).
+		Str("spanName", s.name).
+		Str("parentId", s.parentID).
+		Time("start", s.start).
+		Dur("duration", s.GetDuration()).
+		Bool("ended", s.ended).
+		Err(s.err).
+		Msg("Span status")
 }
 
 // End ends the span and observes the underlying prometheus metric
@@ -53,6 +105,9 @@ func (s *Span) End() {
 		} else {
 			functionDuration.WithLabelValues(s.name, s.err.Error()).Observe(duration)
 		}
+
+		// debug print the span status
+		s.TraceLog()
 	}
 }
 
@@ -95,21 +150,6 @@ func (s *Span) Logger(attrs ...logging.Attr) zerolog.Logger {
 	return SpanLogger(s.ctx, s.id, attrs...)
 }
 
-// StartSpan starts a span using the default prometheus registry
-func StartSpan(ctx context.Context, name string) *Span {
-	spanOnce.Do(func() {
-		prometheus.MustRegister(functionDuration)
-	})
-
-	return &Span{
-		ctx:      ctx,
-		id:       uuid.NewString(),
-		parentID: getParentID(ctx), // search context for a parent span
-		name:     name,
-		start:    time.Now(),
-	}
-}
-
 // StartSpan starts a span with a given function name using the existing
 // registry found in the PrometheusMetrics
 func (p *PrometheusMetrics) StartSpan(ctx context.Context, name string) *Span {
@@ -118,34 +158,15 @@ func (p *PrometheusMetrics) StartSpan(ctx context.Context, name string) *Span {
 		(*p.metrics) = append((*p.metrics), functionDuration)
 	})
 
-	return &Span{
-		ctx:      ctx,
-		id:       uuid.NewString(),
-		parentID: getParentID(ctx), // search context for a parent span
-		name:     name,
-		start:    time.Now(),
-	}
+	return StartSpan(ctx, name)
 }
 
-// Span provides an extremely basic span function wrapper to track execution
-// time. This is NOT a replacement for otel, just a simple exercise that may
-// prove useful in certain cases. The function provides the spanId as the
-// argument `id` in the function.
+// SpanCtx is an extremely basic span function wrapper to track execution time.
+// This is NOT a replacement for otel, just a simple exercise that may prove useful
+// in certain cases. The function provides the spanId as the argument `id` in the
+// function.
 //
-// In addition, this function transiently passes the error to the caller
-func (p *PrometheusMetrics) Span(name string, fn func(id string) error) error {
-	spanOnce.Do(func() {
-		p.registry.MustRegister(functionDuration)
-		(*p.metrics) = append((*p.metrics), functionDuration)
-	})
-
-	span := p.StartSpan(context.Background(), name)
-	defer span.End()
-	err := fn(span.id) // run the actual function
-	return span.Error(err)
-}
-
-// SpanCtx functions the same as Span but accepts a context.
+// # In addition, this function transiently passes the error to the caller
 //
 // The context will contain a spanID key to track the current span, and if SpanCtx is called within the runtime
 // of another span, the parent span id will be embeded into the span.
@@ -167,6 +188,7 @@ func (p *PrometheusMetrics) SpanCtx(ctx context.Context, name string, fn func(ct
 	ctxWithSpan := context.WithValue(ctx, spanIDKey, span.id)
 
 	// call with the embeded context
-	err := fn(ctxWithSpan, span.id)
-	return span.Error(err)
+	err := span.Error(fn(ctxWithSpan, span.id))
+
+	return err
 }

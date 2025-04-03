@@ -190,7 +190,7 @@ func (h *MetricsPusher) Run() error {
 		h.ResetStats()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
+				log.Ctx(h.ctx).Info().Interface("panic", r).Msg("Recovered from panic in metric pushing")
 			}
 		}()
 
@@ -249,7 +249,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	}
 
 	ts := h.formatMetrics(batch)
-	log.Debug().
+	log.Ctx(h.ctx).Debug().
 		Int("record_count", len(ts)).
 		Msg("Pushing records to remote write endpoint")
 
@@ -264,17 +264,17 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 }
 
 func (h *MetricsPusher) Flush() error {
-	log.Debug().Msg("Starting flush operation")
+	log.Ctx(h.ctx).Debug().Msg("Starting flush operation")
 	ctx := context.Background()
 	currentTime := h.clock.GetCurrentTime()
 	whereClause := "sent_at IS NULL"
 	found, err := h.store.FindAllBy(ctx, whereClause)
 	if err != nil {
 		RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()
-		log.Err(err).Msg("Failed to find records to send")
+		log.Ctx(h.ctx).Err(err).Msg("Failed to find records to send")
 		return fmt.Errorf("failed to find records to send: %v", err)
 	}
-	log.Debug().Int("count", len(found)).Msg("Found records to send")
+	log.Ctx(h.ctx).Debug().Int("count", len(found)).Msg("Found records to send")
 	totalSize := 0
 	batch := []*types.ResourceTags{}
 	completed := []*types.ResourceTags{}
@@ -285,13 +285,13 @@ func (h *MetricsPusher) Flush() error {
 		if next.Namespace != nil {
 			namespace = *next.Namespace
 		}
-		log.Debug().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
+		log.Ctx(h.ctx).Debug().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
 		RemoteWriteBacklog.WithLabelValues(h.settings.RemoteWrite.Host).Set(float64(len(found)))
 
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
 			// Send the current batch
 			if err := h.sendBatch(batch); err != nil {
-				log.Err(err).Msg("Failed to send batch")
+				log.Ctx(h.ctx).Err(err).Msg("Failed to send batch")
 				return err
 			}
 
@@ -308,10 +308,10 @@ func (h *MetricsPusher) Flush() error {
 	// Send the last batch if it exists
 	if len(batch) > 0 {
 		if err := h.sendBatch(batch); err != nil {
-			log.Err(err).Msg("Failed to send partial batch")
+			log.Ctx(h.ctx).Err(err).Msg("Failed to send partial batch")
 			return err
 		}
-		log.Debug().Int("count", len(batch)).Msg("Sent last batch")
+		log.Ctx(h.ctx).Debug().Int("count", len(batch)).Msg("Sent last batch")
 	}
 
 	if len(completed) > 0 {
@@ -327,7 +327,7 @@ func (h *MetricsPusher) Flush() error {
 			}
 			return nil
 		}); err != nil {
-			log.Err(err).Msg("Failed to update sent_at for records")
+			log.Ctx(h.ctx).Err(err).Msg("Failed to update sent_at for records")
 			RemoteWriteDBFailures.WithLabelValues(h.settings.RemoteWrite.Host).Inc()
 			return fmt.Errorf("failed to update sent_at for records: %v", err)
 		}
@@ -440,7 +440,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			statusCode := strconv.Itoa(resp.StatusCode)
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, statusCode).Inc()
 			resp.Body.Close()
-			log.Error().
+			log.Ctx(h.ctx).Error().
 				Int("status_code", resp.StatusCode).
 				Str("status_text", resp.Status).
 				Msg("Received non-2xx response, retrying...")

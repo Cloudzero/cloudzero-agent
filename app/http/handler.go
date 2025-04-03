@@ -36,6 +36,8 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
+		log.Ctx(r.Context()).Debug().Msg("Handling admissions request ...")
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "invalid method only POST requests are allowed", http.StatusMethodNotAllowed)
 			return
@@ -46,6 +48,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 			return
 		}
 
+		log.Ctx(r.Context()).Debug().Msg("Parsing the request body ...")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("could not read request body: %v", err), http.StatusBadRequest)
@@ -63,6 +66,7 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 			return
 		}
 
+		log.Ctx(r.Context()).Debug().Str("operation", string(review.Request.Operation)).Msg("Executing the review request ...")
 		result, err := handler.Execute(r.Context(), review.Request)
 		if err != nil {
 			log.Ctx(r.Context()).Error().Err(err).Send()
@@ -89,8 +93,14 @@ func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
 			return
 		}
 
-		log.Ctx(r.Context()).Debug().Msg(fmt.Sprintf("Webhook [%s - %s] - Allowed: %t", r.URL.Path, review.Request.Operation, result.Allowed))
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(res) // ignore return values
+
+		log.Ctx(r.Context()).
+			Debug().
+			Str("path", r.URL.Path).
+			Str("operation", string(review.Request.Operation)).
+			Bool("allowed", result.Allowed).
+			Msg("Webhook Handled")
 	}
 }

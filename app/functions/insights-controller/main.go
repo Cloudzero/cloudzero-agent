@@ -6,11 +6,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent-validator/app/build"
@@ -22,6 +25,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent-validator/app/domain/pusher"
 	"github.com/cloudzero/cloudzero-agent-validator/app/http"
 	"github.com/cloudzero/cloudzero-agent-validator/app/http/handler"
+	"github.com/cloudzero/cloudzero-agent-validator/app/logging"
 	"github.com/cloudzero/cloudzero-agent-validator/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent-validator/app/utils"
 )
@@ -57,6 +61,24 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
 
+	// create a logger
+	logger, err := logging.NewLogger(
+		logging.WithLevel(settings.Logging.Level),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create the logger")
+	}
+	zerolog.DefaultContextLogger = logger
+
+	// print settings on debug
+	if logger.GetLevel() <= zerolog.DebugLevel {
+		enc, err := json.MarshalIndent(settings, "", "  ") //nolint:govet // I actively and vehemently disagree with `shadowing` of `err` in golang
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to encode the config")
+		}
+		fmt.Println(string(enc))
+	}
+
 	// setup database
 	store, err := repo.NewInMemoryResourceRepository(clock)
 	if err != nil {
@@ -83,7 +105,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to start remote metrics writer")
 	}
 	defer func() {
-		log.Debug().Msg("Starting main shutdown process")
+		log.Ctx(ctx).Debug().Msg("Starting main shutdown process")
 		if innerErr := dataPusher.Shutdown(); innerErr != nil {
 			log.Err(innerErr).Msg("failed to flush data")
 			// Exit with a non-zero status code to indicate failure because we
@@ -104,7 +126,7 @@ func main() {
 	}()
 
 	if backfill {
-		log.Info().Msg("Starting backfill mode")
+		log.Ctx(ctx).Info().Msg("Starting backfill mode")
 		// setup k8s client
 		k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
 		if err != nil {
@@ -137,20 +159,20 @@ func main() {
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-signalChan
 
-		log.Error().Str("signal", sig.String()).Msg("Received signal; shutting down...")
+		log.Ctx(ctx).Error().Str("signal", sig.String()).Msg("Received signal; shutting down...")
 		if err := server.Shutdown(ctx); err != nil {
 			log.Err(err).Msg("Error shutting down server")
 		}
 	}()
 
 	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {
-		log.Info().Msg("Starting server without TLS")
+		log.Ctx(ctx).Info().Msg("Starting server without TLS")
 		err := server.ListenAndServe()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to listen and serve")
 		}
 	} else {
-		log.Info().Msg("Starting server with TLS")
+		log.Ctx(ctx).Info().Msg("Starting server with TLS")
 		// Register a signup handler
 		sigc := make(chan os.Signal, 1)
 		defer close(sigc)
@@ -161,7 +183,7 @@ func main() {
 		certs := monitor.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
 		verify := monitor.WithVerifyConnection()
 		cb := monitor.WithOnReload(func(_ *tls.Config) {
-			log.Info().Msg("TLS certificates rotated !!")
+			log.Ctx(ctx).Info().Msg("TLS certificates rotated !!")
 		})
 		server.TLSConfig = monitor.TLSConfig(sig, certs, verify, cb)
 
@@ -171,5 +193,5 @@ func main() {
 		}
 	}
 	// Print a message when the server is stopped.
-	log.Info().Msg("Server stopped")
+	log.Ctx(ctx).Info().Msg("Server stopped")
 }
