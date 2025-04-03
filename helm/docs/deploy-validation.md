@@ -27,6 +27,7 @@ Using the pod name obtained in step 2, run the following command:
 ```sh
 kubectl -n cloudzero-agent logs -f -c env-validator <pod_name>
 ```
+
 > Note: The `-f` flag is used to follow the logs, and the `-c env-validator` flag is used to read the logs of the specific container.
 
 Diagnostics are run at 3 lifecycle phases of the `cloudzero-agent` pod deployment:

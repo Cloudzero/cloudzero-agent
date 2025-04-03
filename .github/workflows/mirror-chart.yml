@@ -1,0 +1,72 @@
+# This workflow is used to mirror the Helm chart in the helm/ subdirectory to
+# the charts/cloudzero-agent directory in the cloudzero-charts repository.
+#
+# Note that it is restricted to the `develop` branch.
+#
+# This allows us to make changes to the Helm chart in this repository and have
+# them reflected in the cloudzero-charts repository, while also preserving the
+# independence of the cloudzero-charts repository.
+#
+# Any changes made to cloudzero-charts/charts/cloudzero-agent will be
+# overwritten the next time anything is committed to the `develop` branch of
+# this repository, so please make sure to make changes in this repository
+# instead of the cloudzero-charts!
+
+name: Mirror Helm Chart
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  mirror-helm-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout cloudzero-charts
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.CLOUDZERO_CHARTS_DEPLOY_KEY }}
+          persist-credentials: true
+          path: cloudzero-charts
+          repository: cloudzero/cloudzero-charts
+          ref: ${{ github.ref }}
+
+      - name: Mirror helm directory
+        run: |
+          export GIT_COMMITTER_NAME="github-actions[bot]"
+          export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
+          ORIGINAL_CHART_REVISION="$(git -C cloudzero-charts rev-parse HEAD)"
+
+          while read REVISION; do
+            git checkout $REVISION
+            rsync -av --del --exclude='.git' helm/ cloudzero-charts/charts/cloudzero-agent
+            export GIT_AUTHOR_NAME="$(git show -s --format='%an' $REVISION)"
+            export GIT_AUTHOR_EMAIL="$(git show -s --format='%ae' $REVISION)"
+            MESSAGE="$(git show -s --format='%B' $REVISION)"
+            (
+              cd cloudzero-charts
+              git add .
+              git commit -m "$MESSAGE" || true
+            );
+          done < <(git rev-list ${{ github.event.before }}..HEAD | tac)
+
+          if [ "$ORIGINAL_CHART_REVISION" != "$(git -C cloudzero-charts rev-parse HEAD)" ]; then
+            echo "PUSH_HELM_CHART=true" >>${GITHUB_ENV}
+          else
+            echo "PUSH_HELM_CHART=false" >>${GITHUB_ENV}
+          fi
+
+      - name: Push to cloudzero-charts
+        if: ${{ env.PUSH_HELM_CHART == 'true' }}
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          ssh: true
+          repository: cloudzero/cloudzero-charts
+          branch: ${{ github.ref }}
+          directory: cloudzero-charts

@@ -17,6 +17,7 @@ To ensure `cloudzero-agent` works correctly in Istio-enabled clusters, you can c
 ---
 
 ## **Option 1: Disable Sidecar Injection for `cloudzero-agent` webhook-server Pods Only**
+
 To disable the sidecar injection **only for a subset of the pods deployed by the cluster**, update the chart input values with the following annotation:
 
 ```yaml
@@ -31,6 +32,7 @@ This annotation prevents the Istio sidecar from being injected into the `webhook
 ---
 
 ## **Option 2: Disable Envoy for Webhook Ports Only**
+
 To prevent only requests to a single port on the webhook-server pods from being routed through envoy, apply the following annotation:
 
 ```yaml
@@ -39,12 +41,15 @@ insightsController:
     podAnnotations:
       traffic.sidecar.istio.io/excludeInboundPorts: "8443"
 ```
+
 In this case, the pods will still have an Istio sidecar injected, but traffic to port 8443 (the webhook port) will bypass envoy.
 
 For more details, see [Istio Documentation](https://istio.io/latest/docs/reference/config/annotations/#SidecarTrafficExcludeInboundPorts).
 
 ---
+
 ## **Option 3: Disable mTLS for `cloudzero-agent`**
+
 To disable mTLS for the `cloudzero-agent` service, apply the following `PeerAuthentication` resource:
 
 ```yaml
@@ -62,6 +67,7 @@ spec:
 ```
 
 ### **Steps to Apply:**
+
 1. Replace `<your-namespace>` with the namespace where `cloudzero-agent` is deployed.
 2. Apply the resource:
    ```sh

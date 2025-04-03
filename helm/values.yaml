@@ -330,26 +330,30 @@ metricFilters:
       additionalRegex: []
 
 prometheusConfig:
-  configMapNameOverride: ''
+  configMapNameOverride: ""
   configMapAnnotations: {}
-  configOverride: ''
+  configOverride: ""
   globalScrapeInterval: 60s
   scrapeJobs:
     # -- Enables the kube-state-metrics scrape job.
     kubeStateMetrics:
       enabled: true
-      scrapeInterval: 60s  # Scrape interval for kubeStateMetrics job
+      # Scrape interval for kubeStateMetrics job
+      scrapeInterval: 60s
     # -- Enables the cadvisor scrape job.
     cadvisor:
       enabled: true
-      scrapeInterval: 60s  # Scrape interval for nodesCadvisor job
+      # Scrape interval for nodesCadvisor job
+      scrapeInterval: 60s
     # -- Enables the prometheus scrape job.
     prometheus:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for prometheus job
+      # Scrape interval for prometheus job
+      scrapeInterval: 120s
     aggregator:
       enabled: true
-      scrapeInterval: 120s  # Scrape interval for aggregator job
+      # Scrape interval for aggregator job
+      scrapeInterval: 120s
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 
@@ -372,13 +376,12 @@ initBackfillJob:
 
 # -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
 # initScrapeJob:
-  # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
-  # imagePullSecrets: []
-  # image:
-  #   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-  #   tag: 0.1.1
-  #   pullPolicy: Always
-
+# -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
+# imagePullSecrets: []
+# image:
+#   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+#   tag: 0.1.1
+#   pullPolicy: Always
 
 initCertJob:
   enabled: true
@@ -388,6 +391,8 @@ initCertJob:
     repository: bitnami/kubectl
     pullPolicy: Always
     tag: "1.32.0"
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   rbac:
     create: true
     serviceAccountName: ""
@@ -452,12 +457,14 @@ server:
       memory: 1024Mi
   deploymentAnnotations: {}
   podAnnotations: {}
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   agentMode: true
   args:
-  - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
-  - --web.enable-lifecycle
-  - --web.console.libraries=/etc/prometheus/console_libraries
-  - --web.console.templates=/etc/prometheus/consoles
+    - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
+    - --web.enable-lifecycle
+    - --web.console.libraries=/etc/prometheus/console_libraries
+    - --web.console.templates=/etc/prometheus/consoles
   persistentVolume:
     existingClaim: ""
     enabled: false
@@ -466,7 +473,7 @@ server:
     storageClass: ""
     size: 8Gi
     accessModes:
-    - ReadWriteOnce
+      - ReadWriteOnce
   # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
@@ -476,7 +483,7 @@ insightsController:
   labels:
     enabled: true
     patterns:
-      - 'app.kubernetes.io/component'
+      - "app.kubernetes.io/component"
       # - '.*'
     resources:
       pods: true
@@ -490,7 +497,7 @@ insightsController:
   annotations:
     enabled: false
     patterns:
-      - '.*'
+      - ".*"
     resources:
       pods: true
       namespaces: true
@@ -550,6 +557,8 @@ insightsController:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    dnsPolicy: ClusterFirst
+    dnsConfig: {}
   volumeMounts: []
   volumes: []
   resources: {}
@@ -642,6 +651,8 @@ aggregator:
     repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
     tag: 0.2.1
     pullPolicy: IfNotPresent
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
   cloudzero:
     # Interval between attempts to ship metrics to the remote endpoint.
     sendInterval: 1m

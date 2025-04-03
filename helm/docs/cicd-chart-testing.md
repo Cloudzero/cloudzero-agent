@@ -43,8 +43,7 @@ act --dry-run -j install -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret 
 
 ---
 
-Special Topics
-==============
+# Special Topics
 
 ### Repository Secrets & Permissions
 
