@@ -27,7 +27,7 @@ var (
 	ErrLockLost            = errors.New("lock lost")
 	ErrLockAcquire         = errors.New("failed to acquire lock")
 	ErrLockCorrup          = errors.New("corrupt lock file")
-	ErrMaxRetryExceeded    = errors.New("failed to aquire lock, max retries exceeded")
+	ErrMaxRetryExceeded    = errors.New("failed to acquire lock, max retries exceeded")
 	DefautlStaleTimeout    = time.Millisecond * 500
 	DefaultRefreshInterval = time.Millisecond * 200
 	DefaultRetryInterval   = 1 * time.Second
@@ -136,7 +136,7 @@ func (fl *FileLock) Acquire() error {
 			// create lock file atomically
 			file, err := os.OpenFile(fl.filepath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, lockFilePermissions)
 			if err == nil {
-				// aquired the lock
+				// acquired the lock
 
 				// write to the lock file
 				if err2 := fl.writeLock(file); err2 != nil {

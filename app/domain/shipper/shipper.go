@@ -6,6 +6,7 @@ package shipper
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
 	"github.com/cloudzero/cloudzero-agent-validator/app/lock"
 	"github.com/cloudzero/cloudzero-agent-validator/app/parallel"
@@ -83,10 +84,10 @@ func (m *MetricShipper) GetMetricHandler() http.Handler {
 func (m *MetricShipper) Run() error {
 	// create the required directories for this application
 	if err := os.Mkdir(m.GetUploadedDir(), filePermissions); err != nil {
-		return fmt.Errorf("failed to create the uploaded directory: %w", err)
+		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the uploaded directory: %w", err))
 	}
 	if err := os.Mkdir(m.GetReplayRequestDir(), filePermissions); err != nil {
-		return fmt.Errorf("failed to create the replay request directory: %w", err)
+		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 	}
 
 	// Set up channel to listen for OS signals
@@ -103,7 +104,8 @@ func (m *MetricShipper) Run() error {
 
 	// run at the start
 	if err := m.runShipper(m.ctx); err != nil {
-		log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
+		log.Ctx(m.ctx).Err(err).Msg("Failed to run shipper")
+		metricShipperRunFailTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 		return fmt.Errorf("failed to run the shipper: %w", err)
 	}
 
@@ -118,19 +120,20 @@ func (m *MetricShipper) Run() error {
 
 			// flush
 			if err := m.ProcessNewFiles(m.ctx); err != nil {
-				metricNewFilesErrorTotal.WithLabelValues().Inc()
+				metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 				return fmt.Errorf("failed to ship the metrics: %w", err)
 			}
 
 			err := m.Shutdown()
 			if err != nil {
-				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to shutdown shipper service")
+				log.Ctx(m.ctx).Err(err).Msg("Failed to shutdown shipper service")
 			}
 			return nil
 
 		case <-ticker.C:
 			if err := m.runShipper(m.ctx); err != nil {
-				log.Ctx(m.ctx).Error().Err(err).Msg("Failed to run shipper")
+				log.Ctx(m.ctx).Err(err).Msg("Failed to run shipper")
+				metricShipperRunFailTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			}
 		}
 	}
@@ -143,17 +146,19 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 
 		// run the base request
 		if err := m.ProcessNewFiles(ctx); err != nil {
-			metricNewFilesErrorTotal.WithLabelValues().Inc()
+			metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to ship the metrics: %w", err)
 		}
 
 		// run the replay request
 		if err := m.ProcessReplayRequests(ctx); err != nil {
+			metricReplayRequestErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to process the replay requests: %w", err)
 		}
 
 		// check the disk usage
 		if err := m.HandleDisk(ctx, time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
+			metricDiskHandleErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to handle the disk usage: %w", err)
 		}
 
@@ -179,8 +184,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
 		)
 		if err := l.Acquire(); err != nil {
-			logger.Err(err).Msg("failed to aquire the lock file")
-			return fmt.Errorf("failed to acquire the lock: %w", err)
+			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire the lock file: %w", err))
 		}
 		defer func() {
 			if err := l.Release(); err != nil {
@@ -188,13 +192,13 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 			}
 		}()
 
-		logger.Debug().Msg("Successfully aquired lock file")
+		logger.Debug().Msg("Successfully acquired lock file")
 		logger.Debug().Msg("Fetching the files from the disk store")
 
 		// Process new files in parallel
 		paths, err := m.store.GetFiles()
 		if err != nil {
-			return fmt.Errorf("failed to list files: %w", err)
+			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the new files: %w", err))
 		}
 		logger.Debug().Int("files", len(paths)).Msg("Found files to ship")
 		logger.Debug().Msg("Creating a list of metric files")
@@ -248,7 +252,7 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			// Assign pre-signed urls to each of the file references
 			urlMap, err := m.AllocatePresignedURLs(chunk)
 			if err != nil {
-				metricPresignedURLErrorTotal.WithLabelValues().Inc()
+				metricPresignedURLErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 				return fmt.Errorf("failed to allocate presigned URLs: %w", err)
 			}
 
@@ -257,11 +261,13 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 				fn := func() error {
 					// Upload the file
 					if err := m.UploadFile(ctx, file, urlMap[GetRemoteFileID(file)]); err != nil {
+						metricFileUploadErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 						return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
 					}
 
 					// mark the file as uploaded
 					if err := m.MarkFileUploaded(ctx, file); err != nil {
+						metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 						return fmt.Errorf("failed to mark the file as uploaded: %w", err)
 					}
 
@@ -275,7 +281,7 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			// check for errors in the waiter
 			for err := range waiter.Err() {
 				if err != nil {
-					return fmt.Errorf("failed to upload files; %w", err)
+					return fmt.Errorf("failed to upload files: %w", err)
 				}
 			}
 		}

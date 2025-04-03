@@ -20,6 +20,14 @@ var (
 		[]string{},
 	)
 
+	metricShipperRunFailTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_run_fail_total",
+			Help: "Total number of times the shipper failed to run",
+		},
+		[]string{"error_status_code"},
+	)
+
 	// New File Processing
 	// ----------------------------------------------------------
 	metricNewFilesErrorTotal = prometheus.NewCounterVec(
@@ -27,7 +35,7 @@ var (
 			Name: "shipper_new_files_error_total",
 			Help: "Total number of errors encountered when running segments of the program",
 		},
-		[]string{},
+		[]string{"error_status_code"},
 	)
 
 	metricNewFilesProcessingCurrent = prometheus.NewGaugeVec(
@@ -63,7 +71,25 @@ var (
 			Name: "shipper_presigned_url_error_total",
 			Help: "Total number of errors seen when creating all presigned urls",
 		},
-		[]string{},
+		[]string{"error_status_code"},
+	)
+
+	// File upload
+	// ----------------------------------------------------------
+	metricFileUploadErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_file_upload_error_total",
+			Help: "Total number of errors seen when uploading files to s3",
+		},
+		[]string{"error_status_code"},
+	)
+
+	metricMarkFileUploadedErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_mark_file_uploaded_error_total",
+			Help: "Total number of errors seen when marking files as uploaded",
+		},
+		[]string{"error_status_code"},
 	)
 
 	// Replay Requests
@@ -82,6 +108,14 @@ var (
 			Help: "The current number of replay requests queued",
 		},
 		[]string{},
+	)
+
+	metricReplayRequestSaveErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_replay_request_save_error_total",
+			Help: "The total number of errors seen when saving replay requests",
+		},
+		[]string{"error_status_code"},
 	)
 
 	metricReplayRequestFileCount = prometheus.NewHistogram(
@@ -111,9 +145,9 @@ var (
 	metricReplayRequestAbandonFilesErrorTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "shipper_replay_request_abandon_files_error_total",
-			Help: "total number of abandoned files",
+			Help: "total number of errors when sending an abandon request",
 		},
-		[]string{},
+		[]string{"error_status_code"},
 	)
 
 	// Disk Usage
@@ -172,7 +206,7 @@ var (
 			Name: "shipper_disk_cleanup_failure_total",
 			Help: "Number of failures when purging files for disk space",
 		},
-		[]string{"storage_warning", "error"},
+		[]string{"storage_warning", "error_status_code"},
 	)
 
 	metricDiskCleanupSuccessTotal = prometheus.NewCounterVec(
@@ -190,6 +224,14 @@ var (
 			Buckets: prometheus.LinearBuckets(0, 10, 11), // 0% to 100% in steps of 10%
 		},
 	)
+
+	metricDiskHandleErrorTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipper_disk_handle_error_total",
+			Help: "Number of errors when handling the disk usage",
+		},
+		[]string{"error_status_code"},
+	)
 )
 
 func InitMetrics() (*instr.PrometheusMetrics, error) {
@@ -198,6 +240,7 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 		instr.WithPromMetrics(
 			// other
 			metricShutdownTotal,
+			metricShipperRunFailTotal,
 
 			// new files
 			metricNewFilesErrorTotal,
@@ -207,11 +250,17 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			metricHandleRequestFileCount,
 			metricHandleRequestSuccessTotal,
 
+			// presigned urls
 			metricPresignedURLErrorTotal,
+
+			// file uploading
+			metricFileUploadErrorTotal,
+			metricMarkFileUploadedErrorTotal,
 
 			// replay requests
 			metricReplayRequestTotal,
 			metricReplayRequestCurrent,
+			metricReplayRequestSaveErrorTotal,
 			metricReplayRequestFileCount,
 			metricReplayRequestErrorTotal,
 			metricReplayRequestAbandonFilesTotal,
@@ -227,6 +276,7 @@ func InitMetrics() (*instr.PrometheusMetrics, error) {
 			metricDiskCleanupFailureTotal,
 			metricDiskCleanupSuccessTotal,
 			metricDiskCleanupPercentage,
+			metricDiskHandleErrorTotal,
 		),
 	)
 }

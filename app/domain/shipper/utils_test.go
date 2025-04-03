@@ -15,8 +15,9 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-agent-validator/app/logging"
 	"github.com/cloudzero/cloudzero-agent-validator/app/store"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
 	"github.com/rs/zerolog"
@@ -139,7 +140,7 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
 		Logging: config.Logging{
-			Level: "debug",
+			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
 			Host:        apiHost,
@@ -156,13 +157,11 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 		},
 	}
 
-	var logger zerolog.Logger
-	{
-		logLevel, parseErr := zerolog.ParseLevel(cfg.Logging.Level)
-		require.NoError(t, parseErr)
-		logger = zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
-		zerolog.DefaultContextLogger = &logger
-	}
+	logger, err := logging.NewLogger(
+		logging.WithLevel(cfg.Logging.Level),
+	)
+	require.NoError(t, err, "failed to get logger")
+	zerolog.DefaultContextLogger = logger
 
 	// validate the config
 	err = cfg.SetAPIKey()

@@ -23,7 +23,7 @@ func TestLock_AcquireAndRelease(t *testing.T) {
 
 	fl := NewFileLock(context.Background(), lockPath)
 
-	// aquire
+	// acquire
 	err := fl.Acquire()
 	require.NoError(t, err)
 
@@ -58,7 +58,7 @@ func TestLock_NonExistentDirectory(t *testing.T) {
 
 	fl := NewFileLock(context.Background(), lockPath)
 
-	// aquire
+	// acquire
 	err := fl.Acquire()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no such file or directory")
@@ -153,7 +153,7 @@ func TestLock_Contention(t *testing.T) {
 	fl1 := NewFileLock(context.Background(), lockPath)
 	fl2 := NewFileLock(context.Background(), lockPath)
 
-	// first aquires the lock
+	// first acquires the lock
 	err := fl1.Acquire()
 	require.NoError(t, err)
 
@@ -165,7 +165,7 @@ func TestLock_Contention(t *testing.T) {
 		close(acquired)
 	}()
 
-	// verify the second process does not aquire immediately
+	// verify the second process does not acquire immediately
 	select {
 	case <-acquired:
 		t.Fatal("Second process acquired lock too quickly")
@@ -176,7 +176,7 @@ func TestLock_Contention(t *testing.T) {
 	err = fl1.Release()
 	require.NoError(t, err)
 
-	// now the second lock should aquire
+	// now the second lock should acquire
 	select {
 	case <-acquired:
 	case <-time.After(1 * time.Second):
@@ -264,12 +264,12 @@ func TestLock_MaxRetry(t *testing.T) {
 		WithMaxRetry(0), // only will try once
 	)
 
-	// aquire the lock
+	// acquire the lock
 	err := fl1.Acquire()
 	require.NoError(t, err)
 	defer fl1.Release()
 
-	// aquire from fl2, this should fail
+	// acquire from fl2, this should fail
 	err = fl2.Acquire()
 	require.Error(t, err)
 	require.Equal(t, ErrMaxRetryExceeded, err)

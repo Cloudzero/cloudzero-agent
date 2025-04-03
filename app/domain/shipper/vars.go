@@ -3,8 +3,6 @@
 
 package shipper
 
-import "errors"
-
 // public
 const (
 	ReplaySubDirectory      = "replay"
@@ -27,9 +25,4 @@ const (
 
 	abandonAPIPath = "/abandon"
 	uploadAPIPath  = "/upload"
-)
-
-var (
-	ErrUnauthorized = errors.New("unauthorized request - possible invalid API key")
-	ErrNoURLs       = errors.New("no presigned URLs returned")
 )
