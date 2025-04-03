@@ -200,6 +200,12 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 		if err != nil {
 			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the new files: %w", err))
 		}
+
+		if len(paths) == 0 {
+			logger.Debug().Msg("No files found, skipping")
+			return nil
+		}
+
 		logger.Debug().Int("files", len(paths)).Msg("Found files to ship")
 		logger.Debug().Msg("Creating a list of metric files")
 
