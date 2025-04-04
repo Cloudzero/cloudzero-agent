@@ -20,7 +20,7 @@ jobs:
           version: v3.14.4
 
       - name: SETUP - Set up chart-testing
-        uses: helm/chart-testing-action@v2.6.1
+        uses: helm/chart-testing-action@v2.7.0
 
       - name: TEST - Lint the chart
         env:
@@ -66,7 +66,7 @@ jobs:
       # Install chart-testing tool to make chart validation easier
       - name: SETUP - chart-testing
         id: install_ct
-        uses: helm/chart-testing-action@v2.6.1
+        uses: helm/chart-testing-action@v2.7.0
 
       # Create a KinD cluster with a registry pod for testing (kind-registry:5000)
       - name: SETUP - Kubernetes KinD Cluster
