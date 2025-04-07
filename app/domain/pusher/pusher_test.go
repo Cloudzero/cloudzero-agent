@@ -18,10 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/pusher"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/pusher"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
 // createAPIKeyFile creates a temporary API key file with the given content.

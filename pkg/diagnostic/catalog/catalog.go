@@ -8,16 +8,16 @@ import (
 	"context"
 	"sync"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/cz"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/egress"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/k8s"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/kms"
-	promcfg "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/config"
-	promver "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/version"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/stage"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/cz"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/egress"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/k8s"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/kms"
+	promcfg "github.com/cloudzero/cloudzero-agent/pkg/diagnostic/prom/config"
+	promver "github.com/cloudzero/cloudzero-agent/pkg/diagnostic/prom/version"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/stage"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 )
 
 type Registry interface {

@@ -8,7 +8,7 @@ on:
 
 env:
   CRANE_VERSION: v0.6.0
-  REGISTRY: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
+  REGISTRY: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
 
 jobs:
   list-tags:

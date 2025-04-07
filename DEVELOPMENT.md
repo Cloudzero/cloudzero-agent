@@ -33,13 +33,13 @@ To quickly get started with the development of the CloudZero Agent Validator, fo
 1. Clone the repository:
 
    ```sh
-   $ git clone https://github.com/Cloudzero/cloudzero-agent-validator.git
+   $ git clone https://github.com/Cloudzero/cloudzero-agent.git
    ```
 
 2. Change to the project directory:
 
    ```sh
-   $ cd cloudzero-agent-validator
+   $ cd cloudzero-agent
    ```
 
 ### 2. Building the Code

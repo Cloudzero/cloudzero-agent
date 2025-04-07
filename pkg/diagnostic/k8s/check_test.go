@@ -10,10 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/k8s"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
-	"github.com/cloudzero/cloudzero-agent-validator/test"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/k8s"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/test"
 )
 
 var k8sAPIResponseBody = `{

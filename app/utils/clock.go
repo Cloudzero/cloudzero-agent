@@ -7,7 +7,7 @@ package utils
 import (
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 var _ types.TimeProvider = (*Clock)(nil)

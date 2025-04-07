@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
 )
 
 func TestCloudzeroSettings_Defaults(t *testing.T) {

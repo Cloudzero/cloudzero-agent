@@ -14,7 +14,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 
-	requestMiddleware "github.com/cloudzero/cloudzero-agent-validator/app/http"
+	requestMiddleware "github.com/cloudzero/cloudzero-agent/app/http"
 )
 
 // TestMetricsMiddlewareWrapper ensures that our instrumentation produces the expected Prometheus metrics.

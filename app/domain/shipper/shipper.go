@@ -16,12 +16,12 @@ import (
 	"syscall"
 	"time"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
-	"github.com/cloudzero/cloudzero-agent-validator/app/lock"
-	"github.com/cloudzero/cloudzero-agent-validator/app/parallel"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/lock"
+	"github.com/cloudzero/cloudzero-agent/app/parallel"
+	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
 )
 
 func TestSetUpLogging(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"github.com/go-obvious/server"
 	"github.com/go-obvious/server/api"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
 )
 
 type ShipperAPI struct {

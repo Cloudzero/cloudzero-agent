@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/validation"
+	"github.com/cloudzero/cloudzero-agent/app/validation"
 )
 
 func TestValidateCloudAccountID(t *testing.T) {

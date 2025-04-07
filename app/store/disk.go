@@ -20,8 +20,8 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 const (

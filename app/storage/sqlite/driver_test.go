@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/sqlite"
+	"github.com/cloudzero/cloudzero-agent/app/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

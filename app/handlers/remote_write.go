@@ -13,7 +13,7 @@ import (
 	"github.com/go-obvious/server/request"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
 )
 
 const MaxPayloadSize = 16 * 1024 * 1024

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
 	"github.com/stretchr/testify/require"
 )
 

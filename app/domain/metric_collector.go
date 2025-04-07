@@ -23,8 +23,8 @@ import (
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 var (

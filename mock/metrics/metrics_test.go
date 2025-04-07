@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/proto"
