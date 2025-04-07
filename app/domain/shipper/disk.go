@@ -84,7 +84,7 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 		}
 
 		// fetch the usage again
-		usage2, err := m.store.GetUsage()
+		usage2, err := m.GetDiskUsage(ctx)
 		if err != nil {
 			return ErrGetDiskUsage
 		}
@@ -110,7 +110,7 @@ func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, er
 		var err error
 
 		// get the disk usage
-		usage, err = m.store.GetUsage()
+		usage, err = m.store.GetUsage(0)
 		if err != nil {
 			return ErrGetDiskUsage
 		}
