@@ -48,5 +48,5 @@ func (du *StoreUsage) GetStorageWarning() StoreWarning {
 type StoreMonitor interface {
 	// GetUsage returns a complete snapshot of the store usage.
 	// optional `paths` can be defined which will be used as `filepath.Join(paths...)`
-	GetUsage(paths ...string) (*StoreUsage, error)
+	GetUsage(limit uint64, paths ...string) (*StoreUsage, error)
 }

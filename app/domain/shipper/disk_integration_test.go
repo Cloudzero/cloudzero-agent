@@ -120,7 +120,7 @@ func NewTestFileLister(tester *DiskIntegrationFSTester) *TestFileLister {
 	return &TestFileLister{tester: tester}
 }
 
-func (tl *TestFileLister) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (tl *TestFileLister) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	used := tl.tester.simulatedUsed
 	total := tl.tester.simulatedSize
 	available := total - used

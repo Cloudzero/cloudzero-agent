@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/store"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
@@ -251,6 +251,6 @@ func TestDiskStore_GetUsage(t *testing.T) {
 	require.NoError(t, err)
 	defer d.Flush()
 
-	_, err = d.GetUsage()
+	_, err = d.GetUsage(0)
 	require.NoError(t, err)
 }

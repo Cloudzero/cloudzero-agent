@@ -20,7 +20,7 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
 )
 
@@ -345,7 +345,7 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 
 // GetUsage gathers disk usage stats using syscall.Statfs.
 // paths will be used as `filepath.Join(paths...)`
-func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (d *DiskStore) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	fullpath := filepath.Join(paths...)
 	fullpath = filepath.Join(d.dirPath, fullpath)
 	var stat syscall.Statfs_t
@@ -353,17 +353,37 @@ func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 		return nil, err
 	}
 
-	// basic stats
-	total := safecast.MustConvert[uint64](stat.Blocks) * safecast.MustConvert[uint64](stat.Bsize)
-	available := safecast.MustConvert[uint64](stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
-	used := total - available
+	// Get raw usage from Statfs.
+	realTotal := safecast.MustConvert[uint64](stat.Blocks) *
+		safecast.MustConvert[uint64](stat.Bsize)
+	available := safecast.MustConvert[uint64](stat.Bavail) *
+		safecast.MustConvert[uint64](stat.Bsize)
+	used := realTotal - available
+
+	// If an artificial limit is provided and lower than the
+	// filesystem's reported total, override the total with it.
+	total := realTotal
+	if limit > 0 && limit < realTotal {
+		total = limit
+		// In this scenario, the "available" is defined in relation
+		// to our artificial limit.
+		if used >= limit {
+			// If we are at or over the limit, report 0 available.
+			available = 0
+		} else {
+			available = limit - used
+		}
+	}
+
+	// Calculate the percent used based on our defined total.
 	var percentUsed float64
 	if total > 0 {
 		percentUsed = (float64(used) / float64(total)) * 100
 	}
 
 	// This is USUALLY true
-	reserved := safecast.MustConvert[uint64](stat.Bfree-stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
+	reserved := safecast.MustConvert[uint64](stat.Bfree-stat.Bavail) *
+		safecast.MustConvert[uint64](stat.Bsize)
 
 	// set inode information
 	inodeTotal := stat.Files

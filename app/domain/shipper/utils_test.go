@@ -51,7 +51,7 @@ func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error 
 	return args.Error(0)
 }
 
-func (m *MockAppendableFiles) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (m *MockAppendableFiles) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	args := m.Called()
 	return args.Get(0).(*types.StoreUsage), args.Error(1)
 }
