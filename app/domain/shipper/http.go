@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cloudzero/cloudzero-agent-validator/app/inspector"
 	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/inspector"
 	"github.com/rs/zerolog"
 )
 
