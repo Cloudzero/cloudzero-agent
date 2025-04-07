@@ -17,11 +17,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/common"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/common"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 )
 
 const DiagnosticK8sVersion = config.DiagnosticK8sVersion

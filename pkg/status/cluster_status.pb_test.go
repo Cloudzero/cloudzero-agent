@@ -6,7 +6,7 @@ package status_test
 import (
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 	"github.com/stretchr/testify/assert"
 )
 

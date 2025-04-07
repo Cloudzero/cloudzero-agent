@@ -17,7 +17,7 @@ on:
 env:
   REGISTRY_LOCAL_ADDR: localhost:5000
   REGISTRY_PROD_ADDR: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/cloudzero-agent-validator
+  IMAGE_NAME: ${{ github.repository }}/cloudzero-agent
 
 jobs:
   docker:

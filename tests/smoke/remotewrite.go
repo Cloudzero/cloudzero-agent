@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	remotewrite "github.com/cloudzero/cloudzero-agent-validator/mock/remotewrite/pkg"
-	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	remotewrite "github.com/cloudzero/cloudzero-agent/mock/remotewrite/pkg"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"

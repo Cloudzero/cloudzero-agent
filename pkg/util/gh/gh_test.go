@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/util/gh"
+	"github.com/cloudzero/cloudzero-agent/pkg/util/gh"
 	"github.com/stretchr/testify/assert"
 )
 

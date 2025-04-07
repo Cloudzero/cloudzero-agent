@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 )
 
 func TestBuildKubeClient(t *testing.T) {

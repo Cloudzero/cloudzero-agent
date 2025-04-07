@@ -6,7 +6,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
 )
 
 // Ensure these match the testdata/cloudzero-agent-validator.yml file

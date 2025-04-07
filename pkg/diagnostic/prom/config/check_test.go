@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	promcfg "github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/prom/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	promcfg "github.com/cloudzero/cloudzero-agent/pkg/diagnostic/prom/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 )
 
 func makeReport() status.Accessor {

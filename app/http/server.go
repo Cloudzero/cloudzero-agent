@@ -9,9 +9,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/healthz"
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/hook"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/healthz"
+	"github.com/cloudzero/cloudzero-agent/app/http/hook"
 )
 
 type RouteSegment struct {

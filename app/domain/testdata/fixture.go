@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 

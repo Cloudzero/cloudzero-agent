@@ -14,9 +14,9 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/http"
-	pb "github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/http"
+	pb "github.com/cloudzero/cloudzero-agent/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

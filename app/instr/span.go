@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/logging"
+	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"

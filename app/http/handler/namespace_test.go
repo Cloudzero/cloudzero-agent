@@ -15,10 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/hook"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
 func makeNamespaceRequest(record TestRecord) *hook.Request {

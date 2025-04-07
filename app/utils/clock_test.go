@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/utils"
+	"github.com/cloudzero/cloudzero-agent/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 

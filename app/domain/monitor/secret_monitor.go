@@ -24,7 +24,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 var DefaultRefreshInterval = 1 * time.Minute

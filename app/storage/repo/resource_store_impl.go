@@ -16,9 +16,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/core"
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/sqlite"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/storage/core"
+	"github.com/cloudzero/cloudzero-agent/app/storage/sqlite"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 )

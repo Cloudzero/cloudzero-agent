@@ -6,7 +6,7 @@ package filter_test
 import (
 	"testing"
 
-	util "github.com/cloudzero/cloudzero-agent-validator/app/domain/filter"
+	util "github.com/cloudzero/cloudzero-agent/app/domain/filter"
 )
 
 func TestFilterChecker_Test(t *testing.T) {

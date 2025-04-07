@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/http"
+	"github.com/cloudzero/cloudzero-agent/pkg/http"
 )
 
 func TestHTTP_ToError(t *testing.T) {
