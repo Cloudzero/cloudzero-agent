@@ -13,6 +13,11 @@ function check_go_version() {
     fi
     DESIRED_GO_VERSION_NO_MICRO="$(echo $DESIRED_GO_VERSION | awk -F. '{print $1"."$2}')"
 
+    if [ "$DESIRED_GO_VERSION_NO_MICRO" = "$DESIRED_GO_VERSION" ]; then
+        echo "Error: Go version in go.mod does not include a micro version (${DESIRED_GO_VERSION} -> ${DESIRED_GO_VERSION}.0?)" >&2
+        FAILED=TRUE
+    fi
+
     # Dockerfiles
     for DOCKERFILE in \
             docker/Dockerfile \

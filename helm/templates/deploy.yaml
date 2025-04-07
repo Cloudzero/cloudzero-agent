@@ -32,8 +32,7 @@ spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
         - name: {{ .Values.validator.name }}
-          image: "{{ .Values.validator.image.repository }}:{{ .Values.validator.image.tag }}"
-          imagePullPolicy: "{{ .Values.validator.image.pullPolicy }}"
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.validator.image) | nindent 10 }}
           command:
             - /bin/sh
             - -c
@@ -51,12 +50,7 @@ spec:
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- if .Values.configmapReload.prometheus.image.digest }}
-          image: "{{ .Values.configmapReload.prometheus.image.repository }}@{{ .Values.configmapReload.prometheus.image.digest }}"
-          {{- else }}
-          image: "{{ .Values.configmapReload.prometheus.image.repository }}:{{ .Values.configmapReload.prometheus.image.tag }}"
-          {{- end }}
-          imagePullPolicy: "{{ .Values.configmapReload.prometheus.image.pullPolicy }}"
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.configmapReload.prometheus.image) | nindent 10 }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
@@ -70,12 +64,8 @@ spec:
               readOnly: true
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
-          {{- if .Values.server.image.digest }}
-          image: "{{ .Values.server.image.repository }}@{{ .Values.server.image.digest }}"
-          {{- else }}
-          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion}}"
-          {{- end }}
-          imagePullPolicy: "{{ .Values.server.image.pullPolicy }}"
+          {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
           {{- if .Values.server.env }}
           env:
 {{ toYaml .Values.server.env | indent 12}}

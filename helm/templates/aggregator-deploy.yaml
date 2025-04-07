@@ -33,8 +33,7 @@ spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       containers:
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
-          image: "{{ .Values.aggregator.image.repository }}:{{ .Values.aggregator.image.tag }}"
-          imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.aggregator.image) | nindent 10 }}
           ports:
             - containerPort: {{ .Values.aggregator.collector.port }}
           command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
@@ -66,8 +65,7 @@ spec:
             {{- toYaml .Values.aggregator.collector.resources | nindent 12 }}
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
-          image: "{{ .Values.aggregator.image.repository }}:{{ .Values.aggregator.image.tag }}"
-          imagePullPolicy: {{ .Values.aggregator.image.pullPolicy }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.aggregator.image) | nindent 10 }}
           command: ["/app/cloudzero-shipper", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
