@@ -19,12 +19,7 @@ function check_go_version() {
     fi
 
     # Dockerfiles
-    for DOCKERFILE in \
-            docker/Dockerfile \
-            tests/docker/Dockerfile.collector \
-            tests/docker/Dockerfile.shipper \
-            tests/docker/Dockerfile.remotewrite \
-            tests/integration/test_server/Dockerfile; do
+    find . -type f -iname 'Dockerfile*' -print0 | while IFS= read -r -d '' DOCKERFILE; do
         git grep -q " golang:${DESIRED_GO_VERSION}" ${DOCKERFILE} || {
             echo "${DOCKERFILE} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2
             FAILED=true

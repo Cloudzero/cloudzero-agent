@@ -36,6 +36,7 @@ func ContainerWaitForLog(ctx context.Context, input *WaitForLogInput) error {
 		return fmt.Errorf("log is empty")
 	}
 
+	fmt.Printf("Waiting for log message: [%s]\n", input.Log)
 	return WaitForCondition(ctx, input.Timeout, input.Poll, func() (bool, error) {
 		// read the logs
 		reader, err := (*input.Container).Logs(ctx)

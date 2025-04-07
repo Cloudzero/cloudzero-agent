@@ -1,8 +1,11 @@
 FROM golang:1.24.2 AS builder
 
-WORKDIR /app
-COPY . .
+# Copy source code
+COPY go.mod go.sum ./
+COPY Makefile Makefile
+COPY ./app ./app
 
+# Build the app
 RUN make /go/bin/cloudzero-shipper OUTPUT_BIN_DIR=/go/bin
 
 FROM alpine:latest AS shipper

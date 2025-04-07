@@ -16,9 +16,10 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent-validator/app/store"
 	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -69,6 +70,7 @@ type testContext struct {
 	shipperName     string
 	s3instanceName  string
 	remotewriteName string
+	controllerName  string
 
 	// internal docker state
 	network     *testcontainers.DockerNetwork
@@ -76,6 +78,7 @@ type testContext struct {
 	shipper     *testcontainers.Container
 	s3instance  *testcontainers.Container
 	remotewrite *testcontainers.Container
+	controller  *testcontainers.Container
 
 	// mock paramters
 	uploadDelayMs string
@@ -149,10 +152,11 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		apiKey:          apiKey,
 		apiKeyFile:      apiKeyFile,
 		dataLocation:    dataLocation,
-		collectorName:   "cz-insights-controller-mock-collector",
-		shipperName:     "cz-insights-controller-mock-shipper",
-		s3instanceName:  "cz-insights-controller-mock-s3instance",
-		remotewriteName: "cz-insights-controller-mock-remotewrite",
+		collectorName:   uuid.NewString(),
+		shipperName:     uuid.NewString(),
+		s3instanceName:  uuid.NewString(),
+		remotewriteName: uuid.NewString(),
+		controllerName:  uuid.NewString(),
 	}
 
 	// run the options

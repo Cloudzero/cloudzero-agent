@@ -13,9 +13,13 @@ func main() {
 	slog.Default().Info("Starting the mock insights controller")
 
 	required := []string{
-		"COLLECTOR_ENDPOINT", "API_KEY",
-		"TOTAL_HOURS", "NUM_NODES", "PODS_PER_NODE",
-		"CPU_PER_NODE", "MEM_PER_NODE",
+		"COLLECTOR_ENDPOINT",
+		"API_KEY",
+		"TOTAL_HOURS",
+		"NUM_NODES",
+		"PODS_PER_NODE",
+		"CPU_PER_NODE",
+		"MEM_PER_NODE",
 	}
 
 	for _, item := range required {
@@ -48,9 +52,9 @@ func main() {
 		log.Fatalf("failed to parse `CPU_PER_NODE`")
 	}
 
-	memPerNode, err := strconv.ParseInt(os.Getenv("MEM_PER_NODE"), 10, 32)
+	memPerNode, err := strconv.ParseInt(os.Getenv("MEM_PER_NODE"), 10, 64)
 	if err != nil {
-		log.Fatalf("failed to parse `MEM_PER_NODE`")
+		log.Fatalf("failed to parse `MEM_PER_NODE`='%s': %s", os.Getenv("MEM_PER_NODE"), err.Error())
 	}
 
 	numBatches, err := strconv.ParseInt(os.Getenv("NUM_BATCHES"), 10, 32)
@@ -67,7 +71,7 @@ func main() {
 		With("collectorEndpoint", collectorEndpoint, "apiKeyLength", len(apiKey)).
 		With("totalHours", totalhours, "numNodes", numNodes, "podsPerNode", podsPerNode).
 		With("cpuPerNode", cpuPerNode, "memPerNode", memPerNode).
-		Info("Running collector with the provided config")
+		Info("Running controller with the provided config")
 
 	// create a mock insights controller
 	controller := mock_controller.MockInsightsController{
