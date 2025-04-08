@@ -263,6 +263,54 @@ $(eval $(call generate-container-build-target,package-build,load))
 
 # ----------- HELM CHART ------------
 
+
+PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
+HELM_TARGET_NAMESPACE     ?= cz-agent
+HELM_TARGET               ?= cz-agent
+HELM                      ?= helm
+
+.PHONY: helm-install
+helm-install: api-tests-check-env
+helm-install: ## Install the Helm chart
+	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
+	$(HELM) repo update prometheus-community
+	$(HELM) dependency build ./helm
+	@$(HELM) upgrade --install \
+		-n "$(HELM_TARGET_NAMESPACE)" \
+		--create-namespace "$(HELM_TARGET)" \
+		./helm \
+		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+		--set clusterName=$(CLUSTER_NAME) \
+		--set region=$(CSP_REGION) \
+		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		--set host=$(CLOUDZERO_HOST)
+
+install: helm-install
+
+.PHONY: helm-uninstall
+helm-uninstall: ## Uninstall the Helm chart
+	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
+
+uninstall: helm-uninstall
+
+.PHONY: helm-template
+helm-template: api-tests-check-env
+helm-template: ## Generate the Helm chart templates
+	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
+	$(HELM) repo update prometheus-community
+	$(HELM) dependency build ./helm
+	@$(HELM) template \
+		-n "$(HELM_TARGET_NAMESPACE)" \
+		--create-namespace "$(HELM_TARGET)" \
+		./helm \
+		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+		--set clusterName=$(CLUSTER_NAME) \
+		--set region=$(CSP_REGION) \
+		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		--set host=$(CLOUDZERO_HOST)
+
+template: helm-template
+
 .PHONY: helm-lint
 helm-lint: ## Lint the Helm chart
 	@$(HELM) lint \
@@ -288,30 +336,3 @@ generate: ## (Re)generate generated code
 generate: pkg/status/cluster_status.pb.go
 pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto
-
-# ----------- HELM INSTALL ------------
-
-PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
-HELM_TARGET_NAMESPACE     ?= cz-agent
-HELM_TARGET               ?= cz-agent
-HELM                      ?= helm
-
-.PHONY: helm-install
-helm-install: api-tests-check-env
-helm-install: ## Install the Helm chart
-	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
-	$(HELM) repo update prometheus-community
-	$(HELM) dependency build ./helm
-	@$(HELM) upgrade --install \
-		-n "$(HELM_TARGET_NAMESPACE)" \
-		--create-namespace "$(HELM_TARGET)" \
-		./helm \
-		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
-		--set clusterName=$(CLUSTER_NAME) \
-		--set region=$(CSP_REGION) \
-		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		--set host=$(CLOUDZERO_HOST)
-
-.PHONY: helm-uninstall
-helm-uninstall: ## Uninstall the Helm chart
-	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"

@@ -400,7 +400,7 @@ initCertJob:
   # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
   # imagePullSecrets: []
   image:
-    repository: bitnami/kubectl
+    repository: docker.io/bitnami/kubectl
     pullPolicy:
     digest:
     tag: "1.32.0"
