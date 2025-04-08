@@ -27,10 +27,11 @@ BUILD_TIME     ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 REVISION       ?= $(shell git rev-parse HEAD)
 TAG            ?= dev-$(REVISION)
 OUTPUT_BIN_DIR ?= bin
+GIT_ROOT       ?= $(shell git rev-parse --show-toplevel)
 
 # Default Helm configuration
 CLOUDZERO_HOST   ?= dev-api.cloudzero.com
-CLOUD_ACCOUNT_ID ?= "12345"
+CLOUD_ACCOUNT_ID ?= "ID12345"
 CSP_REGION       ?= "us-east-1"
 CLUSTER_NAME     ?= "insights-controller-integration-test"
 
@@ -106,6 +107,12 @@ install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
 	@$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b .tools/bin $(GOLANGCI_LINT_VERSION)
 
+# Generate the secrets file used by the `act` tool for local GitHub Action development.
+secrets-act:
+	@if [[ "$(CLOUDZERO_DEV_API_KEY)" == "" ]] || [[ "$(GITHUB_TOKEN)" == "" ]]; then echo "CLOUDZERO_DEV_API_KEY and GITHUB_TOKEN are required to generate the .github/workflows/.secret file, but at least one of them is not set. Consider adding to local-config.mk."; exit 1; fi
+	@echo "CLOUDZERO_DEV_API_KEY=$(CLOUDZERO_DEV_API_KEY)" > $(GIT_ROOT)/.github/workflows/.secrets
+	@echo "GITHUB_TOKEN=$(GITHUB_TOKEN)" >> $(GIT_ROOT)/.github/workflows/.secrets
+
 # ----------- STANDARDS & PRACTICES ------------
 
 .PHONY: format
@@ -144,19 +151,19 @@ TARGET_ARCH    ?= $(shell go env GOARCH)
 # supported by go (i.e., GOARCH values), see:
 # https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63
 ifeq ($(TARGET_ARCH),amd64)
-  TOOLCHAIN_ARCH ?= x86_64
+	TOOLCHAIN_ARCH ?= x86_64
 else ifeq ($(TARGET_ARCH),arm64)
-  TOOLCHAIN_ARCH ?= aarch64
+	TOOLCHAIN_ARCH ?= aarch64
 else
-  TOOLCHAIN_ARCH ?= $(TARGET_ARCH)
+	TOOLCHAIN_ARCH ?= $(TARGET_ARCH)
 endif
 
 ifeq ($(ENABLE_ZIG),true)
-  TOOLCHAIN_CC  ?= "zig cc  -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
-  TOOLCHAIN_CXX ?= "zig c++ -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
+	TOOLCHAIN_CC  ?= "zig cc  -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
+	TOOLCHAIN_CXX ?= "zig c++ -target $(TOOLCHAIN_ARCH)-$(TARGET_OS)-musl"
 else
-  TOOLCHAIN_CC  ?= $(CC)
-  TOOLCHAIN_CXX ?= $(CXX)
+	TOOLCHAIN_CC  ?= $(CC)
+	TOOLCHAIN_CXX ?= $(CXX)
 endif
 
 define generate-go-command-target
@@ -204,7 +211,7 @@ CLEANFILES += \
 
 .PHONY: api-tests-check-env
 api-tests-check-env:
-	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests. Consider adding to local-config.mk." && exit 1 || true
+	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests and helm chart installation. Consider adding to local-config.mk." && exit 1 || true
 
 .PHONY: test
 test: ## Run the unit tests
@@ -295,3 +302,30 @@ generate: ## (Re)generate generated code
 generate: pkg/status/cluster_status.pb.go
 pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto
+
+# ----------- HELM INSTALL ------------
+
+PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
+HELM_TARGET_NAMESPACE     ?= cz-agent
+HELM_TARGET               ?= cz-agent
+HELM                      ?= helm
+
+.PHONY: helm-install
+helm-install: api-tests-check-env
+helm-install: ## Install the Helm chart
+	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
+	$(HELM) repo update prometheus-community
+	$(HELM) dependency build ./helm
+	@$(HELM) upgrade --install \
+		-n "$(HELM_TARGET_NAMESPACE)" \
+		--create-namespace "$(HELM_TARGET)" \
+		./helm \
+		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+		--set clusterName=$(CLUSTER_NAME) \
+		--set region=$(CSP_REGION) \
+		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		--set host=$(CLOUDZERO_HOST)
+
+.PHONY: helm-uninstall
+helm-uninstall: ## Uninstall the Helm chart
+	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
