@@ -30,10 +30,12 @@ OUTPUT_BIN_DIR ?= bin
 GIT_ROOT       ?= $(shell git rev-parse --show-toplevel)
 
 # Default Helm configuration
-CLOUDZERO_HOST   ?= dev-api.cloudzero.com
-CLOUD_ACCOUNT_ID ?= "ID12345"
-CSP_REGION       ?= "us-east-1"
-CLUSTER_NAME     ?= "insights-controller-integration-test"
+CLOUDZERO_HOST        ?= dev-api.cloudzero.com
+CLOUD_ACCOUNT_ID      ?= "ID12345"
+CSP_REGION            ?= "us-east-1"
+CLUSTER_NAME          ?= "insights-controller-integration-test"
+# This is intentional empty (without quotes, etc.)
+CLOUD_HELM_EXTRA_ARGS ?=
 
 # Colors
 ERROR_COLOR ?= \033[1;31m
@@ -277,34 +279,6 @@ $(eval $(call generate-container-build-target,package-build-debug,load,true))
 
 # ----------- HELM CHART ------------
 
-.PHONY: helm-lint
-helm-lint: ## Lint the Helm chart
-	@$(HELM) lint \
-		--set-string cloudAccountId="\"$(CLOUD_ACCOUNT_ID)\"" \
-		--set-string clusterName="$(CLUSTER_NAME)" \
-		--set-string region="$(CSP_REGION)" \
-		--set-string host="$(CLOUDZERO_HOST)" \
-		--set-string apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		helm/
-
-lint: helm-lint
-
-# ----------- CODE GENERATION ------------
-
-.PHONY: generate
-generate: ## (Re)generate generated code
-	@$(GO) generate ./...
-
-# We don't yet have a good way to install a specific version of protoc /
-# protoc-gen-go, so for now we'll keep this out of the automatic regeneration
-# path. If you want to regenerate it using the system protoc, manually remove
-# pkg/status/cluster_status.pb.go, then run `make generate`.
-generate: pkg/status/cluster_status.pb.go
-pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto
-
-# ----------- HELM INSTALL ------------
-
 PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
 HELM_TARGET_NAMESPACE     ?= cz-agent
 HELM_TARGET               ?= cz-agent
@@ -324,8 +298,60 @@ helm-install: ## Install the Helm chart
 		--set clusterName=$(CLUSTER_NAME) \
 		--set region=$(CSP_REGION) \
 		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		--set host=$(CLOUDZERO_HOST)
+		--set host=$(CLOUDZERO_HOST) \
+		$(CLOUD_HELM_EXTRA_ARGS)
+
+install: helm-install
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall the Helm chart
 	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
+
+uninstall: helm-uninstall
+
+.PHONY: helm-template
+helm-template: api-tests-check-env
+helm-template: ## Generate the Helm chart templates
+	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
+	$(HELM) repo update prometheus-community
+	$(HELM) dependency build ./helm
+	@$(HELM) template \
+		-n "$(HELM_TARGET_NAMESPACE)" \
+		--create-namespace "$(HELM_TARGET)" \
+		./helm \
+		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+		--set clusterName=$(CLUSTER_NAME) \
+		--set region=$(CSP_REGION) \
+		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		--set host=$(CLOUDZERO_HOST) \
+		$(CLOUD_HELM_EXTRA_ARGS)
+
+
+template: helm-template
+
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart
+	@$(HELM) lint \
+		./helm \
+		--set-string cloudAccountId="\"$(CLOUD_ACCOUNT_ID)\"" \
+		--set-string clusterName="$(CLUSTER_NAME)" \
+		--set-string region="$(CSP_REGION)" \
+		--set-string host="$(CLOUDZERO_HOST)" \
+		--set-string apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		$(CLOUD_HELM_EXTRA_ARGS)
+
+lint: helm-lint
+
+# ----------- CODE GENERATION ------------
+
+.PHONY: generate
+generate: ## (Re)generate generated code
+	@$(GO) generate ./...
+
+# We don't yet have a good way to install a specific version of protoc /
+# protoc-gen-go, so for now we'll keep this out of the automatic regeneration
+# path. If you want to regenerate it using the system protoc, manually remove
+# pkg/status/cluster_status.pb.go, then run `make generate`.
+generate: pkg/status/cluster_status.pb.go
+pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto

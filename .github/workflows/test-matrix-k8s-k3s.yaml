@@ -14,30 +14,89 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        k8s_version: [v1.26, v1.27, v1.28, v1.29, v1.30, v1.31, v1.32]
-        # Some of these earlier versions don't appear to be available from the GH action (maybe a bug in the action...)
-        # [v1.23, v1.24, v1.25, v1.26, v1.27, v1.28, v1.29, v1.30, v1.31, v1.32]
+        # Useful for finding versions: https://eduardominguez.es/k3s-versions/
+        # From: https://github.com/e-minguez/k3s-versions
+        k8s_version:
+          [
+            v1.23.17+k3s1,
+            v1.24.17+k3s1,
+            v1.25.16+k3s4,
+            v1.26.15+k3s1,
+            v1.27.16+k3s1,
+            v1.28.14+k3s1,
+            v1.29.15+k3s1,
+            v1.30.11+k3s1,
+            v1.31.7+k3s1,
+            v1.32.3+k3s1,
+          ]
 
     steps:
       - uses: actions/checkout@v4
       - uses: alexellis/setup-arkade@v2
+
+      # Fast binary install
+      # https://github.com/alexellis/arkade?tab=readme-ov-file#catalog-of-clis
       - uses: alexellis/arkade-get@master
         with:
           kubectl: latest
           helm: latest
-          k3d: latest
-      - name: Create k3s ${{ matrix.k8s_version }} cluster
-        uses: nolar/setup-k3d-k3s@v1.0.9
-        id: k3s
-        with:
-          k3d-name: k3d-${{ matrix.k8s_version }}
-          version: ${{ matrix.k8s_version }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Test nodes
+          yq: latest
+
+      - name: Setup k3s ${{ matrix.k8s_version }}
+        shell: bash
+        run: |
+          echo "Ensure UFW is disabled"
+          sudo ufw disable
+          echo "Setup k3s ${{ matrix.k8s_version }}"
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.k8s_version }}" INSTALL_K3S_CHANNEL="stable" sh -s -
+
+      - name: Prepare a kubeconfig in ~/.kube/config
+        shell: bash
+        run: |
+          echo "Prepare a kubeconfig in ~/.kube/config"
+          mkdir -p ~/.kube
+          sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
+      - name: Wait for cluster to be ready
+        shell: bash
         run: |
           echo "Waiting for nodes to be ready..."
-          kubectl wait --for=condition=Ready nodes --all --timeout=5m
+          sleep 60s
+          kubectl wait --for=condition=Ready nodes --all --timeout=4m
           kubectl get nodes -o wide
+          echo "Wait for deployment/coredns"
+          kubectl rollout status --watch --timeout=4m deployment/coredns -n kube-system
+          echo "Wait for deployment/metrics-server"
+          kubectl rollout status --watch --timeout=4m deployment/metrics-server -n kube-system
+
+      - name: Set version output
+        id: set-output
+        shell: bash
+        run: |
+          echo "kubeconfig=$HOME/.kube/config" >> $GITHUB_OUTPUT
+          echo "k3s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^ ]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "k8s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^+]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "helm-version=$(helm version --short | sed 's/\([^+]*\).*/\1/')" >> $GITHUB_OUTPUT
+
+      # There have been some odd auth (?) issue with some of the CloudZero images in GHCR
+      # that prevent them from being found when pulled via k3d's containerd.
+      # Maybe related to this closed issue: https://github.com/k3s-io/k3s/issues/2401
+      - name: Pre-pull the CZ Agent images
+        run: |
+          set -xv
+          # We do not need the correct helm values since we only want the container images and tags.
+          for i in $(make CLOUDZERO_DEV_API_KEY="01234567890" CLUSTER_NAME="template" template | yq e '..|.image? | select(.)' - | grep -v '\-\-\-' ); do
+            set +e
+            sudo ctr image pull "${i}"
+            set -e
+            retVal=$?
+            if [ $retVal -ne 0 ]; then
+              # Let's see if we are just assuming the default image registry in the image name...
+              sudo ctr image pull "docker.io/${i}"
+            fi
+          done
 
       - name: Install CZ Agent
         run: |
@@ -47,19 +106,47 @@ jobs:
           export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
           echo $CLUSTERNAME
           make \
+            CLOUD_HELM_EXTRA_ARGS="--set insightsController.server.replicaCount=1" \
             CLOUDZERO_DEV_API_KEY="${{ secrets.CLOUDZERO_DEV_API_KEY }}" \
             CLUSTER_NAME="${CLUSTERNAME}" \
             helm-install
+          echo "Wait for cz-agent deployments"
+          kubectl wait deployment \
+            -n cz-agent \
+            --all \
+            --for condition=Available=True \
+            --timeout=240s
 
+      - name: Install TestKube
+        run: |
+          echo "Applying TestKube Helm Chart"
+          helm repo add kubeshop https://kubeshop.github.io/helm-charts
+          helm install testkube kubeshop/testkube \
+            --version=v2.1.137 \
+            -n testkube --create-namespace
+          echo "Wait for testkube deployments"
+          kubectl wait deployment \
+            -n testkube \
+            --all \
+            --for condition=Available=True \
+            --timeout=240s
+
+      # Testkube CLI setup
       - uses: kubeshop/setup-testkube@v1
         with:
           namespace: testkube
           version: 2.1.137
-    
-      - run: |
-          testkube run testworkflow agent-basic-test -f ./tests/testkube/tests.yaml
+
+      - name: Apply and Run TestKube Tests
+        run: |
+          kubectl apply -f ./tests/testkube/tests.yaml
+          testkube run testworkflow agent-basic-test -f
+
+      # Many more testkube based tests could be added in here as desired.
+      # Testkube support Postman, K6, simple scripts and much more.
 
       - name: Cleanup
         if: always()
         run: |
-          k3d cluster rm k3d-${{ matrix.k8s_version }} || true
+          sudo systemctl stop k3s
+          /usr/local/bin/k3s-uninstall.sh || true
