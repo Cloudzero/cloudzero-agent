@@ -46,14 +46,10 @@ jobs:
           helm dependency build ./helm
           export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
           echo $CLUSTERNAME
-          helm upgrade --install \
-            -n cza --create-namespace cza \
-            ./helm \
-            --set cloudAccountId="gha-0001" \
-            --set clusterName="${CLUSTERNAME}" \
-            --set region="gha" \
-            --set apiKey=${{ secrets.CLOUDZERO_DEV_API_KEY }} \
-            --set host=dev-api.cloudzero.com
+          make \
+            CLOUDZERO_DEV_API_KEY="${{ secrets.CLOUDZERO_DEV_API_KEY }}" \
+            CLUSTER_NAME="${CLUSTERNAME}" \
+            helm-install
 
       - uses: kubeshop/setup-testkube@v1
         with:
