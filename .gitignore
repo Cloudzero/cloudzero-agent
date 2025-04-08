@@ -1,6 +1,7 @@
 # local development tailoring
-*ignore*
-.secrets
+/scratch/
+# Used by the `act` CLI tool for local testing
+/.github/workflows/.secrets
 go.work
 go.work.sum
 .tool-versions
