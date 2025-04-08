@@ -7,6 +7,7 @@ on:
     branches:
       - develop
   workflow_dispatch:
+
 jobs:
   k3s-version-test:
     name: k3s-test-${{ matrix.k8s_version }}
@@ -15,7 +16,7 @@ jobs:
       matrix:
         k8s_version: [v1.26, v1.27, v1.28, v1.29, v1.30, v1.31, v1.32]
         # Some of these earlier versions don't appear to be available from the GH action (maybe a bug in the action...)
-        # [v1.23.17+k3s1, v1.24.17+k3s1, v1.25.16+k3s4, v1.26.15+k3s1, v1.27.16+k3s1, v1.28.15+k3s1, v1.29.15+k3s1, v1.30.11+k3s1, v1.31.7+k3s1, v1.32.3+k3s1]
+        # [v1.23, v1.24, v1.25, v1.26, v1.27, v1.28, v1.29, v1.30, v1.31, v1.32]
 
     steps:
       - uses: actions/checkout@v4
@@ -38,18 +39,29 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=5m
           kubectl get nodes -o wide
 
-      - name: Test CZ Agent
+      - name: Install CZ Agent
         run: |
-          echo "Applying Helm Chart"
+          echo "Applying CloudZero Agent Helm Chart"
           helm repo add prom https://prometheus-community.github.io/helm-charts
           helm dependency build ./helm
           export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
           echo $CLUSTERNAME
-          helm install -n cza --create-namespace cza ./helm \
+          helm upgrade --install \
+            -n cza --create-namespace cza \
+            ./helm \
             --set cloudAccountId="gha-0001" \
             --set clusterName="${CLUSTERNAME}" \
             --set region="gha" \
             --set apiKey=${{ secrets.CLOUDZERO_DEV_API_KEY }} \
+            --set host=dev-api.cloudzero.com
+
+      - uses: kubeshop/setup-testkube@v1
+        with:
+          namespace: testkube
+          version: 2.1.137
+    
+      - run: |
+          testkube run testworkflow agent-basic-test -f ./tests/testkube/tests.yaml
 
       - name: Cleanup
         if: always()
