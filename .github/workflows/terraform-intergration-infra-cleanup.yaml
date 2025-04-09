@@ -1,8 +1,9 @@
 name: terraform destroy (int infra)
 
 on:
-  pull_request:
-    types: [closed]
+  # Not doing this automatically yet.
+  #pull_request:
+  #  types: [closed]
   workflow_dispatch:
 
 jobs:

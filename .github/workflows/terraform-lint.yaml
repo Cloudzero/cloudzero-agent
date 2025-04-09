@@ -1,10 +1,10 @@
 name: terraform linting
 
 on:
-  workflow_dispatch:
   push:
     branches-ignore:
       - develop
+  workflow_dispatch:
 
 jobs:
   validate:
