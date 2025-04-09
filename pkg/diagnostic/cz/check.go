@@ -11,11 +11,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/http"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/pkg/http"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 )
 
 const DiagnosticAPIKey = config.DiagnosticAPIKey

@@ -17,10 +17,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/kms"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
-	"github.com/cloudzero/cloudzero-agent-validator/test"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/kms"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/test"
 )
 
 const (

@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/repo"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
 // setupTestRepo initializes a new in-memory repository with the provided TimeProvider.

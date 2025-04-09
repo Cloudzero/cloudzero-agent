@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

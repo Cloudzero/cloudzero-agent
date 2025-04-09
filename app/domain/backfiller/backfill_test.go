@@ -21,13 +21,13 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/homedir"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/backfiller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/k8s"
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/repo"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
-	"github.com/cloudzero/cloudzero-agent-validator/app/utils"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
+	"github.com/cloudzero/cloudzero-agent/app/utils"
 )
 
 // TestBackfiller_FakeK8s_Start tests the Backfiller.Start method with various Kubernetes resources using a fake client.

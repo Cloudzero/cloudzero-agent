@@ -13,8 +13,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/k8s"
 )
 
 //go:embed internal/scrape_config.tmpl

@@ -10,7 +10,7 @@ import (
 	"io"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/parquet-go/parquet-go"
 )
 

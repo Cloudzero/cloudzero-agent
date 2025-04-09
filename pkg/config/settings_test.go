@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/build"
+	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/stretchr/testify/assert"
 )
 

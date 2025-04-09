@@ -1,4 +1,4 @@
-module github.com/cloudzero/cloudzero-agent-validator
+module github.com/cloudzero/cloudzero-agent
 
 go 1.24.2
 

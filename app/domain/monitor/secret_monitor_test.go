@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/monitor"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 )
 
 type MockFileMonitor struct {

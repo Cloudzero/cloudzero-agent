@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/tests/utils"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -86,7 +86,7 @@ jobs:
 
             Or if you prefer docker:
             ```bash
-            docker pull ghcr.io/${{ github.repository }}/cloudzero-agent-validator:${{ steps.version.outputs.new_tag }}
+            docker pull ghcr.io/${{ github.repository }}/cloudzero-agent:${{ steps.version.outputs.new_tag }}
             ```
             Changes in this Release:
             ${{ steps.get_changes.outputs.changes }}

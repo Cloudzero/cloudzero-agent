@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/compress"
+	"github.com/cloudzero/cloudzero-agent/app/compress"
 )
 
 func TestFile(t *testing.T) {
