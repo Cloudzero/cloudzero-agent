@@ -1,0 +1,21 @@
+name: terraform destroy (int infra)
+
+on:
+  # Not doing this automatically yet.
+  #pull_request:
+  #  types: [closed]
+  workflow_dispatch:
+
+jobs:
+  cleanup_integration_infra:
+    runs-on: ubuntu-latest
+    name: Cleanup integration environment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: terraform destroy
+        uses: dflook/terraform-destroy-workspace@v1
+        with:
+          path: terraform/aws-eks-cluster
+          workspace: ${{ github.head_ref }}

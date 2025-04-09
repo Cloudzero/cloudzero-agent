@@ -1,0 +1,24 @@
+name: terraform plan
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    name: Create a plan for our terraform configuration
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: terraform plan
+        uses: dflook/terraform-plan@v1
+        with:
+          path: terraform/aws-eks-cluster
