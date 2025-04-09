@@ -28,8 +28,14 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 		)
 		logger.Debug().Msg("Handling the disk usage ...")
 
+		// get the size limit from the config
+		sizeLimitBytes, err := m.setting.GetAvailableSizeBytes()
+		if err != nil {
+			return fmt.Errorf("failed to get the size_limit from the config: %w", err)
+		}
+
 		// get the disk usage
-		usage, err := m.GetDiskUsage(ctx)
+		usage, err := m.GetDiskUsage(ctx, sizeLimitBytes)
 		if err != nil {
 			return err
 		}
@@ -84,7 +90,7 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 		}
 
 		// fetch the usage again
-		usage2, err := m.GetDiskUsage(ctx)
+		usage2, err := m.GetDiskUsage(ctx, sizeLimitBytes)
 		if err != nil {
 			return ErrGetDiskUsage
 		}
@@ -101,7 +107,7 @@ func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) 
 
 // GetDiskUsage gets the storage usage of the attached volume, and also reports
 // the usage to prometheus.
-func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, error) {
+func (m *MetricShipper) GetDiskUsage(ctx context.Context, limit uint64) (*types.StoreUsage, error) {
 	var usage *types.StoreUsage
 
 	err := m.metrics.SpanCtx(ctx, "shipper_GetDiskUsage", func(ctx context.Context, id string) error {
@@ -110,7 +116,7 @@ func (m *MetricShipper) GetDiskUsage(ctx context.Context) (*types.StoreUsage, er
 		var err error
 
 		// get the disk usage
-		usage, err = m.store.GetUsage(0)
+		usage, err = m.store.GetUsage(limit)
 		if err != nil {
 			return ErrGetDiskUsage
 		}

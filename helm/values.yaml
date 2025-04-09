@@ -705,6 +705,9 @@ aggregator:
       # This controls the percentage of files the application will remove when there is critical storage pressure.
       # This is defined by >95% of storage usage.
       percent: 20
+    emptyDir:
+      enabled: true
+      sizeLimit: 20Gi
   collector:
     port: 8080
     resources:

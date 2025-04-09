@@ -15,15 +15,11 @@ var (
 
 // StoreUsage stores information about the current state of a store
 type StoreUsage struct {
-	Total          uint64  `json:"total"`          // Total storage in bytes
-	Available      uint64  `json:"available"`      // Available storage in bytes
-	Used           uint64  `json:"used"`           // Computed as Total - Available
-	PercentUsed    float64 `json:"percentUsed"`    // Computed as (Used / Total) * 100
-	BlockSize      uint32  `json:"blockSize"`      // Underlying block size
-	Reserved       uint64  `json:"reserved"`       // Reserved space for system use in bytes
-	InodeTotal     uint64  `json:"inodeTotal"`     // Total number of inodes
-	InodeUsed      uint64  `json:"inodeUsed"`      // Inodes currently in use
-	InodeAvailable uint64  `json:"inodeAvailable"` // Available inodes
+	Total       uint64  `json:"total"`       // Total storage in bytes
+	Available   uint64  `json:"available"`   // Available storage in bytes
+	Used        uint64  `json:"used"`        // Computed as Total - Available
+	PercentUsed float64 `json:"percentUsed"` // Computed as (Used / Total) * 100
+	BlockSize   uint32  `json:"blockSize"`   // Underlying block size
 }
 
 // GetStorageWarning uses the `PercentUsed` field to calculate the current warning state of a store

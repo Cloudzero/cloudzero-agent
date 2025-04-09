@@ -153,5 +153,8 @@ spec:
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
         - name: aggregator-persistent-storage
-          emptyDir: {}
+        {{- if .Values.aggregator.database.emptyDir.enabled }}
+          emptyDir:
+            sizeLimit: {{ .Values.aggregator.database.emptyDir.sizeLimit }}
+        {{- end }}
 {{- end }}
