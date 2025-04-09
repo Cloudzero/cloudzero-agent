@@ -13,6 +13,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // DiskIntegrationFSTester implements types.AppendableFilesMonitor with fake disk usage reporting
@@ -127,15 +128,11 @@ func (tl *TestFileLister) GetUsage(limit uint64, paths ...string) (*types.StoreU
 	percentUsed := float64(used) / float64(total) * 100
 
 	return &types.StoreUsage{
-		Total:          total,
-		Available:      available,
-		Used:           used,
-		PercentUsed:    percentUsed,
-		BlockSize:      4096,
-		Reserved:       0,
-		InodeTotal:     1000000,
-		InodeUsed:      1000,
-		InodeAvailable: 999000,
+		Total:       total,
+		Available:   available,
+		Used:        used,
+		PercentUsed: percentUsed,
+		BlockSize:   4096,
 	}, nil
 }
 
@@ -197,6 +194,8 @@ func TestShipper_Integration_Disk_PurgeMetricsBefore(t *testing.T) {
 	// Create the metric shipper with the mock lister
 	fileLister := NewTestFileLister(fsTester)
 	settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+	q := resource.NewQuantity(int64(fsTester.simulatedSize), resource.BinarySI)
+	settings.Database.AvailableStorage = q.String()
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 	require.NoError(t, err)
 
@@ -233,6 +232,8 @@ func TestShipper_Integration_Disk_PurgeOldestPercentage(t *testing.T) {
 	// Create the metric shipper with the mock lister
 	fileLister := NewTestFileLister(fsTester)
 	settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+	q := resource.NewQuantity(int64(fsTester.simulatedSize), resource.BinarySI)
+	settings.Database.AvailableStorage = q.String()
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 	require.NoError(t, err)
 
@@ -284,6 +285,8 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		// Create the metric shipper with the mock lister
 		fileLister := NewTestFileLister(fsTester)
 		settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+		q := resource.NewQuantity(int64(fsTester.simulatedSize), resource.BinarySI)
+		settings.Database.AvailableStorage = q.String()
 		metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 		require.NoError(t, err)
 
@@ -314,6 +317,8 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		// Create the metric shipper with the mock lister
 		fileLister := NewTestFileLister(fsTester)
 		settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+		q := resource.NewQuantity(int64(fsTester.simulatedSize), resource.BinarySI)
+		settings.Database.AvailableStorage = q.String()
 		metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 		require.NoError(t, err)
 
@@ -348,6 +353,8 @@ func TestShipper_Integration_Disk_FSManagement(t *testing.T) {
 		// Create the metric shipper with the mock lister
 		fileLister := NewTestFileLister(fsTester)
 		settings := getMockSettingsIntegration(t, fsTester.rootDir, "no-api-key")
+		q := resource.NewQuantity(int64(fsTester.simulatedSize), resource.BinarySI)
+		settings.Database.AvailableStorage = q.String()
 		metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, fileLister)
 		require.NoError(t, err)
 
