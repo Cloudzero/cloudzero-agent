@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/cmd/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/k8s"
+	"github.com/cloudzero/cloudzero-agent/pkg/cmd/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/k8s"
 )
 
 func TestGenerateByName(t *testing.T) {

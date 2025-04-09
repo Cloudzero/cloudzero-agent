@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/parallel"
+	"github.com/cloudzero/cloudzero-agent/app/parallel"
 )
 
 func TestNew(t *testing.T) {

@@ -14,10 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
-	configcmd "github.com/cloudzero/cloudzero-agent-validator/pkg/cmd/config"
-	diagcmd "github.com/cloudzero/cloudzero-agent-validator/pkg/cmd/diagnose"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/pkg/build"
+	configcmd "github.com/cloudzero/cloudzero-agent/pkg/cmd/config"
+	diagcmd "github.com/cloudzero/cloudzero-agent/pkg/cmd/diagnose"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
 )
 
 func main() {

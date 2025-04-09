@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/common"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/common"
 )
 
 func TestInPod(t *testing.T) {

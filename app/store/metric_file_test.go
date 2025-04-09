@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

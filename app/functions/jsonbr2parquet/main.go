@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/store"
 	"github.com/rs/zerolog/log"
 )
 

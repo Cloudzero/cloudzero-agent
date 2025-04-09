@@ -13,6 +13,7 @@ CXX    ?= $(shell $(GO) env CXX)
 CURL   ?= curl
 DOCKER ?= docker
 GREP   ?= grep
+HELM   ?= helm
 NPM    ?= npm
 PROTOC ?= protoc
 RM     ?= rm
@@ -26,6 +27,12 @@ BUILD_TIME     ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 REVISION       ?= $(shell git rev-parse HEAD)
 TAG            ?= dev-$(REVISION)
 OUTPUT_BIN_DIR ?= bin
+
+# Default Helm configuration
+CLOUDZERO_HOST   ?= dev-api.cloudzero.com
+CLOUD_ACCOUNT_ID ?= "12345"
+CSP_REGION       ?= "us-east-1"
+CLUSTER_NAME     ?= "insights-controller-integration-test"
 
 # Colors
 ERROR_COLOR ?= \033[1;31m
@@ -195,11 +202,6 @@ CLEANFILES += \
 
 # ----------- TESTING ------------
 
-CLOUDZERO_HOST   ?= dev-api.cloudzero.com
-CLOUD_ACCOUNT_ID ?= "12345"
-CSP_REGION       ?= "us-east-1"
-CLUSTER_NAME     ?= "insights-controller-integration-test"
-
 .PHONY: api-tests-check-env
 api-tests-check-env:
 	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests. Consider adding to local-config.mk." && exit 1 || true
@@ -251,6 +253,20 @@ $(eval $(call generate-container-build-target,package,push))
 
 package-build: ## Build the Docker image
 $(eval $(call generate-container-build-target,package-build,load))
+
+# ----------- HELM CHART ------------
+
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart
+	@$(HELM) lint \
+		--set-string cloudAccountId="\"$(CLOUD_ACCOUNT_ID)\"" \
+		--set-string clusterName="$(CLUSTER_NAME)" \
+		--set-string region="$(CSP_REGION)" \
+		--set-string host="$(CLOUDZERO_HOST)" \
+		--set-string apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+		helm/
+
+lint: helm-lint
 
 # ----------- CODE GENERATION ------------
 

@@ -14,7 +14,7 @@ import (
 	"gotest.tools/v3/assert"
 	admission "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/http/hook"
 )
 
 type MockHandler struct {

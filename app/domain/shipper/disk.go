@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 )
 

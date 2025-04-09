@@ -6,7 +6,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

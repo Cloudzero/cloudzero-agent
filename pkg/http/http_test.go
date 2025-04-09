@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/http"
-	"github.com/cloudzero/cloudzero-agent-validator/test"
+	"github.com/cloudzero/cloudzero-agent/pkg/http"
+	"github.com/cloudzero/cloudzero-agent/test"
 )
 
 const (

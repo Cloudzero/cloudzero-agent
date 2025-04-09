@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/filter"
+	"github.com/cloudzero/cloudzero-agent/app/domain/filter"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 )

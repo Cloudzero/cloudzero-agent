@@ -8,8 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
-	"github.com/cloudzero/cloudzero-agent-validator/test"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/test"
 )
 
 func TestSetUpLoggingSequenceLogger(t *testing.T) {

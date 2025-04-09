@@ -32,9 +32,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/handler"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/http/handler"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 type Backfiller struct {

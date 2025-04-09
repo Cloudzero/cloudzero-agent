@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

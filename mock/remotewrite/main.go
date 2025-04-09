@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	remotewrite "github.com/cloudzero/cloudzero-agent-validator/mock/remotewrite/pkg"
+	remotewrite "github.com/cloudzero/cloudzero-agent/mock/remotewrite/pkg"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/exp/slog"
 )

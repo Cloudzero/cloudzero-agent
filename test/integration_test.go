@@ -12,8 +12,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 // func Test_Integration(t *testing.T) {

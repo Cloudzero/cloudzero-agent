@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
 )
 
 // Basic test with mimimal configuration

@@ -10,8 +10,8 @@ import (
 
 	v1 "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 type Request = v1.AdmissionRequest

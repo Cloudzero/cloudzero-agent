@@ -3,7 +3,7 @@
 
 package http
 
-import "github.com/cloudzero/cloudzero-agent-validator/pkg/build"
+import "github.com/cloudzero/cloudzero-agent/pkg/build"
 
 const (
 	HeaderAccept          = "Accept"

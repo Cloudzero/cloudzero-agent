@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/stretchr/testify/require"
 )
 
