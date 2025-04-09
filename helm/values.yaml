@@ -127,7 +127,7 @@ agent:
   # The container image used for most CloudZero components.
   image:
     repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-    tag: 0.10.0
+    tag: 0.10.0  # <- Software release corresponding to this chart version.
     digest:
     pullPolicy: IfNotPresent
 
@@ -391,7 +391,7 @@ initBackfillJob:
 # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
 # imagePullSecrets: []
 # image:
-#   repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
+#   repository:
 #   tag:
 #   pullPolicy:
 
@@ -548,8 +548,8 @@ insightsController:
     # -- Uncomment to use a specific imagePullSecrets; otherwise, the default top level imagePullSecrets is used.
     # imagePullSecrets: []
     image:
-      repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-      tag: 0.2.1
+      repository:
+      tag:
       pullPolicy:
     port: 8443
     read_timeout: 10s
@@ -662,8 +662,8 @@ aggregator:
   # generally be disabled in production.
   profiling: false
   image:
-    repository: ghcr.io/cloudzero/cloudzero-insights-controller/cloudzero-insights-controller
-    tag: 0.2.1
+    repository:
+    tag:
     digest:
     pullPolicy:
   dnsPolicy: ClusterFirst
