@@ -127,7 +127,7 @@ agent:
   # The container image used for most CloudZero components.
   image:
     repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-    tag: 0.10.0  # <- Software release corresponding to this chart version.
+    tag: 1.1.0-beta-3  # <- Software release corresponding to this chart version.
     digest:
     pullPolicy: IfNotPresent
 

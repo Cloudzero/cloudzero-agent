@@ -88,19 +88,9 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 		logger.Debug().Str("url", req.URL.String()).Msg("Abandoning files")
 
 		// Send the request
-		var resp *http.Response
-		err = m.metrics.SpanCtx(ctx, "shipper_AbandonFiles_httpRequest", func(ctx context.Context, id string) error {
-			spanLogger := instr.SpanLogger(ctx, id)
-			spanLogger.Debug().Msg("Sending the http request ...")
-			resp, err = m.HTTPClient.Do(req)
-			if err != nil {
-				return err
-			}
-			spanLogger.Debug().Msg("Successfully sent http request")
-			return nil
-		})
+		resp, err := m.SendHTTPRequest(ctx, "shipper_AbandonFiles_httpRequest", req)
 		if err != nil {
-			return errors.Join(ErrHTTPRequestFailed, fmt.Errorf("HTTP request failed: %w", err))
+			return err
 		}
 
 		defer resp.Body.Close()
