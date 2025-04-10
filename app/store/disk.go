@@ -63,9 +63,6 @@ type DiskStore struct {
 	maxInterval       time.Duration
 	ticker            *time.Ticker
 	mu                sync.Mutex
-
-	// internal metadata for the state of the disk store
-	stat *syscall.Statfs_t
 }
 
 // Just to make sure DiskStore implements the AppendableFiles interface
