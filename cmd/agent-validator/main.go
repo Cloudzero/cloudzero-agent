@@ -17,6 +17,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/pkg/build"
 	configcmd "github.com/cloudzero/cloudzero-agent/pkg/cmd/config"
 	diagcmd "github.com/cloudzero/cloudzero-agent/pkg/cmd/diagnose"
+	"github.com/cloudzero/cloudzero-agent/pkg/cmd/install"
 	"github.com/cloudzero/cloudzero-agent/pkg/logging"
 )
 
@@ -42,6 +43,7 @@ func main() {
 	app.Commands = append(app.Commands,
 		configcmd.NewCommand(ctx),
 		diagcmd.NewCommand(),
+		install.NewCommand(),
 	)
 
 	err := app.Run(os.Args)
