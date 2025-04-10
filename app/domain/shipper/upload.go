@@ -43,19 +43,9 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 		}
 
 		// Send the request
-		var resp *http.Response
-		err = m.metrics.SpanCtx(ctx, "shipper_UploadFile_httpRequest", func(ctx context.Context, id string) error {
-			spanLogger := instr.SpanLogger(ctx, id)
-			spanLogger.Debug().Msg("Sending the http request ...")
-			resp, err = m.HTTPClient.Do(req)
-			if err != nil {
-				return err
-			}
-			spanLogger.Debug().Msg("Successfully sent http request")
-			return nil
-		})
+		resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", req)
 		if err != nil {
-			return errors.Join(ErrHTTPRequestFailed, fmt.Errorf("HTTP request failed: %w", err))
+			return err
 		}
 
 		defer resp.Body.Close()

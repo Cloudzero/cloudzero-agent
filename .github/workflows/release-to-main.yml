@@ -21,6 +21,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
+          ssh-key: ${{ secrets.VERSION_BUMP_DEPLOY_KEY }}
+          persist-credentials: true
           fetch-depth: 0 # fetch the whole repo history
 
       - name: Verify release notes exist
@@ -33,7 +35,7 @@ jobs:
 
       - name: Update image version in Helm chart
         run: |
-          sed -rie "s/^( +tag): +[^ ]+  (# <- Software release corresponding to this chart version.)$/\1: ${{ github.event.inputs.version }}  \2/" helm/values.yaml
+          sed -ri "s/^( +tag): +[^ ]+  (# <- Software release corresponding to this chart version.)$/\1: ${{ github.event.inputs.version }}  \2/" helm/values.yaml
           git add helm/values.yaml
           git commit -m "Update image version in Helm chart to ${{ github.event.inputs.version }}"
 
@@ -43,8 +45,11 @@ jobs:
       - name: Merge develop into main
         run: git merge --ff-only develop
 
+      - name: Tag release
+        run: git tag -a "v${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
+
       - name: Push changes to main
-        run: git push --atomic origin develop main
+        run: git push --atomic origin develop main "v${{ github.event.inputs.version }}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
