@@ -93,7 +93,7 @@ spec:
             postStart:
               exec:
                 command:
-                  - /check/app/cloudzero-agent-validator
+                  - /checks/cloudzero-agent-validator
                   - diagnose
                   - post-start
                   - -f
@@ -101,7 +101,7 @@ spec:
             preStop:
               exec:
                 command:
-                  - /check/app/cloudzero-agent-validator
+                  - /checks/cloudzero-agent-validator
                   - diagnose
                   - pre-stop
                   - -f
