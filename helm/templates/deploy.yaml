@@ -31,12 +31,31 @@ spec:
 {{- end }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
-        - name: {{ .Values.validator.name }}
+        - name: {{ .Values.validator.name }}-copy
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.validator.image) | nindent 10 }}
           command:
-            - /bin/sh
-            - -c
-            - cp -r /app /checks/bin/ && cloudzero-agent-validator d pre-start -f /checks/config/validator.yml
+            - /app/cloudzero-agent-validator
+            - install
+            - --destination
+            - /checks/bin/cloudzero-agent-validator
+          {{- with .Values.validator.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+          {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+            - name: lifecycle-volume
+              mountPath: /checks/bin/
+            - name: validator-config-volume
+              mountPath: /checks/config/
+        - name: {{ .Values.validator.name }}-run
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.validator.image) | nindent 10 }}
+          command:
+            - /checks/bin/cloudzero-agent-validator
+            - diagnose
+            - pre-start
+            - -f
+            - /checks/config/validator.yml
           {{- with .Values.validator.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -74,15 +93,19 @@ spec:
             postStart:
               exec:
                 command:
-                  - /bin/sh
-                  - -c
-                  - /check/app/cloudzero-agent-validator d post-start -f /check/app/config/validator.yml
+                  - /check/app/cloudzero-agent-validator
+                  - diagnose
+                  - post-start
+                  - -f
+                  - /checks/app/config/validator.yml
             preStop:
               exec:
                 command:
-                  - /bin/sh
-                  - -c
-                  - /check/app/cloudzero-agent-validator d pre-stop -f /check/app/config/validator.yml
+                  - /check/app/cloudzero-agent-validator
+                  - diagnose
+                  - pre-stop
+                  - -f
+                  - /check/app/config/validator.yml
           args:
             {{ toYaml .Values.server.args | nindent 12}}
             {{- if .Values.server.agentMode }}
@@ -121,9 +144,9 @@ spec:
               mountPath: {{ .Values.server.persistentVolume.mountPath }}
               subPath: "{{ .Values.server.persistentVolume.subPath }}"
             - name: lifecycle-volume
-              mountPath: /check/
+              mountPath: /checks/
             - name: validator-config-volume
-              mountPath: /check/app/config/
+              mountPath: /checks/app/config/
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
       securityContext:
         runAsUser: 65534
