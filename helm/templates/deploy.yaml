@@ -101,20 +101,15 @@ spec:
             postStart:
               exec:
                 command:
-                  - /bin/sh
-                  - -c
-                  - ls -lR /checks && /checks/app/cloudzero-agent-validator d post-start -f /checks/app/config/validator.yml
-
-
-                  # - /check/app/cloudzero-agent-validator
-                  # - d
-                  # - post-start
-                  # - -f
-                  # - /check/app/config/validator.yml
+                  - /checks/cloudzero-agent-validator
+                  - d
+                  - post-start
+                  - -f
+                  - /checks/app/config/validator.yml
             preStop:
               exec:
                 command:
-                  - /check/app/cloudzero-agent-validator
+                  - /checks/cloudzero-agent-validator
                   - d
                   - pre-stop
                   - -f
