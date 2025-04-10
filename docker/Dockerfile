@@ -1,3 +1,5 @@
+ARG DEPLOY_IMAGE=scratch
+
 # Stage 1: Build the Go binary
 FROM --platform=$BUILDPLATFORM golang:1.24.2-alpine AS builder
 ARG TARGETPLATFORM
@@ -31,9 +33,10 @@ RUN make build OUTPUT_BIN_DIR=/go/bin \
 # Stage 2: Access current certs
 FROM gcr.io/distroless/static-debian12:debug@sha256:5c474275684bbf271ec40502ab50158b2f9826de5877d8feec27e22e8d6ee3d2 AS certs
 
-# TODO: use busybox for development - switch to "scratch" before release
-#FROM busybox:1.36.1-uclibc
-FROM scratch
+# Note: For debugging, you can temporarily change the image used
+# for building by passing in something like this to 'docker build':
+#--build-arg DEPLOY_IMAGE=busybox:1.36.1-uclibc
+FROM ${DEPLOY_IMAGE}
 
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
