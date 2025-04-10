@@ -21,6 +21,7 @@ on:
 
 jobs:
   mirror-helm-chart:
+    if: github.repository == 'cloudzero/cloudzero-agent'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ${{ github.repository }}

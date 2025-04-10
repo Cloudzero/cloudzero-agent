@@ -2,10 +2,15 @@ name: Manual Prepare Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release."
+        required: true
 
 jobs:
   release-to-main:
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
       id-token: write
@@ -16,79 +21,41 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }} # checkout the correct branch name
+          ssh-key: ${{ secrets.VERSION_BUMP_DEPLOY_KEY }}
+          persist-credentials: true
           fetch-depth: 0 # fetch the whole repo history
 
-      - name: Fetch all branches
-        run: git fetch --all
+      - name: Verify release notes exist
+        run: test -f "docs/releases/${{ github.event.inputs.version }}.md"
 
-      - name: Checkout develop branch
-        run: git checkout develop
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Rebase develop branch
-        run: git pull --rebase origin develop
+      - name: Update image version in Helm chart
+        run: |
+          sed -ri "s/^( +tag): +[^ ]+  (# <- Software release corresponding to this chart version.)$/\1: ${{ github.event.inputs.version }}  \2/" helm/values.yaml
+          git add helm/values.yaml
+          git commit -m "Update image version in Helm chart to ${{ github.event.inputs.version }}"
 
       - name: Checkout main branch
         run: git checkout main
 
-      - name: Rebase main branch
-        run: git pull --rebase origin main
-
       - name: Merge develop into main
         run: git merge --ff-only develop
 
+      - name: Tag release
+        run: git tag -a "v${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
+
       - name: Push changes to main
-        run: git push origin main
+        run: git push --atomic origin develop main "v${{ github.event.inputs.version }}"
 
-      - name: Get the latest tag (as environment variable)
-        id: get_latest_tag
-        run: |
-          LAST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          # Remove the v prefix
-          LAST_TAG=${LAST_TAG:1}
-          echo "LAST_TAG=${LAST_TAG}" >>${GITHUB_ENV}
-
-      - name: RELEASE - Create new version
-        id: version
-        # outputs
-        # new_tag - The value of the newly created tag.
-        # old_tag - The value of the last semantic version tag before the version bump. Empty if no version bump is performed.
-        # tag - The value of the latest tag after running this action.
-        # part - The part of version which was bumped.
-        uses: anothrNick/github-tag-action@1.71.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          PRERELEASE: true
-          INITIAL_VERSION: ${{ env.LAST_TAG }}
-
-      - name: GET CHANGES
-        id: get_changes
-        run: |
-          FROM=$(git show-ref --abbrev=7 --tags | grep "${{ steps.version.outputs.old_tag }}" | cut -f1 -d' ')
-          TO=$(git show-ref --abbrev=7 --tags | grep "${{ steps.version.outputs.new_tag }}" | cut -f1 -d' ')
-          CHANGES=$(git log ${FROM}..${TO} --oneline)
-          echo "::set-output name=changes::${CHANGES}"
-
-      - name: RELEASE - Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          release_name: Release ${{ steps.version.outputs.new_tag }}
-          body: |
-            To install use the following command:
-            ```bash
-            go install github.com/${{ github.repository }}/cmd/cloudzero-agent-validator@${{ steps.version.outputs.new_tag }}
-            ```
-
-            Or if you prefer docker:
-            ```bash
-            docker pull ghcr.io/${{ github.repository }}/cloudzero-agent:${{ steps.version.outputs.new_tag }}
-            ```
-            Changes in this Release:
-            ${{ steps.get_changes.outputs.changes }}
-          draft: false
-          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ github.event.inputs.version }}
+          body_path: docs/releases/${{ github.event.inputs.version }}.md
+          prerelease: ${{ contains(github.event.inputs.version, '-beta-') }}
+          draft: true
