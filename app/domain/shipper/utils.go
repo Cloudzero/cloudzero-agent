@@ -4,7 +4,7 @@
 // Package shipper provides domain logic for for the shipper.
 package shipper
 
-import "github.com/cloudzero/cloudzero-agent-validator/app/types"
+import "github.com/cloudzero/cloudzero-agent/app/types"
 
 // Chunk splits a list into a matrix of elements with a size of `n`
 func Chunk[T any](list []T, n int) [][]T {

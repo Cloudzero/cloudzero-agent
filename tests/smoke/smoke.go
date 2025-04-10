@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"

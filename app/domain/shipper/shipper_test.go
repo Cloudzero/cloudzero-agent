@@ -21,10 +21,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/shipper"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 func TestShipper_Unit_PerformShipping(t *testing.T) {

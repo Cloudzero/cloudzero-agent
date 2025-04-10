@@ -9,9 +9,9 @@ import (
 
 	v1 "k8s.io/api/apps/v1"
 
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/hook"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 type DaemonSetHandler struct {

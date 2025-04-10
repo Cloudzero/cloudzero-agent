@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/inspector"
+	"github.com/cloudzero/cloudzero-agent/app/inspector"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/rs/zerolog"

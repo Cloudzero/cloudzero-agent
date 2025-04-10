@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/uuid"
 	"github.com/prometheus/prometheus/prompb"
 )

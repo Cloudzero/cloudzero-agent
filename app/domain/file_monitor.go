@@ -9,7 +9,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )

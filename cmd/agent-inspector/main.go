@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/inspector"
+	"github.com/cloudzero/cloudzero-agent/app/inspector"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

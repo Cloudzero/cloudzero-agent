@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/http/hook"
 )
 
 // admissionHandler represents the HTTP handler for an admission webhook

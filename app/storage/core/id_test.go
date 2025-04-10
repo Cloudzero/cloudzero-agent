@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/storage/core"
+	"github.com/cloudzero/cloudzero-agent/app/storage/core"
 )
 
 func TestNewID(t *testing.T) {

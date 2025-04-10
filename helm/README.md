@@ -270,7 +270,7 @@ kubeStateMetrics:
 
 ## Contributing
 
-We welcome contributions to the CloudZero Agent Helm chart. Contributions for this chart are managed through the [CloudZero Agent Validator repository](https://github.com/cloudzero/cloudzero-agent-validator), which is then automatically synced to the [CloudZero Charts repository](https://github.com/cloudzero/cloudzero-charts). We cannot accept contributions for anything in this directory through the CloudZero Charts repository as they would be overwritten automatically the next time a change is made in the CloudZero Agent Validator repository.
+We welcome contributions to the CloudZero Agent Helm chart. Contributions for this chart are managed through the [CloudZero Agent repository](https://github.com/cloudzero/cloudzero-agent), which is then automatically synced to the [CloudZero Charts repository](https://github.com/cloudzero/cloudzero-charts). We cannot accept contributions for anything in this directory through the CloudZero Charts repository as they would be overwritten automatically the next time a change is made in the CloudZero Agent Validator repository.
 
 ## Dependencies
 

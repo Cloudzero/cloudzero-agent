@@ -126,7 +126,7 @@ additionalMetricLabels: []
 agent:
   # The container image used for most CloudZero components.
   image:
-    repository: ghcr.io/cloudzero/cloudzero-agent-validator/cloudzero-agent-validator
+    repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
     tag: 0.10.0
     digest:
     pullPolicy: IfNotPresent

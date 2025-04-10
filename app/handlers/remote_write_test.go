@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/testdata"
-	"github.com/cloudzero/cloudzero-agent-validator/app/handlers"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types/mocks"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/domain/testdata"
+	"github.com/cloudzero/cloudzero-agent/app/handlers"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
 const MountBase = "/"

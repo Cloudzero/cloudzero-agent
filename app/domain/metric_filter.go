@@ -6,9 +6,9 @@ package domain
 import (
 	"fmt"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain/filter"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain/filter"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 // MetricFilter is a filter that can be used to filter metrics, including

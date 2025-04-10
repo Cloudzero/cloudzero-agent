@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/parquet-go/parquet-go"
 	"github.com/stretchr/testify/assert"

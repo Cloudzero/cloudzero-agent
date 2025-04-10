@@ -6,7 +6,7 @@ package store
 import (
 	"github.com/wagoodman/go-partybus"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 // This structure is allows registering for events on the bus

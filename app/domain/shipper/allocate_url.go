@@ -13,9 +13,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/build"
-	"github.com/cloudzero/cloudzero-agent-validator/app/instr"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/build"
+	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

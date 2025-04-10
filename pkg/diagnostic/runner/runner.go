@@ -12,12 +12,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/build"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/config"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/diagnostic/catalog"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/logging"
-	"github.com/cloudzero/cloudzero-agent-validator/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/build"
+	"github.com/cloudzero/cloudzero-agent/pkg/config"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent/pkg/logging"
+	"github.com/cloudzero/cloudzero-agent/pkg/status"
 )
 
 type Engine interface {

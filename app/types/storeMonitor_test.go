@@ -6,7 +6,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 func TestStorageWarning_Thresholds(t *testing.T) {

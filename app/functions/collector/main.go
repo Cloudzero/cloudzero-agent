@@ -17,14 +17,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent-validator/app/build"
-	config "github.com/cloudzero/cloudzero-agent-validator/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent-validator/app/domain"
-	"github.com/cloudzero/cloudzero-agent-validator/app/handlers"
-	"github.com/cloudzero/cloudzero-agent-validator/app/logging"
-	"github.com/cloudzero/cloudzero-agent-validator/app/store"
-	"github.com/cloudzero/cloudzero-agent-validator/app/types"
-	"github.com/cloudzero/cloudzero-agent-validator/app/utils"
+	"github.com/cloudzero/cloudzero-agent/app/build"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/handlers"
+	"github.com/cloudzero/cloudzero-agent/app/logging"
+	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/utils"
 )
 
 func main() {
