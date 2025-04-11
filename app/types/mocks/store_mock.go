@@ -92,9 +92,9 @@ func (mr *MockStoreMockRecorder) GetFiles(paths ...any) *gomock.Call {
 }
 
 // GetUsage mocks base method.
-func (m *MockStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (m *MockStore) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{}
+	varargs := []any{limit}
 	for _, a := range paths {
 		varargs = append(varargs, a)
 	}
@@ -105,9 +105,10 @@ func (m *MockStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
 }
 
 // GetUsage indicates an expected call of GetUsage.
-func (mr *MockStoreMockRecorder) GetUsage(paths ...any) *gomock.Call {
+func (mr *MockStoreMockRecorder) GetUsage(limit any, paths ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsage", reflect.TypeOf((*MockStore)(nil).GetUsage), paths...)
+	varargs := append([]any{limit}, paths...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsage", reflect.TypeOf((*MockStore)(nil).GetUsage), varargs...)
 }
 
 // ListFiles mocks base method.

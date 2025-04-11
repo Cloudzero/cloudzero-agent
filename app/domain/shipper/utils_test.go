@@ -51,7 +51,7 @@ func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error 
 	return args.Error(0)
 }
 
-func (m *MockAppendableFiles) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (m *MockAppendableFiles) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	args := m.Called()
 	return args.Get(0).(*types.StoreUsage), args.Error(1)
 }
@@ -105,7 +105,7 @@ func getMockSettings(mockURL, dir string) *config.Settings {
 		CloudAccountID: "test-account",
 		Region:         "us-east-1",
 		Logging: config.Logging{
-			Level: "debug",
+			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
 			Host:        mockURL,
@@ -118,6 +118,7 @@ func getMockSettings(mockURL, dir string) *config.Settings {
 				Lazy:             true,
 				Percent:          20,
 			},
+			AvailableStorage: "10Gi",
 		},
 	}
 
@@ -154,6 +155,7 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 				Lazy:             true,
 				Percent:          20,
 			},
+			AvailableStorage: "10Gi",
 		},
 	}
 
