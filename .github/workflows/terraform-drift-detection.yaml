@@ -1,0 +1,21 @@
+name: terraform drift detection
+
+on:
+  # Since we only have ephemeral resources at the moment,
+  # we don't need to currently run this automatically.
+  #schedule:
+  #  - cron:  "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  check_drift:
+    runs-on: ubuntu-latest
+    name: Check for drift in our terraform configuration
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for drift
+        uses: dflook/terraform-check@v1
+        with:
+          path: terraform/aws-eks-cluster
