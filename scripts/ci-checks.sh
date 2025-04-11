@@ -38,6 +38,18 @@ function check_go_version() {
 }
 check_go_version
 
+# Check that Helm chart contains expected pattern(s) for version bump
+function check_helm_chart_version_bump() {
+    # This is the pattern we use in .github/workflows/release-to-main.yml to
+    # update the version of the CloudZero Agent container in the Helm chart.
+    # This just exists to make sure we don't accidentally break it by tweaking
+    # the comment or something.
+    if ! grep -Eq '^( +tag): +[^ ]+  (# <- Software release corresponding to this chart version.)$' helm/values.yaml; then
+        echo "Helm chart does not contain expected pattern for version bump" >&2
+        FAILED=true
+    fi
+}
+check_helm_chart_version_bump
 if [ "$FAILED" = true ]; then
     exit 1
 fi
