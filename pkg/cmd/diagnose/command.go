@@ -49,7 +49,7 @@ func NewCommand() *cli.Command {
 				Name:  "run",
 				Usage: "run a specific check or checks",
 				Flags: []cli.Flag{
-					&cli.StringSliceFlag{Name: "check", Usage: "comma seperated or multi-value list of check(s) to run", Required: true},
+					&cli.StringSliceFlag{Name: "check", Usage: "comma separated or multi-value list of check(s) to run", Required: true},
 					&cli.StringSliceFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: configFileDesc, Required: true},
 					&cli.BoolFlag{Name: "post", Usage: "if set to true, telemetry will be pushed", Required: false},
 				},

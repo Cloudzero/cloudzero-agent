@@ -3,12 +3,17 @@
 
 package config
 
-import "github.com/pkg/errors"
+import (
+	"os"
+
+	"github.com/pkg/errors"
+)
 
 type Deployment struct {
-	AccountID   string `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
-	ClusterName string `yaml:"cluster_name" env:"CLUSTER_NAME" required:"true" env-description:"Cluster Name"`
-	Region      string `yaml:"region" env:"REGION" required:"true" env-description:"AWS Region"`
+	AccountID     string        `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
+	ClusterName   string        `yaml:"cluster_name" env:"CLUSTER_NAME" required:"true" env-description:"Cluster Name"`
+	Region        string        `yaml:"region" env:"REGION" required:"true" env-description:"AWS Region"`
+	WebhookServer WebhookServer `yaml:"webhook_server"`
 }
 
 func (s *Deployment) Validate() error {
@@ -23,6 +28,13 @@ func (s *Deployment) Validate() error {
 	if s.Region == "" {
 		return errors.New(ErrNoRegionMsg)
 	}
+
+	// Read TLS secret file
+	data, err := os.ReadFile(s.WebhookServer.TLSSecretFile)
+	if err != nil {
+		return errors.Wrap(err, "read TLS secret file")
+	}
+	s.WebhookServer.CACert = data
 
 	return nil
 }

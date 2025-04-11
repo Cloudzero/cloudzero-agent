@@ -10,6 +10,7 @@ deployment:
   account_id: { { .AccountID } }
   cluster_name: { { .ClusterName } }
   region: { { .Region } }
+  webhook_server_address: { { .WebhookServerAddress } }
 
 cloudzero:
   host: { { .CloudzeroHost } }
@@ -27,8 +28,9 @@ diagnostics:
       checks:
         - egress_reachable
         - api_key_valid
+        - webhook_server_reachable
     - name: post-start
-      enforce: false
+      enforce: true
       checks:
         - k8s_version
         - kube_state_metrics_reachable
