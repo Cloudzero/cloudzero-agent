@@ -232,6 +232,13 @@ test-smoke: ## Run the smoke tests
 
 # ----------- DOCKER IMAGE ------------
 
+DEBUG_IMAGE ?= busybox:stable-uclibc
+
+# Define targets for Docker image variants
+#
+#  $1: Target name (package, package-debug, package-build, package-build-debug)
+#  $2: Whether to push to a registry, or only the local Docker (push, load)
+#  $3: Whether to build a debug image (true, false)
 define generate-container-build-target
 .PHONY: $1
 $1:
@@ -244,15 +251,22 @@ endif
 		--build-arg REVISION=$(REVISION) \
 		--build-arg TAG=$(TAG) \
 		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		$(if $(filter true,$(3)),--build-arg DEPLOY_IMAGE=$(DEBUG_IMAGE),) \
 		--$2 -t $(IMAGE_NAME):$(TAG) -f docker/Dockerfile .
 	echo -e "$(INFO_COLOR)Image $(IMAGE_NAME):$(TAG) built successfully$(NO_COLOR)"
 endef
 
 package: ## Build and push the Docker image
-$(eval $(call generate-container-build-target,package,push))
+$(eval $(call generate-container-build-target,package,push,false,false))
+
+package-debug: ## Build and push a debugging version of the Docker image
+$(eval $(call generate-container-build-target,package-debug,push,true))
 
 package-build: ## Build the Docker image
-$(eval $(call generate-container-build-target,package-build,load))
+$(eval $(call generate-container-build-target,package-build,load,false))
+
+package-build-debug: ## Build a debugging version of the Docker image
+$(eval $(call generate-container-build-target,package-build-debug,load,true))
 
 # ----------- HELM CHART ------------
 
