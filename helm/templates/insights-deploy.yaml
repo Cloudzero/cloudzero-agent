@@ -50,7 +50,7 @@ spec:
       {{- end }}
       containers:
         - name: webhook-server
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.insightsController.server.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}
           command:
             - /app/cloudzero-insights-controller
           args:

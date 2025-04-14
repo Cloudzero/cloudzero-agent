@@ -15,13 +15,42 @@ existingSecretName: null
 # Agent largely contains top-level settings which are often shared by multiple
 # components within this chart, or used as defaults in case values are not
 # explicitly set per-component.
-agent:
-  # The container image used for most CloudZero components.
+defaults:
   image:
-    repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-    tag: 1.1.0-beta-3  # <- Software release corresponding to this chart version.
+    repository:
+    tag:
     digest:
     pullPolicy: IfNotPresent
+    pullSecrets:
+
+components:
+  agent:
+    image:
+      repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
+      tag: 1.1.0-beta-3  # <- Software release corresponding to this chart version.
+  kubectl:
+    image:
+      repository: docker.io/bitnami/kubectl
+      tag: "1.32.0"
+  prometheus:
+    image:
+      repository: quay.io/prometheus/prometheus
+      tag:  # This will fall back on .Chart.AppVersion if not set.
+  prometheusReloader:
+    image:
+      repository: quay.io/prometheus-operator/prometheus-config-reloader
+      tag: "v0.70.0"
+
+
+#######################################################################################
+#######################################################################################
+####                                                                               ####
+####  Values below this point are not considered API stable. Use at your own risk. ####
+####  If you do require them for some reason, please let us know so we can work on ####
+####  covering your use case in the stable section.                                ####
+####                                                                               ####
+#######################################################################################
+#######################################################################################
 
 prometheusConfig:
   configMapNameOverride: ""
@@ -83,10 +112,10 @@ initCertJob:
   # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
   # imagePullSecrets: []
   image:
-    repository: docker.io/bitnami/kubectl
+    repository:
     pullPolicy:
     digest:
-    tag: "1.32.0"
+    tag:
   dnsPolicy: ClusterFirst
   dnsConfig: {}
   rbac:
@@ -135,14 +164,13 @@ validator:
     tag:
     digest:
     pullPolicy:
+    pullSecrets:
 
 server:
   name: server
   image:
-    repository: quay.io/prometheus/prometheus
-    # if not set appVersion field from Chart.yaml is used
+    repository:
     tag:
-    # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
     digest:
     pullPolicy:
   nodeSelector: {}
@@ -308,10 +336,10 @@ configmapReload:
   prometheus:
     enabled: true
     image:
-      repository: quay.io/prometheus-operator/prometheus-config-reloader
-      tag: v0.70.0
-      digest: ""
-      pullPolicy: IfNotPresent
+      repository:
+      tag:
+      digest:
+      pullPolicy:
 
     containerSecurityContext: {}
     resources: {}

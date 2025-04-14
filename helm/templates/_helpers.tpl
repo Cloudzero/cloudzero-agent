@@ -583,14 +583,28 @@ Otherwise, it will be the CloudZero API endpoint.
 Generate image configuration with defaults.
 */}}
 {{- define "cloudzero-agent.generateImage" -}}
-{{- if .image.digest -}}
-image: "{{ .image.repository | default .defaults.repository }}@{{ .image.digest }}"
-{{- else if .image.tag -}}
-image: "{{ .image.repository | default .defaults.repository }}:{{ .image.tag }}"
-{{- else if .defaults.digest -}}
-image: "{{ .image.repository | default .defaults.repository }}@{{ .defaults.digest }}"
-{{- else -}}
-image: "{{ .image.repository | default .defaults.repository }}:{{ .defaults.tag }}"
+{{- $digest      := (.image.digest      | default .defaults.digest) -}}
+{{- $tag         := (.image.tag         | default .defaults.tag) -}}
+{{- $repository  := (.image.repository  | default .defaults.repository) -}}
+{{- $pullPolicy  := (.image.pullPolicy  | default .defaults.pullPolicy) -}}
+{{- $pullSecrets := (.image.pullSecrets | default .defaults.pullSecrets) -}}
+{{- if .compat -}}
+{{- $digest      = (.compat.digest      | default .image.digest      | default .defaults.digest) -}}
+{{- $tag         = (.compat.tag         | default .image.tag         | default .defaults.tag) -}}
+{{- $repository  = (.compat.repository  | default .image.repository  | default .defaults.repository) -}}
+{{- $pullPolicy  = (.compat.pullPolicy  | default .image.pullPolicy  | default .defaults.pullPolicy) -}}
+{{- $pullSecrets = (.compat.pullSecrets | default .image.pullSecrets | default .defaults.pullSecrets) -}}
+{{- end -}}
+{{- if $digest -}}
+image: "{{ $repository }}@{{ $digest }}"
+{{- else if $tag -}}
+image: "{{ $repository }}:{{ $tag }}"
 {{- end }}
-imagePullPolicy: "{{ .image.pullPolicy | default .defaults.pullPolicy }}"
+{{ if $pullPolicy -}}
+imagePullPolicy: "{{ $pullPolicy }}"
+{{- end }}
+{{ if $pullSecrets -}}
+imagePullSecrets:
+{{ toYaml $pullSecrets | indent 2 }}
+{{- end }}
 {{- end -}}
