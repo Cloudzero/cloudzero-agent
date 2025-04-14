@@ -57,7 +57,7 @@ data:
           action: replace
         metric_relabel_configs:
         - source_labels: [__name__]
-          regex: "^({{ join "|" .Values.kubeMetrics }})$"
+          regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics }})$"
           action: keep
         - separator: ;
           regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
@@ -111,7 +111,7 @@ data:
         - action: labelkeep
           regex: "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
         - source_labels: [__name__]
-          regex: "^({{ join "|" .Values.containerMetrics }})$"
+          regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).containerMetrics }})$"
           action: keep
         kubernetes_sd_configs:
         - role: node
@@ -139,7 +139,7 @@ data:
             regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
         metric_relabel_configs:
           - source_labels: [__name__]
-            regex: "^({{ join "|" .Values.insightsMetrics }})$"
+            regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics }})$"
             action: keep
       {{- end }}
       {{- if and .Values.aggregator.enabled  .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
@@ -163,7 +163,7 @@ data:
         metrics_path: /metrics
         metric_relabel_configs:
           - source_labels: [__name__]
-            regex: "^({{ join "|" .Values.prometheusMetrics }})$"
+            regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
             action: keep
       {{- end }}
       {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
@@ -257,10 +257,10 @@ data:
     cluster_name: "{{ .Values.clusterName }}"
 
     metrics:
-      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters" .Values.metricFilters.cost.name) | nindent 6 }}
-      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters" .Values.metricFilters.cost.labels) | nindent 6 }}
-      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters" .Values.metricFilters.observability.name) | nindent 6 }}
-      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" .Values.metricFilters.observability.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 6 }}
+      {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 6 }}
 
     server:
       mode: http
