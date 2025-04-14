@@ -37,7 +37,7 @@ data:
       {{- end }}
       executable: /bin/prometheus
       kube_metrics:
-        {{- toYaml .Values.kubeMetrics | nindent 8 }}
+        {{- (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics | toYaml | nindent 8 }}
       configurations:
         - /etc/prometheus/prometheus.yml
         - /etc/config/prometheus/configmaps/prometheus.yml

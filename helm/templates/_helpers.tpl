@@ -185,7 +185,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Combine metric lists
 */}}
 {{- define "cloudzero-agent.combineMetrics" -}}
-{{- $total := concat .Values.kubeMetrics .Values.containerMetrics .Values.insightsMetrics .Values.prometheusMetrics -}}
+{{- $total := concat (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics (include "cloudzero-agent.defaults" . | fromYaml).containerMetrics (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics -}}
 {{- $result := join "|" $total -}}
 {{- $result -}}
 {{- end -}}
@@ -235,21 +235,21 @@ Internal helper function for generating a metric filter regex
 
 {{- define "cloudzero-agent.generateMetricNameFilterRegex" -}}
 {{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
-  "exact"    (uniq (concat .metricFilters.cost.name.exact    .metricFilters.observability.name.exact    .metricFilters.cost.name.additionalExact    .metricFilters.observability.name.additionalExact))
-  "prefix"   (uniq (concat .metricFilters.cost.name.prefix   .metricFilters.observability.name.prefix   .metricFilters.cost.name.additionalPrefix   .metricFilters.observability.name.additionalPrefix))
-  "suffix"   (uniq (concat .metricFilters.cost.name.suffix   .metricFilters.observability.name.suffix   .metricFilters.cost.name.additionalSuffix   .metricFilters.observability.name.additionalSuffix))
-  "contains" (uniq (concat .metricFilters.cost.name.contains .metricFilters.observability.name.contains .metricFilters.cost.name.additionalContains .metricFilters.observability.name.additionalContains))
-  "regex"    (uniq (concat .metricFilters.cost.name.regex    .metricFilters.observability.name.regex    .metricFilters.cost.name.additionalRegex    .metricFilters.observability.name.additionalRegex))
+  "exact"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.exact    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.exact   ))
+  "prefix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.prefix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.prefix  ))
+  "suffix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.suffix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.suffix  ))
+  "contains" (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.contains (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.contains))
+  "regex"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.regex    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.regex   ))
 ) -}}
 {{- end -}}
 
 {{- define "cloudzero-agent.generateMetricLabelFilterRegex" -}}
 {{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
-  "exact"    (uniq (concat .metricFilters.cost.labels.exact    .metricFilters.observability.labels.exact    .metricFilters.cost.labels.additionalExact    .metricFilters.observability.labels.additionalExact))
-  "prefix"   (uniq (concat .metricFilters.cost.labels.prefix   .metricFilters.observability.labels.prefix   .metricFilters.cost.labels.additionalPrefix   .metricFilters.observability.labels.additionalPrefix))
-  "suffix"   (uniq (concat .metricFilters.cost.labels.suffix   .metricFilters.observability.labels.suffix   .metricFilters.cost.labels.additionalSuffix   .metricFilters.observability.labels.additionalSuffix))
-  "contains" (uniq (concat .metricFilters.cost.labels.contains .metricFilters.observability.labels.contains .metricFilters.cost.labels.additionalContains .metricFilters.observability.labels.additionalContains))
-  "regex"    (uniq (concat .metricFilters.cost.labels.regex    .metricFilters.observability.labels.regex    .metricFilters.cost.labels.additionalRegex    .metricFilters.observability.labels.additionalRegex))
+  "exact"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.exact    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.exact   ))
+  "prefix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.prefix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.prefix  ))
+  "suffix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.suffix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.suffix  ))
+  "contains" (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.contains (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.contains))
+  "regex"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.regex    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.regex   ))
 ) -}}
 {{- end -}}
 
@@ -257,25 +257,25 @@ Internal helper function for generating a metric filter regex
 Generate metric filters
 */}}
 {{- define "cloudzero-agent.generateMetricFilters" -}}
-{{- if ne 0 (add (len .filters.exact) (len .filters.additionalExact) (len .filters.prefix) (len .filters.additionalPrefix) (len .filters.suffix) (len .filters.additionalSuffix) (len .filters.contains) (len .filters.additionalContains) (len .filters.regex) (len .filters.additionalRegex)) }}
+{{- if ne 0 (add (len .filters.exact) (len .filters.prefix) (len .filters.suffix) (len .filters.contains) (len .filters.regex)) }}
 {{ .name }}:
-{{- range $pattern := uniq (concat .filters.exact .filters.additionalExact) }}
+{{- range $pattern := uniq .filters.exact }}
   - pattern: "{{ $pattern }}"
     match: exact
 {{- end }}
-{{- range $pattern := uniq (concat .filters.prefix .filters.additionalPrefix) }}
+{{- range $pattern := uniq .filters.prefix }}
   - pattern: "{{ $pattern }}"
     match: prefix
 {{- end }}
-{{- range $pattern := uniq (concat .filters.suffix .filters.additionalSuffix) }}
+{{- range $pattern := uniq .filters.suffix }}
   - pattern: "{{ $pattern }}"
     match: suffix
 {{- end }}
-{{- range $pattern := uniq (concat .filters.contains .filters.additionalContains) }}
+{{- range $pattern := uniq .filters.contains }}
   - pattern: "{{ $pattern }}"
     match: contains
 {{- end }}
-{{- range $pattern := uniq (concat .filters.regex .filters.additionalRegex) }}
+{{- range $pattern := uniq .filters.regex }}
   - pattern: "{{ $pattern }}"
     match: regex
 {{- end }}
@@ -288,7 +288,7 @@ Required metric labels
 {{- define "cloudzero-agent.requiredMetricLabels" -}}
 {{- $requiredSpecialMetricLabels := tuple "_.*" "label_.*" "app.kubernetes.io/*" "k8s.*" -}}
 {{- $requiredCZMetricLabels := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
-{{- $total := concat .Values.additionalMetricLabels $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
+{{- $total := concat $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
 {{- $result := join "|" $total -}}
 {{- $result -}}
 {{- end -}}
