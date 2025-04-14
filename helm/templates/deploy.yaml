@@ -32,7 +32,7 @@ spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
         - name: {{ .Values.validator.name }}-copy
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.validator.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
           command:
             - /app/cloudzero-agent-validator
             - install
@@ -49,7 +49,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
         - name: {{ .Values.validator.name }}-run
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.validator.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
           command:
             - /checks/bin/cloudzero-agent-validator
             - diagnose
@@ -69,7 +69,7 @@ spec:
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
@@ -84,7 +84,7 @@ spec:
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
           {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.agent.image "image" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
           {{- if .Values.server.env }}
           env:
 {{ toYaml .Values.server.env | indent 12}}
