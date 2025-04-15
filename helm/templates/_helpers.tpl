@@ -654,3 +654,17 @@ annotations:
 {{- . | toYaml | nindent 2 -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Generate affinity sections
+*/}}
+{{- define "cloudzero-agent.generateAffinity" -}}
+{{ $affinity := .default }}
+{{- if .affinity -}}
+{{ $affinity = merge .affinity .default }}
+{{- end -}}
+{{- if $affinity -}}
+affinity:
+{{- $affinity | toYaml | nindent 2 -}}
+{{- end -}}
+{{- end -}}

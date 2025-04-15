@@ -162,10 +162,7 @@ spec:
       tolerations:
 {{ toYaml .Values.server.tolerations | indent 8 }}
     {{- end }}
-    {{- if .Values.server.affinity }}
-      affinity:
-{{ toYaml .Values.server.affinity | indent 8 }}
-    {{- end }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}
     {{- with .Values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
