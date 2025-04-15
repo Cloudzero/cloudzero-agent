@@ -44,10 +44,8 @@ spec:
                   matchLabels:
                     app: webhook-server
                 topologyKey: "kubernetes.io/hostname"
-      dnsPolicy: {{ .Values.insightsController.server.dnsPolicy }}
-      {{- if .Values.insightsController.server.dnsConfig }}
-      dnsConfig: {{ toYaml .Values.insightsController.server.dnsConfig | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
       containers:
         - name: webhook-server
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}

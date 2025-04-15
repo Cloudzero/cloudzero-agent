@@ -27,10 +27,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-{{- if .Values.server.priorityClassName }}
-      priorityClassName: "{{ .Values.server.priorityClassName }}"
-{{- end }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
+      {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
       containers:
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
@@ -99,10 +97,7 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      dnsPolicy: {{ .Values.aggregator.dnsPolicy }}
-      {{- if .Values.aggregator.dnsConfig }}
-      dnsConfig: {{ .Values.aggregator.dnsConfig | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
 
       {{- with .Values.aggregator.nodeSelector }}
