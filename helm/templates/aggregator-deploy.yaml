@@ -88,11 +88,7 @@ spec:
         fsGroup: 65534
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
-
-      {{- with .Values.aggregator.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.aggregator.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations) | nindent 6 }}
   
