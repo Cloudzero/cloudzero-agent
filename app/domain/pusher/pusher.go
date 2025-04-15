@@ -274,7 +274,7 @@ func (h *MetricsPusher) Flush() error {
 		log.Ctx(h.ctx).Err(err).Msg("Failed to find records to send")
 		return fmt.Errorf("failed to find records to send: %v", err)
 	}
-	log.Ctx(h.ctx).Debug().Int("count", len(found)).Msg("Found records to send")
+	log.Ctx(h.ctx).Info().Int("count", len(found)).Msg("Found resource records to send to remote write")
 	totalSize := 0
 	batch := []*types.ResourceTags{}
 	completed := []*types.ResourceTags{}
