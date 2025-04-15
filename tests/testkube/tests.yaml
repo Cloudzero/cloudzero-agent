@@ -1,0 +1,14 @@
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: agent-basic-test
+  namespace: testkube
+spec:
+  steps:
+    - run:
+        image: "curlimages/curl:8.13.0"
+        # This should likely use Postman, but this is a simple start.
+        shell: |
+          curl -m 5 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local/healthz
+          curl -m 5 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics
