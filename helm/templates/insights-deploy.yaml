@@ -17,8 +17,9 @@ spec:
       {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.insightsController.server.podAnnotations }}
       annotations:
+        checksum/config: {{ include "cloudzero-agent.insightsController.configuration" . | sha256sum }}
+      {{- with .Values.insightsController.server.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
