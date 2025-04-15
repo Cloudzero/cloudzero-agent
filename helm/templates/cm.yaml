@@ -183,7 +183,7 @@ data:
 
 {{- if .Values.insightsController.enabled }}
 {{- with .Values.insightsController }}
-{{- if not (and .labels.enabled .labels.patterns) }}
+{{- if and .labels.enabled (not .labels.patterns) }}
 {{- $msg := "\n\nThe required field(s) 'insightsController.labels.enabled' and/or 'insightsController.labels.patterns' is not set! See the README.md for more information." }}
 {{- $enabledMsg:=""}}
 {{- $patternMsg:=""}}
