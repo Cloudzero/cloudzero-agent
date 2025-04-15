@@ -93,10 +93,7 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.aggregator.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
       {{- with .Values.aggregator.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
