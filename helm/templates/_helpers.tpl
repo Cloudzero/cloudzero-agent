@@ -500,7 +500,7 @@ Map for initBackfillJob values; this allows us to preferably use initBackfillJob
 Name for a job resource
 */}}
 {{- define "cloudzero-agent.jobName" -}}
-{{- printf "%s-%s-%s" .Release .Name (. | toYaml | sha256sum) | trunc 61 -}}
+{{- printf "%s-%s-%s" .Release .Name (.Values.jobConfigID | default (. | toYaml | sha256sum)) | trunc 61 -}}
 {{- end }}
 
 {{/*
