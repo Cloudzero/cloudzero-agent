@@ -2,9 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    checksum/config: {{ include "cloudzero-agent.aggregator.configuration" . | sha256sum }}
 {{- if .Values.aggregator.deploymentAnnotations }}
+  annotations:
     {{- toYaml .Values.aggregator.deploymentAnnotations | nindent 4 }}
 {{- end }}
   name: {{ include "cloudzero-agent.aggregator.name" . }}
@@ -18,8 +17,9 @@ spec:
   replicas: {{ .Values.aggregator.replicas }}
   template:
     metadata:
-      {{- with .Values.aggregator.podAnnotations }}
       annotations:
+        checksum/config: {{ include "cloudzero-agent.aggregator.configuration" . | sha256sum }}
+      {{- with .Values.aggregator.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
