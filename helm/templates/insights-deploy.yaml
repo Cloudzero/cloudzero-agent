@@ -2,11 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+{{- if .Values.insightsController.server.deploymentAnnotations }}
   annotations:
-    checksum/config: {{ include "cloudzero-agent.insightsController.configuration" . | sha256sum }}
-    {{- if .Values.insightsController.server.deploymentAnnotations }}
     {{- toYaml .Values.insightsController.server.deploymentAnnotations | nindent 4 }}
-    {{- end }}
+{{- end }}
   name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
@@ -18,8 +17,9 @@ spec:
       {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.insightsController.server.podAnnotations }}
       annotations:
+        checksum/config: {{ include "cloudzero-agent.insightsController.configuration" . | sha256sum }}
+      {{- with .Values.insightsController.server.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
