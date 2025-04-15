@@ -8,13 +8,14 @@ import (
 	"context"
 	net "net/http"
 
+	ping "github.com/prometheus-community/pro-bing"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudzero/cloudzero-agent/pkg/config"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
-	"github.com/cloudzero/cloudzero-agent/pkg/http"
 	"github.com/cloudzero/cloudzero-agent/pkg/logging"
 	"github.com/cloudzero/cloudzero-agent/pkg/status"
+	"github.com/cloudzero/cloudzero-agent/pkg/util"
 )
 
 const DiagnosticEgressAccess = config.DiagnosticEgressAccess
@@ -34,12 +35,24 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
 	// simple unuathenticated check for egress access
-	url := c.cfg.Cloudzero.Host + "/v2/insights"
-	_, err := http.Do(ctx, client, net.MethodGet, nil, nil, url, nil)
-	if err == nil {
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: true})
+	domain, err := util.ExtractHostnameFromURL(c.cfg.Cloudzero.Host)
+	if err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: false, Error: err.Error()})
 		return nil
 	}
-	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: false, Error: err.Error()})
+
+	pinger, err := ping.NewPinger(domain)
+	if err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: false, Error: err.Error()})
+		return nil
+	}
+	pinger.SetNetwork("ip4")
+	pinger.SetPrivileged(false)
+	pinger.Count = 1
+	if err := pinger.RunWithContext(ctx); err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: false, Error: err.Error()})
+		return nil
+	}
+	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticEgressAccess, Passing: true})
 	return nil
 }

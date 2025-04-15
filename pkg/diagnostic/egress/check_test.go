@@ -4,7 +4,6 @@ package egress_test
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,89 +11,68 @@ import (
 	"github.com/cloudzero/cloudzero-agent/pkg/config"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/egress"
 	"github.com/cloudzero/cloudzero-agent/pkg/status"
-	"github.com/cloudzero/cloudzero-agent/test"
 )
 
-const (
-	mockURL = "http://example.com"
-)
-
-func makeReport() status.Accessor {
-	return status.NewAccessor(&status.ClusterStatus{})
-}
-
-func TestChecker_CheckOK(t *testing.T) {
-	cfg := &config.Settings{
-		Cloudzero: config.Cloudzero{
-			Host:       mockURL,
-			Credential: "your-api-key",
+func TestChecker_CheckPing(t *testing.T) {
+	tests := []struct {
+		name          string
+		host          string
+		expectPassing bool
+		expectError   bool
+	}{
+		{
+			name:          "PingSuccess",
+			host:          "https://localhost",
+			expectPassing: true,
+			expectError:   false,
+		},
+		{
+			name:          "InvalidDomain",
+			host:          "invalid-url",
+			expectPassing: false,
+			expectError:   true,
+		},
+		{
+			name:          "PingFailure",
+			host:          "http://nonexistent.domain",
+			expectPassing: false,
+			expectError:   true,
+		},
+		{
+			name:          "NoHost",
+			host:          "",
+			expectPassing: false,
+			expectError:   true,
 		},
 	}
-
-	provider := egress.NewProvider(context.Background(), cfg)
-
-	mock := test.NewHTTPMock()
-	mock.Expect(http.MethodGet, "Hello World", http.StatusOK, nil)
-	client := mock.HTTPClient()
-
-	accessor := makeReport()
-
-	err := provider.Check(context.Background(), client, accessor)
-	assert.NoError(t, err)
-
-	accessor.ReadFromReport(func(s *status.ClusterStatus) {
-		assert.Len(t, s.Checks, 1)
-		assert.True(t, s.Checks[0].Passing)
-		assert.Empty(t, s.Checks[0].Error)
-	})
-}
-
-func TestChecker_CheckBadKey(t *testing.T) {
-	cfg := &config.Settings{
-		Cloudzero: config.Cloudzero{
-			Host:       mockURL,
-			Credential: "your-api-key",
-		},
+	if testing.Short() {
+		// RE: https://github.com/actions/runner-images/issues/1519#issuecomment-683790054
+		t.Skip("Skipping test in short mode as ping is not supported in GitHub Actions CI")
 	}
 
-	provider := egress.NewProvider(context.Background(), cfg)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Settings{
+				Cloudzero: config.Cloudzero{
+					Host: tt.host,
+				},
+			}
 
-	mock := test.NewHTTPMock()
-	mock.Expect(http.MethodGet, "", http.StatusUnauthorized, nil)
-	client := mock.HTTPClient()
+			provider := egress.NewProvider(context.Background(), cfg)
 
-	accessor := makeReport()
-	err := provider.Check(context.Background(), client, accessor)
-	assert.NoError(t, err)
+			accessor := status.NewAccessor(&status.ClusterStatus{})
+			err := provider.Check(context.Background(), nil, accessor)
+			assert.NoError(t, err)
 
-	accessor.ReadFromReport(func(s *status.ClusterStatus) {
-		assert.Len(t, s.Checks, 1)
-		assert.False(t, s.Checks[0].Passing)
-		assert.NotEmpty(t, s.Checks[0].Error)
-	})
-}
-
-func TestChecker_CheckErrorCondition(t *testing.T) {
-	cfg := &config.Settings{
-		Cloudzero: config.Cloudzero{
-			Host:       mockURL,
-			Credential: "your-api-key",
-		},
+			accessor.ReadFromReport(func(s *status.ClusterStatus) {
+				assert.Len(t, s.Checks, 1)
+				assert.Equal(t, tt.expectPassing, s.Checks[0].Passing)
+				if tt.expectError {
+					assert.NotEmpty(t, s.Checks[0].Error)
+				} else {
+					assert.Empty(t, s.Checks[0].Error)
+				}
+			})
+		})
 	}
-
-	provider := egress.NewProvider(context.Background(), cfg)
-
-	mock := test.NewHTTPMock()
-	mock.Expect(http.MethodGet, "", http.StatusBadGateway, nil)
-	client := mock.HTTPClient()
-
-	accessor := makeReport()
-	err := provider.Check(context.Background(), client, accessor)
-	assert.NoError(t, err)
-	accessor.ReadFromReport(func(s *status.ClusterStatus) {
-		assert.Len(t, s.Checks, 1)
-		assert.Equal(t, egress.DiagnosticEgressAccess, s.Checks[0].Name)
-		assert.False(t, s.Checks[0].Passing)
-		assert.NotEmpty(t, s.Checks[0].Error)
-	})
 }
