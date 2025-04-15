@@ -94,10 +94,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
-      {{- with .Values.aggregator.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations) | nindent 6 }}
   
     {{- with .Values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
