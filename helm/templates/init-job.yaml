@@ -72,10 +72,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
-      {{- with (.Values.initBackfillJob.tolerations | default .Values.insightsController.server.tolerations) }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initBackfillJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
 {{- end }}
 {{- if and .Values.insightsController.tls.secret.create (not .Values.insightsController.tls.useCertManager) .Values.initCertJob.enabled (not .Values.insightsController.tls.crt) (not .Values.insightsController.tls.key) }}
 ---
@@ -100,10 +97,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
-      {{- with (.Values.initCertJob.tolerations | default .Values.insightsController.server.tolerations) }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initCertJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
       serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}

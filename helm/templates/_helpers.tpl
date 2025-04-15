@@ -668,3 +668,13 @@ affinity:
 {{- $affinity | toYaml | nindent 2 -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Generate tolerations sections
+*/}}
+{{- define "cloudzero-agent.generateTolerations" -}}
+{{- if . -}}
+tolerations:
+{{- . | toYaml | nindent 2 }}
+{{- end -}}
+{{- end -}}

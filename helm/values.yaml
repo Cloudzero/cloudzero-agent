@@ -27,7 +27,9 @@ defaults:
   # Labels to be added to all resources.
   labels: {}
   annotations: {}
+  # Affinity settings to be added to all resources.
   affinity: {}
+  # Tolerations to be added to all resources.
   tolerations: []
   # If set, this priority class name will be used for all deployments and jobs.
   priorityClassName:
@@ -99,6 +101,7 @@ serverConfig:
 # -- The following settings are for the init-backfill-job, which is used to backfill data from the cluster to CloudZero.
 initBackfillJob:
   annotations: {}
+  tolerations: []
   # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
   # imagePullSecrets: []
   image:
@@ -122,6 +125,7 @@ initCertJob:
   # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
   # imagePullSecrets: []
   annotations: {}
+  tolerations: []
   image:
     repository:
     pullPolicy:
@@ -211,6 +215,7 @@ server:
   emptyDir:
     sizeLimit: 8Gi
   affinity: {}
+  tolerations: []
 
 insightsController:
   enabled: true
