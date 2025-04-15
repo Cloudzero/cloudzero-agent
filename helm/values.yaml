@@ -26,11 +26,14 @@ defaults:
     config: {}
   # Labels to be added to all resources.
   labels: {}
+  # Annotations to be added to all resources.
   annotations: {}
   # Affinity settings to be added to all resources.
   affinity: {}
   # Tolerations to be added to all resources.
   tolerations: []
+  # Node Selector to be added to all resources.
+  nodeSelector: {}
   # If set, this priority class name will be used for all deployments and jobs.
   priorityClassName:
 
@@ -447,3 +450,6 @@ aggregator:
       limits:
         memory: "1024Mi"
         cpu: "2000m"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

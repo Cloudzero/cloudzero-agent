@@ -678,3 +678,14 @@ tolerations:
 {{- . | toYaml | nindent 2 }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Generate nodeSelector sections
+*/}}
+{{- define "cloudzero-agent.generateNodeSelector" -}}
+{{- $nodeSelector := .nodeSelector | default .default -}}
+{{if $nodeSelector }}
+nodeSelector:
+{{- $nodeSelector | toYaml | nindent 2 -}}
+{{- end -}}
+{{- end -}}
