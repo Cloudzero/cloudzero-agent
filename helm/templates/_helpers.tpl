@@ -74,13 +74,13 @@ app.kubernetes.io/component: {{ .Values.server.name }}
 Create unified labels for prometheus components
 */}}
 {{- define "cloudzero-agent.common.metaLabels" -}}
-app.kubernetes.io/version: {{ .Chart.AppVersion }}
-helm.sh/chart: {{ include "cloudzero-agent.chart" . }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: {{ include "cloudzero-agent.name" . }}
-{{- with .Values.commonMetaLabels}}
-{{ toYaml . }}
-{{- end }}
+{{- $labels := dict
+    "app.kubernetes.io/version" .Chart.AppVersion
+    "helm.sh/chart" (include "cloudzero-agent.chart" .)
+    "app.kubernetes.io/managed-by" .Release.Service
+    "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .)
+-}}
+{{- (merge $labels .Values.defaults.labels .Values.commonMetaLabels) | toYaml -}}
 {{- end -}}
 
 {{- define "cloudzero-agent.server.labels" -}}
@@ -627,4 +627,30 @@ dnsPolicy: {{ $dnsPolicy }}
 dnsConfig:
 {{ $dnsConfig | toYaml | indent 2 }}
 {{ end -}}
+{{- end -}}
+
+{{/*
+Generate labels for a component
+*/}}
+{{- define "cloudzero-agent.generateLabels" -}}
+{{- $labels := dict
+    "app.kubernetes.io/version" .globals.Chart.AppVersion
+    "helm.sh/chart" (include "cloudzero-agent.chart" .globals)
+    "app.kubernetes.io/managed-by" .globals.Release.Service
+    "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .globals)
+-}}
+{{- if len $labels -}}
+labels:
+{{- (merge $labels (.labels | default (dict)) .globals.Values.defaults.labels .globals.Values.commonMetaLabels) | toYaml | nindent 2 -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Generate annotations
+*/}}
+{{- define "cloudzero-agent.generateAnnotations" -}}
+{{- if . -}}
+annotations:
+{{- . | toYaml | nindent 2 -}}
+{{- end -}}
 {{- end -}}

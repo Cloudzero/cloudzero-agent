@@ -11,7 +11,11 @@ metadata:
   namespace: {{ $.Release.Namespace }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" $ | nindent 4 }}
-  {{- include "cloudzero-agent.webhooks.annotations" $ | nindent 2 }}
+  {{- $certManagerAnnotations := dict -}}
+  {{- if $.Values.insightsController.tls.useCertManager -}}
+  {{- $certManagerAnnotations = dict "cert-manager.io/inject-ca-from" ($.Values.insightsController.webhooks.caInjection | default (printf "%s/%s" $.Release.Namespace (include "cloudzero-agent.certificateName" $))) -}}
+  {{- end -}}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $.Values.defaults.annotations $certManagerAnnotations) | nindent 2 }}
 webhooks:
   - name: {{ include "cloudzero-agent.validatingWebhookName" $ }}
     namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector | nindent 6 }}

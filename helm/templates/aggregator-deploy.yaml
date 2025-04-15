@@ -1,12 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-{{- if .Values.aggregator.deploymentAnnotations }}
-  annotations:
-    {{- toYaml .Values.aggregator.deploymentAnnotations | nindent 4 }}
-{{- end }}
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
 spec:
@@ -16,16 +13,8 @@ spec:
   replicas: {{ .Values.aggregator.replicas }}
   template:
     metadata:
-      annotations:
-        checksum/config: {{ include "cloudzero-agent.aggregator.configuration" . | sha256sum }}
-      {{- with .Values.aggregator.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      labels:
-        {{- include "cloudzero-agent.aggregator.labels" . | nindent 8 }}
-        {{- with .Values.aggregator.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations (dict "checksum/config" (include "cloudzero-agent.aggregator.configuration" . | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)) | nindent 6 }}
     spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}

@@ -2,6 +2,7 @@
 apiVersion: {{ template "cloudzero-agent.rbac.apiVersion" . }}
 kind: ClusterRole
 metadata:
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.clusterRoleName" . }}
@@ -67,6 +68,7 @@ kind: ClusterRole
 metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   name: {{ include "cloudzero-agent.initCertJob.clusterRoleName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
 rules:

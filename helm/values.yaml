@@ -24,6 +24,11 @@ defaults:
   dns:
     policy:
     config: {}
+  # Labels to be added to all resources.
+  labels: {}
+  annotations: {}
+  affinity: {}
+  tolerations: []
   # If set, this priority class name will be used for all deployments and jobs.
   priorityClassName:
 
@@ -93,6 +98,7 @@ serverConfig:
 
 # -- The following settings are for the init-backfill-job, which is used to backfill data from the cluster to CloudZero.
 initBackfillJob:
+  annotations: {}
   # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
   # imagePullSecrets: []
   image:
@@ -115,6 +121,7 @@ initCertJob:
   enabled: true
   # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
   # imagePullSecrets: []
+  annotations: {}
   image:
     repository:
     pullPolicy:
@@ -199,6 +206,7 @@ server:
     size: 8Gi
     accessModes:
       - ReadWriteOnce
+    annotations: {}
   # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
@@ -282,6 +290,8 @@ insightsController:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    deploymentAnnotations: {}
+    podAnnotations: {}
   volumeMounts: []
   volumes: []
   resources: {}

@@ -3,15 +3,12 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  {{- if .Values.server.persistentVolume.annotations }}
-  annotations:
-{{ toYaml .Values.server.persistentVolume.annotations | indent 4 }}
-  {{- end }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
     {{- with .Values.server.persistentVolume.labels }}
        {{- toYaml . | nindent 4 }}
     {{- end }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.server.persistentVolume.annotations) | nindent 2 }}
   name: {{ template "cloudzero-agent.server.fullname" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
 spec:
