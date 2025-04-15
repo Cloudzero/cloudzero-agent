@@ -134,7 +134,9 @@ spec:
               caBundles=()
               {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
               {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
-              {{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
+              {{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
+              {{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+              {{- if or $labelsEnabled $annotationEnabled }}
               wh_{{ $configType }}_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
               caBundles+=("${wh_{{ $configType }}_caBundle:-missing }")
               {{- end }}
@@ -194,7 +196,9 @@ spec:
 
               {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
               {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
-              {{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
+              {{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
+              {{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+              {{- if or $labelsEnabled $annotationEnabled }}
               # Patch the ValidatingWebhookConfiguration {{ $webhookName }} with the caBundle
               kubectl patch validatingwebhookconfiguration  {{ $webhookName }} \
                 --type='json' \
