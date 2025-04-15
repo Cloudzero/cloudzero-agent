@@ -210,7 +210,7 @@ metadata:
   {{- end }}
 data:
   server-config.yaml: |-
-    {{ include "cloudzero-agent.insightsController.configuration" . | nindent 4 }}
+{{- include "cloudzero-agent.insightsController.configuration" . | nindent 4 -}}
 {{- end }}
 ---
 apiVersion: v1
@@ -220,4 +220,4 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   config.yml: |-
-    {{ include "cloudzero-agent.aggregator.configuration" . | nindent 4 }}
+{{- include "cloudzero-agent.aggregator.configuration" . | nindent 4 -}}

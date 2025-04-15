@@ -7,34 +7,34 @@ region: {{ .Values.region }}
 cluster_name: {{ .Values.clusterName }}
 destination: {{ include "cloudzero-agent.metricsDestination" . }}
 logging:
-    level: {{ .Values.insightsController.server.logging.level }}
+  level: {{ .Values.insightsController.server.logging.level }}
 remote_write:
-    send_interval: {{ .Values.insightsController.server.send_interval }}
-    max_bytes_per_send: 500000
-    send_timeout: {{ .Values.insightsController.server.send_timeout }}
-    max_retries: 3
+  send_interval: {{ .Values.insightsController.server.send_interval }}
+  max_bytes_per_send: 500000
+  send_timeout: {{ .Values.insightsController.server.send_timeout }}
+  max_retries: 3
 k8s_client:
-    timeout: 30s
+  timeout: 30s
 database:
-    retention_time: 24h
-    cleanup_interval: 3h
-    batch_update_size: 500
+  retention_time: 24h
+  cleanup_interval: 3h
+  batch_update_size: 500
 api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
 {{- with .Values.insightsController }}
 certificate:
-    key: {{ .tls.mountPath }}/tls.key
-    cert: {{ .tls.mountPath }}/tls.crt
+  key: {{ .tls.mountPath }}/tls.key
+  cert: {{ .tls.mountPath }}/tls.crt
 server:
-    port: {{ .server.port }}
-    read_timeout: {{ .server.read_timeout }}
-    write_timeout: {{ .server.write_timeout }}
-    idle_timeout: {{ .server.idle_timeout }}
+  port: {{ .server.port }}
+  read_timeout: {{ .server.read_timeout }}
+  write_timeout: {{ .server.write_timeout }}
+  idle_timeout: {{ .server.idle_timeout }}
 {{- end }}
 filters:
-    labels:
-    {{- .Values.insightsController.labels | toYaml | nindent 8 }}
-    annotations:
-    {{- .Values.insightsController.annotations | toYaml | nindent 8 }}
+  labels:
+  {{- .Values.insightsController.labels | toYaml | nindent 4 }}
+  annotations:
+  {{- .Values.insightsController.annotations | toYaml | nindent 4 }}
 {{- end}}
 
 
@@ -47,10 +47,10 @@ region: "{{ .Values.region }}"
 cluster_name: "{{ .Values.clusterName }}"
 
 metrics:
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 6 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 6 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 6 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 6 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 2 }}
 server:
   mode: http
   port: {{ .Values.aggregator.collector.port }}
