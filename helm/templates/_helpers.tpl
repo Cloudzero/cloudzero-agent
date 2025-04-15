@@ -608,3 +608,23 @@ imagePullSecrets:
 {{ toYaml $pullSecrets | indent 2 }}
 {{- end }}
 {{- end -}}
+
+{{/* Generate priority class name */}}
+{{- define "cloudzero-agent.generatePriorityClassName" -}}
+{{- if . -}}
+priorityClassName: {{ . }}
+{{- end -}}
+{{- end -}}
+
+{{/* Generate DNS info */}}
+{{- define "cloudzero-agent.generateDNSInfo" -}}
+{{- $dnsPolicy := .defaults.policy -}}
+{{- $dnsConfig := .defaults.config -}}
+{{- if $dnsPolicy -}}
+dnsPolicy: {{ $dnsPolicy }}
+{{- end -}}
+{{- if $dnsConfig }}
+dnsConfig:
+{{ $dnsConfig | toYaml | indent 2 }}
+{{ end -}}
+{{- end -}}

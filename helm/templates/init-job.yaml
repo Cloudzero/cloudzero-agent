@@ -19,11 +19,9 @@ spec:
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" . | nindent 6 }}
-      dnsPolicy: {{ .Values.insightsController.server.dnsPolicy }}
-      {{- if .Values.insightsController.server.dnsConfig }}
-      dnsConfig: {{ toYaml .Values.insightsController.server.dnsConfig | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
       containers:
         - name: init-scrape
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}
@@ -112,11 +110,9 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
-      dnsPolicy: {{ .Values.initCertJob.dnsPolicy }}
-      {{- if .Values.initCertJob.dnsConfig }}
-      dnsConfig: {{ toYaml .Values.initCertJob.dnsConfig | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
       containers:
         - name: init-cert
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 10 }}
