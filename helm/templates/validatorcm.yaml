@@ -5,10 +5,7 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.validatorConfigMapName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- with .Values.prometheusConfig.configMapAnnotations }}
-  annotations:
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   validator.yml: |-
     versions:

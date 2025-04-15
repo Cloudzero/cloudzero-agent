@@ -4,6 +4,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   name: {{ include "cloudzero-agent.clusterRoleName" . }}
 subjects:
   - kind: ServiceAccount
@@ -21,6 +22,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   name: {{ include "cloudzero-agent.initCertJob.clusterRoleBindingName" . }}
 subjects:
   - kind: ServiceAccount

@@ -6,7 +6,7 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.initBackfillJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.initBackfillJob.annotations" . | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.initBackfillJob.annotations) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
@@ -16,6 +16,7 @@ spec:
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "cloudzero-agent.insightsController.initBackfillJob.matchLabels" . | nindent 8 }}
+      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure
@@ -86,7 +87,7 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.initCertJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.initCertJob.annotations" . | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.initCertJob.annotations) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
@@ -95,6 +96,7 @@ spec:
       name: {{ include "cloudzero-agent.initCertJobName" . }}
       labels:
         {{- include "cloudzero-agent.insightsController.initCertJob.matchLabels" . | nindent 8 }}
+      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       {{- with (.Values.initCertJob.nodeSelector | default .Values.insightsController.server.nodeSelector) }}
       nodeSelector:
