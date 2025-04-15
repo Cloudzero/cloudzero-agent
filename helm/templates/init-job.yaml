@@ -71,10 +71,7 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with (.Values.initBackfillJob.affinity | default .Values.insightsController.server.affinity) }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
       {{- with (.Values.initBackfillJob.tolerations | default .Values.insightsController.server.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
@@ -102,10 +99,7 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with (.Values.initCertJob.affinity | default .Values.insightsController.server.affinity) }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
       {{- with (.Values.initCertJob.tolerations | default .Values.insightsController.server.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
