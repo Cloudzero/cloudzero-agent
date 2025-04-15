@@ -39,6 +39,11 @@ func main() {
 
 	clock := &utils.Clock{}
 
+	settings, err := config.NewSettings(configFiles...)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load settings")
+	}
+
 	log.Info().
 		Str("app_name", build.AppName).
 		Str("version", build.GetVersion()).
@@ -49,16 +54,11 @@ func main() {
 		Str("copyright", build.Copyright).
 		Str("author_email", build.AuthorEmail).
 		Str("charts_repo", build.ChartsRepo).
-		Str("platform_endpoint", build.PlatformEndpoint).
+		Str("platform_endpoint", settings.Destination).
 		Interface("config_files", configFiles).
 		Msg("Starting CloudZero Insights Controller")
 	if len(configFiles) == 0 {
 		log.Fatal().Msg("No configuration files provided")
-	}
-
-	settings, err := config.NewSettings(configFiles...)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load settings")
 	}
 
 	// create a logger
