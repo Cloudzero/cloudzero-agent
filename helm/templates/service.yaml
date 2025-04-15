@@ -4,6 +4,7 @@ metadata:
   name: {{ include "cloudzero-agent.serviceName" . }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
   namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP

@@ -5,6 +5,8 @@ kind: Issuer
 metadata:
   name: {{ include "cloudzero-agent.issuerName" . }}
   namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" .Values.commonMetaLabels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
 spec:
   {{- if .Values.insightsController.tls.issuerSpec }}
   {{- toYaml .Values.insightsController.tls.issuerSpec | nindent 2 }}
