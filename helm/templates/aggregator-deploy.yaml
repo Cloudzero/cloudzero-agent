@@ -2,8 +2,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-{{- if .Values.aggregator.deploymentAnnotations }}
   annotations:
+    checksum/config: {{ include "cloudzero-agent.insightsController.configuration" . | sha256sum }}
+{{- if .Values.aggregator.deploymentAnnotations }}
     {{- toYaml .Values.aggregator.deploymentAnnotations | nindent 4 }}
 {{- end }}
   name: {{ include "cloudzero-agent.aggregator.name" . }}
