@@ -1,5 +1,5 @@
 module "karpenter" {
-  source = "terraform-aws-modules/eks/aws//modules/karpenter"
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 20.35"
 
   cluster_name          = module.eks.cluster_name
@@ -19,7 +19,7 @@ module "karpenter" {
 }
 
 module "karpenter_disabled" {
-  source = "terraform-aws-modules/eks/aws//modules/karpenter"
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 20.35"
 
   create = false

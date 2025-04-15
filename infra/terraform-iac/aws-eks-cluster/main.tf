@@ -8,9 +8,9 @@ terraform {
   }
   # We will likely want bucket logging and tight permissions added to this bucket.
   backend "s3" {
-    bucket         = "cz-eng-research-team-cirrus-terraform-state"
-    key            = "tfstate/cloudzero-agent/terraform/aws-eks-cluster/terraform.tfstate"
-    region         = "us-east-1"
-    use_lockfile   = "true"
+    bucket       = "cz-eng-research-team-cirrus-terraform-state"
+    key          = "tfstate/cloudzero-agent/terraform/aws-eks-cluster/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = "true"
   }
 }
