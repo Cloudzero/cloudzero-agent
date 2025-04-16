@@ -330,7 +330,6 @@ configmapReload:
 # ensuring that there is no data loss in the event of any loss of communication with the CloudZero API,
 # even when a misconfiguration (such as an incorrect API key) prevents it.
 aggregator:
-  enabled: false
   replicas: 1
   logging:
     # Logging level that will be posted to stdout.

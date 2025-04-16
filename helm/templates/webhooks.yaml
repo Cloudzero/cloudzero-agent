@@ -1,6 +1,8 @@
 {{- if .Values.insightsController.enabled }}
 {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
-{{- if or (index $.Values.insightsController.labels.resources $configType) (index $.Values.insightsController.annotations.resources $configType) }}
+{{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
+{{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+{{- if or $labelsEnabled $annotationEnabled }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
