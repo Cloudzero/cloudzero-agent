@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -166,8 +167,8 @@ func runDiagnostics(c *cli.Context, stage string) error {
 	}
 
 	report.ReadFromReport(func(cs *status.ClusterStatus) {
+		printNonEmptyClusterStatus(cs)
 		if b, err := protojson.Marshal(cs); err == nil {
-			fmt.Println(string(b))
 			if cfg.Logging.Location != "" {
 				logrus.WithField("report", string(b)).Info("reporting status")
 			}
@@ -181,4 +182,27 @@ func runDiagnostics(c *cli.Context, stage string) error {
 		}
 	}
 	return nil
+}
+
+func printNonEmptyClusterStatus(cs *status.ClusterStatus) {
+	if cs == nil || len(cs.Checks) == 0 {
+		return
+	}
+
+	printClusterStatusHeader()
+	for _, check := range cs.Checks {
+		printClusterStatusRow(check)
+	}
+}
+
+func printClusterStatusHeader() {
+	fmt.Println("Checks:")
+	fmt.Printf("%-30s %-10s %-50s\n", "Name", "Passing", "Error")
+	fmt.Printf("%-30s %-10s %-50s\n", strings.Repeat("-", 30), strings.Repeat("-", 10), strings.Repeat("-", 50))
+}
+
+func printClusterStatusRow(check *status.StatusCheck) {
+	if check.Name != "" || check.Passing || check.Error != "" {
+		fmt.Printf("%-30s %-10v %-50s\n", check.Name, check.Passing, check.Error)
+	}
 }
