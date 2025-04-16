@@ -249,7 +249,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	}
 
 	ts := h.formatMetrics(batch)
-	log.Ctx(h.ctx).Debug().
+	log.Ctx(h.ctx).Info().
 		Int("record_count", len(ts)).
 		Msg("Pushing records to remote write endpoint")
 
