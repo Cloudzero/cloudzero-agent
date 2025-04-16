@@ -362,10 +362,7 @@ We'll now use the synced secret in deploying the CloudZero agent.
          "state": "STATUS_TYPE_INIT_OK",
          "chartVersion": "0.0.0-dev",
          "validatorVersion": "cloudzero-agent-validator.x.y.z",
-         "checks": [
-           { "name": "egress_reachable", "passing": true },
-           { "name": "api_key_valid", "passing": true }
-         ]
+         "checks": [{ "name": "api_key_valid", "passing": true }]
        }
        ```
 

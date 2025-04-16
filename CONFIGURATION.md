@@ -73,7 +73,6 @@ The following table describes the available checkers:
 | ------------------------------ | ----------------------------------------------------------------------------------------- |
 | `api_key_valid`                | Checks the API Key is valid                                                               |
 | `k8s_version`                  | Checks the Kubernetes compatability                                                       |
-| `egress_reachable`             | Checks pod can communicate with the Cloudzero API                                         |
 | `kube_state_metrics_reachable` | Checks the kubernetes state metrics service is reachable                                  |
 | `scrape_cfg`                   | Checks the prometheus configurations exist and contain the necessary scrape configuration |
 
