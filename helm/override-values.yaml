@@ -1,0 +1,45 @@
+cloudAccountId: "975482786146"
+clusterName: aws-cirrus-jb-cluster
+region: us-east-2
+existingSecretName: existing-dev-api-key
+host: dev-api.cloudzero.com
+
+commonMetaLabels:
+  engr.os.com/component: cloudzero
+  engr.os.com/initiative: odc
+  engr.os.com/ring: ring
+  engr.os.com/service: cloudzero
+  engr.os.com/stamp: stamp
+
+# Override the image tag
+agent:
+  image:
+    tag: dev-736a1e7e8ab60f6ebc09aabd6799d36b2443f4b6
+
+aggregator:
+  enabled: true
+
+insightsController:
+  annotations:
+    enabled: false
+    patterns:
+    - .*
+  enabled: true
+  labels:
+    enabled: true
+    patterns:
+    - .*
+    resources:
+      deployments: true
+      namespaces: true
+      pods: true
+  tls:
+    caBundle: ""
+    crt: ""
+    enabled: true
+    key: ""
+    mountPath: /etc/certs
+    secret:
+      create: true
+      name: ""
+    useCertManager: false

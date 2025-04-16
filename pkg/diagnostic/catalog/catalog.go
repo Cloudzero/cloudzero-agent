@@ -11,7 +11,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent/pkg/config"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/cz"
-	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/egress"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/k8s"
 	"github.com/cloudzero/cloudzero-agent/pkg/diagnostic/kms"
 	promcfg "github.com/cloudzero/cloudzero-agent/pkg/diagnostic/prom/config"
@@ -45,7 +44,6 @@ func NewCatalog(ctx context.Context, c *config.Settings) Registry {
 	}
 	// Register checks
 	r.add(config.DiagnosticAPIKey, false, cz.NewProvider(ctx, c))
-	r.add(config.DiagnosticEgressAccess, false, egress.NewProvider(ctx, c))
 	r.add(config.DiagnosticK8sVersion, false, k8s.NewProvider(ctx, c))
 	r.add(config.DiagnosticKMS, false, kms.NewProvider(ctx, c))
 	r.add(config.DiagnosticScrapeConfig, false, promcfg.NewProvider(ctx, c))

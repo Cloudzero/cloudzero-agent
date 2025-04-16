@@ -47,7 +47,6 @@ data:
         - name: pre-start
           enforce: true
           checks:
-            - egress_reachable
             - api_key_valid
         - name: post-start
           enforce: false
