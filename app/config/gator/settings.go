@@ -5,6 +5,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -13,9 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ccoveille/go-safecast"
 	"github.com/cloudzero/cloudzero-agent/app/domain/filter"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -62,7 +66,8 @@ type Database struct {
 	CompressionLevel int           `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
 	MaxInterval      time.Duration `yaml:"max_interval" default:"10m" env:"MAX_INTERVAL" env-description:"maximum interval to wait before flushing metrics"`
 
-	PurgeRules PurgeRules `yaml:"purge_rules"`
+	PurgeRules       PurgeRules `yaml:"purge_rules"`
+	AvailableStorage string     `yaml:"available_storage" default:"" env:"DATABASE_AVAILABLE_STORAGE" env-description:"total size alloted to the gator to store metric files"`
 }
 
 type PurgeRules struct {
@@ -161,6 +166,13 @@ func (d *Database) Validate() error {
 	}
 	if _, err := os.Stat(d.StoragePath); os.IsNotExist(err) {
 		return errors.Wrap(err, "database storage path does not exist")
+	}
+
+	// validate the passed sizeLimit is valid if it is not empty
+	if d.AvailableStorage != "" {
+		if _, err := resource.ParseQuantity(d.AvailableStorage); err != nil {
+			return fmt.Errorf("failed to parse the size_limit quantity: %w", err)
+		}
 	}
 
 	return nil
@@ -279,6 +291,24 @@ func (s *Settings) GetRemoteAPIBase() (*url.URL, error) {
 	}
 	u.Path += "/v1/container-metrics"
 	return u, nil
+}
+
+// GetAvailableSizeBytes parses the config file in real time and attempts
+// to get the available size in bytes of the storage volume.
+// If the value fails to be parsed, it will return 0.
+func (s *Settings) GetAvailableSizeBytes() (uint64, error) {
+	if s.Database.AvailableStorage == "" {
+		return 0, nil
+	}
+
+	quantity, err := resource.ParseQuantity(s.Database.AvailableStorage)
+	if err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Str("size_limit", s.Database.AvailableStorage).Msg("failed to parse the size_limit, using 0 as the default value (all available space)")
+		return 0, nil
+	}
+
+	// value will give size in bytes
+	return safecast.MustConvert[uint64](quantity.Value()), nil
 }
 
 func isValidURL(uri string) bool {
