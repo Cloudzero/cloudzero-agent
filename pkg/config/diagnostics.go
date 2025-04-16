@@ -11,7 +11,6 @@ import (
 const (
 	DiagnosticAPIKey            string = "api_key_valid" //nolint:gosec // false positive for G101: Potential hardcoded credentials
 	DiagnosticK8sVersion        string = "k8s_version"
-	DiagnosticEgressAccess      string = "egress_reachable"
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
 	DiagnosticPrometheusVersion string = "prometheus_version"
 	DiagnosticScrapeConfig      string = "scrape_cfg"
@@ -28,7 +27,7 @@ const (
 func IsValidDiagnostic(d string) bool {
 	d = strings.ToLower(strings.TrimSpace(d))
 	switch d {
-	case DiagnosticAPIKey, DiagnosticK8sVersion, DiagnosticEgressAccess,
+	case DiagnosticAPIKey, DiagnosticK8sVersion,
 		DiagnosticKMS, DiagnosticScrapeConfig,
 		DiagnosticPrometheusVersion:
 		return true
