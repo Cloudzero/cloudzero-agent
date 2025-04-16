@@ -111,7 +111,7 @@ func TestShipper_Unit_Disk_SetsMetrics(t *testing.T) {
 	require.NoError(t, err, "failed to create metric shipper")
 
 	// get disk usage
-	_, err = metricShipper.GetDiskUsage(context.Background())
+	_, err = metricShipper.GetDiskUsage(context.Background(), 0)
 	require.NoError(t, err, "failed to get disk usage")
 
 	// fetch metrics from the mock handler
@@ -165,7 +165,7 @@ func TestShipper_Unit_Disk_ErrorHandling(t *testing.T) {
 			metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
 			require.NoError(t, err, "failed to create metric shipper")
 
-			_, err = metricShipper.GetDiskUsage(context.Background())
+			_, err = metricShipper.GetDiskUsage(context.Background(), 0)
 			require.ErrorContains(t, err, tt.expectedError)
 		})
 	}
