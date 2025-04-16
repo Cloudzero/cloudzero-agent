@@ -155,6 +155,9 @@ spec:
         - name: aggregator-persistent-storage
         {{- if .Values.aggregator.database.emptyDir.enabled }}
           emptyDir:
+          {{- if .Values.aggregator.database.emptyDir.sizeLimit }}
             sizeLimit: {{ .Values.aggregator.database.emptyDir.sizeLimit }}
+          {{- else}}
+            {}
         {{- end }}
 {{- end }}

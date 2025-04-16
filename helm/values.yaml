@@ -389,7 +389,7 @@ aggregator:
       percent: 20
     emptyDir:
       enabled: true
-      sizeLimit: 20Gi
+      sizeLimit: ""
   collector:
     port: 8080
     resources:

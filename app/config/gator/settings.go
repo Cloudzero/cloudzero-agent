@@ -67,7 +67,7 @@ type Database struct {
 	MaxInterval      time.Duration `yaml:"max_interval" default:"10m" env:"MAX_INTERVAL" env-description:"maximum interval to wait before flushing metrics"`
 
 	PurgeRules       PurgeRules `yaml:"purge_rules"`
-	AvailableStorage string     `yaml:"available_storage" default:"20Gi" env:"DATABASE_AVAILABLE_STORAGE" env-description:"total size alloted to the gator to store metric files"`
+	AvailableStorage string     `yaml:"available_storage" default:"" env:"DATABASE_AVAILABLE_STORAGE" env-description:"total size alloted to the gator to store metric files"`
 }
 
 type PurgeRules struct {
