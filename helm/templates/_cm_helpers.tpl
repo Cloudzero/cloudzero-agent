@@ -66,6 +66,9 @@ database:
     metrics_older_than: {{ .Values.aggregator.database.purgeRules.metricsOlderThan }}
     lazy: {{ .Values.aggregator.database.purgeRules.lazy }}
     percent: {{ .Values.aggregator.database.purgeRules.percent }}
+  {{- if .Values.aggregator.database.emptyDir.enabled }}
+  available_storage: {{ .Values.aggregator.database.emptyDir.sizeLimit }}
+  {{- end}}
 cloudzero:
   api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
   send_interval: {{ .Values.aggregator.cloudzero.sendInterval }}
