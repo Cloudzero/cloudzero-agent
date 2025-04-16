@@ -20,8 +20,9 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 	"github.com/rs/zerolog/log"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/shirou/gopsutil/v4/disk"
 )
 
 const (
@@ -62,9 +63,6 @@ type DiskStore struct {
 	maxInterval       time.Duration
 	ticker            *time.Ticker
 	mu                sync.Mutex
-
-	// internal metadata for the state of the disk store
-	stat *syscall.Statfs_t
 }
 
 // Just to make sure DiskStore implements the AppendableFiles interface
@@ -345,43 +343,46 @@ func (d *DiskStore) readCompressedJSONFile(filePath string) ([]types.Metric, err
 
 // GetUsage gathers disk usage stats using syscall.Statfs.
 // paths will be used as `filepath.Join(paths...)`
-func (d *DiskStore) GetUsage(paths ...string) (*types.StoreUsage, error) {
+func (d *DiskStore) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
 	fullpath := filepath.Join(paths...)
 	fullpath = filepath.Join(d.dirPath, fullpath)
+
+	// run the syscall ourselves
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(fullpath, &stat); err != nil {
 		return nil, err
 	}
 
-	// basic stats
-	total := safecast.MustConvert[uint64](stat.Blocks) * safecast.MustConvert[uint64](stat.Bsize)
-	available := safecast.MustConvert[uint64](stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
-	used := total - available
-	var percentUsed float64
-	if total > 0 {
-		percentUsed = (float64(used) / float64(total)) * 100
+	// use the package for more consistent math when we can
+	diskUsage, err := disk.Usage(fullpath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the disk usage: %w", err)
 	}
 
-	// This is USUALLY true
-	reserved := safecast.MustConvert[uint64](stat.Bfree-stat.Bavail) * safecast.MustConvert[uint64](stat.Bsize)
+	usage := &types.StoreUsage{
+		Total:       diskUsage.Total,
+		Used:        diskUsage.Used,
+		Available:   diskUsage.Free,
+		PercentUsed: diskUsage.UsedPercent,
+		BlockSize:   safecast.MustConvert[uint32](stat.Bsize),
+	}
 
-	// set inode information
-	inodeTotal := stat.Files
-	inodeAvailable := stat.Ffree
-	inodeUsed := inodeTotal - inodeAvailable
+	// If an artificial limit is provided and it is lower than the physical total,
+	// scale the values so that:
+	//   - Total becomes the limit.
+	//   - Used is capped at the limit.
+	//   - Available = limit - used.
+	if limit > 0 && limit < usage.Total {
+		usage.Total = limit
+		if usage.Used >= limit {
+			usage.Used = limit
+			usage.Available = 0
+		} else {
+			usage.Available = limit - usage.Used
+		}
+		// Compute the percent used relative to the defined total.
+		usage.PercentUsed = (float64(usage.Used) / float64(usage.Total)) * 100
+	}
 
-	// save the stat information if needed
-	d.stat = &stat
-
-	return &types.StoreUsage{
-		Total:          total,
-		Available:      available,
-		Used:           used,
-		PercentUsed:    percentUsed,
-		BlockSize:      safecast.MustConvert[uint32](stat.Bsize),
-		Reserved:       reserved,
-		InodeTotal:     inodeTotal,
-		InodeUsed:      inodeUsed,
-		InodeAvailable: inodeAvailable,
-	}, nil
+	return usage, nil
 }

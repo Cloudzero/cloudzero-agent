@@ -122,6 +122,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 				Lazy:             true,
 				Percent:          20,
 			},
+			AvailableStorage: "",
 		},
 		Cloudzero: config.Cloudzero{
 			APIKeyPath:   apiKeyFile,
