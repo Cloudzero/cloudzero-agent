@@ -27,11 +27,6 @@ func TestDiagnostics_IsValidDiagnostics(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "DiagnosticEgressAccess",
-			diagnostic: config.DiagnosticEgressAccess,
-			expected:   true,
-		},
-		{
 			name:       "DiagnosticKMS",
 			diagnostic: config.DiagnosticKMS,
 			expected:   true,

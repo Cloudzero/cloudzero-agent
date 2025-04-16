@@ -12,7 +12,12 @@ For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-ch
 
 - Kubernetes 1.23+
 - Helm 3+
-- A CloudZero API key
+- [A CloudZero API key](https://docs.cloudzero.com/reference/authorization#creating-a-new-api-key) with the following scopes:
+  - `container-metrics_v1:abandon`
+  - `container-metrics_v1:get-status`
+  - `container-metrics_v1:legacy`
+  - `container-metrics_v1:upload`
+  - `insights:read_insights`
 - Each Kubernetes cluster must have a route to the internet and a rule that allows egress from the agent to the CloudZero collector endpoint at https://api.cloudzero.com on port 443
 
 ### Recommended Knowledge
