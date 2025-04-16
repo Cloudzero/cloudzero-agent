@@ -57,5 +57,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ github.event.inputs.version }}
           body_path: docs/releases/${{ github.event.inputs.version }}.md
-          prerelease: ${{ contains(github.event.inputs.version, '-beta-') }}
+          prerelease: ${{ contains(github.event.inputs.version, '-beta-') || contains(github.event.inputs.version, '-rc-') }}
           draft: true
