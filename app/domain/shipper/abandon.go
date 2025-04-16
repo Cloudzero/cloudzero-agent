@@ -32,7 +32,9 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 				return ctx.Int("numFiles", len(referenceIDs))
 			},
 		)
-		logger.Debug().Msg("Abandoning files ...")
+		logger.Debug().
+			Interface("fileIDs", referenceIDs).
+			Msg("Abandoning files ...")
 
 		if len(referenceIDs) == 0 {
 			return errors.New("cannot send in an empty slice")
