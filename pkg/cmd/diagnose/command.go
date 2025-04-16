@@ -198,6 +198,7 @@ func printNonEmptyClusterStatus(cs *status.ClusterStatus) {
 func printClusterStatusHeader() {
 	fmt.Println("Checks:")
 	fmt.Printf("%-30s %-10s %-50s\n", "Name", "Passing", "Error")
+	//revive:disable-next-line
 	fmt.Printf("%-30s %-10s %-50s\n", strings.Repeat("-", 30), strings.Repeat("-", 10), strings.Repeat("-", 50))
 }
 
