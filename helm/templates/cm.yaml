@@ -142,7 +142,7 @@ data:
             regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics }})$"
             action: keep
       {{- end }}
-      {{- if and .Values.aggregator.enabled  .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
+      {{- if .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
       - job_name: cloudzero-aggregator-job
         scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
         static_configs:
