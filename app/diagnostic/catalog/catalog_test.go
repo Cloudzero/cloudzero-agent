@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/kubernetes"
+
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
 	"github.com/cloudzero/cloudzero-agent/app/status"
-	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/kubernetes"
 )
 
 type mockProvider struct{}
@@ -81,5 +82,5 @@ func TestRegistry_List(t *testing.T) {
 
 	// Test listing providers
 	providers := r.List()
-	assert.Len(t, providers, 5) // Update the expected length to 6
+	assert.Len(t, providers, 6) // Update the expected length to 6
 }
