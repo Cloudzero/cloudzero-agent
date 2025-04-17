@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent/app/instr"
 	"github.com/cloudzero/cloudzero-agent/app/lock"
+	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/go-obvious/timestamp"
