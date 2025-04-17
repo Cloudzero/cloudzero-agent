@@ -17,6 +17,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	EnvVarHostname   = "HOSTNAME"
+	PodNamePartial   = "insights-controller-server"
+	queriesPerSecond = 50
+	maxBurst         = 100
+)
+
 // UpdateConfigMap updates the specified ConfigMap
 func UpdateConfigMap(ctx context.Context, clientset kubernetes.Interface, namespace, name string, data map[string]string) error {
 	configMap := &corev1.ConfigMap{
@@ -44,12 +51,18 @@ func UpdateConfigMap(ctx context.Context, clientset kubernetes.Interface, namesp
 	return errors.Wrap(err, "updating configmap")
 }
 
-// BuildKubeClient builds a Kubernetes clientset from the kubeconfig file
-func BuildKubeClient(kubeconfigPath string) (kubernetes.Interface, error) {
+// NewClient creates a new Kubernetes client using the provided kubeconfig file path.
+// It returns a kubernetes.Interface which can be used to interact with the Kubernetes API.
+// The function sets the QPS (Queries Per Second) and Burst rate for the client to ensure efficient communication with the cluster.
+// If there is an error building the kubeconfig or creating the clientset, it returns an error.
+func NewClient(kubeconfigPath string) (kubernetes.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "building kubeconfig")
 	}
+	config.QPS = queriesPerSecond
+	config.Burst = maxBurst
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "building clientset")
