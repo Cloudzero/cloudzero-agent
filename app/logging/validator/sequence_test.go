@@ -8,14 +8,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent/app/logging/validator"
-	"github.com/cloudzero/cloudzero-agent/test"
+	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
 
 func TestSetUpLoggingSequenceLogger(t *testing.T) {
 	logging.SetUpLogging("info", logging.LogFormatText)
 	logger := logrus.StandardLogger()
-	capture := test.NewLogCaptureWithCurrentFormatter(logger)
+	capture := utils.NewLogCaptureWithCurrentFormatter(logger)
 
 	logger.Info("line1")
 	logger.Info("line2")

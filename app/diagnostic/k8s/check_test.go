@@ -13,7 +13,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/k8s"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
-	"github.com/cloudzero/cloudzero-agent/test"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
 
 var k8sAPIResponseBody = `{
@@ -48,7 +48,7 @@ func TestChecker_CheckOK(t *testing.T) {
 
 	provider := k8s.NewProvider(context.Background(), cfg)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, k8sAPIResponseBody, 200, nil)
 	client := mock.HTTPClient()
 

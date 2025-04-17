@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package test contains higher-level (e.g., integration) tests.
-package test
+package utils
 
 import (
 	"fmt"

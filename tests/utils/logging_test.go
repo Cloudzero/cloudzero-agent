@@ -1,18 +1,17 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package test_test
+package utils_test
 
 import (
 	"testing"
 
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/cloudzero/cloudzero-agent/test"
 )
 
 func TestLogCapture_Extract(t *testing.T) {
-	capture := test.NewLogCapture(logrus.New())
+	capture := utils.NewLogCapture(logrus.New())
 	capture.Lines = []string{
 		"a=one b=two.3.4A",
 		`c="quote, with space", d="another quote"`,

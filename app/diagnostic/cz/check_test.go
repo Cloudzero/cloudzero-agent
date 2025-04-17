@@ -12,7 +12,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/cz"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
-	"github.com/cloudzero/cloudzero-agent/test"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
 
 const (
@@ -33,7 +33,7 @@ func TestChecker_CheckOK(t *testing.T) {
 
 	provider := cz.NewProvider(context.Background(), cfg)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "Hello World", http.StatusOK, nil)
 	client := mock.HTTPClient()
 
@@ -59,7 +59,7 @@ func TestChecker_CheckBadKey(t *testing.T) {
 
 	provider := cz.NewProvider(context.Background(), cfg)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "", http.StatusUnauthorized, nil)
 	client := mock.HTTPClient()
 
