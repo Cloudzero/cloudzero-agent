@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	AppName          = "cloudzero-insight-controller"
 	AuthorName       = "Cloudzero"
 	ChartsRepo       = "cloudzero-charts"
 	AuthorEmail      = "support@cloudzero.com"
@@ -23,5 +22,5 @@ func Version() *server.ServerVersion {
 }
 
 func GetVersion() string {
-	return fmt.Sprintf("%s.%s.%s-%s", AppName, Rev, Tag, Time)
+	return fmt.Sprintf("%s.%s-%s", Rev, Tag, Time)
 }

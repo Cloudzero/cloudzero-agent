@@ -14,18 +14,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
+	"github.com/cloudzero/cloudzero-agent/app/build"
 	configcmd "github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/config"
 	diagcmd "github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/diagnose"
 	"github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/install"
-	"github.com/cloudzero/cloudzero-agent/pkg/build"
-	"github.com/cloudzero/cloudzero-agent/app/logging/validator"
+	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 )
 
 func main() {
 	ctx := ctrlCHandler()
 
 	app := &cli.App{
-		Name:     build.AppName,
+		Name:     "cloudzero-agent-validator",
 		Version:  fmt.Sprintf("%s/%s-%s", build.GetVersion(), runtime.GOOS, runtime.GOARCH),
 		Compiled: time.Now(),
 		Authors: []*cli.Author{
