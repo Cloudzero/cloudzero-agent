@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0 # fetch the whole repo history
 
       - name: Verify release notes exist
-        run: test -f "docs/releases/${{ github.event.inputs.version }}.md"
+        run: test -f "helm/docs/releases/${{ github.event.inputs.version }}.md"
 
       - name: Setup Git
         run: |
@@ -56,6 +56,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ github.event.inputs.version }}
-          body_path: docs/releases/${{ github.event.inputs.version }}.md
+          body_path: helm/docs/releases/${{ github.event.inputs.version }}.md
           prerelease: ${{ contains(github.event.inputs.version, '-beta-') || contains(github.event.inputs.version, '-rc-') }}
           draft: true
