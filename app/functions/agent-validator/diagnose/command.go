@@ -18,8 +18,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/runner"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
-	"github.com/cloudzero/cloudzero-agent/app/telemetry"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
+	"github.com/cloudzero/cloudzero-agent/app/utils/telemetry"
 )
 
 const (
