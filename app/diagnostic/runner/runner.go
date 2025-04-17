@@ -12,7 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/cloudzero/cloudzero-agent/pkg/build"
+	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"

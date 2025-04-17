@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/cloudzero/cloudzero-agent/pkg/build"
+	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )

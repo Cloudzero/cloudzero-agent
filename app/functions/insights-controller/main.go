@@ -45,7 +45,6 @@ func main() {
 	}
 
 	log.Info().
-		Str("app_name", build.AppName).
 		Str("version", build.GetVersion()).
 		Str("build_time", build.Time).
 		Str("rev", build.Rev).
