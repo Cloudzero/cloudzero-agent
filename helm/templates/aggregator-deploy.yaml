@@ -22,7 +22,8 @@ spec:
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
           ports:
-            - containerPort: {{ .Values.aggregator.collector.port }}
+            - name: port-collector
+              containerPort: {{ .Values.aggregator.collector.port }}
           command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
@@ -53,10 +54,13 @@ spec:
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
+          ports:
+            - name: port-shipper
+              containerPort: {{ .Values.aggregator.shipper.port }}
           command: ["/app/cloudzero-shipper", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
-              value: "8081"
+              value: "{{ .Values.aggregator.shipper.port }}"
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume

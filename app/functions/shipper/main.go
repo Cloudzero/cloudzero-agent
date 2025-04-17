@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -107,8 +108,34 @@ func main() {
 		}
 	}()
 
+	loggerMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestLogger := log.Ctx(r.Context()).With().
+				Str("path", r.URL.Path).
+				Str("method", r.Method).
+				Str("remote_addr", r.RemoteAddr).
+				Logger()
+
+			requestLogger.Trace().Msg("received request")
+
+			next.ServeHTTP(w, r.WithContext(requestLogger.WithContext(r.Context())))
+		})
+	}
+
+	apis := []server.API{
+		handlers.NewPromMetricsAPI("/metrics"),
+		handlers.NewShipperAPI("/", domain),
+	}
+
 	logger.Info().Msg("Starting service")
-	server.New(build.Version(), nil, handlers.NewShipperAPI("/", domain)).Run(context.Background())
+	server.New(
+		build.Version(),
+		[]server.Middleware{
+			loggerMiddleware,
+			handlers.PromHTTPMiddleware,
+		},
+		apis...,
+	).Run(ctx)
 	logger.Info().Msg("Service stopping")
 
 	defer func() {
