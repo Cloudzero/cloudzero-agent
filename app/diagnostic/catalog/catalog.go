@@ -8,7 +8,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/cz"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/k8s"
@@ -16,6 +16,7 @@ import (
 	promcfg "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/config"
 	promver "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/version"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/stage"
+	"github.com/cloudzero/cloudzero-agent/app/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/status"
 )
 
@@ -48,6 +49,7 @@ func NewCatalog(ctx context.Context, c *config.Settings) Registry {
 	r.add(config.DiagnosticKMS, false, kms.NewProvider(ctx, c))
 	r.add(config.DiagnosticScrapeConfig, false, promcfg.NewProvider(ctx, c))
 	r.add(config.DiagnosticPrometheusVersion, false, promver.NewProvider(ctx, c))
+	r.add(config.DiagnosticInsightsIngress, false, webhook.NewProvider(ctx, c))
 
 	// Internal diagnostics emitted based on stage
 	r.add(config.DiagnosticInternalInitStart, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_INIT_STARTED))

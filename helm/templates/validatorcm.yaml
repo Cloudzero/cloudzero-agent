@@ -57,7 +57,7 @@ data:
             - kube_state_metrics_reachable
             - prometheus_version
             - scrape_cfg
-            - insight_ingress_check
+            - webhook_server_reachable
         - name: pre-stop
           enforce: false
           checks:
