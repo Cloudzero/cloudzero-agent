@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/cloudzero/cloudzero-agent/app/http/client"
-	"github.com/cloudzero/cloudzero-agent/test"
+	http "github.com/cloudzero/cloudzero-agent/app/http/client"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
 
 const (
@@ -27,7 +27,7 @@ func TestHTTP_Do(t *testing.T) {
 		"key": "value with space",
 	}
 
-	mockClient := test.NewHTTPMock()
+	mockClient := utils.NewHTTPMock()
 	mockClient.Expect("GET", "Hello World", net.StatusOK, nil)
 
 	httpClient := mockClient.HTTPClient()

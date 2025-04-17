@@ -20,7 +20,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
-	"github.com/cloudzero/cloudzero-agent/test"
+	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
 
 const (
@@ -64,7 +64,7 @@ func TestChecker_CheckOK(t *testing.T) {
 	createMockEndpoints(clientset)
 	provider := kms.NewProvider(context.Background(), cfg, clientset)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "kube_pod_info\nkube_node_info\n", http.StatusOK, nil)
 	client := mock.HTTPClient()
 
@@ -96,7 +96,7 @@ func TestChecker_CheckRetry(t *testing.T) {
 	kms.RetryInterval = 10 * time.Millisecond
 	kms.MaxRetry = 3
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	for i := 0; i < kms.MaxRetry-1; i++ {
 		mock.Expect(http.MethodGet, "", http.StatusNotFound, nil)
 	}
@@ -131,7 +131,7 @@ func TestChecker_CheckRetryFailure(t *testing.T) {
 	kms.RetryInterval = 10 * time.Millisecond
 	kms.MaxRetry = 3
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	for i := 0; i < kms.MaxRetry; i++ {
 		mock.Expect(http.MethodGet, "", http.StatusNotFound, nil)
 	}
@@ -161,7 +161,7 @@ func TestChecker_CheckMetricsValidation(t *testing.T) {
 	createMockEndpoints(clientset)
 	provider := kms.NewProvider(context.Background(), cfg, clientset)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "kube_pod_info\nkube_node_info\n", http.StatusOK, nil)
 	client := mock.HTTPClient()
 
@@ -189,7 +189,7 @@ func TestChecker_CheckHandles500Error(t *testing.T) {
 	createMockEndpoints(clientset)
 	provider := kms.NewProvider(context.Background(), cfg, clientset)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "", http.StatusInternalServerError, nil)
 	client := mock.HTTPClient()
 
@@ -217,7 +217,7 @@ func TestChecker_CheckMissingMetrics(t *testing.T) {
 	createMockEndpoints(clientset)
 	provider := kms.NewProvider(context.Background(), cfg, clientset)
 
-	mock := test.NewHTTPMock()
+	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, "kube_pod_info\nkube_node_info\n", http.StatusOK, nil)
 	client := mock.HTTPClient()
 
