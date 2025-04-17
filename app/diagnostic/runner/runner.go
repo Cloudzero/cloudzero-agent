@@ -13,11 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
-	"github.com/cloudzero/cloudzero-agent/app/logging/validator"
-	"github.com/cloudzero/cloudzero-agent/app/status"
+	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
 type Engine interface {

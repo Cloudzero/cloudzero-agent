@@ -17,7 +17,7 @@ import (
 	promver "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/version"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/stage"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/status"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
 type Registry interface {

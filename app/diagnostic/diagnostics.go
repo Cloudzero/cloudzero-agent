@@ -8,7 +8,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/cloudzero/cloudzero-agent/app/status"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
 // Provider is the interface that must be implemented by a diagnostics provider
