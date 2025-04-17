@@ -139,13 +139,13 @@ issues:
   uniq-by-line: false
   exclude-dirs:
     # Generated files
-    - pkg/status/cluster_status.pb.go
-    - pkg/types/mocks
+    - app/types/status/cluster_status.pb.go
+    - app/types/mocks
 
     # These should not be excluded, but that's a tomorrow problem.
     - mock/
     - tests/
   exclude-rules:
-    - path: pkg/types/mocks
+    - path: app/types/mocks
       linters:
         - goheader
