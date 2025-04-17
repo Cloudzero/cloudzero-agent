@@ -532,6 +532,7 @@ aggregator:
         memory: "1024Mi"
         cpu: "2000m"
   shipper:
+    port: 8081
     resources:
       requests:
         memory: "64Mi"

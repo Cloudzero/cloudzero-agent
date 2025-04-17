@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +20,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
+	czhttp "github.com/cloudzero/cloudzero-agent/app/http"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/store"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -101,20 +101,6 @@ func main() {
 	}
 	defer domain.Close()
 
-	loggerMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := log.Ctx(r.Context()).With().
-				Str("path", r.URL.Path).
-				Str("method", r.Method).
-				Str("remote_addr", r.RemoteAddr).
-				Logger()
-
-			requestLogger.Trace().Msg("received request")
-
-			next.ServeHTTP(w, r.WithContext(requestLogger.WithContext(r.Context())))
-		})
-	}
-
 	apis := []server.API{
 		handlers.NewRemoteWriteAPI("/collector", domain),
 		handlers.NewPromMetricsAPI("/metrics"),
@@ -129,7 +115,7 @@ func main() {
 	server.New(
 		build.Version(),
 		[]server.Middleware{
-			loggerMiddleware,
+			czhttp.LoggingMiddlewareWrapper,
 			handlers.PromHTTPMiddleware,
 		},
 		apis...,
