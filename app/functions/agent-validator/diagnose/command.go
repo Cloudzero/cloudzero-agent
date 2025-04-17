@@ -15,8 +15,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/runner"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/runner"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/cloudzero/cloudzero-agent/app/utils/telemetry"

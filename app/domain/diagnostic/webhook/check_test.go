@@ -13,7 +13,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 )
 
 func TestNewProvider(t *testing.T) {

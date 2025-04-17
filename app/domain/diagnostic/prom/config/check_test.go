@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	promcfg "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/config"
+	promcfg "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/config"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
