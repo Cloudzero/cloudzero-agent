@@ -17,39 +17,128 @@ existingSecretName: null
 # explicitly set per-component.
 defaults:
   # The default image settings which will be fallen back on for all components.
+  #
+  # Note that all image values (including repository, tag, etc.) are valid here,
+  # though for the most part they are overridden by the component-specific
+  # settings anyways.
   image:
     pullPolicy: IfNotPresent
     pullSecrets:
   # If set, these DNS settings will be attached to resources which support it.
   dns:
+    # DNS policy to use on all pods.
+    #
+    # Valid values include:
+    #
+    # - "Default"
+    # - "ClusterFirst"
+    # - "ClusterFirstWithHostNet"
+    # - "None"
+    #
+    # Somewhat counterintuitively, "Default" is not actually the default,
+    # "ClusterFirst" is.
+    #
+    # For details, see the Kubernetes documentation:
+    # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
     policy:
+    # DNS configuration to use on all pods.
+    #
+    # There are currently three properties which can be specified: nameservers,
+    # searches, and options.
+    #
+    # For details, see the Kubernetes documentation:
+    # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
     config: {}
   # Labels to be added to all resources.
+  #
+  # Labels are organized as key/value pairs. For example, if you wanted to set a
+  # my.org/team label to the value "superstars":
+  #
+  #   labels:
+  #     my.org/team: superstars
+  #
+  # Note that this chart will unconditionally add the following labels:
+  #
+  #  - app.kubernetes.io/version
+  #  - helm.sh/chart
+  #  - app.kubernetes.io/managed-by
+  #  - app.kubernetes.io/part-of
+  #
+  # Additionally, certain components will add additional labels. Any labels
+  # specified here will be *in addition* to the labels added automatically, not
+  # instead of them.
+  #
+  # For more information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  #
+  # You may also be interested in this list of well-known labels:
+  # https://kubernetes.io/docs/reference/labels-annotations-taints/
   labels: {}
   # Annotations to be added to all resources.
+  #
+  # Similar to labels, annotations are organized as key/value pairs, and
+  # annotations specified here will be merged into any annotations added
+  # automatically by the chart.
+  #
+  # For more information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   annotations: {}
   # Affinity settings to be added to all resources.
+  #
+  # Affinity settings are used to control the scheduling of pods. For more
+  # information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
   # Tolerations to be added to all resources.
+  #
+  # Tolerations are used to control the scheduling of pods. For more
+  # information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
   tolerations: []
   # Node Selector to be added to all resources.
+  #
+  # Node Selector is used to control the scheduling of pods. For more
+  # information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
   nodeSelector: {}
   # If set, this priority class name will be used for all deployments and jobs.
+  #
+  # Note that, if used, you will need to create the PriorityClass resource
+  # yourself; this chart is only capable of referencing an existing priority
+  # class, not creating one from whole cloth.
+  #
+  # For more information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
   priorityClassName:
 
+# Component-specific configuration settings.
 components:
+  # The agent here refers to the CloudZero Agent, which contains most of the
+  # code that makes this chart work. Since 1.1, CloudZero uses a single
+  # container image, with multiple executables, to provide CloudZero
+  # functionality.
   agent:
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
       tag: 1.1.0-rc-1  # <- Software release corresponding to this chart version.
+  # kubectl contains details about where to find the kubectl image.  This chart
+  # uses the kubectl image as part of the job to initialize certificates.
   kubectl:
     image:
       repository: docker.io/bitnami/kubectl
       tag: "1.32.0"
+  # prometheus contains details about where to find the Prometheus image.
+  # Prometheus is critical to the functionality of this chart, and is used to
+  # scrape metrics.
   prometheus:
     image:
       repository: quay.io/prometheus/prometheus
       tag:  # This will fall back on .Chart.AppVersion if not set.
+  # prometheusReloader contains details about where to find the Prometheus
+  # reloader image.
+  #
+  # prometheus-config-reloader will watch the Prometheus configuration for
+  # changes and restart the Prometheus pod as necessary.
   prometheusReloader:
     image:
       repository: quay.io/prometheus-operator/prometheus-config-reloader
