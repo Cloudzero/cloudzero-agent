@@ -15,8 +15,8 @@ import (
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	http "github.com/cloudzero/cloudzero-agent/app/http/client"
-	"github.com/cloudzero/cloudzero-agent/app/telemetry"
 	pb "github.com/cloudzero/cloudzero-agent/app/types/status"
+	"github.com/cloudzero/cloudzero-agent/app/utils/telemetry"
 	"github.com/stretchr/testify/assert"
 )
 
