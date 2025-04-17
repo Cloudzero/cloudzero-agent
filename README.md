@@ -4,24 +4,20 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-agent.svg)
 
-<img src="./docs/assets/deployment.png" alt="deployment" width="700">
+<img src="./docs/assets/hld.png" alt="deployment" width="700">
 
 This repository contains several applications to support Kubernetes integration
 with the CloudZero platform, including:
 
-- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform
-  to enabling complex cost allocation and analysis.
-- _CloudZero Collector_ - the collector application exposes a prometheus remote
-  write API which can receive POST requests from prometheus in either v1 or v2
-  encoded format. It decodes the messages, then writes them to the `data`
-  directory as parquet files with snappy compression.
-- _CloudZero Shipper_ - the shipper application watches the data directory
-  looking for completed parquet files on a regular interval (eg. 10 min), then
-  will call the `CloudZero upload API` to allocate S3 Presigned PUT URLS. These
-  URLs are used to upload the file. The application has the ability to compress
-  the files before sending them to S3.
-- _CloudZero Agent Validator_ - the validator application performs various
-  validation checks.
+- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis. This webhook application securely receives resource provisioning and deprovisioning requests from the Kubernetes API. It collects resource labels, annotations, and relationship metadata between resources, ultimately supporting the identification of CSP resources not directly connected to a Kubernetes node.
+
+- _CloudZero Collector_ - The collector application which implements a prometheus compliant interface for metrics collection; which writes the metrics payloads to files to a shared location for consumption by the shipper. Today the collector classifies incoming metrics data, and will save the data into either cost telemetry files, or into observability files. These files are compressed on disk to save space.
+
+- _CloudZero Shipper_ - The shipper application monitors shared locations for metrics file creation, allocates pre-signed S3 PUT URLs for customers (using the `CloudZero upload API`), and then uploads data to the AWS S3 bucket at set intervals. This approach protects against invalid API keys and enables end-to-end file tracking.
+
+- _CloudZero Agent Validator_ - the validator application is part of the agent’s pod lifecycle hooks. It is responsible for performing basic validation checks, and notifying the CloudZero platform of installation status changes (initializing, started, stopping). This application runs during the lifecycle hook, then exits when complete.
+
+> Note the **_agent application_** which is responsible for executing metrics scrape jobs at various intervals. The agent will communicate with a kube-state-metrics exporter application, and cAdvisor exporter applications (one per machine instance). For large scale clusters, the agent runs in “federated mode” (aka daemonset mode), where each instance on each machine is responsible for metrics collection on that single machine.
 
 ## ⚡ Getting Started With CloudZero Insights Controller
 

@@ -14,6 +14,7 @@ const (
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
 	DiagnosticPrometheusVersion string = "prometheus_version"
 	DiagnosticScrapeConfig      string = "scrape_cfg"
+	DiagnosticInsightsIngress   string = "webhook_server_reachable"
 )
 
 const (
@@ -29,7 +30,7 @@ func IsValidDiagnostic(d string) bool {
 	switch d {
 	case DiagnosticAPIKey, DiagnosticK8sVersion,
 		DiagnosticKMS, DiagnosticScrapeConfig,
-		DiagnosticPrometheusVersion:
+		DiagnosticPrometheusVersion, DiagnosticInsightsIngress:
 		return true
 	}
 	return false
