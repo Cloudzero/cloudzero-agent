@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"github.com/cloudzero/cloudzero-agent/app/inspector"
-	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/rs/zerolog"
 )
 
