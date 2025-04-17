@@ -19,6 +19,13 @@ type Settings struct {
 	Cloudzero        Cloudzero   `yaml:"cloudzero"`
 	Prometheus       Prometheus  `yaml:"prometheus"`
 	Diagnostics      Diagnostics `yaml:"diagnostics"`
+	Services         Services    `yaml:"services"`
+}
+
+type Services struct {
+	Namespace        string `yaml:"namespace" validate:"required"`
+	InsightsService  string `yaml:"insights_service" validate:"required"`
+	CollectorService string `yaml:"collector_service" validate:"required"`
 }
 
 func NewSettings(configFiles ...string) (*Settings, error) {

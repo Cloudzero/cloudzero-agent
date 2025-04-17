@@ -26,6 +26,11 @@ data:
       credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
       disable_telemetry: false
 
+    services:
+      namespace: {{ .Release.Namespace }}
+      insights_service:  {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
+      collector_service: {{ include "cloudzero-agent.aggregator.name" . }}
+
     prometheus:
       {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
       kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
@@ -52,6 +57,7 @@ data:
             - kube_state_metrics_reachable
             - prometheus_version
             - scrape_cfg
+            - webhook_server_reachable
         - name: pre-stop
           enforce: false
           checks:
