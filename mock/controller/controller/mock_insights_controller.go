@@ -14,8 +14,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent/app/parallel"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
+	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 	"github.com/cloudzero/cloudzero-agent/mock/metrics"
 	"github.com/golang/snappy"
 	"github.com/google/uuid"

@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent/app/lock"
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/utils/lock"
 	"github.com/go-obvious/timestamp"
 	"github.com/rs/zerolog"
 )
