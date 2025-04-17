@@ -20,7 +20,7 @@ func TestGetVersion(t *testing.T) {
 	build.Tag = Tag
 	build.Time = Time
 
-	expectedVersion := fmt.Sprintf("%s.%s.%s-%s", build.AppName, Rev, Tag, Time)
+	expectedVersion := fmt.Sprintf("%s.%s-%s", Rev, Tag, Time)
 	actualVersion := build.GetVersion()
 
 	assert.Equal(t, expectedVersion, actualVersion)

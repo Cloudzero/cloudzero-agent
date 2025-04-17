@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/cloudzero/cloudzero-agent/app/cmd/config"
+	"github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/config"
 	"github.com/cloudzero/cloudzero-agent/app/k8s"
 )
 
