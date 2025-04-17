@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package store_test
+package disk_test
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/parquet-go/parquet-go"
@@ -73,7 +73,7 @@ func TestNewParquetStreamer_RoundTrip(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := store.NewParquetStreamer(pr)
+	parquetStreamer := disk.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	parquetData, err := io.ReadAll(parquetStreamer)
@@ -115,7 +115,7 @@ func TestNewParquetStreamer_WrongCompression(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := store.NewParquetStreamer(pr)
+	parquetStreamer := disk.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)
@@ -138,7 +138,7 @@ func TestNewParquetStreamer_TruncatedJSON(t *testing.T) {
 		compressor.Write(jsonData[:len(jsonData)/2])
 	}()
 
-	parquetStreamer := store.NewParquetStreamer(pr)
+	parquetStreamer := disk.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)
@@ -167,7 +167,7 @@ func TestNewParquetStreamer_TruncatedData(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	parquetStreamer := store.NewParquetStreamer(pr)
+	parquetStreamer := disk.NewParquetStreamer(pr)
 	defer parquetStreamer.Close()
 
 	_, err := io.ReadAll(parquetStreamer)

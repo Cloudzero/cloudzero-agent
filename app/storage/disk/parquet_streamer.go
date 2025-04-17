@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package store provides storage functionality.
-package store
+package disk
 
 import (
 	"encoding/json"

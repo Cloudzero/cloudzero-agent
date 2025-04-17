@@ -23,7 +23,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
 	czhttp "github.com/cloudzero/cloudzero-agent/app/http"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 )
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 		fmt.Println(string(enc))
 	}
 
-	store, err := store.NewDiskStore(settings.Database)
+	store, err := disk.NewDiskStore(settings.Database)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}

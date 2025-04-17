@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package store_test
+package disk_test
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"time"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/google/uuid"
@@ -24,7 +24,7 @@ func TestDiskStore_PutAndPending(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 10
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -61,7 +61,7 @@ func TestDiskStore_Flush(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 5
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
@@ -95,7 +95,7 @@ func TestDiskStore_FlushTimeout(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 5
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit, MaxInterval: 50 * time.Millisecond})
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit, MaxInterval: 50 * time.Millisecond})
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
@@ -132,7 +132,7 @@ func TestDiskStore_Compact(t *testing.T) {
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -179,7 +179,7 @@ func TestDiskStore_GetFiles(t *testing.T) {
 	fileCount := 3
 	recordCount := rowLimit * fileCount
 
-	ps, err := store.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, store.WithContentIdentifier(store.CostContentIdentifier))
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	assert.NoError(t, err)
 	defer ps.Flush()
 
@@ -247,7 +247,7 @@ func TestDiskStore_GetFiles(t *testing.T) {
 
 func TestDiskStore_GetUsage(t *testing.T) {
 	tmpDir := t.TempDir()
-	d, err := store.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100}, store.WithContentIdentifier(store.CostContentIdentifier))
+	d, err := disk.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100}, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	require.NoError(t, err)
 	defer d.Flush()
 

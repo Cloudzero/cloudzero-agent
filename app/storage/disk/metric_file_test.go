@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package store_test
+package disk_test
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/andybalholm/brotli"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	assert.NoError(t, err)
 
 	// create a new metric file with this
-	file, err := store.NewMetricFile(osFile.Name())
+	file, err := disk.NewMetricFile(osFile.Name())
 	require.NoError(t, err)
 
 	// read the data

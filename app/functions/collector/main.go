@@ -22,7 +22,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
 	czhttp "github.com/cloudzero/cloudzero-agent/app/http"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
 )
@@ -62,7 +62,7 @@ func main() {
 		fmt.Println(string(enc))
 	}
 
-	costMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.CostContentIdentifier))
+	costMetricStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier(disk.CostContentIdentifier))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
@@ -75,7 +75,7 @@ func main() {
 		}
 	}()
 
-	observabilityMetricStore, err := store.NewDiskStore(settings.Database, store.WithContentIdentifier(store.ObservabilityContentIdentifier))
+	observabilityMetricStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier(disk.ObservabilityContentIdentifier))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
