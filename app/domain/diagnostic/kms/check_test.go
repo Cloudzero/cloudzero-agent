@@ -18,7 +18,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/kms"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )

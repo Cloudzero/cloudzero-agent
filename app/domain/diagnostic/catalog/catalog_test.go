@@ -12,9 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/kms"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 

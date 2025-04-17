@@ -13,7 +13,7 @@ import (
 	"time"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/sirupsen/logrus"

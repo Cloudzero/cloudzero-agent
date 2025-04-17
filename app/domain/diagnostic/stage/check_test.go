@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/stage"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/stage"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 

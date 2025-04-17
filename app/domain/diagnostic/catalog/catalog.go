@@ -9,14 +9,14 @@ import (
 	"sync"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/cz"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/k8s"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
-	promcfg "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/config"
-	promver "github.com/cloudzero/cloudzero-agent/app/diagnostic/prom/version"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/stage"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/cz"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/kms"
+	promcfg "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/config"
+	promver "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/version"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/stage"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
