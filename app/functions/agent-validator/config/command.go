@@ -57,7 +57,7 @@ func NewCommand(ctx context.Context) *cli.Command {
 					host := c.String("host")
 					secretPath := c.String("secret-path")
 
-					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
+					clientset, err := k8s.NewClient(kubeconfigPath)
 					if err != nil {
 						return err
 					}

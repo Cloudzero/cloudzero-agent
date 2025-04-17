@@ -20,7 +20,6 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/housekeeper"
-	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-agent/app/domain/pusher"
 	"github.com/cloudzero/cloudzero-agent/app/http"
@@ -28,6 +27,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
+	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
 
 func main() {

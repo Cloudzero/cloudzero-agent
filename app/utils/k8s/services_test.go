@@ -135,7 +135,7 @@ users:
 	assert.NoError(t, err)
 
 	// Build the kube client using the temporary kubeconfig file
-	clientset, err := k8s.BuildKubeClient(tmpfile.Name())
+	clientset, err := k8s.NewClient(tmpfile.Name())
 	assert.NoError(t, err)
 	assert.NotNil(t, clientset)
 }
