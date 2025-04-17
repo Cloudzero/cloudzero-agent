@@ -20,8 +20,8 @@ package build
 //     REVISION="$(git rev-parse HEAD)"
 //   fi
 //
-//   LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-agent/app/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-insights-controller/app/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-insights-controller/app/build.Tag=${TAG}"
-//   CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-insights-controller
+//   LD_FLAGS="-s -w -X github.com/cloudzero/cloudzero-agent/app/build.Time=${BUILD_TIME} -X github.com/cloudzero/cloudzero-agent/app/build.Rev=${REVISION} -X github.com/cloudzero/cloudzero-agent/app/build.Tag=${TAG}"
+//   CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="${LD_FLAGS}" -tags 'netgo osusergo' -o cloudzero-agent-validator
 
 var (
 	Rev  = "latest"

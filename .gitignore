@@ -26,14 +26,14 @@ log.json
 certs
 
 # changelog generation
-CHANGELOG.md
-VERSION
+/CHANGELOG.md
+/VERSION
 
 # IDE configuration
-.vscode/
-.idea/
-.server/
-.history/
+/.vscode/
+/.idea/
+/.server/
+/.history/
 
 # test related
 *.fingerprint
