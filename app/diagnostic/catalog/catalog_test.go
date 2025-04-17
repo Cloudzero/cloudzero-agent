@@ -15,7 +15,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
-	"github.com/cloudzero/cloudzero-agent/app/status"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
 type mockProvider struct{}

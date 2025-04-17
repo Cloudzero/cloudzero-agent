@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
 	"github.com/cloudzero/cloudzero-agent/app/diagnostic/kms"
-	"github.com/cloudzero/cloudzero-agent/app/status"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes"
 )

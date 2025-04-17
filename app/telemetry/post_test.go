@@ -13,10 +13,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/http/client"
-	pb "github.com/cloudzero/cloudzero-agent/app/status"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
+	http "github.com/cloudzero/cloudzero-agent/app/http/client"
 	"github.com/cloudzero/cloudzero-agent/app/telemetry"
+	pb "github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/stretchr/testify/assert"
 )
 
