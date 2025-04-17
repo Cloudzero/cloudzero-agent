@@ -16,7 +16,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent/app/instr"
 	"github.com/cloudzero/cloudzero-agent/app/lock"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/go-obvious/timestamp"
 	"github.com/rs/zerolog"
@@ -213,7 +213,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 				}
 
 				// create a new types.File to compare the remote ids
-				storeFile, err := store.NewMetricFile(path)
+				storeFile, err := disk.NewMetricFile(path)
 				if err != nil {
 					return errors.New("failed to create a new metric file")
 				}
@@ -245,7 +245,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 				}
 
 				// create a new types.File to compare the remote ids
-				storeFile, err := store.NewMetricFile(path)
+				storeFile, err := disk.NewMetricFile(path)
 				if err != nil {
 					return errors.New("failed to create a new metric file")
 				}

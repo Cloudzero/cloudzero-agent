@@ -20,7 +20,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/instr"
 	"github.com/cloudzero/cloudzero-agent/app/lock"
 	"github.com/cloudzero/cloudzero-agent/app/parallel"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -212,7 +212,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 		// create a list of metric files
 		files := make([]types.File, 0)
 		for _, item := range paths {
-			file, err := store.NewMetricFile(item)
+			file, err := disk.NewMetricFile(item)
 			if err != nil {
 				return fmt.Errorf("failed to create the metric file: %w", err)
 			}
