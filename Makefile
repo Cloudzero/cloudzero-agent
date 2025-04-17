@@ -180,7 +180,7 @@ $(OUTPUT_BIN_DIR)/cloudzero-$(notdir $1):
 	$(GO) build \
 		-mod=readonly \
 		-trimpath \
-		-ldflags="-s -w -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/app/build.Rev=$(REVISION) -X $(GO_MODULE)/app/build.Tag=$(TAG) -X $(GO_MODULE)/pkg/build.Time=$(BUILD_TIME) -X $(GO_MODULE)/pkg/build.Rev=$(REVISION) -X $(GO_MODULE)/pkg/build.Tag=$(TAG)" \
+		-ldflags="-s -w -X $(GO_MODULE)/app/build.Rev=$(REVISION) -X $(GO_MODULE)/app/build.Tag=$(TAG) -X $(GO_MODULE)/app/build.Time=$(BUILD_TIME)" \
 		-tags 'netgo osusergo' \
 		-o $$@ \
 		./$1/
@@ -351,7 +351,7 @@ generate: ## (Re)generate generated code
 # We don't yet have a good way to install a specific version of protoc /
 # protoc-gen-go, so for now we'll keep this out of the automatic regeneration
 # path. If you want to regenerate it using the system protoc, manually remove
-# pkg/status/cluster_status.pb.go, then run `make generate`.
-generate: pkg/status/cluster_status.pb.go
-pkg/status/cluster_status.pb.go: pkg/status/cluster_status.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) pkg/status/cluster_status.proto
+# app/status/cluster_status.pb.go, then run `make generate`.
+generate: app/status/cluster_status.pb.go
+app/status/cluster_status.pb.go: app/status/cluster_status.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/status/cluster_status.proto
