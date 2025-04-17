@@ -19,9 +19,9 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/lock"
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
-	"github.com/cloudzero/cloudzero-agent/app/parallel"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
