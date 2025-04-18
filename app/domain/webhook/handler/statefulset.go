@@ -10,7 +10,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -20,14 +20,13 @@ type StatefulSetHandler struct {
 	clock    types.TimeProvider
 }
 
-func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &StatefulSetHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
-	h.Handler.ErrorChan = errChan
 	h.clock = clock
-	return h.Handler
+	return &h.Handler
 }
 
 func (h *StatefulSetHandler) Create() hook.AdmitFunc {

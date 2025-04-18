@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
@@ -171,7 +171,6 @@ func TestNewDaemonSetHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		errChan  chan<- error
 	}{
 		{
 			name: "Test with valid settings",
@@ -191,12 +190,10 @@ func TestNewDaemonSetHandler(t *testing.T) {
 					},
 				},
 			},
-			errChan: make(chan error),
 		},
 		{
 			name:     "Test with nil settings",
 			settings: nil,
-			errChan:  make(chan error),
 		},
 	}
 
@@ -206,10 +203,9 @@ func TestNewDaemonSetHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, tt.errChan)
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
-			assert.Equal(t, tt.errChan, handler.ErrorChan)
 		})
 	}
 }
@@ -289,7 +285,7 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -418,7 +414,7 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

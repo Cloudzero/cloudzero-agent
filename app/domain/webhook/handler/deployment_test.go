@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/stretchr/testify/assert"
@@ -141,7 +141,7 @@ func TestDeploymentHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDeploymentHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewDeploymentHandler(writer, tt.settings, mockClock)
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -271,7 +271,7 @@ func TestDeploymentHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDeploymentHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewDeploymentHandler(writer, tt.settings, mockClock)
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

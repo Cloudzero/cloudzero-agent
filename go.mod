@@ -82,7 +82,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.2.1
-	github.com/go-obvious/server v0.1.7
+	github.com/go-obvious/server v0.1.8
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0

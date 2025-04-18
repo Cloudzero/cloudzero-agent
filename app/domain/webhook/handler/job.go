@@ -11,7 +11,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -21,14 +21,13 @@ type JobHandler struct {
 	clock    types.TimeProvider
 }
 
-func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &JobHandler{settings: settings}
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Store = store
-	h.Handler.ErrorChan = errChan
 	h.clock = clock
-	return h.Handler
+	return &h.Handler
 }
 
 func (h *JobHandler) Create() hook.AdmitFunc {
