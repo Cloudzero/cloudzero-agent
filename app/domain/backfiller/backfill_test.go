@@ -23,11 +23,11 @@ import (
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
-	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
+	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
 
 // TestBackfiller_FakeK8s_Start tests the Backfiller.Start method with various Kubernetes resources using a fake client.

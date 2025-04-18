@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,7 +21,7 @@ func main() {
 	inputFile := os.Args[1]
 	outputFile := os.Args[2]
 
-	input, err := store.NewMetricFile(inputFile)
+	input, err := disk.NewMetricFile(inputFile)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create input file")
 	}

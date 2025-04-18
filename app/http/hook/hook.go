@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 

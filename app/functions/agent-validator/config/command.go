@@ -13,8 +13,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/k8s"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
+	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
 
 //go:embed internal/scrape_config.tmpl
@@ -57,7 +57,7 @@ func NewCommand(ctx context.Context) *cli.Command {
 					host := c.String("host")
 					secretPath := c.String("secret-path")
 
-					clientset, err := k8s.BuildKubeClient(kubeconfigPath)
+					clientset, err := k8s.NewClient(kubeconfigPath)
 					if err != nil {
 						return err
 					}
