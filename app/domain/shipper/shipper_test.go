@@ -23,7 +23,7 @@ import (
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -500,7 +500,7 @@ func TestShipper_Unit_UploadFile_FileOpenError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-existent file path
-	_, err = store.NewMetricFile("/path/to/nonexistent/file.json.br")
+	_, err = disk.NewMetricFile("/path/to/nonexistent/file.json.br")
 	require.Error(t, err)
 }
 

@@ -14,12 +14,12 @@ import (
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/catalog"
-	"github.com/cloudzero/cloudzero-agent/app/diagnostic/runner"
-	"github.com/cloudzero/cloudzero-agent/app/logging/validator"
-	"github.com/cloudzero/cloudzero-agent/app/status"
-	"github.com/cloudzero/cloudzero-agent/app/telemetry"
+	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/catalog"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/runner"
+	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
+	"github.com/cloudzero/cloudzero-agent/app/types/status"
+	"github.com/cloudzero/cloudzero-agent/app/utils/telemetry"
 )
 
 const (

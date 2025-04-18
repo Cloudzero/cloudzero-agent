@@ -18,7 +18,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
@@ -272,7 +272,7 @@ func createTestFiles(t *testing.T, dir string, n int) []types.File {
 		_, err = file.Write(compressedData.Bytes())
 		require.NoError(t, err, "failed to write the metrics to the file")
 
-		f, err := store.NewMetricFile(path)
+		f, err := disk.NewMetricFile(path)
 		require.NoError(t, err, "failed to create metric file")
 		files = append(files, f)
 	}

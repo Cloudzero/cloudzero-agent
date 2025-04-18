@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudzero/cloudzero-agent/app/instr"
+	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/rs/zerolog"
 )

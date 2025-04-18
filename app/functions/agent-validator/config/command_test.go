@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/config"
-	"github.com/cloudzero/cloudzero-agent/app/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
 
 func TestGenerateByName(t *testing.T) {

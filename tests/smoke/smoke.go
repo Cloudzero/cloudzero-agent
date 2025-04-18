@@ -17,7 +17,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
-	"github.com/cloudzero/cloudzero-agent/app/store"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -222,9 +222,9 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 		// create a file location
 		var filename string
 		if i%2 == 0 {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", store.CostContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.CostContentIdentifier, now.UnixMilli(), i)
 		} else {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", store.ObservabilityContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.ObservabilityContentIdentifier, now.UnixMilli(), i)
 		}
 		file, err := os.Create(filepath.Join(t.dataLocation, filename))
 		require.NoError(t, err, "failed to create file: %s", err)
