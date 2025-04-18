@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: alexellis/setup-arkade@v2
+      - uses: alexellis/setup-arkade@v3
 
       # Fast binary install
       # https://github.com/alexellis/arkade?tab=readme-ov-file#catalog-of-clis
