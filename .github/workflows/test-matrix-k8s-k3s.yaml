@@ -49,6 +49,7 @@ jobs:
             ./"${KREW}" install krew
           )
           echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.krew/bin:$PATH"
           kubectl krew install stern
 
       - name: Install Helm
