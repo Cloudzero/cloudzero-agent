@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 

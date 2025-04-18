@@ -14,7 +14,7 @@ import (
 	"gotest.tools/v3/assert"
 	admission "k8s.io/api/admission/v1"
 
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 )
 
 type MockHandler struct {
@@ -37,7 +37,7 @@ func TestServe(t *testing.T) {
 	// Setup
 	mockHandler := NewMockHandler()
 	handler := handler()
-	handlerFunc := handler.Serve(mockHandler)
+	handlerFunc := handler.Serve(&mockHandler)
 
 	// Test cases
 	tests := []struct {

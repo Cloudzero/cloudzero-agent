@@ -11,7 +11,7 @@ import (
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/healthz"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 )
 
 type RouteSegment struct {
@@ -21,7 +21,7 @@ type RouteSegment struct {
 
 type AdmissionRouteSegment struct {
 	Route string
-	Hook  hook.Handler
+	Hook  *hook.Handler
 }
 
 // NewServer creates and return a http.Server

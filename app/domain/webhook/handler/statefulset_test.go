@@ -12,19 +12,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	batchv1 "k8s.io/api/batch/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makeCronJobRequest(record TestRecord) *hook.Request {
-	cronjob := &batchv1.CronJob{
+func makeStatefulSetRequest(record TestRecord) *hook.Request {
+	statefulset := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
 			Labels:      record.Labels,
@@ -33,14 +33,14 @@ func makeCronJobRequest(record TestRecord) *hook.Request {
 	}
 
 	if record.Namespace != nil {
-		cronjob.Namespace = *record.Namespace
+		statefulset.Namespace = *record.Namespace
 	}
 
 	scheme := runtime.NewScheme()
-	batchv1.AddToScheme(scheme)
+	appsv1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(batchv1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, cronjob)
+	encoder := codecs.LegacyCodec(appsv1.SchemeGroupVersion)
+	raw, _ := runtime.Encode(encoder, statefulset)
 
 	return &hook.Request{
 		Object: runtime.RawExtension{
@@ -49,18 +49,18 @@ func makeCronJobRequest(record TestRecord) *hook.Request {
 	}
 }
 
-func TestFormatCronData(t *testing.T) {
+func TestFormatStatefulSetData(t *testing.T) {
 	tests := []struct {
 		name     string
-		cronjob  *batchv1.CronJob
+		sts      *appsv1.StatefulSet
 		settings *config.Settings
 		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
-			cronjob: &batchv1.CronJob{
+			sts: &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cronjob",
+					Name:      "test-sts",
 					Namespace: "default",
 					Labels: map[string]string{
 						"app": "test",
@@ -75,13 +75,13 @@ func TestFormatCronData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 				},
@@ -93,13 +93,13 @@ func TestFormatCronData(t *testing.T) {
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.CronJob,
-				Name:      "test-cronjob",
+				Type:      config.StatefulSet,
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 				MetricLabels: &config.MetricLabels{
-					"cronjob":       "test-cronjob",
+					"statefulset":   "test-sts",
 					"namespace":     "default",
-					"resource_type": "cronjob",
+					"resource_type": "statefulset",
 				},
 				Labels: &config.MetricLabelTags{
 					"app": "test",
@@ -111,9 +111,9 @@ func TestFormatCronData(t *testing.T) {
 		},
 		{
 			name: "Test with labels and annotations disabled",
-			cronjob: &batchv1.CronJob{
+			sts: &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cronjob",
+					Name:      "test-sts",
 					Namespace: "default",
 				},
 			},
@@ -122,25 +122,25 @@ func TestFormatCronData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.CronJob,
-				Name:      "test-cronjob",
+				Type:      config.StatefulSet,
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 				MetricLabels: &config.MetricLabels{
+					"statefulset":   "test-sts",
 					"namespace":     "default",
-					"resource_type": "cronjob",
-					"cronjob":       "test-cronjob",
+					"resource_type": "statefulset",
 				},
 				Labels:      &config.MetricLabelTags{},
 				Annotations: &config.MetricLabelTags{},
@@ -150,7 +150,7 @@ func TestFormatCronData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatCronJobData(tt.cronjob, tt.settings)
+			result := FormatStatefulsetData(tt.sts, tt.settings)
 			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
 				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
 			}
@@ -167,11 +167,10 @@ func TestFormatCronData(t *testing.T) {
 	}
 }
 
-func TestNewCronJobHandler(t *testing.T) {
+func TestNewStatefulSetHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		errChan  chan<- error
 	}{
 		{
 			name: "Test with valid settings",
@@ -180,23 +179,21 @@ func TestNewCronJobHandler(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 				},
 			},
-			errChan: make(chan error),
 		},
 		{
 			name:     "Test with nil settings",
 			settings: nil,
-			errChan:  make(chan error),
 		},
 	}
 
@@ -206,15 +203,14 @@ func TestNewCronJobHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewCronJobHandler(writer, tt.settings, mockClock, tt.errChan)
+			handler := NewStatefulsetHandler(writer, tt.settings, mockClock)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
-			assert.Equal(t, tt.errChan, handler.ErrorChan)
 		})
 	}
 }
 
-func TestCronJobHandler_Create(t *testing.T) {
+func TestStatefulSetHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -228,19 +224,19 @@ func TestCronJobHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 				},
 			},
-			request: makeCronJobRequest(TestRecord{
-				Name:      "test-cronjob",
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -258,19 +254,19 @@ func TestCronJobHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 				},
 			},
-			request: makeCronJobRequest(TestRecord{
-				Name:      "test-cronjob",
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 			}),
 			expected: &hook.Result{Allowed: true},
@@ -289,7 +285,7 @@ func TestCronJobHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewCronJobHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewStatefulsetHandler(writer, tt.settings, mockClock)
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -297,7 +293,7 @@ func TestCronJobHandler_Create(t *testing.T) {
 	}
 }
 
-func TestCronJobHandler_Update(t *testing.T) {
+func TestStatefulSetHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -315,19 +311,19 @@ func TestCronJobHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 				},
 			},
-			request: makeCronJobRequest(TestRecord{
-				Name:      "test-cronjob",
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -345,19 +341,19 @@ func TestCronJobHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							CronJobs: true,
+							StatefulSets: true,
 						},
 					},
 				},
 			},
-			request: makeCronJobRequest(TestRecord{
-				Name:      "test-cronjob",
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
@@ -368,8 +364,8 @@ func TestCronJobHandler_Update(t *testing.T) {
 			}),
 			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.CronJob,
-				Name:          "test-cronjob",
+				Type:          config.StatefulSet,
+				Name:          "test-sts",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -384,19 +380,19 @@ func TestCronJobHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							CronJobs: false,
+							StatefulSets: false,
 						},
 					},
 				},
 			},
-			request: makeCronJobRequest(TestRecord{
-				Name:      "test-cronjob",
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
 				Namespace: stringPtr("default"),
 			}),
 			expected: &hook.Result{Allowed: true},
@@ -419,7 +415,7 @@ func TestCronJobHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewCronJobHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewStatefulsetHandler(writer, tt.settings, mockClock)
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

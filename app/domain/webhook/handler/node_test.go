@@ -18,13 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makePodRequest(record TestRecord) *hook.Request {
-	namespace := &corev1.Pod{
+func makeNodeRequest(record TestRecord) *hook.Request {
+	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
 			Labels:      record.Labels,
@@ -32,15 +32,11 @@ func makePodRequest(record TestRecord) *hook.Request {
 		},
 	}
 
-	if record.Namespace != nil {
-		namespace.Namespace = *record.Namespace
-	}
-
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
 	encoder := codecs.LegacyCodec(corev1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, namespace)
+	raw, _ := runtime.Encode(encoder, node)
 
 	return &hook.Request{
 		Object: runtime.RawExtension{
@@ -49,19 +45,18 @@ func makePodRequest(record TestRecord) *hook.Request {
 	}
 }
 
-func TestFormatPodData(t *testing.T) {
+func TestFormatNodeData(t *testing.T) {
 	tests := []struct {
 		name     string
-		pod      *corev1.Pod
+		node     *corev1.Node
 		settings *config.Settings
 		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
-			pod: &corev1.Pod{
+			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "default",
+					Name: "test-node",
 					Labels: map[string]string{
 						"app": "test",
 					},
@@ -75,13 +70,13 @@ func TestFormatPodData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 				},
@@ -93,13 +88,11 @@ func TestFormatPodData(t *testing.T) {
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.Pod,
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+				Type: config.Node,
+				Name: "test-node",
 				MetricLabels: &config.MetricLabels{
-					"pod":           "test-pod",
-					"namespace":     "default",
-					"resource_type": "pod",
+					"node":          "test-node",
+					"resource_type": "node",
 				},
 				Labels: &config.MetricLabelTags{
 					"app": "test",
@@ -111,10 +104,9 @@ func TestFormatPodData(t *testing.T) {
 		},
 		{
 			name: "Test with labels and annotations disabled",
-			pod: &corev1.Pod{
+			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: "default",
+					Name: "test-node",
 				},
 			},
 			settings: &config.Settings{
@@ -122,25 +114,23 @@ func TestFormatPodData(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
 			expected: types.ResourceTags{
-				Type:      config.Pod,
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+				Type: config.Node,
+				Name: "test-node",
 				MetricLabels: &config.MetricLabels{
-					"pod":           "test-pod",
-					"namespace":     "default",
-					"resource_type": "pod",
+					"node":          "test-node",
+					"resource_type": "node",
 				},
 				Labels:      &config.MetricLabelTags{},
 				Annotations: &config.MetricLabelTags{},
@@ -150,28 +140,26 @@ func TestFormatPodData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatPodData(tt.pod, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
+			result := FormatNodeData(tt.node, tt.settings)
+			if !reflect.DeepEqual(tt.expected.MetricLabels, result.MetricLabels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, result.MetricLabels)
 			}
-			if !reflect.DeepEqual(tt.expected.Labels, tt.expected.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, tt.expected.Labels)
+			if !reflect.DeepEqual(tt.expected.Labels, result.Labels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, result.Labels)
 			}
-			if !reflect.DeepEqual(tt.expected.Annotations, tt.expected.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, tt.expected.Annotations)
+			if !reflect.DeepEqual(tt.expected.Annotations, result.Annotations) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, result.Annotations)
 			}
 			assert.Equal(t, tt.expected.Type, result.Type)
 			assert.Equal(t, tt.expected.Name, result.Name)
-			assert.Equal(t, tt.expected.Namespace, result.Namespace)
 		})
 	}
 }
 
-func TestNewPodHandler(t *testing.T) {
+func TestNewNodeHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		errChan  chan<- error
 	}{
 		{
 			name: "Test with valid settings",
@@ -180,23 +168,21 @@ func TestNewPodHandler(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			errChan: make(chan error),
 		},
 		{
 			name:     "Test with nil settings",
 			settings: nil,
-			errChan:  make(chan error),
 		},
 	}
 
@@ -206,15 +192,14 @@ func TestNewPodHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewPodHandler(writer, tt.settings, mockClock, tt.errChan)
+			handler := NewNodeHandler(writer, tt.settings, mockClock)
 			assert.NotNil(t, handler)
 			assert.Equal(t, writer, handler.Store)
-			assert.Equal(t, tt.errChan, handler.ErrorChan)
 		})
 	}
 }
 
-func TestPodHandler_Create(t *testing.T) {
+func TestNodeHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -228,20 +213,19 @@ func TestPodHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makePodRequest(TestRecord{
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -258,20 +242,19 @@ func TestPodHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
-			request: makePodRequest(TestRecord{
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -289,7 +272,7 @@ func TestPodHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewPodHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewNodeHandler(writer, tt.settings, mockClock)
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -297,7 +280,7 @@ func TestPodHandler_Create(t *testing.T) {
 	}
 }
 
-func TestPodHandler_Update(t *testing.T) {
+func TestNodeHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -315,20 +298,19 @@ func TestPodHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makePodRequest(TestRecord{
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -345,20 +327,19 @@ func TestPodHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Pods: true,
+							Nodes: true,
 						},
 					},
 				},
 			},
-			request: makePodRequest(TestRecord{
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -368,8 +349,8 @@ func TestPodHandler_Update(t *testing.T) {
 			}),
 			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.Pod,
-				Name:          "test-pod",
+				Type:          config.Node,
+				Name:          "test-node",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -384,20 +365,19 @@ func TestPodHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							Pods: false,
+							Nodes: false,
 						},
 					},
 				},
 			},
-			request: makePodRequest(TestRecord{
-				Name:      "test-pod",
-				Namespace: stringPtr("default"),
+			request: makeNodeRequest(TestRecord{
+				Name: "test-node",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -419,15 +399,10 @@ func TestPodHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewPodHandler(writer, tt.settings, mockClock, make(chan error))
-
+			handler := NewNodeHandler(writer, tt.settings, mockClock)
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
-}
-
-func stringPtr(s string) *string {
-	return &s
 }

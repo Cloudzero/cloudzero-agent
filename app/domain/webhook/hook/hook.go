@@ -27,12 +27,11 @@ type AdmitFunc func(ctx context.Context, r *Request) (*Result, error)
 
 // Handler represents the set of functions for each operation in an admission webhook.
 type Handler struct {
-	Create    AdmitFunc
-	Delete    AdmitFunc
-	Update    AdmitFunc
-	Connect   AdmitFunc
-	ErrorChan chan<- error
-	Store     types.ResourceStore
+	Create  AdmitFunc
+	Delete  AdmitFunc
+	Update  AdmitFunc
+	Connect AdmitFunc
+	Store   types.ResourceStore
 }
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.

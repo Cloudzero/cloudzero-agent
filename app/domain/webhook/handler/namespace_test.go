@@ -5,47 +5,36 @@ package handler
 
 import (
 	"context"
-	"regexp"
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
-	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/apps/v1"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
+	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-type TestRecord struct {
-	Type         config.ResourceType
-	Name         string
-	Namespace    *string
-	MetricLabels map[string]string
-	Labels       map[string]string
-	Annotations  map[string]string
-}
-
-func makeDeploymentRequest(record TestRecord) *hook.Request {
-	deployment := &v1.Deployment{
+func makeNamespaceRequest(record TestRecord) *hook.Request {
+	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
-			Namespace:   *record.Namespace,
 			Labels:      record.Labels,
 			Annotations: record.Annotations,
 		},
 	}
 
 	scheme := runtime.NewScheme()
-	v1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(v1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, deployment)
+	encoder := codecs.LegacyCodec(corev1.SchemeGroupVersion)
+	raw, _ := runtime.Encode(encoder, namespace)
 
 	return &hook.Request{
 		Object: runtime.RawExtension{
@@ -54,19 +43,7 @@ func makeDeploymentRequest(record TestRecord) *hook.Request {
 	}
 }
 
-func NewTestSettings() *config.Settings {
-	filter := config.Filters{Labels: config.Labels{Enabled: true, Patterns: []string{"*"}}, Annotations: config.Annotations{Enabled: true, Patterns: []string{"*"}}}
-	filter.Labels.Resources.Deployments = true
-	filter.Annotations.Resources.Deployments = true
-	filter.Labels.Resources.Namespaces = true
-	filter.Annotations.Resources.Namespaces = true
-	compiledPatterns := []regexp.Regexp{}
-	testPattern, _ := regexp.Compile(".*")
-	compiledPatterns = append(compiledPatterns, *testPattern)
-	return &config.Settings{RemoteWrite: config.RemoteWrite{MaxBytesPerSend: 10000, SendInterval: 3}, Filters: filter, LabelMatches: compiledPatterns, AnnotationMatches: compiledPatterns}
-}
-
-func TestDeploymentHandler_Create(t *testing.T) {
+func TestNamespaceHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -80,20 +57,19 @@ func TestDeploymentHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 				},
 			},
-			request: makeDeploymentRequest(TestRecord{
-				Name:      "test-deployment",
-				Namespace: stringPtr("default"),
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -110,20 +86,19 @@ func TestDeploymentHandler_Create(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							Deployments: false,
+							Namespaces: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							Deployments: false,
+							Namespaces: false,
 						},
 					},
 				},
 			},
-			request: makeDeploymentRequest(TestRecord{
-				Name:      "test-deployment",
-				Namespace: stringPtr("default"),
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -141,7 +116,7 @@ func TestDeploymentHandler_Create(t *testing.T) {
 				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDeploymentHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewNamespaceHandler(writer, tt.settings, mockClock)
 			result, err := handler.Create(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -149,7 +124,7 @@ func TestDeploymentHandler_Create(t *testing.T) {
 	}
 }
 
-func TestDeploymentHandler_Update(t *testing.T) {
+func TestNamespaceHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -167,20 +142,19 @@ func TestDeploymentHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 				},
 			},
-			request: makeDeploymentRequest(TestRecord{
-				Name:      "test-deployment",
-				Namespace: stringPtr("default"),
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -197,20 +171,19 @@ func TestDeploymentHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
 						Resources: config.Resources{
-							Deployments: true,
+							Namespaces: true,
 						},
 					},
 				},
 			},
-			request: makeDeploymentRequest(TestRecord{
-				Name:      "test-deployment",
-				Namespace: stringPtr("default"),
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -220,8 +193,8 @@ func TestDeploymentHandler_Update(t *testing.T) {
 			}),
 			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.Deployment,
-				Name:          "test-deployment",
+				Type:          config.Namespace,
+				Name:          "test-namespace",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -236,20 +209,19 @@ func TestDeploymentHandler_Update(t *testing.T) {
 					Labels: config.Labels{
 						Enabled: false,
 						Resources: config.Resources{
-							Deployments: false,
+							Namespaces: false,
 						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
 						Resources: config.Resources{
-							Deployments: false,
+							Namespaces: false,
 						},
 					},
 				},
 			},
-			request: makeDeploymentRequest(TestRecord{
-				Name:      "test-deployment",
-				Namespace: stringPtr("default"),
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
 			}),
 			expected: &hook.Result{Allowed: true},
 		},
@@ -271,7 +243,7 @@ func TestDeploymentHandler_Update(t *testing.T) {
 				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDeploymentHandler(writer, tt.settings, mockClock, make(chan error))
+			handler := NewNamespaceHandler(writer, tt.settings, mockClock)
 			result, err := handler.Update(context.Background(), tt.request)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
