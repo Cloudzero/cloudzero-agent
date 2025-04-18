@@ -27,7 +27,7 @@ spec:
         - name: init-scrape
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}
           command:
-            - /app/cloudzero-insights-controller
+            - /app/cloudzero-webhook
           args:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
