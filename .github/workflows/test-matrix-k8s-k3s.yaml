@@ -10,48 +10,69 @@ on:
 
 jobs:
   k3s-version-test:
-    name: k3s-test-${{ matrix.k8s_version }}
+    name: k3s-test-${{ matrix.kver.k3s }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         # Useful for finding versions: https://eduardominguez.es/k3s-versions/
         # From: https://github.com/e-minguez/k3s-versions
-        k8s_version:
+        kver:
           [
-            v1.23.17+k3s1,
-            v1.24.17+k3s1,
-            v1.25.16+k3s4,
-            v1.26.15+k3s1,
-            v1.27.16+k3s1,
-            v1.28.14+k3s1,
-            v1.29.15+k3s1,
-            v1.30.11+k3s1,
-            v1.31.7+k3s1,
-            v1.32.3+k3s1,
+            { k8s: v1.23.17, k3s: v1.23.17+k3s1 },
+            { k8s: v1.24.17, k3s: v1.24.17+k3s1 },
+            { k8s: v1.25.16, k3s: v1.25.16+k3s4 },
+            { k8s: v1.26.15, k3s: v1.26.15+k3s1 },
+            { k8s: v1.27.16, k3s: v1.27.16+k3s1 },
+            { k8s: v1.28.14, k3s: v1.28.14+k3s1 },
+            { k8s: v1.29.15, k3s: v1.29.15+k3s1 },
+            { k8s: v1.30.11, k3s: v1.30.11+k3s1 },
+            { k8s: v1.31.7,  k3s: v1.31.7+k3s1 },
+            { k8s: v1.32.3,  k3s: v1.32.3+k3s1 }
           ]
 
     steps:
       - uses: actions/checkout@v4
-      - uses: alexellis/setup-arkade@v2
-
-      # Fast binary install
-      # https://github.com/alexellis/arkade?tab=readme-ov-file#catalog-of-clis
-      - uses: alexellis/arkade-get@master
+      - uses: azure/setup-kubectl@v4
         with:
-          kubectl: latest
-          helm: latest
-          yq: latest
+          version: ${{ matrix.kver.k8s }}
 
-      - name: Setup k3s ${{ matrix.k8s_version }}
-        shell: bash
+      - name: Install Krew and Plugins
+        run: |
+          (
+            set -x; cd "$(mktemp -d)" &&
+            OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+            ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+            KREW="krew-${OS}_${ARCH}" &&
+            curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+            tar zxvf "${KREW}.tar.gz" &&
+            ./"${KREW}" install krew
+          )
+          echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.krew/bin:$PATH"
+          kubectl krew install stern
+
+      - name: Install Helm
+        run: |
+          # Helm
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install apt-transport-https --yes
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install helm
+
+      - name: Install SNAP Software
+        run: |
+          snap install yq --channel=v3/stable
+
+      - name: Setup k3s ${{ matrix.kver.k3s }}
         run: |
           echo "Ensure UFW is disabled"
           sudo ufw disable
-          echo "Setup k3s ${{ matrix.k8s_version }}"
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.k8s_version }}" INSTALL_K3S_CHANNEL="stable" sh -s -
+          echo "Setup k3s ${{ matrix.kver.k3s }}"
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.kver.k3s }}" INSTALL_K3S_CHANNEL="stable" sh -s -
 
       - name: Prepare a kubeconfig in ~/.kube/config
-        shell: bash
         run: |
           echo "Prepare a kubeconfig in ~/.kube/config"
           mkdir -p ~/.kube
@@ -60,7 +81,6 @@ jobs:
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
 
       - name: Wait for cluster to be ready
-        shell: bash
         run: |
           echo "Waiting for nodes to be ready..."
           sleep 60s
@@ -73,11 +93,10 @@ jobs:
 
       - name: Set version output
         id: set-output
-        shell: bash
         run: |
           echo "kubeconfig=$HOME/.kube/config" >> $GITHUB_OUTPUT
-          echo "k3s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^ ]*\).*/\1/')" >> $GITHUB_OUTPUT
-          echo "k8s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^+]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "k8s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^ ]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "kubectl-version=$(kubectl version --client | grep Client | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
           echo "helm-version=$(helm version --short | sed 's/\([^+]*\).*/\1/')" >> $GITHUB_OUTPUT
 
       # There have been some odd auth (?) issue with some of the CloudZero images in GHCR
@@ -144,6 +163,27 @@ jobs:
 
       # Many more testkube based tests could be added in here as desired.
       # Testkube support Postman, K6, simple scripts and much more.
+
+      - name: Collect Logs
+        id: logs
+        if: failure()
+        run: |
+          echo "---Stern------------------------------------------------------" \
+            &> /tmp/${{ matrix.kver.k3s }}.log
+          stern -n cz-agent --since=5m --no-follow -t . | sort -k4 \
+            &>> /tmp/${{ matrix.kver.k3s }}.log
+          echo "---Testkube---------------------------------------------------" \
+            &>> /tmp/${{ matrix.kver.k3s }}.log
+          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) \
+            &>> /tmp/${{ matrix.kver.k3s }}.log
+
+      - name: Upload Failure Logs
+        uses: actions/upload-artifact@v4
+        if: steps.logs.outcome == 'success'
+        with:
+          name: ${{ matrix.kver.k3s }}-logs.txt
+          path: /tmp/${{ matrix.kver.k3s }}.log
+          retention-days: 7
 
       - name: Cleanup
         if: always()
