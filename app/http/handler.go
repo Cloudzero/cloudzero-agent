@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 )
 
 // admissionHandler represents the HTTP handler for an admission webhook
@@ -32,7 +32,7 @@ func handler() *admissionHandler {
 }
 
 // Serve returns a http.HandlerFunc for an admission webhook
-func (h *admissionHandler) Serve(handler hook.Handler) http.HandlerFunc {
+func (h *admissionHandler) Serve(handler *hook.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 

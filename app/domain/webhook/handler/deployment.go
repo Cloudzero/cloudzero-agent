@@ -11,7 +11,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -22,15 +22,14 @@ type DeploymentHandler struct {
 }
 
 // NewDeploymentHandler creates a new instance of deployment validation hook
-func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, errChan chan<- error) hook.Handler {
+func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	// Need little trick to protect internal data
 	d := &DeploymentHandler{settings: settings}
 	d.Handler.Create = d.Create()
 	d.Handler.Update = d.Update()
 	d.Handler.Store = store
-	d.Handler.ErrorChan = errChan
 	d.clock = clock
-	return d.Handler
+	return &d.Handler
 }
 
 func (h *DeploymentHandler) Create() hook.AdmitFunc {
