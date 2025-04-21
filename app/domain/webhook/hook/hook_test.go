@@ -8,16 +8,31 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/admission/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
+	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
 func TestHandler_Execute(t *testing.T) {
 	ctx := context.Background()
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "namespace",
+			Name:      "deployment",
+		},
+	}
+
 	tests := []struct {
 		name        string
-		operation   v1.Operation
+		operation   types.AdmissionReviewOp
 		admitFunc   hook.AdmitFunc
 		expectErr   bool
 		expectMsg   string
@@ -25,9 +40,9 @@ func TestHandler_Execute(t *testing.T) {
 	}{
 		{
 			name:      "Create operation",
-			operation: v1.Create,
-			admitFunc: func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-				return &hook.Result{Allowed: true, Msg: "Create operation successful"}, nil
+			operation: types.OperationCreate,
+			admitFunc: func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+				return &types.AdmissionResponse{Allowed: true, Message: "Create operation successful"}, nil
 			},
 			expectErr:   false,
 			expectMsg:   "Create operation successful",
@@ -35,9 +50,9 @@ func TestHandler_Execute(t *testing.T) {
 		},
 		{
 			name:      "Update operation",
-			operation: v1.Update,
-			admitFunc: func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-				return &hook.Result{Allowed: true, Msg: "Update operation successful"}, nil
+			operation: types.OperationUpdate,
+			admitFunc: func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+				return &types.AdmissionResponse{Allowed: true, Message: "Update operation successful"}, nil
 			},
 			expectErr:   false,
 			expectMsg:   "Update operation successful",
@@ -45,9 +60,9 @@ func TestHandler_Execute(t *testing.T) {
 		},
 		{
 			name:      "Delete operation",
-			operation: v1.Delete,
-			admitFunc: func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-				return &hook.Result{Allowed: true, Msg: "Delete operation successful"}, nil
+			operation: types.OperationDelete,
+			admitFunc: func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+				return &types.AdmissionResponse{Allowed: true, Message: "Delete operation successful"}, nil
 			},
 			expectErr:   false,
 			expectMsg:   "Delete operation successful",
@@ -55,9 +70,9 @@ func TestHandler_Execute(t *testing.T) {
 		},
 		{
 			name:      "Connect operation",
-			operation: v1.Connect,
-			admitFunc: func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-				return &hook.Result{Allowed: true, Msg: "Connect operation successful"}, nil
+			operation: types.OperationConnect,
+			admitFunc: func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+				return &types.AdmissionResponse{Allowed: true, Message: "Connect operation successful"}, nil
 			},
 			expectErr:   false,
 			expectMsg:   "Connect operation successful",
@@ -69,7 +84,7 @@ func TestHandler_Execute(t *testing.T) {
 			admitFunc:   nil, // No admit function for invalid operation
 			expectErr:   false,
 			expectMsg:   "Invalid operation: Invalid",
-			expectAllow: false,
+			expectAllow: true,
 		},
 	}
 
@@ -77,23 +92,27 @@ func TestHandler_Execute(t *testing.T) {
 		tt := tt // Capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize the handler with only the relevant AdmitFunc based on the operation
-			h := &hook.Handler{}
+			h := &hook.Handler{
+				ObjectCreator: helper.NewStaticObjectCreator(&appsv1.Deployment{}),
+			}
 			switch tt.operation {
-			case v1.Create:
+			case types.OperationCreate:
 				h.Create = tt.admitFunc
-			case v1.Update:
+			case types.OperationUpdate:
 				h.Update = tt.admitFunc
-			case v1.Delete:
+			case types.OperationDelete:
 				h.Delete = tt.admitFunc
-			case v1.Connect:
+			case types.OperationConnect:
 				h.Connect = tt.admitFunc
 				// No default case needed; invalid operations will have no handler set
 			}
 
 			// Create a mock AdmissionRequest
-			req := &hook.Request{
+			req := &types.AdmissionReview{
 				Operation: tt.operation,
 				// You can add more fields here if your handler uses them
+				NewObjectRaw: getRawObject(appsv1.SchemeGroupVersion, deployment),
+				OldObjectRaw: getRawObject(appsv1.SchemeGroupVersion, deployment),
 			}
 
 			// Execute the handler
@@ -104,9 +123,19 @@ func TestHandler_Execute(t *testing.T) {
 				assert.Error(t, err, "Expected an error but got none")
 			} else {
 				assert.NoError(t, err, "Did not expect an error but got one")
-				assert.Equal(t, tt.expectMsg, result.Msg, "Unexpected message in result")
+				assert.Equal(t, tt.expectMsg, result.Message, "Unexpected message in result")
 				assert.Equal(t, tt.expectAllow, result.Allowed, "Unexpected allowed status in result")
 			}
 		})
 	}
+}
+
+func getRawObject(s schema.GroupVersion, o runtime.Object) []byte {
+	scheme := runtime.NewScheme()
+	corev1.AddToScheme(scheme)
+	codecs := serializer.NewCodecFactory(scheme)
+	encoder := codecs.LegacyCodec(s)
+	raw, _ := runtime.Encode(encoder, o)
+
+	return raw
 }

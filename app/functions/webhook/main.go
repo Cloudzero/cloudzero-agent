@@ -12,7 +12,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/go-obvious/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -22,8 +24,9 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-agent/app/domain/pusher"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
-	"github.com/cloudzero/cloudzero-agent/app/http"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/handlers"
+	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
@@ -127,67 +130,63 @@ func main() {
 	if backfill {
 		log.Ctx(ctx).Info().Msg("Starting backfill mode")
 		// setup k8s client
-		k8sClient, err := k8s.NewClient(settings.K8sClient.KubeConfig)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to build k8s client")
+		k8sClient, err2 := k8s.NewClient(settings.K8sClient.KubeConfig)
+		if err2 != nil {
+			log.Fatal().Err(err2).Msg("Failed to build k8s client")
 		}
 		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
 		return
 	}
 
-	server := http.NewServer(settings,
-		nil,
-		[]http.AdmissionRouteSegment{
-			{Route: "/validate/pod", Hook: handler.NewPodHandler(store, settings, clock)},
-			{Route: "/validate/deployment", Hook: handler.NewDeploymentHandler(store, settings, clock)},
-			{Route: "/validate/statefulset", Hook: handler.NewStatefulsetHandler(store, settings, clock)},
-			{Route: "/validate/namespace", Hook: handler.NewNamespaceHandler(store, settings, clock)},
-			{Route: "/validate/node", Hook: handler.NewNodeHandler(store, settings, clock)},
-			{Route: "/validate/job", Hook: handler.NewJobHandler(store, settings, clock)},
-			{Route: "/validate/cronjob", Hook: handler.NewCronJobHandler(store, settings, clock)},
-			{Route: "/validate/daemonset", Hook: handler.NewDaemonSetHandler(store, settings, clock)},
-		}..., // variadic arguments expansion
-	)
+	wd, err := webhook.NewWebhookFactory(store, settings, clock)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
+	}
 
-	go func() {
-		// listen shutdown signal
-		signalChan := make(chan os.Signal, 1)
-		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-		sig := <-signalChan
-
-		log.Ctx(ctx).Error().Str("signal", sig.String()).Msg("Received signal; shutting down...")
-		if err := server.Shutdown(ctx); err != nil {
-			log.Err(err).Msg("Error shutting down server")
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Panic().Interface("panic", r).Msg("application panicked, exiting")
 		}
 	}()
 
-	if settings.Certificate.Cert == "" || settings.Certificate.Key == "" {
-		log.Ctx(ctx).Info().Msg("Starting server without TLS")
-		err := server.ListenAndServe()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to listen and serve")
-		}
-	} else {
-		log.Ctx(ctx).Info().Msg("Starting server with TLS")
-		// Register a signup handler
-		sigc := make(chan os.Signal, 1)
-		defer close(sigc)
-		signal.Notify(sigc, syscall.SIGHUP)
-
-		// Options
-		sig := monitor.WithSIGHUPReload(sigc)
-		certs := monitor.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
-		verify := monitor.WithVerifyConnection()
-		cb := monitor.WithOnReload(func(_ *tls.Config) {
-			log.Ctx(ctx).Info().Msg("TLS certificates rotated !!")
-		})
-		server.TLSConfig = monitor.TLSConfig(sig, certs, verify, cb)
-
-		err := server.ListenAndServeTLS("", "")
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to listen and serve")
-		}
+	mw := []server.Middleware{
+		middleware.LoggingMiddlewareWrapper,
+		middleware.PromHTTPMiddleware,
 	}
-	// Print a message when the server is stopped.
+
+	apis := []server.API{
+		handlers.NewValidationWebhookAPI("/validate", wd),
+		handlers.NewPromMetricsAPI("/metrics"),
+	}
+	if settings.Server.Profiling {
+		apis = append(apis, handlers.NewProfilingAPI("/debug/pprof/"))
+	}
+
+	// Register a signup handler
+	sigc := make(chan os.Signal, 1)
+	defer close(sigc)
+	signal.Notify(sigc, syscall.SIGHUP)
+
+	// Options
+	sig := monitor.WithSIGHUPReload(sigc)
+	certs := monitor.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
+	verify := monitor.WithVerifyConnection()
+	cb := monitor.WithOnReload(func(_ *tls.Config) {
+		log.Ctx(ctx).Info().Msg("TLS certificate initialized")
+	})
+	listener := server.TLSListener(
+		time.Duration(settings.Server.ReadTimeout),
+		time.Duration(settings.Server.WriteTimeout),
+		time.Duration(settings.Server.IdleTimeout),
+		func() *tls.Config { return monitor.TLSConfig(sig, certs, verify, cb) },
+	)
+
+	log.Ctx(ctx).Info().Msg("Starting service")
+	server.New(build.Version()).
+		WithAddress(fmt.Sprintf(":%d", settings.Server.Port)).
+		WithMiddleware(mw...).
+		WithAPIs(apis...).
+		WithListener(listener).
+		Run(ctx)
 	log.Ctx(ctx).Info().Msg("Server stopped")
 }

@@ -12,7 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
@@ -21,8 +22,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makeNodeRequest(record TestRecord) *types.AdmissionReview {
-	node := &corev1.Node{
+func makeIngressRequest(record TestRecord) *types.AdmissionReview {
+	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
 			Labels:      record.Labels,
@@ -30,23 +31,28 @@ func makeNodeRequest(record TestRecord) *types.AdmissionReview {
 		},
 	}
 
+	if record.Namespace != nil {
+		ingress.Namespace = *record.Namespace
+	}
+
 	return &types.AdmissionReview{
-		NewObjectRaw: getRawObject(corev1.SchemeGroupVersion, node),
+		NewObjectRaw: getRawObject(appsv1.SchemeGroupVersion, ingress),
 	}
 }
 
-func TestFormatNodeData(t *testing.T) {
+func TestFormatIngressData(t *testing.T) {
 	tests := []struct {
 		name     string
-		node     *corev1.Node
+		ingress  *networkingv1.Ingress
 		settings *config.Settings
 		expected types.ResourceTags
 	}{
 		{
 			name: "Test with labels and annotations enabled",
-			node: &corev1.Node{
+			ingress: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
+					Name:      "test-ingress",
+					Namespace: "default",
 					Labels: map[string]string{
 						"app": "test",
 					},
@@ -72,11 +78,13 @@ func TestFormatNodeData(t *testing.T) {
 				},
 			},
 			expected: types.ResourceTags{
-				Type: config.Node,
-				Name: "test-node",
+				Type:      config.Ingress,
+				Name:      "test-ingress",
+				Namespace: stringPtr("default"),
 				MetricLabels: &config.MetricLabels{
-					"node":          "test-node",
-					"resource_type": "node",
+					"ingress":       "test-ingress",
+					"namespace":     "default",
+					"resource_type": "ingress",
 				},
 				Labels: &config.MetricLabelTags{
 					"app": "test",
@@ -90,23 +98,24 @@ func TestFormatNodeData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := handler.FormatNodeData(tt.node, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, result.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, result.MetricLabels)
+			result := handler.FormatIngressData(tt.ingress, tt.settings)
+			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
 			}
-			if !reflect.DeepEqual(tt.expected.Labels, result.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, result.Labels)
+			if !reflect.DeepEqual(tt.expected.Labels, tt.expected.Labels) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, tt.expected.Labels)
 			}
-			if !reflect.DeepEqual(tt.expected.Annotations, result.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, result.Annotations)
+			if !reflect.DeepEqual(tt.expected.Annotations, tt.expected.Annotations) {
+				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, tt.expected.Annotations)
 			}
 			assert.Equal(t, tt.expected.Type, result.Type)
 			assert.Equal(t, tt.expected.Name, result.Name)
+			assert.Equal(t, tt.expected.Namespace, result.Namespace)
 		})
 	}
 }
 
-func TestNewNodeHandler(t *testing.T) {
+func TestNewIngressHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -136,14 +145,15 @@ func TestNewNodeHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
+
+			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
 			assert.NotNil(t, h)
 			assert.Equal(t, writer, h.Store)
 		})
 	}
 }
 
-func TestNodeHandler_Create(t *testing.T) {
+func TestIngressHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
@@ -162,8 +172,9 @@ func TestNodeHandler_Create(t *testing.T) {
 					},
 				},
 			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
+			request: makeIngressRequest(TestRecord{
+				Name:      "test-ingress",
+				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -179,15 +190,14 @@ func TestNodeHandler_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
 
+			writer := mocks.NewMockResourceStore(mockCtl)
 			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
 			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
 			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
 			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
 
+			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
 			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -195,7 +205,7 @@ func TestNodeHandler_Create(t *testing.T) {
 	}
 }
 
-func TestNodeHandler_Update(t *testing.T) {
+func TestIngressHandler_Update(t *testing.T) {
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
 	mockClock := mocks.NewMockClock(initialTime)
 
@@ -218,8 +228,9 @@ func TestNodeHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
+			request: makeIngressRequest(TestRecord{
+				Name:      "test-ingress",
+				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -241,8 +252,9 @@ func TestNodeHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
+			request: makeIngressRequest(TestRecord{
+				Name:      "test-ingress",
+				Namespace: stringPtr("default"),
 				Labels: map[string]string{
 					"app": "test",
 				},
@@ -252,8 +264,8 @@ func TestNodeHandler_Update(t *testing.T) {
 			}),
 			dbresult: &types.ResourceTags{
 				ID:            "1",
-				Type:          config.Node,
-				Name:          "test-node",
+				Type:          config.Ingress,
+				Name:          "test-ingress",
 				Labels:        &config.MetricLabelTags{"app": "test"},
 				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
 				RecordCreated: mockClock.GetCurrentTime(),
@@ -267,8 +279,8 @@ func TestNodeHandler_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
 
+			writer := mocks.NewMockResourceStore(mockCtl)
 			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
 			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
 			if tt.dbresult == nil {
@@ -276,10 +288,9 @@ func TestNodeHandler_Update(t *testing.T) {
 			} else {
 				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			}
-
 			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
 
+			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
 			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

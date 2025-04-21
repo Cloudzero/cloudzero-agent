@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package handler
+package handler_test
 
 import (
 	"context"
@@ -13,17 +13,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makeDaemonSetRequest(record TestRecord) *hook.Request {
+func makeDaemonSetRequest(record TestRecord) *types.AdmissionReview {
 	daemonset := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
@@ -36,16 +39,8 @@ func makeDaemonSetRequest(record TestRecord) *hook.Request {
 		daemonset.Namespace = *record.Namespace
 	}
 
-	scheme := runtime.NewScheme()
-	appsv1.AddToScheme(scheme)
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(appsv1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, daemonset)
-
-	return &hook.Request{
-		Object: runtime.RawExtension{
-			Raw: raw,
-		},
+	return &types.AdmissionReview{
+		NewObjectRaw: getRawObject(appsv1.SchemeGroupVersion, daemonset),
 	}
 }
 
@@ -74,15 +69,9 @@ func TestFormatDaemonSetData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 				},
 				LabelMatches: []regexp.Regexp{
@@ -121,15 +110,9 @@ func TestFormatDaemonSetData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
 					},
 				},
 			},
@@ -150,7 +133,7 @@ func TestFormatDaemonSetData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatDaemonSetData(tt.daemonset, tt.settings)
+			result := handler.FormatDaemonSetData(tt.daemonset, tt.settings)
 			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
 				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
 			}
@@ -178,15 +161,9 @@ func TestNewDaemonSetHandler(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 				},
 			},
@@ -201,11 +178,13 @@ func TestNewDaemonSetHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
+
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
-			assert.NotNil(t, handler)
-			assert.Equal(t, writer, handler.Store)
+
+			h := handler.NewDaemonSetHandler(writer, tt.settings, mockClock)
+			assert.NotNil(t, h)
+			assert.Equal(t, writer, h.Store)
 		})
 	}
 }
@@ -214,8 +193,8 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
-		expected *hook.Result
+		request  *types.AdmissionReview
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test create with labels and annotations enabled",
@@ -223,15 +202,9 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 				},
 			},
@@ -245,31 +218,7 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test create with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
-					},
-				},
-			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -279,14 +228,13 @@ func TestDaemonSetHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			}
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
-			result, err := handler.Create(context.Background(), tt.request)
+
+			h := handler.NewDaemonSetHandler(writer, tt.settings, mockClock)
+			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -300,9 +248,9 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
+		request  *types.AdmissionReview
 		dbresult *types.ResourceTags
-		expected *hook.Result
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test update with labels and annotations enabled no previous record",
@@ -310,15 +258,9 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 				},
 			},
@@ -332,7 +274,7 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 		{
 			name: "Test update with labels and annotations enabled with previous record",
@@ -340,15 +282,9 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							DaemonSets: true,
-						},
 					},
 				},
 			},
@@ -370,31 +306,7 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 				RecordCreated: mockClock.GetCurrentTime(),
 				RecordUpdated: mockClock.GetCurrentTime(),
 			},
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							DaemonSets: false,
-						},
-					},
-				},
-			},
-			request: makeDaemonSetRequest(TestRecord{
-				Name:      "test-daemonset",
-				Namespace: stringPtr("default"),
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -404,20 +316,46 @@ func TestDaemonSetHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				if tt.dbresult == nil {
-					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				} else {
-					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-				}
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.dbresult == nil {
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewDaemonSetHandler(writer, tt.settings, mockClock)
-			result, err := handler.Update(context.Background(), tt.request)
+
+			h := handler.NewDaemonSetHandler(writer, tt.settings, mockClock)
+			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func encodeObject(t *testing.T, handler *hook.Handler, rawOjb []byte) metav1.Object {
+	// Create a new object from the raw type.
+	runtimeObj, err := handler.ObjectCreator.NewObject(rawOjb)
+	assert.NoError(t, err)
+	assert.NotNil(t, runtimeObj)
+
+	validatingObj, ok := runtimeObj.(metav1.Object)
+	assert.True(t, ok)
+	assert.NotNil(t, validatingObj)
+
+	return validatingObj
+}
+
+func getRawObject(s schema.GroupVersion, o runtime.Object) []byte {
+	scheme := runtime.NewScheme()
+	corev1.AddToScheme(scheme)
+	codecs := serializer.NewCodecFactory(scheme)
+	encoder := codecs.LegacyCodec(s)
+	raw, _ := runtime.Encode(encoder, o)
+
+	return raw
+}
+
+func stringPtr(s string) *string {
+	return &s
 }

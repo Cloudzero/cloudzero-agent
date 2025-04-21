@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package handler
+package handler_test
 
 import (
 	"context"
@@ -14,16 +14,14 @@ import (
 	"go.uber.org/mock/gomock"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makeJobRequest(record TestRecord) *hook.Request {
+func makeJobRequest(record TestRecord) *types.AdmissionReview {
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
@@ -36,16 +34,8 @@ func makeJobRequest(record TestRecord) *hook.Request {
 		job.Namespace = *record.Namespace
 	}
 
-	scheme := runtime.NewScheme()
-	batchv1.AddToScheme(scheme)
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(batchv1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, job)
-
-	return &hook.Request{
-		Object: runtime.RawExtension{
-			Raw: raw,
-		},
+	return &types.AdmissionReview{
+		NewObjectRaw: getRawObject(batchv1.SchemeGroupVersion, job),
 	}
 }
 
@@ -74,15 +64,9 @@ func TestFormatJobData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 				},
 				LabelMatches: []regexp.Regexp{
@@ -109,48 +93,11 @@ func TestFormatJobData(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "Test with labels and annotations disabled",
-			job: &batchv1.Job{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-job",
-					Namespace: "default",
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.Job,
-				Name:      "test-job",
-				Namespace: stringPtr("default"),
-				MetricLabels: &config.MetricLabels{
-					"job":           "test-job",
-					"namespace":     "default",
-					"resource_type": "job",
-				},
-				Labels:      &config.MetricLabelTags{},
-				Annotations: &config.MetricLabelTags{},
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatJobData(tt.job, tt.settings)
+			result := handler.FormatJobData(tt.job, tt.settings)
 			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
 				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
 			}
@@ -178,15 +125,9 @@ func TestNewJobHandler(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 				},
 			},
@@ -203,9 +144,10 @@ func TestNewJobHandler(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewJobHandler(writer, tt.settings, mockClock)
-			assert.NotNil(t, handler)
-			assert.Equal(t, writer, handler.Store)
+
+			h := handler.NewJobHandler(writer, tt.settings, mockClock)
+			assert.NotNil(t, h)
+			assert.Equal(t, writer, h.Store)
 		})
 	}
 }
@@ -214,8 +156,8 @@ func TestJobHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
-		expected *hook.Result
+		request  *types.AdmissionReview
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test create with labels and annotations enabled",
@@ -223,15 +165,9 @@ func TestJobHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 				},
 			},
@@ -245,31 +181,7 @@ func TestJobHandler_Create(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test create with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-				},
-			},
-			request: makeJobRequest(TestRecord{
-				Name:      "test-job",
-				Namespace: stringPtr("default"),
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -277,16 +189,15 @@ func TestJobHandler_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			}
+			writer := mocks.NewMockResourceStore(mockCtl)
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewJobHandler(writer, tt.settings, mockClock)
-			result, err := handler.Create(context.Background(), tt.request)
+
+			h := handler.NewJobHandler(writer, tt.settings, mockClock)
+			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -300,9 +211,9 @@ func TestJobHandler_Update(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
+		request  *types.AdmissionReview
 		dbresult *types.ResourceTags
-		expected *hook.Result
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test update with labels and annotations enabled no previous record",
@@ -310,15 +221,9 @@ func TestJobHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 				},
 			},
@@ -332,7 +237,7 @@ func TestJobHandler_Update(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 		{
 			name: "Test update with labels and annotations enabled with previous record",
@@ -340,15 +245,9 @@ func TestJobHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Jobs: true,
-						},
 					},
 				},
 			},
@@ -371,31 +270,7 @@ func TestJobHandler_Update(t *testing.T) {
 				RecordCreated: mockClock.GetCurrentTime(),
 				RecordUpdated: mockClock.GetCurrentTime(),
 			},
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Jobs: false,
-						},
-					},
-				},
-			},
-			request: makeJobRequest(TestRecord{
-				Name:      "test-job",
-				Namespace: stringPtr("default"),
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -403,20 +278,19 @@ func TestJobHandler_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				if tt.dbresult == nil {
-					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				} else {
-					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-				}
+			writer := mocks.NewMockResourceStore(mockCtl)
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.dbresult == nil {
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			}
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewJobHandler(writer, tt.settings, mockClock)
-			result, err := handler.Update(context.Background(), tt.request)
+
+			h := handler.NewJobHandler(writer, tt.settings, mockClock)
+			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})

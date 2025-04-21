@@ -8,69 +8,87 @@ import (
 	"context"
 	"fmt"
 
-	v1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
-type Request = v1.AdmissionRequest
-
-// Result contains the result of an admission request
-type Result struct {
-	Allowed bool
-	Msg     string
-}
-
 // AdmitFunc defines how to process an admission request
-type AdmitFunc func(ctx context.Context, r *Request) (*Result, error)
+type AdmitFunc func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error)
 
 // Handler represents the set of functions for each operation in an admission webhook.
 type Handler struct {
-	Create  AdmitFunc
-	Delete  AdmitFunc
-	Update  AdmitFunc
-	Connect AdmitFunc
-	Store   types.ResourceStore
+	ObjectCreator types.ObjectCreator
+	Create        AdmitFunc
+	Delete        AdmitFunc
+	Update        AdmitFunc
+	Connect       AdmitFunc
+	Store         types.ResourceStore
 }
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.
-func (h *Handler) Execute(ctx context.Context, r *Request) (*Result, error) {
-	var res *Result
+func (h *Handler) Execute(ctx context.Context, r *types.AdmissionReview) (*types.AdmissionResponse, error) {
+	var res *types.AdmissionResponse
 	var err error
+
+	// No object creator? Don't handle the review
+	if h.ObjectCreator == nil {
+		return &types.AdmissionResponse{Allowed: true, Message: fmt.Sprintf("no object creator: %s", r.Operation)}, nil
+	}
+
+	raw := r.NewObjectRaw
+	if r.Operation == types.OperationDelete {
+		raw = r.OldObjectRaw
+	}
+
+	// Create a new object from the raw type.
+	runtimeObj, err := h.ObjectCreator.NewObject(raw)
+	if err != nil {
+		// RULE: always return allow
+		return &types.AdmissionResponse{Allowed: true, Message: fmt.Sprintf("Unable to create object from raw: %s: %s", r.Operation, err.Error())}, nil
+	}
+
+	validatingObj, ok := runtimeObj.(metav1.Object)
+	// Get the object.
+	if !ok {
+		// RULE: always return allow
+		return &types.AdmissionResponse{Allowed: true, Message: "Impossible to type assert the deep copy to metav1.Object"}, nil
+	}
+
 	switch r.Operation {
-	case v1.Create:
+	case types.OperationCreate:
 		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Create", func(ctx context.Context, span *instr.Span) error {
-			res, err = middleware(ctx, h.Create, r)
+			res, err = middleware(ctx, h.Create, r, validatingObj)
 			return err
 		})
-	case v1.Update:
+	case types.OperationUpdate:
 		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Update", func(ctx context.Context, span *instr.Span) error {
-			res, err = middleware(ctx, h.Update, r)
+			res, err = middleware(ctx, h.Update, r, validatingObj)
 			return err
 		})
-	case v1.Delete:
+	case types.OperationDelete:
 		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Delete", func(ctx context.Context, span *instr.Span) error {
-			res, err = middleware(ctx, h.Delete, r)
+			res, err = middleware(ctx, h.Delete, r, validatingObj)
 			return err
 		})
-	case v1.Connect:
+	case types.OperationConnect:
 		err = instr.RunSpan(ctx, "executeAdmissionsReviewRequest_Connect", func(ctx context.Context, span *instr.Span) error {
-			res, err = middleware(ctx, h.Connect, r)
+			res, err = middleware(ctx, h.Connect, r, validatingObj)
 			return err
 		})
 	default:
-		return &Result{Msg: fmt.Sprintf("Invalid operation: %s", r.Operation)}, nil
+		return &types.AdmissionResponse{Allowed: true, Message: fmt.Sprintf("Invalid operation: %s", r.Operation)}, nil
 	}
 
 	return res, err
 }
 
-func middleware(ctx context.Context, fn AdmitFunc, r *Request) (*Result, error) {
+func middleware(ctx context.Context, fn AdmitFunc, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 	// This is a setup which would allow registration of middleware functions
 	// which we could invoke before finally invoking the actual function.
 	if fn == nil {
 		return nil, fmt.Errorf("operation %s is not registered", r.Operation)
 	}
-	return fn(ctx, r)
+	return fn(ctx, r, obj)
 }

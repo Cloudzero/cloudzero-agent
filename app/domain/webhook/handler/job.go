@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type JobHandler struct {
@@ -23,47 +25,35 @@ type JobHandler struct {
 
 func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &JobHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&batchv1.Job{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
 	h.Handler.Store = store
 	h.clock = clock
 	return &h.Handler
 }
 
 func (h *JobHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*batchv1.Job)
+		if !ok {
+			log.Warn().Msg("unable to case to job object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *JobHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
-	}
+	return h.Create()
 }
 
-func (h *JobHandler) parseV1(data []byte) (*batchv1.Job, error) {
-	var o batchv1.Job
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
+func (h *JobHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
-	return &o, nil
-}
-
-func (h *JobHandler) writeDataToStorage(ctx context.Context, o *batchv1.Job) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
 }
 
 func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags {
@@ -73,13 +63,8 @@ func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.Jobs {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Jobs), settings)
-	}
-	if settings.Filters.Annotations.Resources.Jobs {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Jobs), settings)
-	}
-
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

@@ -40,6 +40,9 @@ defaults:
     #
     # For details, see the Kubernetes documentation:
     # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+    #
+    # Note that if you set this, you'll likely also want to set kubeStateMetrics.dnsPolicy
+    # to the same value.
     policy:
     # DNS configuration to use on all pods.
     #
@@ -48,6 +51,9 @@ defaults:
     #
     # For details, see the Kubernetes documentation:
     # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+    #
+    # Note that if you set this, you'll likely also want to set kubeStateMetrics.dnsConfig
+    # to the same value.
     config: {}
   # Labels to be added to all resources.
   #
@@ -73,6 +79,9 @@ defaults:
   #
   # You may also be interested in this list of well-known labels:
   # https://kubernetes.io/docs/reference/labels-annotations-taints/
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.customLabels.
   labels: {}
   # Annotations to be added to all resources.
   #
@@ -82,24 +91,36 @@ defaults:
   #
   # For more information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.annotations.
   annotations: {}
   # Affinity settings to be added to all resources.
   #
   # Affinity settings are used to control the scheduling of pods. For more
   # information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.affinity.
   affinity: {}
   # Tolerations to be added to all resources.
   #
   # Tolerations are used to control the scheduling of pods. For more
   # information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.tolerations.
   tolerations: []
   # Node Selector to be added to all resources.
   #
   # Node Selector is used to control the scheduling of pods. For more
   # information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.nodeSelector.
   nodeSelector: {}
   # If set, this priority class name will be used for all deployments and jobs.
   #
@@ -109,6 +130,9 @@ defaults:
   #
   # For more information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.priorityClassName.
   priorityClassName:
 
 # Component-specific configuration settings.
@@ -144,6 +168,40 @@ components:
       repository: quay.io/prometheus-operator/prometheus-config-reloader
       tag: "v0.70.0"
 
+# Due to limitations of Helm, we are unfortunately not able to automatically configure the
+# kube-state-metrics subchart using the configuration above, and instead need to configure
+# it here, often duplicating things.
+#
+# For full documentation on configuring this subchart, see:
+# https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics
+# Specifically, the values.yaml file in that repository:
+# https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-state-metrics/values.yaml
+kubeStateMetrics:
+  enabled: true
+  affinity: {}
+  tolerations: []
+  customLabels: {}
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
+  annotations: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  podDisruptionBudget: {}
+  image:
+    registry: registry.k8s.io
+    repository: kube-state-metrics/kube-state-metrics
+    tag: "v2.10.1"
+    sha:
+    pullPolicy: IfNotPresent
+  imagePullSecrets: []
+  nameOverride: "cloudzero-state-metrics"
+  # Disable CloudZero KSM as a Scrape Target since the service endpoint is
+  # explicitly defined by the Validators config file.
+  prometheusScrape: false
+  # Set a default port other than 8080 to avoid collisions with any existing KSM
+  # services.
+  service:
+    port: 8080
 
 #######################################################################################
 #######################################################################################
@@ -228,21 +286,6 @@ initCertJob:
     serviceAccountName: ""
     clusterRoleName: ""
     clusterRoleBindingName: ""
-
-kubeStateMetrics:
-  enabled: true
-  image:
-    registry: registry.k8s.io
-    repository: kube-state-metrics/kube-state-metrics
-    tag: "v2.10.1"
-    digest:
-  nameOverride: "cloudzero-state-metrics"
-  # Disable CloudZero KSM as a Scrape Target since the service endpoint is explicitly defined
-  # by the Validators config file.
-  prometheusScrape: false
-  # Set a default port other than 8080 to avoid collisions with any existing KSM services.
-  service:
-    port: 8080
 
   # -- Overriding static scrape target address for an existing KSM.
   # -- Set to service <service-name>.<namespace>.svc.cluster.local:port if built-in is disabled (enable=false above)

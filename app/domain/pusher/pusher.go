@@ -249,7 +249,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	}
 
 	ts := h.formatMetrics(batch)
-	log.Ctx(h.ctx).Info().
+	log.Ctx(h.ctx).Debug().
 		Int("record_count", len(ts)).
 		Msg("Pushing records to remote write endpoint")
 
@@ -424,6 +424,9 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 
 		client := &http.Client{}
 		resp, err = client.Do(req)
+		if err != nil {
+			log.Ctx(ctx).Err(err).Msg("JB: post metric failure")
+		}
 
 		// Instrument: measure duration after each attempt
 		duration := time.Since(start).Seconds()

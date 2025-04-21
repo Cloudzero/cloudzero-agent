@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package handler
+package handler_test
 
 import (
 	"context"
@@ -12,16 +12,14 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func makeNamespaceRequest(record TestRecord) *hook.Request {
+func makeNamespaceRequest(record TestRecord) *types.AdmissionReview {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        record.Name,
@@ -30,16 +28,8 @@ func makeNamespaceRequest(record TestRecord) *hook.Request {
 		},
 	}
 
-	scheme := runtime.NewScheme()
-	corev1.AddToScheme(scheme)
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(corev1.SchemeGroupVersion)
-	raw, _ := runtime.Encode(encoder, namespace)
-
-	return &hook.Request{
-		Object: runtime.RawExtension{
-			Raw: raw,
-		},
+	return &types.AdmissionReview{
+		NewObjectRaw: getRawObject(corev1.SchemeGroupVersion, namespace),
 	}
 }
 
@@ -47,8 +37,8 @@ func TestNamespaceHandler_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
-		expected *hook.Result
+		request  *types.AdmissionReview
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test create with labels and annotations enabled",
@@ -56,15 +46,9 @@ func TestNamespaceHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 				},
 			},
@@ -77,30 +61,7 @@ func TestNamespaceHandler_Create(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test create with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Namespaces: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Namespaces: false,
-						},
-					},
-				},
-			},
-			request: makeNamespaceRequest(TestRecord{
-				Name: "test-namespace",
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -110,14 +71,14 @@ func TestNamespaceHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			}
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewNamespaceHandler(writer, tt.settings, mockClock)
-			result, err := handler.Create(context.Background(), tt.request)
+			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
+
+			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -131,9 +92,9 @@ func TestNamespaceHandler_Update(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings *config.Settings
-		request  *hook.Request
+		request  *types.AdmissionReview
 		dbresult *types.ResourceTags
-		expected *hook.Result
+		expected *types.AdmissionResponse
 	}{
 		{
 			name: "Test update with labels and annotations enabled no previous record",
@@ -141,15 +102,9 @@ func TestNamespaceHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 				},
 			},
@@ -162,7 +117,7 @@ func TestNamespaceHandler_Update(t *testing.T) {
 					"annotation-key": "annotation-value",
 				},
 			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 		{
 			name: "Test update with labels and annotations enabled with previous record",
@@ -170,15 +125,9 @@ func TestNamespaceHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
-						Resources: config.Resources{
-							Namespaces: true,
-						},
 					},
 				},
 			},
@@ -200,30 +149,7 @@ func TestNamespaceHandler_Update(t *testing.T) {
 				RecordCreated: mockClock.GetCurrentTime(),
 				RecordUpdated: mockClock.GetCurrentTime(),
 			},
-			expected: &hook.Result{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Namespaces: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Namespaces: false,
-						},
-					},
-				},
-			},
-			request: makeNamespaceRequest(TestRecord{
-				Name: "test-namespace",
-			}),
-			expected: &hook.Result{Allowed: true},
+			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
@@ -233,18 +159,18 @@ func TestNamespaceHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
 
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				if tt.dbresult == nil {
-					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				} else {
-					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-				}
+			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.dbresult == nil {
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			}
+
 			mockClock := mocks.NewMockClock(time.Now())
-			handler := NewNamespaceHandler(writer, tt.settings, mockClock)
-			result, err := handler.Update(context.Background(), tt.request)
+			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
+
+			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})

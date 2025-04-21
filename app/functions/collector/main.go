@@ -20,7 +20,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
-	czhttp "github.com/cloudzero/cloudzero-agent/app/http"
+	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -101,6 +101,11 @@ func main() {
 	}
 	defer domain.Close()
 
+	mw := []server.Middleware{
+		middleware.LoggingMiddlewareWrapper,
+		middleware.PromHTTPMiddleware,
+	}
+
 	apis := []server.API{
 		handlers.NewRemoteWriteAPI("/collector", domain),
 		handlers.NewPromMetricsAPI("/metrics"),
@@ -112,14 +117,12 @@ func main() {
 
 	// Expose the service
 	logger.Info().Msg("Starting service")
-	server.New(
-		build.Version(),
-		[]server.Middleware{
-			czhttp.LoggingMiddlewareWrapper,
-			handlers.PromHTTPMiddleware,
-		},
-		apis...,
-	).Run(ctx)
+	server.New(build.Version()).
+		WithAddress(fmt.Sprintf(":%d", settings.Server.Port)).
+		WithMiddleware(mw...).
+		WithAPIs(apis...).
+		WithListener(server.HTTPListener()).
+		Run(ctx)
 	logger.Info().Msg("Service stopping")
 }
 

@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type PodHandler struct {
@@ -23,47 +25,35 @@ type PodHandler struct {
 
 func NewPodHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &PodHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&corev1.Pod{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
 	h.Handler.Store = store
 	h.clock = clock
 	return &h.Handler
 }
 
 func (h *PodHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Pod)
+		if !ok {
+			log.Warn().Msg("unable to case to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *PodHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
-	}
+	return h.Create()
 }
 
-func (h *PodHandler) parseV1(data []byte) (*corev1.Pod, error) {
-	var o corev1.Pod
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
+func (h *PodHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
-	return &o, nil
-}
-
-func (h *PodHandler) writeDataToStorage(ctx context.Context, o *corev1.Pod) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
 }
 
 func FormatPodData(o *corev1.Pod, settings *config.Settings) types.ResourceTags {
@@ -73,12 +63,8 @@ func FormatPodData(o *corev1.Pod, settings *config.Settings) types.ResourceTags 
 		namespace   = o.GetNamespace()
 		podName     = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.Pods {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
-	}
-	if settings.Filters.Annotations.Resources.Pods {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
-	}
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 	metricLabels := config.MetricLabels{
 		"pod":           podName, // standard metric labels to attach to metric
 		"namespace":     namespace,

@@ -21,9 +21,9 @@ webhooks:
     failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE", "DELETE" ]
-        apiGroups: "*"
-        apiVersions: "*"
-        resources: "*"
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["*"]
         scope: "*"
     clientConfig:
       service:
@@ -38,6 +38,6 @@ webhooks:
       {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 5
+    timeoutSeconds: 15
 {{- end }}
 {{- end }}

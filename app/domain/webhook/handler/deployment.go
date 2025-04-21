@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type DeploymentHandler struct {
@@ -24,63 +26,47 @@ type DeploymentHandler struct {
 // NewDeploymentHandler creates a new instance of deployment validation hook
 func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	// Need little trick to protect internal data
-	d := &DeploymentHandler{settings: settings}
-	d.Handler.Create = d.Create()
-	d.Handler.Update = d.Update()
-	d.Handler.Store = store
-	d.clock = clock
-	return &d.Handler
+	h := &DeploymentHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&appsv1.Deployment{})
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
+	h.Handler.Store = store
+	h.clock = clock
+	return &h.Handler
 }
 
 func (h *DeploymentHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			log.Warn().Msg("unable to case to deployment object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *DeploymentHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
+	return h.Create()
+}
+
+func (h *DeploymentHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func (h *DeploymentHandler) parseV1(data []byte) (*v1.Deployment, error) {
-	var o v1.Deployment
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
-	}
-	return &o, nil
-}
-
-func (h *DeploymentHandler) writeDataToStorage(ctx context.Context, o *v1.Deployment) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
-}
-
-func FormatDeploymentData(o *v1.Deployment, settings *config.Settings) types.ResourceTags {
+func FormatDeploymentData(o *appsv1.Deployment, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.Deployments {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
-	}
-	if settings.Filters.Annotations.Resources.Deployments {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), settings)
-	}
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
