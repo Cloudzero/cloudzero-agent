@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,6 +56,10 @@ func Do(
 	req.URL.RawQuery = values.Encode()
 
 	resp, err := client.Do(req)
+	if err != nil {
+		log.Ctx(ctx).Err(err).Msg("JB: do failure")
+	}
+
 	if resp == nil {
 		if msg := classifyNetworkError(err); msg != "" {
 			logrus.WithError(err).WithField("message", msg).Error("network error")

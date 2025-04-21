@@ -15,6 +15,8 @@ const (
 	Job         ResourceType = 6
 	CronJob     ResourceType = 7
 	DaemonSet   ResourceType = 8
+	Ingress     ResourceType = 9
+	Service     ResourceType = 10
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
@@ -27,4 +29,6 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	Job:         "job",
 	CronJob:     "cronjob",
 	DaemonSet:   "daemonset",
+	Ingress:     "ingress",
+	Service:     "service",
 }

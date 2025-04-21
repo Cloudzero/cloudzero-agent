@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type NamespaceHandler struct {
@@ -23,62 +25,46 @@ type NamespaceHandler struct {
 
 func NewNamespaceHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &NamespaceHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&corev1.Namespace{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
 	h.Handler.Store = store
 	h.clock = clock
 	return &h.Handler
 }
 
 func (h *NamespaceHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Namespace)
+		if !ok {
+			log.Warn().Msg("unable to case to namespace object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *NamespaceHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
+	return h.Create()
+}
+
+func (h *NamespaceHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func (h *NamespaceHandler) parseV1(data []byte) (*corev1.Namespace, error) {
-	var o corev1.Namespace
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
-	}
-	return &o, nil
-}
-
-func (h *NamespaceHandler) writeDataToStorage(ctx context.Context, o *corev1.Namespace) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
-}
-
-func FormatNamespaceData(h *corev1.Namespace, settings *config.Settings) types.ResourceTags {
+func FormatNamespaceData(o *corev1.Namespace, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
-		namespace   = h.GetName()
+		namespace   = o.GetName()
 	)
 
-	if settings.Filters.Labels.Resources.Namespaces {
-		labels = config.Filter(h.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Namespaces), settings)
-	}
-	if settings.Filters.Annotations.Resources.Namespaces {
-		annotations = config.Filter(h.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Namespaces), settings)
-	}
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 
 	metricLabels := config.MetricLabels{
 		"namespace":     namespace, // standard metric labels to attach to metric

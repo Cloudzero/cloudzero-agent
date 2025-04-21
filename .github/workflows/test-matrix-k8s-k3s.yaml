@@ -1,11 +1,11 @@
 name: k8s+k3s-version-test-matrix
 on:
-  pull_request:
-    branches:
-      - "*"
-  push:
-    branches:
-      - develop
+  #pull_request:
+  #  branches:
+  #    - "*"
+  #push:
+  #  branches:
+  #    - develop
   workflow_dispatch:
 
 jobs:

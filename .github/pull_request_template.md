@@ -8,4 +8,4 @@
 
 ## How Tested
 
-> Instructions to reproduce what I did to test achiving a brighter smile
+> Instructions to reproduce what I did to test this and achieve a brighter smile

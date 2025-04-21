@@ -38,10 +38,10 @@ func Filter(tags map[string]string, patterns []regexp.Regexp, enabled bool, sett
 
 func evalTag(key string, value string, patterns []regexp.Regexp, settings *Settings) bool {
 	if settings.Filters.Policy.Sanitize(key) != key {
-		log.Warn().Str("tag", key).Msg("tag does not satisfy filter policy")
+		log.Debug().Str("tag", key).Msg("tag does not satisfy filter policy")
 		return false
 	} else if settings.Filters.Policy.Sanitize(value) != value {
-		log.Warn().Str("value", value).Msg("tag value does not satisfy filter policy")
+		log.Debug().Str("value", value).Msg("tag value does not satisfy filter policy")
 		return false
 	}
 	for _, pattern := range patterns {

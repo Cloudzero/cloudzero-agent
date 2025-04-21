@@ -5,6 +5,8 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
   {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
   namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP

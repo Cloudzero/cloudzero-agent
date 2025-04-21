@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"net/http"
 
-	v1 "k8s.io/api/admission/v1"
+	appsv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,7 +61,7 @@ func GenerateRequest(method, route, url string, req Request) (*http.Request, err
 }
 
 func NewAdmissionRequest() []byte {
-	admissionRequest := &v1.AdmissionRequest{
+	admissionRequest := &appsv1.AdmissionRequest{
 		UID: types.UID("12345"),
 		Kind: metav1.GroupVersionKind{
 			Group:   "",
@@ -75,7 +75,7 @@ func NewAdmissionRequest() []byte {
 		},
 		Name:      "example-pod",
 		Namespace: "default",
-		Operation: v1.Create,
+		Operation: appsv1.Create,
 		Object: runtime.RawExtension{
 			Raw: []byte(`{
                 "apiVersion": "v1",
@@ -94,7 +94,7 @@ func NewAdmissionRequest() []byte {
 		},
 	}
 
-	admissionReview := &v1.AdmissionReview{
+	admissionReview := &appsv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "admission.k8s.io/v1",
 			Kind:       "AdmissionReview",

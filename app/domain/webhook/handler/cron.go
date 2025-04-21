@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type CronJobHandler struct {
@@ -23,47 +25,35 @@ type CronJobHandler struct {
 
 func NewCronJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &CronJobHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&batchv1.CronJob{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
 	h.Handler.Store = store
 	h.clock = clock
 	return &h.Handler
 }
 
 func (h *CronJobHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*batchv1.CronJob)
+		if !ok {
+			log.Warn().Msg("unable to case to cronjob object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *CronJobHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
-	}
+	return h.Create()
 }
 
-func (h *CronJobHandler) parseV1(data []byte) (*batchv1.CronJob, error) {
-	var o batchv1.CronJob
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
+func (h *CronJobHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
-	return &o, nil
-}
-
-func (h *CronJobHandler) writeDataToStorage(ctx context.Context, o *batchv1.CronJob) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
 }
 
 func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) types.ResourceTags {
@@ -73,12 +63,8 @@ func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) types.Reso
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	if settings.Filters.Labels.Resources.CronJobs {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.CronJobs), settings)
-	}
-	if settings.Filters.Annotations.Resources.CronJobs {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.CronJobs), settings)
-	}
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

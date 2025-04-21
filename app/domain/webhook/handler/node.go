@@ -6,13 +6,15 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
 )
 
 type NodeHandler struct {
@@ -23,47 +25,35 @@ type NodeHandler struct {
 
 func NewNodeHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
 	h := &NodeHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&corev1.Node{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
 	h.Handler.Store = store
 	h.clock = clock
 	return &h.Handler
 }
 
 func (h *NodeHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Node)
+		if !ok {
+			log.Warn().Msg("unable to case to node object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		return &hook.Result{Allowed: true}, nil
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *NodeHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *hook.Request) (*hook.Result, error) {
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
-			if o, err := h.parseV1(r.Object.Raw); err == nil {
-				h.writeDataToStorage(ctx, o)
-			}
-		}
-		return &hook.Result{Allowed: true}, nil
-	}
+	return h.Create()
 }
 
-func (h *NodeHandler) parseV1(data []byte) (*corev1.Node, error) {
-	var o corev1.Node
-	if err := json.Unmarshal(data, &o); err != nil {
-		return nil, err
+func (h *NodeHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
 	}
-	return &o, nil
-}
-
-func (h *NodeHandler) writeDataToStorage(ctx context.Context, o *corev1.Node) {
-	genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
 }
 
 func FormatNodeData(o *corev1.Node, settings *config.Settings) types.ResourceTags {
@@ -73,13 +63,8 @@ func FormatNodeData(o *corev1.Node, settings *config.Settings) types.ResourceTag
 		workload    = o.GetName()
 	)
 
-	if settings.Filters.Labels.Resources.Nodes {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Nodes), settings)
-	}
-	if settings.Filters.Annotations.Resources.Nodes {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Nodes), settings)
-	}
-
+	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
+	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
 	metricLabels := config.MetricLabels{
 		"node":          workload, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Node],
