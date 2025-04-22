@@ -45,7 +45,7 @@ NO_COLOR    ?= \033[0m
 
 # Docker is the default container tool (and buildx buildkit)
 CONTAINER_TOOL ?= $(shell command -v $(DOCKER) 2>/dev/null)
-ifdef CONTAINER_TOOL
+ifdef $(CONTAINER_TOOL)
 BUILDX_CONTAINER_EXISTS := $(shell $(CONTAINER_TOOL) buildx ls --format "{{.Name}}: {{.DriverEndpoint}}" | grep -c "container:")
 endif
 
