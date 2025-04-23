@@ -44,20 +44,36 @@ func (h *IngressHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*networkingv1.Ingress)
 		if !ok {
-			log.Warn().Msg("unable to case to pod object instance")
+			log.Warn().Msg("unable to cast to pod object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatIngressData(o, h.settings))
+		debugPrintObject(o, "ingress created")
+		// not saving labels/annotations
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *IngressHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*networkingv1.Ingress)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "ingress updated")
+		// not saving labels/annotations
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *IngressHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*networkingv1.Ingress)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "ingress deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

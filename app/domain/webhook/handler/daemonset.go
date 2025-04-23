@@ -39,20 +39,36 @@ func (h *DaemonSetHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*appsv1.DaemonSet)
 		if !ok {
-			log.Warn().Msg("unable to case to daemonset object instance")
+			log.Warn().Msg("unable to cast to daemonset object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "daemonset created")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDaemonSetData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *DaemonSetHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.DaemonSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to daemonset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "daemonset updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDaemonSetData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *DaemonSetHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.DaemonSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to daemonset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "daemonset deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

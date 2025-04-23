@@ -38,20 +38,36 @@ func (h *NodeHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Node)
 		if !ok {
-			log.Warn().Msg("unable to case to node object instance")
+			log.Warn().Msg("unable to cast to node object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "node created")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *NodeHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Node)
+		if !ok {
+			log.Warn().Msg("unable to cast to node object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "node updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *NodeHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Node)
+		if !ok {
+			log.Warn().Msg("unable to cast to node object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "node deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

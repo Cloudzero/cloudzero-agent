@@ -40,20 +40,36 @@ func (h *DeploymentHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*appsv1.Deployment)
 		if !ok {
-			log.Warn().Msg("unable to case to deployment object instance")
+			log.Warn().Msg("unable to cast to deployment object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "deployment created")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *DeploymentHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			log.Warn().Msg("unable to cast to deployment object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "deployment updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *DeploymentHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			log.Warn().Msg("unable to cast to deployment object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "deployment deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

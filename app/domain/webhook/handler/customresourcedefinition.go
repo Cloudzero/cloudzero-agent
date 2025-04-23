@@ -7,7 +7,6 @@ package handler
 import (
 	"context"
 
-	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
@@ -17,15 +16,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type JobHandler struct {
+type CustomResourceDefinitionHandler struct {
 	hook.Handler
 	settings *config.Settings
 	clock    types.TimeProvider
 }
 
-func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
-	h := &JobHandler{settings: settings}
-	h.ObjectCreator = helper.NewStaticObjectCreator(&batchv1.Job{})
+func NewCustomResourceDefinitionHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
+	h := &CustomResourceDefinitionHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&metav1.PartialObjectMetadata{})
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Delete = h.Delete()
@@ -34,45 +33,45 @@ func NewJobHandler(store types.ResourceStore, settings *config.Settings, clock t
 	return &h.Handler
 }
 
-func (h *JobHandler) Create() hook.AdmitFunc {
+func (h *CustomResourceDefinitionHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.Job)
+		o, ok := obj.(*metav1.PartialObjectMetadata)
 		if !ok {
-			log.Warn().Msg("unable to cast to job object instance")
+			log.Warn().Msg("unable to cast to custom resource definition object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		debugPrintObject(o, "job created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		debugPrintObject(o, "CRD created")
+		// not storing labels/annotations
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func (h *JobHandler) Update() hook.AdmitFunc {
+func (h *CustomResourceDefinitionHandler) Update() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.Job)
+		o, ok := obj.(*metav1.PartialObjectMetadata)
 		if !ok {
-			log.Warn().Msg("unable to cast to job object instance")
+			log.Warn().Msg("unable to cast to custom resource definition object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		debugPrintObject(o, "job updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		debugPrintObject(o, "CRD updated")
+		// not storing labels/annotations
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func (h *JobHandler) Delete() hook.AdmitFunc {
+func (h *CustomResourceDefinitionHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.Job)
+		o, ok := obj.(*metav1.PartialObjectMetadata)
 		if !ok {
-			log.Warn().Msg("unable to cast to job object instance")
+			log.Warn().Msg("unable to cast to custom resource definition object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		debugPrintObject(o, "job deleted")
+		debugPrintObject(o, "CRD deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags {
+func FormatCustomResourceDefinitionData(o *metav1.PartialObjectMetadata, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
@@ -84,10 +83,10 @@ func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,
-		"resource_type": config.ResourceTypeToMetricName[config.Job],
+		"resource_type": config.ResourceTypeToMetricName[config.CustomResourceDefinition],
 	}
 	return types.ResourceTags{
-		Type:         config.Job,
+		Type:         config.CustomResourceDefinition,
 		Name:         workload,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,

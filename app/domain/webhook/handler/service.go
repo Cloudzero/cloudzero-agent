@@ -38,20 +38,36 @@ func (h *ServiceHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Service)
 		if !ok {
-			log.Warn().Msg("unable to case to pod object instance")
+			log.Warn().Msg("unable to cast to pod object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatServiceData(o, h.settings))
+		debugPrintObject(o, "service created")
+		// not storing labels and annotations
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *ServiceHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Service)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "service updated")
+		// not storing labels and annotations
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *ServiceHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Service)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "service deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

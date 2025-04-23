@@ -5,6 +5,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -75,5 +76,11 @@ func genericWriteDataToStorage(
 		log.Err(err).Msg("failed to write data to storage")
 	} else {
 		log.Ctx(ctx).Debug().Msg("Successfully wrote data to storage")
+	}
+}
+
+func debugPrintObject(o interface{}, msg string) {
+	if objJSON, err := json.Marshal(o); err == nil {
+		log.Debug().RawJSON("raw_json", objJSON).Msg(msg)
 	}
 }

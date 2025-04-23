@@ -38,20 +38,36 @@ func (h *NamespaceHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Namespace)
 		if !ok {
-			log.Warn().Msg("unable to case to namespace object instance")
+			log.Warn().Msg("unable to cast to namespace object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "namespace created")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *NamespaceHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Namespace)
+		if !ok {
+			log.Warn().Msg("unable to cast to namespace object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "namespace updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *NamespaceHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Namespace)
+		if !ok {
+			log.Warn().Msg("unable to cast to namespace object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "namespace deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

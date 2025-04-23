@@ -295,3 +295,58 @@ func TestPodHandler_Update(t *testing.T) {
 		})
 	}
 }
+
+func TestPodHandler_Delete(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings *config.Settings
+		request  *types.AdmissionReview
+	}{
+		{
+			name: "Test delete with valid pod",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: true,
+					},
+					Annotations: config.Annotations{
+						Enabled: true,
+					},
+				},
+			},
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+				Labels: map[string]string{
+					"app": "test",
+				},
+				Annotations: map[string]string{
+					"annotation-key": "annotation-value",
+				},
+			}),
+		},
+		{
+			name:     "Test delete with nil settings",
+			settings: nil,
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			writer := mocks.NewMockResourceStore(mockCtl)
+			mockClock := mocks.NewMockClock(time.Now())
+
+			h := handler.NewPodHandler(writer, tt.settings, mockClock)
+			result, err := h.Delete(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
+			assert.NoError(t, err)
+			assert.Equal(t, &types.AdmissionResponse{Allowed: true}, result)
+		})
+	}
+}
