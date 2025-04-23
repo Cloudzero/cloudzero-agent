@@ -6,6 +6,7 @@ package instr
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -128,4 +129,16 @@ func TestUnit_Instr_Span_ParentSpanID(t *testing.T) {
 	// Verify that the log output contains both span id and parent span id.
 	require.Contains(t, logOutput, `"spanId":"child-5678"`, "logger output should contain the child span id")
 	require.Contains(t, logOutput, `"parentSpanId":"parent-1234"`, "logger output should contain the parent span id")
+}
+
+func TestUnit_Instr_Span_RunSpan(t *testing.T) {
+	err := RunSpan(t.Context(), "test-noerror", func(ctx context.Context, span *Span) error {
+		return nil
+	})
+	require.NoError(t, err)
+
+	err = RunSpan(t.Context(), "test-error", func(ctx context.Context, span *Span) error {
+		return errors.New("err")
+	})
+	require.Error(t, err)
 }
