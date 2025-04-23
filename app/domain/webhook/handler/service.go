@@ -38,7 +38,7 @@ func (h *ServiceHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Service)
 		if !ok {
-			log.Warn().Msg("unable to cast to pod object instance")
+			log.Warn().Msg("unable to cast to service object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "service created")
@@ -51,7 +51,7 @@ func (h *ServiceHandler) Update() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Service)
 		if !ok {
-			log.Warn().Msg("unable to cast to pod object instance")
+			log.Warn().Msg("unable to cast to service object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "service updated")
@@ -64,7 +64,7 @@ func (h *ServiceHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Service)
 		if !ok {
-			log.Warn().Msg("unable to cast to pod object instance")
+			log.Warn().Msg("unable to cast to service object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "service deleted")
