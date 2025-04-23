@@ -38,7 +38,7 @@ func (h *CronJobHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*batchv1.CronJob)
 		if !ok {
-			log.Warn().Msg("unable to case to cronjob object instance")
+			log.Warn().Msg("unable to cast to cronjob object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))

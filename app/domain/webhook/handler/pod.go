@@ -38,20 +38,36 @@ func (h *PodHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*corev1.Pod)
 		if !ok {
-			log.Warn().Msg("unable to case to pod object instance")
+			log.Warn().Msg("unable to cast to pod object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "pod add")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *PodHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Pod)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "pod updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *PodHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*corev1.Pod)
+		if !ok {
+			log.Warn().Msg("unable to cast to pod object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "pod deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

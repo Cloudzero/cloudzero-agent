@@ -38,20 +38,36 @@ func (h *StatefulSetHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		o, ok := obj.(*appsv1.StatefulSet)
 		if !ok {
-			log.Warn().Msg("unable to case to statefulset object instance")
+			log.Warn().Msg("unable to cast to statefulset object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		debugPrintObject(o, "statefulset created")
 		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *StatefulSetHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to statefulset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "statefulset updated")
+		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *StatefulSetHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to statefulset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "statefulset deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

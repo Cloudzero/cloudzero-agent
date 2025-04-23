@@ -191,9 +191,6 @@ func TestServiceHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			mockClock := mocks.NewMockClock(time.Now())
 
 			h := handler.NewServiceHandler(writer, tt.settings, mockClock)
@@ -280,13 +277,6 @@ func TestServiceHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-			}
 			mockClock := mocks.NewMockClock(time.Now())
 
 			h := handler.NewServiceHandler(writer, tt.settings, mockClock)
