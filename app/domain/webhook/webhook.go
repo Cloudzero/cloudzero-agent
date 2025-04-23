@@ -127,6 +127,7 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 	wc.register(BatchGroup, Version1, "jobs", handler.NewJobHandler(store, settings, clock))                                                       // ✓ check
 	wc.register(BatchGroup, Version1, "cronjobs", handler.NewCronJobHandler(store, settings, clock))                                               // ✓ check
 	wc.register(CoreGroup, Version1, "services", handler.NewServiceHandler(store, settings, clock))                                                // ✓ new
+	wc.register(CoreGroup, Version1, "persistentvolumeclaims", handler.NewPersistentVolumeClaimHandler(store, settings, clock))                    // ✓ new
 	wc.register("networking.k8s.io", Version1, "ingresses", handler.NewIngressHandler(store, settings, clock))                                     // ✓ new
 	wc.register("apiextensions.k8s.io", Version1, "customresourcedefinitions", handler.NewCustomResourceDefinitionHandler(store, settings, clock)) // ✓ new
 	wc.register(AppsGroup, Version1, "replicasets", handler.NewReplicaSetHandler(store, settings, clock))                                          // ✓ new
