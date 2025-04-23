@@ -55,7 +55,7 @@ func (s *Backfiller) Start(ctx context.Context) {
 	var _continue string
 	allNamespaces := []corev1.Namespace{}
 	log.Info().
-		Time("current_time", time.Now().UTC()).
+		Time("currentTime", time.Now().UTC()).
 		Msg("Starting backfill of existing resources")
 
 	// write all nodes in the cluster storage
@@ -163,8 +163,8 @@ func (s *Backfiller) Start(ctx context.Context) {
 		}
 		if namespaces.GetContinue() == "" {
 			log.Info().
-				Time("current_time", time.Now().UTC()).
-				Int("namespaces_count", len(allNamespaces)).
+				Time("currentTime", time.Now().UTC()).
+				Int("namespacesCount", len(allNamespaces)).
 				Msg("Backfill operation completed")
 			break
 		}
