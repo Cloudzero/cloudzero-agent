@@ -118,20 +118,22 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 	})
 
 	// register each resource you care about:
-	wc.register(CoreGroup, Version1, "pods", handler.NewPodHandler(store, settings, clock))                                                        // ✓ check
-	wc.register(CoreGroup, Version1, "namespaces", handler.NewNamespaceHandler(store, settings, clock))                                            // ✓ check
-	wc.register(CoreGroup, Version1, "nodes", handler.NewNodeHandler(store, settings, clock))                                                      // ✓ check
-	wc.register(AppsGroup, Version1, "deployments", handler.NewDeploymentHandler(store, settings, clock))                                          // ✓ check
-	wc.register(AppsGroup, Version1, "statefulsets", handler.NewStatefulsetHandler(store, settings, clock))                                        // ✓ check
-	wc.register(AppsGroup, Version1, "daemonsets", handler.NewDaemonSetHandler(store, settings, clock))                                            // ✓ check
-	wc.register(BatchGroup, Version1, "jobs", handler.NewJobHandler(store, settings, clock))                                                       // ✓ check
-	wc.register(BatchGroup, Version1, "cronjobs", handler.NewCronJobHandler(store, settings, clock))                                               // ✓ check
+	wc.register(CoreGroup, Version1, "pods", handler.NewPodHandler(store, settings, clock))                 // ✓ check
+	wc.register(CoreGroup, Version1, "namespaces", handler.NewNamespaceHandler(store, settings, clock))     // ✓ check
+	wc.register(CoreGroup, Version1, "nodes", handler.NewNodeHandler(store, settings, clock))               // ✓ check
+	wc.register(AppsGroup, Version1, "deployments", handler.NewDeploymentHandler(store, settings, clock))   // ✓ check
+	wc.register(AppsGroup, Version1, "statefulsets", handler.NewStatefulsetHandler(store, settings, clock)) // ✓ check
+	wc.register(AppsGroup, Version1, "daemonsets", handler.NewDaemonSetHandler(store, settings, clock))     // ✓ check
+	wc.register(BatchGroup, Version1, "jobs", handler.NewJobHandler(store, settings, clock))                // ✓ check
+	wc.register(BatchGroup, Version1, "cronjobs", handler.NewCronJobHandler(store, settings, clock))        // ✓ check
+
+	// Note: handlers beyond this point will not capture labels/annotations and will later be used to correlate resources
+	// to cloud resources (providerID) - to the pod using them.
 	wc.register(CoreGroup, Version1, "services", handler.NewServiceHandler(store, settings, clock))                                                // ✓ new
 	wc.register(CoreGroup, Version1, "persistentvolumeclaims", handler.NewPersistentVolumeClaimHandler(store, settings, clock))                    // ✓ new
 	wc.register("networking.k8s.io", Version1, "ingresses", handler.NewIngressHandler(store, settings, clock))                                     // ✓ new
 	wc.register("apiextensions.k8s.io", Version1, "customresourcedefinitions", handler.NewCustomResourceDefinitionHandler(store, settings, clock)) // ✓ new
 	wc.register(AppsGroup, Version1, "replicasets", handler.NewReplicaSetHandler(store, settings, clock))                                          // ✓ new
-	// As we add more domain controllers for new types ... add here
 
 	return wc, nil
 }
