@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_Shipper_ErrorsBasicWrapping(t *testing.T) {
+func TestUnit_Shipper_Errors_BasicWrapping(t *testing.T) {
 	// test a basic case
 	err := errors.Join(shipper.ErrCreateDirectory, fmt.Errorf("this is a wrapped error: %w", errors.New("base error")))
 	statusCode := shipper.GetErrStatusCode(err)
@@ -21,7 +21,7 @@ func TestUnit_Shipper_ErrorsBasicWrapping(t *testing.T) {
 	require.Equal(t, shipper.ErrCreateDirectory.Code(), statusCode)
 }
 
-func TestUnit_Shipper_MultiWrapping(t *testing.T) {
+func TestUnit_Shipper_Errors_MultiWrapping(t *testing.T) {
 	err := errors.Join(errors.New("this is a basic error"), fmt.Errorf("this is a wrapped error: %w", shipper.ErrCreateDirectory))
 	err = errors.Join(shipper.ErrCreateLock, err)
 	err = errors.Join(errors.New("this is a bogus error"), err)
