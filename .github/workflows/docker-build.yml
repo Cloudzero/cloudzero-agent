@@ -52,7 +52,7 @@ jobs:
           docker tag busybox ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
           docker push ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
 
-      # Format the image name to OCI compatable format
+      # Format the image name to OCI compatible format
       - name: INPUT PREP - image name formatting
         id: image_name
         run: |
@@ -82,7 +82,7 @@ jobs:
             org.opencontainers.image.vendor=CloudZero
             image.name=${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}
           # https://github.com/docker/metadata-action?tab=readme-ov-file#latest-tag
-          # should only occur whtn a semver or raw when we are on master
+          # should only occur when a semver or raw when we are on master
           flavor: |
             latest=false
 
@@ -115,6 +115,7 @@ jobs:
             BUILD_TIME=${{ env.BUILD_TIME }}
             REVISION=${{ env.REVISION }}
             TAG=${{ env.TAG }}
+
       - name: SECURITY - Grype Docker Image Scan
         uses: anchore/scan-action@v6
         with:
@@ -131,6 +132,23 @@ jobs:
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
+
+      - name: Save Image Location
+        env:
+          IMAGE_REPO: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
+        run: |
+          mkdir -p ./image
+          docker image save ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} | gzip > ./image/image.tar.gz
+          echo $IMAGE_REPO > ./image/image_repo.txt
+          echo $IMAGE_TAG > ./image/image_tag.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: container_image_info
+          path: ./image/
+          retention-days: 1
+          if-no-files-found: error
 
       ###########################################################################
       # PRODUCTION ONLY STEPS BEYOND THIS POINT
