@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //nolint:dupl // There is currently substantial duplication in the handlers :(
-
 package handler
 
 import (
