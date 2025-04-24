@@ -150,13 +150,31 @@ jobs:
     permissions:
       contents: read
       packages: read
-    needs: docker-build
+    needs: ["docker-build"]
     uses: ./.github/workflows/test-matrix-k8s-k3s.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
       image-path: ${{ needs.docker-build.outputs.image-path }}
       image-tag: ${{ needs.docker-build.outputs.image-tag }}
     secrets: inherit
+
+  test-status-reporting:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    needs: ["k8s-version-matrix-tests"]
+    if: ${{ always() }}
+    steps:
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status == 'success' }}
+        with:
+          name: "k8s-version-matrix-tests"
+          status: "success"
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status != 'success' }}
+        with:
+          name: "k8s-version-matrix-tests"
+          status: "failure"
 
   ###########################################################################
   # PRODUCTION ONLY STEPS BEYOND THIS POINT
