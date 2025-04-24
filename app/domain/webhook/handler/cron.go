@@ -41,17 +41,37 @@ func (h *CronJobHandler) Create() hook.AdmitFunc {
 			log.Warn().Msg("unable to cast to cronjob object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
+		debugPrintObject(o, "cron create")
+		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
 func (h *CronJobHandler) Update() hook.AdmitFunc {
-	return h.Create()
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*batchv1.CronJob)
+		if !ok {
+			log.Warn().Msg("unable to cast to cronjob object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "cron updated")
+		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
+		}
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *CronJobHandler) Delete() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*batchv1.CronJob)
+		if !ok {
+			log.Warn().Msg("unable to cast to cronjob object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "cron deleted")
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -63,8 +83,12 @@ func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) types.Reso
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.CronJobs), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.CronJobs), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

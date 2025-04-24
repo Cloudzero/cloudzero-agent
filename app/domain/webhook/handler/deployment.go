@@ -44,7 +44,10 @@ func (h *DeploymentHandler) Create() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "deployment created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -57,7 +60,10 @@ func (h *DeploymentHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "deployment updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		// only process if enabled, always return allowed to not block an admission
+		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -81,8 +87,12 @@ func FormatDeploymentData(o *appsv1.Deployment, settings *config.Settings) types
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

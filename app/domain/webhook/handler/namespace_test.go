@@ -46,9 +46,15 @@ func TestNamespaceHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 				},
 			},
@@ -63,6 +69,29 @@ func TestNamespaceHandler_Create(t *testing.T) {
 			}),
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test create with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Namespaces: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Namespaces: false,
+						},
+					},
+				},
+			},
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -70,14 +99,14 @@ func TestNamespaceHandler_Create(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
-
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			}
 			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
 
+			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
 			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -102,9 +131,15 @@ func TestNamespaceHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 				},
 			},
@@ -125,9 +160,15 @@ func TestNamespaceHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Namespaces: true,
+						},
 					},
 				},
 			},
@@ -151,6 +192,29 @@ func TestNamespaceHandler_Update(t *testing.T) {
 			},
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Namespaces: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Namespaces: false,
+						},
+					},
+				},
+			},
+			request: makeNamespaceRequest(TestRecord{
+				Name: "test-namespace",
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -158,18 +222,18 @@ func TestNamespaceHandler_Update(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 			writer := mocks.NewMockResourceStore(mockCtl)
-
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				if tt.dbresult == nil {
+					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				} else {
+					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+				}
 			}
-
 			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
 
+			h := handler.NewNamespaceHandler(writer, tt.settings, mockClock)
 			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)

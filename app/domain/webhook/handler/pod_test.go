@@ -64,9 +64,15 @@ func TestFormatPodData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 				},
 				LabelMatches: []regexp.Regexp{
@@ -91,6 +97,43 @@ func TestFormatPodData(t *testing.T) {
 				Annotations: &config.MetricLabelTags{
 					"annotation-key": "annotation-value",
 				},
+			},
+		},
+		{
+			name: "Test with labels and annotations disabled",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+				},
+			},
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+				},
+			},
+			expected: types.ResourceTags{
+				Type:      config.Pod,
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+				MetricLabels: &config.MetricLabels{
+					"pod":           "test-pod",
+					"namespace":     "default",
+					"resource_type": "pod",
+				},
+				Labels:      &config.MetricLabelTags{},
+				Annotations: &config.MetricLabelTags{},
 			},
 		},
 	}
@@ -125,9 +168,15 @@ func TestNewPodHandler(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 				},
 			},
@@ -164,9 +213,15 @@ func TestPodHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 				},
 			},
@@ -182,6 +237,30 @@ func TestPodHandler_Create(t *testing.T) {
 			}),
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test create with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+				},
+			},
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -190,9 +269,11 @@ func TestPodHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			}
 			mockClock := mocks.NewMockClock(time.Now())
 
 			h := handler.NewPodHandler(writer, tt.settings, mockClock)
@@ -220,9 +301,15 @@ func TestPodHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 				},
 			},
@@ -244,9 +331,15 @@ func TestPodHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Pods: true,
+						},
 					},
 				},
 			},
@@ -271,6 +364,30 @@ func TestPodHandler_Update(t *testing.T) {
 			},
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Pods: false,
+						},
+					},
+				},
+			},
+			request: makePodRequest(TestRecord{
+				Name:      "test-pod",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -279,12 +396,14 @@ func TestPodHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				if tt.dbresult == nil {
+					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				} else {
+					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
 

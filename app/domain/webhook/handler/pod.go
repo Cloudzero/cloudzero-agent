@@ -42,7 +42,9 @@ func (h *PodHandler) Create() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "pod add")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -55,7 +57,9 @@ func (h *PodHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "pod updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Pods || h.settings.Filters.Annotations.Resources.Pods {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatPodData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -79,8 +83,12 @@ func FormatPodData(o *corev1.Pod, settings *config.Settings) types.ResourceTags 
 		namespace   = o.GetNamespace()
 		podName     = o.GetName()
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Pods), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Pods), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"pod":           podName, // standard metric labels to attach to metric
 		"namespace":     namespace,

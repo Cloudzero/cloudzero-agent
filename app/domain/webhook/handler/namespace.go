@@ -42,7 +42,9 @@ func (h *NamespaceHandler) Create() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "namespace created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -55,7 +57,9 @@ func (h *NamespaceHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "namespace updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Namespaces || h.settings.Filters.Annotations.Resources.Namespaces {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNamespaceData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -78,10 +82,12 @@ func FormatNamespaceData(o *corev1.Namespace, settings *config.Settings) types.R
 		annotations = config.MetricLabelTags{}
 		namespace   = o.GetName()
 	)
-
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
-
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Namespaces), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Namespaces), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"namespace":     namespace, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Namespace],

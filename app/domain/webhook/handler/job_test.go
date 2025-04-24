@@ -64,9 +64,15 @@ func TestFormatJobData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 				},
 				LabelMatches: []regexp.Regexp{
@@ -91,6 +97,43 @@ func TestFormatJobData(t *testing.T) {
 				Annotations: &config.MetricLabelTags{
 					"annotation-key": "annotation-value",
 				},
+			},
+		},
+		{
+			name: "Test with labels and annotations disabled",
+			job: &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-job",
+					Namespace: "default",
+				},
+			},
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+				},
+			},
+			expected: types.ResourceTags{
+				Type:      config.Job,
+				Name:      "test-job",
+				Namespace: stringPtr("default"),
+				MetricLabels: &config.MetricLabels{
+					"job":           "test-job",
+					"namespace":     "default",
+					"resource_type": "job",
+				},
+				Labels:      &config.MetricLabelTags{},
+				Annotations: &config.MetricLabelTags{},
 			},
 		},
 	}
@@ -125,9 +168,15 @@ func TestNewJobHandler(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 				},
 			},
@@ -165,9 +214,15 @@ func TestJobHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 				},
 			},
@@ -183,6 +238,30 @@ func TestJobHandler_Create(t *testing.T) {
 			}),
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test create with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+				},
+			},
+			request: makeJobRequest(TestRecord{
+				Name:      "test-job",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -191,9 +270,11 @@ func TestJobHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			}
 			mockClock := mocks.NewMockClock(time.Now())
 
 			h := handler.NewJobHandler(writer, tt.settings, mockClock)
@@ -221,9 +302,15 @@ func TestJobHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 				},
 			},
@@ -245,9 +332,15 @@ func TestJobHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Jobs: true,
+						},
 					},
 				},
 			},
@@ -272,6 +365,30 @@ func TestJobHandler_Update(t *testing.T) {
 			},
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Jobs: false,
+						},
+					},
+				},
+			},
+			request: makeJobRequest(TestRecord{
+				Name:      "test-job",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -280,12 +397,14 @@ func TestJobHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				if tt.dbresult == nil {
+					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				} else {
+					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
 
