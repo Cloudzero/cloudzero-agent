@@ -41,8 +41,10 @@ func (h *StatefulSetHandler) Create() hook.AdmitFunc {
 			log.Warn().Msg("unable to cast to statefulset object instance")
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		debugPrintObject(o, "statefulset created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		debugPrintObject(o, "statefulset updated")
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -55,7 +57,9 @@ func (h *StatefulSetHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "statefulset updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -79,8 +83,12 @@ func FormatStatefulsetData(o *appsv1.StatefulSet, settings *config.Settings) typ
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

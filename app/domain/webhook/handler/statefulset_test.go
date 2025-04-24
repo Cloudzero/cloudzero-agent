@@ -64,9 +64,15 @@ func TestFormatStatefulSetData(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 				},
 				LabelMatches: []regexp.Regexp{
@@ -91,6 +97,43 @@ func TestFormatStatefulSetData(t *testing.T) {
 				Annotations: &config.MetricLabelTags{
 					"annotation-key": "annotation-value",
 				},
+			},
+		},
+		{
+			name: "Test with labels and annotations disabled",
+			sts: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-sts",
+					Namespace: "default",
+				},
+			},
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+				},
+			},
+			expected: types.ResourceTags{
+				Type:      config.StatefulSet,
+				Name:      "test-sts",
+				Namespace: stringPtr("default"),
+				MetricLabels: &config.MetricLabels{
+					"statefulset":   "test-sts",
+					"namespace":     "default",
+					"resource_type": "statefulset",
+				},
+				Labels:      &config.MetricLabelTags{},
+				Annotations: &config.MetricLabelTags{},
 			},
 		},
 	}
@@ -125,9 +168,15 @@ func TestNewStatefulSetHandler(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 				},
 			},
@@ -164,9 +213,15 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 				},
 			},
@@ -182,6 +237,30 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 			}),
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test create with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+				},
+			},
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -190,9 +269,11 @@ func TestStatefulSetHandler_Create(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			}
 			mockClock := mocks.NewMockClock(time.Now())
 
 			h := handler.NewStatefulsetHandler(writer, tt.settings, mockClock)
@@ -220,9 +301,15 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 				},
 			},
@@ -244,9 +331,15 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							StatefulSets: true,
+						},
 					},
 				},
 			},
@@ -271,6 +364,30 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 			},
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							StatefulSets: false,
+						},
+					},
+				},
+			},
+			request: makeStatefulSetRequest(TestRecord{
+				Name:      "test-sts",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
@@ -279,12 +396,14 @@ func TestStatefulSetHandler_Update(t *testing.T) {
 			defer mockCtl.Finish()
 
 			writer := mocks.NewMockResourceStore(mockCtl)
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				if tt.dbresult == nil {
+					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				} else {
+					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+				}
 			}
 			mockClock := mocks.NewMockClock(time.Now())
 

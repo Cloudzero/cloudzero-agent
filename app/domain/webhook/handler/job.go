@@ -42,7 +42,9 @@ func (h *JobHandler) Create() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "job created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -55,7 +57,9 @@ func (h *JobHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "job updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Jobs || h.settings.Filters.Annotations.Resources.Jobs {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatJobData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -79,8 +83,12 @@ func FormatJobData(o *batchv1.Job, settings *config.Settings) types.ResourceTags
 		namespace   = o.GetNamespace()
 		workload    = o.GetName()
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Jobs), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Jobs), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"workload":      workload, // standard metric labels to attach to metric
 		"namespace":     namespace,

@@ -65,9 +65,15 @@ func TestDeploymentHandler_Create(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 				},
 			},
@@ -83,18 +89,43 @@ func TestDeploymentHandler_Create(t *testing.T) {
 			}),
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test create with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Deployments: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Deployments: false,
+						},
+					},
+				},
+			},
+			request: makeDeploymentRequest(TestRecord{
+				Name:      "test-deployment",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
+
 			writer := mocks.NewMockResourceStore(mockCtl)
-
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+			}
 			mockClock := mocks.NewMockClock(time.Now())
 			h := handler.NewDeploymentHandler(writer, tt.settings, mockClock)
 
@@ -122,9 +153,15 @@ func TestDeploymentHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 				},
 			},
@@ -146,9 +183,15 @@ func TestDeploymentHandler_Update(t *testing.T) {
 				Filters: config.Filters{
 					Labels: config.Labels{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 					Annotations: config.Annotations{
 						Enabled: true,
+						Resources: config.Resources{
+							Deployments: true,
+						},
 					},
 				},
 			},
@@ -173,22 +216,47 @@ func TestDeploymentHandler_Update(t *testing.T) {
 			},
 			expected: &types.AdmissionResponse{Allowed: true},
 		},
+		{
+			name: "Test update with labels and annotations disabled",
+			settings: &config.Settings{
+				Filters: config.Filters{
+					Labels: config.Labels{
+						Enabled: false,
+						Resources: config.Resources{
+							Deployments: false,
+						},
+					},
+					Annotations: config.Annotations{
+						Enabled: false,
+						Resources: config.Resources{
+							Deployments: false,
+						},
+					},
+				},
+			},
+			request: makeDeploymentRequest(TestRecord{
+				Name:      "test-deployment",
+				Namespace: stringPtr("default"),
+			}),
+			expected: &types.AdmissionResponse{Allowed: true},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
+
 			writer := mocks.NewMockResourceStore(mockCtl)
-
-			writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-			writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-			if tt.dbresult == nil {
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.settings.Filters.Labels.Enabled {
+				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
+				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
+				if tt.dbresult == nil {
+					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				} else {
+					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+				}
 			}
-
 			mockClock := mocks.NewMockClock(time.Now())
 			h := handler.NewDeploymentHandler(writer, tt.settings, mockClock)
 

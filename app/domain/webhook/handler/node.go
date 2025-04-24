@@ -42,7 +42,9 @@ func (h *NodeHandler) Create() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "node created")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -55,7 +57,9 @@ func (h *NodeHandler) Update() hook.AdmitFunc {
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
 		debugPrintObject(o, "node updated")
-		genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		if h.settings.Filters.Labels.Resources.Nodes || h.settings.Filters.Annotations.Resources.Nodes {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatNodeData(o, h.settings))
+		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
@@ -78,9 +82,12 @@ func FormatNodeData(o *corev1.Node, settings *config.Settings) types.ResourceTag
 		annotations = config.MetricLabelTags{}
 		workload    = o.GetName()
 	)
-
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Nodes), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Nodes), settings)
+	}
 	metricLabels := config.MetricLabels{
 		"node":          workload, // standard metric labels to attach to metric
 		"resource_type": config.ResourceTypeToMetricName[config.Node],
