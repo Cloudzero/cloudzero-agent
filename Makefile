@@ -58,6 +58,9 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} \
 		/^[a-zA-Z_-]+:.*##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
+.PHONY: FORCE
+FORCE:
+
 # ----------- CLEANUP ------------
 
 CLEANFILES ?= \
@@ -284,61 +287,38 @@ HELM_TARGET_NAMESPACE     ?= cz-agent
 HELM_TARGET               ?= cz-agent
 HELM                      ?= helm
 
-.PHONY: helm-install
-helm-install: api-tests-check-env
-helm-install: ## Install the Helm chart
+HELM_ARGS = \
+	--namespace "$(HELM_TARGET_NAMESPACE)" \
+	--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+	--set clusterName=$(CLUSTER_NAME) \
+	--set region=$(CSP_REGION) \
+	--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
+	--set host=$(CLOUDZERO_HOST) \
+	$(CLOUD_HELM_EXTRA_ARGS) \
+
+.PHONY: helm-install-deps
+helm-install-deps:
 	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
 	$(HELM) repo update prometheus-community
 	$(HELM) dependency build ./helm
-	@$(HELM) upgrade --install \
-		-n "$(HELM_TARGET_NAMESPACE)" \
-		--create-namespace "$(HELM_TARGET)" \
-		./helm \
-		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
-		--set clusterName=$(CLUSTER_NAME) \
-		--set region=$(CSP_REGION) \
-		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		--set host=$(CLOUDZERO_HOST) \
-		$(CLOUD_HELM_EXTRA_ARGS)
 
-install: helm-install
+.PHONY: helm-install
+helm-install: api-tests-check-env helm-install-deps
+helm-install: ## Install the Helm chart
+	@$(HELM) upgrade --install "$(HELM_TARGET)" ./helm --create-namespace $(HELM_ARGS)
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall the Helm chart
 	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
 
-uninstall: helm-uninstall
-
 .PHONY: helm-template
-helm-template: api-tests-check-env
+helm-template: api-tests-check-env helm-install-deps
 helm-template: ## Generate the Helm chart templates
-	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
-	$(HELM) repo update prometheus-community
-	$(HELM) dependency build ./helm
-	@$(HELM) template \
-		-n "$(HELM_TARGET_NAMESPACE)" \
-		--create-namespace "$(HELM_TARGET)" \
-		./helm \
-		--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
-		--set clusterName=$(CLUSTER_NAME) \
-		--set region=$(CSP_REGION) \
-		--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		--set host=$(CLOUDZERO_HOST) \
-		$(CLOUD_HELM_EXTRA_ARGS)
-
-
-template: helm-template
+	@$(HELM) template "$(HELM_TARGET)" ./helm $(HELM_ARGS)
 
 .PHONY: helm-lint
 helm-lint: ## Lint the Helm chart
-	@$(HELM) lint \
-		./helm \
-		--set-string cloudAccountId="\"$(CLOUD_ACCOUNT_ID)\"" \
-		--set-string clusterName="$(CLUSTER_NAME)" \
-		--set-string region="$(CSP_REGION)" \
-		--set-string host="$(CLOUDZERO_HOST)" \
-		--set-string apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-		$(CLOUD_HELM_EXTRA_ARGS)
+	@$(HELM) lint ./helm $(HELM_ARGS)
 
 lint: helm-lint
 
