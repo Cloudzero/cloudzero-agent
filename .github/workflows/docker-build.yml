@@ -14,6 +14,12 @@ on:
       - published
       - released
 
+concurrency:
+  # This concurrency group ensures that only one job in the group runs at a time.
+  # If a new job is triggered, the previous one will be canceled.
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY_PROD_ADDR: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/cloudzero-agent
@@ -21,7 +27,14 @@ env:
 
 jobs:
   docker-build:
-    runs-on: ubuntu-latest
+    name: Build Docker image for ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-latest' || matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' }}
     permissions:
       contents: read
       packages: write
@@ -36,12 +49,25 @@ jobs:
         id: checkout_code
         uses: actions/checkout@v4
 
+      - name: Prepare environment for current platform
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: |
+          docker context create builders
+
       - # Install buildx for multi-platform builds
         name: SETUP - Docker Buildx
         id: install_buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
         with:
+          endpoint: builders
           driver-opts: network=host
+          platforms: ${{ matrix.platform }}
 
       - name: Get raw repo name
         run: |
@@ -57,6 +83,103 @@ jobs:
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
 
       # Extract metadata (tags, labels) the docker image build
+      # No tags  of other metadata at this stage, as we are pushing by digest
+      - name: INPUT PREP - Basic Docker metadata for initial build
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          # ONLY use the untested registry address for the image until it is tested
+          images: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: INPUT PREP - Set build time revision
+        run: |
+          REVISION=$(git rev-parse --short HEAD)
+          TAG=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+          BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "REVISION=${REVISION}" >>${GITHUB_ENV}
+          echo "TAG=${TAG}" >>${GITHUB_ENV}
+          echo "BUILD_TIME=${BUILD_TIME}" >>${GITHUB_ENV}
+
+      - name: TEST - Build image
+        id: build_image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        env:
+          VALIDATOR_DOCKERFILE: docker/Dockerfile
+          VALIDATOR_CONTEXT: .
+        with:
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true,oci-mediatypes=true
+          cache-from: type=gha,scope=${{ github.repository }}-${{ github.ref_name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.repository }}-${{ github.ref_name }}-${{ matrix.platform }}
+          context: ${{ env.VALIDATOR_CONTEXT }}
+          file: ${{ env.VALIDATOR_DOCKERFILE }}
+          build-args: |
+            BUILD_TIME=${{ env.BUILD_TIME }}
+            REVISION=${{ env.REVISION }}
+            TAG=${{ env.TAG }}
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build_image.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-merge:
+    # This job merges the Docker manifests for the different platforms built in the previous job.
+    name: Merge Docker manifests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    needs: ["docker-build"]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      # Format the image names for OCI compliance (all lowercase)
+      - name: INPUT PREP - image name formatting
+        id: image_name
+        run: |
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        with:
+          driver-opts: |
+            network=host
+
+      # Extract metadata (tags, labels) the docker image build
+      # This is the full metadata for the manifest
       - name: INPUT PREP - Extract Docker metadata from git repository
         id: meta
         uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
@@ -83,42 +206,51 @@ jobs:
           flavor: |
             latest=false
 
-      - name: INPUT PREP - Set build time revision
+      - name: Get execution timestamp with RFC3339 format
+        # This step gets the current execution timestamp in RFC3339 format.
+        # It uses the date command to get the current UTC time and formats it as a string.
+        # The timestamp is used for annotating the Docker manifest list.
+        id: timestamp
         run: |
-          REVISION=$(git rev-parse --short HEAD)
-          TAG=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
-          BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          echo "REVISION=${REVISION}" >>${GITHUB_ENV}
-          echo "TAG=${TAG}" >>${GITHUB_ENV}
-          echo "BUILD_TIME=${BUILD_TIME}" >>${GITHUB_ENV}
+          echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create manifest list and push
+        # This step creates a manifest list for the Docker images built for different platforms.
+        # It uses the docker buildx imagetools create command to create the manifest list.
+        # The manifest list is annotated with metadata such as description, creation timestamp, and source URL.
+        # The annotations are obtained from the metadata generated in the previous steps.
+        # The manifest list is pushed to the GitHub Container Registry (GHCR) with the specified tags.
+        working-directory: ${{ runner.temp }}/digests
+        id: manifest-annotate
+        continue-on-error: true
+        run: |
+          ls -lFa
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            --annotation='index:org.opencontainers.image.description=${{ github.event.repository.description }}' \
+            --annotation='index:org.opencontainers.image.created=${{ steps.timestamp.outputs.timestamp }}' \
+            --annotation='index:org.opencontainers.image.url=${{ github.event.repository.url }}' \
+            --annotation='index:org.opencontainers.image.source=${{ github.event.repository.url }}' \
+            $(printf '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:%s ' *)
 
-      - name: TEST - Build image
-        id: build_image
-        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
-        env:
-          PLATFORMS: "linux/amd64,linux/arm64"
-          VALIDATOR_DOCKERFILE: docker/Dockerfile
-          VALIDATOR_CONTEXT: .
-        with:
-          push: true
-          context: ${{ env.VALIDATOR_CONTEXT }}
-          file: ${{ env.VALIDATOR_DOCKERFILE }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ env.PLATFORMS }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_TIME=${{ env.BUILD_TIME }}
-            REVISION=${{ env.REVISION }}
-            TAG=${{ env.TAG }}
+      - name: Create manifest list and push without annotations
+        # This step creates a manifest list for the Docker images built for different platforms.
+        # It uses the docker buildx imagetools create command to create the manifest list.
+        # The manifest list is created without annotations if the previous step fails.
+        # The manifest list is pushed to the GitHub Container Registry (GHCR) with the specified tags.
+        if: steps.manifest-annotate.outcome == 'failure'
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create  $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        # This step inspects the created manifest list to verify its contents.
+        # It uses the docker buildx imagetools inspect command to display information about the manifest list.
+        # The inspection output will show the platforms and tags associated with the manifest list.
+        id: inspect
+        run: |
+          docker buildx imagetools inspect '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}'
 
       - name: SECURITY - Grype Docker Image Scan
         uses: anchore/scan-action@v6
@@ -150,7 +282,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    needs: ["docker-build"]
+    needs: ["docker-build", "docker-merge"]
     uses: ./.github/workflows/test-matrix-k8s-k3s.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
@@ -158,7 +290,20 @@ jobs:
       image-tag: ${{ needs.docker-build.outputs.image-tag }}
     secrets: inherit
 
-  test-status-reporting:
+  replicated-compatibility-matrix-tests:
+    # These should match the permissions in the called workflow.
+    permissions:
+      contents: read
+      packages: read
+    needs: ["docker-build", "docker-merge"]
+    uses: ./.github/workflows/test-matrix-replicated-k8s-clusters.yaml
+    with:
+      image-repo: ${{ needs.docker-build.outputs.image-repo }}
+      image-path: ${{ needs.docker-build.outputs.image-path }}
+      image-tag: ${{ needs.docker-build.outputs.image-tag }}
+    secrets: inherit
+
+  test-versions-status-reporting:
     runs-on: ubuntu-latest
     permissions:
       statuses: write
@@ -176,11 +321,35 @@ jobs:
           name: "k8s-version-matrix-tests"
           status: "failure"
 
+  test-replicated-status-reporting:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    needs: ["replicated-compatibility-matrix-tests"]
+    if: ${{ always() }}
+    steps:
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
+        with:
+          name: "replicated-compatibility-matrix-tests"
+          status: "success"
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status != 'success' }}
+        with:
+          name: "replicated-compatibility-matrix-tests"
+          status: "failure"
+
   ###########################################################################
   # PRODUCTION ONLY STEPS BEYOND THIS POINT
   #
   release-image:
-    needs: ["docker-build", "k8s-version-matrix-tests"]
+    needs:
+      [
+        "docker-build",
+        "docker-merge",
+        "k8s-version-matrix-tests",
+        "replicated-compatibility-matrix-tests",
+      ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -226,3 +395,31 @@ jobs:
               ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ needs.docker-build.outputs.image-tag }} \
               ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:latest
           fi
+
+  docker-build-status-reporting:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    needs: [
+        "docker-build",
+        "docker-merge",
+        "k8s-version-matrix-tests",
+        "replicated-compatibility-matrix-tests",
+        "release-image",
+      ]
+    if: ${{ always() }}
+    steps:
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: |
+          !contains(needs.*.result, 'failure') &&
+          !contains(needs.*.result, 'cancelled')
+        with:
+          name: "docker-build"
+          status: "success"
+      - uses: ouzi-dev/commit-status-updater@v2
+        if: |
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        with:
+          name: "docker-build"
+          status: "failure"
