@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/stretchr/testify/assert"
 )
 
