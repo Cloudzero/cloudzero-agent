@@ -97,9 +97,7 @@ rules:
     resources:
       - "validatingwebhookconfigurations"
     resourceNames:
-    {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
-      - {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}-{{ $configType }}
-    {{- end }}
+      - {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}
     verbs:
       - get
       - list

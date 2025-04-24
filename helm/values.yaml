@@ -359,28 +359,10 @@ insightsController:
     patterns:
       - "app.kubernetes.io/component"
       # - '.*'
-    resources:
-      pods: true
-      namespaces: true
-      deployments: false
-      statefulsets: false
-      nodes: false
-      jobs: false
-      cronjobs: false
-      daemonsets: false
   annotations:
     enabled: false
     patterns:
       - ".*"
-    resources:
-      pods: true
-      namespaces: true
-      deployments: false
-      statefulsets: false
-      nodes: false
-      jobs: false
-      cronjobs: false
-      daemonsets: false
   tls:
     # -- If disabled, the insights controller will not mount a TLS certificate from a Secret, and the user is responsible for configuring a method of providing TLS information to the webhook-server container.
     enabled: true
@@ -443,31 +425,7 @@ insightsController:
   webhooks:
     annotations: {}
     namespaceSelector: {}
-    configurations:
-      pods:
-        path: /validate/pod
-        apiGroups: ['""']
-      namespaces:
-        path: /validate/namespace
-        apiGroups: ['""']
-      deployments:
-        path: /validate/deployment
-        apiGroups: ["apps"]
-      statefulsets:
-        path: /validate/statefulset
-        apiGroups: ["apps"]
-      nodes:
-        path: /validate/node
-        apiGroups: ['""']
-      jobs:
-        path: /validate/job
-        apiGroups: ["batch"]
-      cronjobs:
-        path: /validate/cronjob
-        apiGroups: ["batch"]
-      daemonsets:
-        path: /validate/daemonset
-        apiGroups: ["apps"]
+    path: /validate
 
 serviceAccount:
   create: true

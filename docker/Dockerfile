@@ -69,7 +69,7 @@ ENV PATH=/app:$PATH
 COPY --from=builder /go/bin/cloudzero-agent-inspector /app/cloudzero-agent-inspector
 COPY --from=builder /go/bin/cloudzero-agent-validator /app/cloudzero-agent-validator
 COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
-COPY --from=builder /go/bin/cloudzero-insights-controller /app/cloudzero-insights-controller
+COPY --from=builder /go/bin/cloudzero-webhook /app/cloudzero-webhook
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 
 # Allow the default ENTRYPOINT from busybox to be the default,

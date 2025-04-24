@@ -26,7 +26,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -424,6 +424,9 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 
 		client := &http.Client{}
 		resp, err = client.Do(req)
+		if err != nil {
+			log.Ctx(ctx).Err(err).Msg("post metric failure")
+		}
 
 		// Instrument: measure duration after each attempt
 		duration := time.Since(start).Seconds()

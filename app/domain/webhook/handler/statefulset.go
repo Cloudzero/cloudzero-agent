@@ -1,0 +1,105 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+//nolint:dupl // There is currently substantial duplication in the handlers :(
+package handler
+
+import (
+	"context"
+
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/rs/zerolog/log"
+)
+
+type StatefulSetHandler struct {
+	hook.Handler
+	settings *config.Settings
+	clock    types.TimeProvider
+}
+
+func NewStatefulsetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
+	h := &StatefulSetHandler{settings: settings}
+	h.ObjectCreator = helper.NewStaticObjectCreator(&appsv1.StatefulSet{})
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
+	h.Handler.Store = store
+	h.clock = clock
+	return &h.Handler
+}
+
+func (h *StatefulSetHandler) Create() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to statefulset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "statefulset updated")
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		}
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func (h *StatefulSetHandler) Update() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to statefulset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "statefulset updated")
+		if h.settings.Filters.Labels.Resources.StatefulSets || h.settings.Filters.Annotations.Resources.StatefulSets {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatStatefulsetData(o, h.settings))
+		}
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func (h *StatefulSetHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		o, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			log.Warn().Msg("unable to cast to statefulset object instance")
+			return &types.AdmissionResponse{Allowed: true}, nil
+		}
+		debugPrintObject(o, "statefulset deleted")
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func FormatStatefulsetData(o *appsv1.StatefulSet, settings *config.Settings) types.ResourceTags {
+	var (
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		namespace   = o.GetNamespace()
+		workload    = o.GetName()
+	)
+	if settings.Filters.Labels.Enabled {
+		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.StatefulSets), settings)
+	}
+	if settings.Filters.Annotations.Enabled {
+		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.StatefulSets), settings)
+	}
+	metricLabels := config.MetricLabels{
+		"workload":      workload, // standard metric labels to attach to metric
+		"namespace":     namespace,
+		"resource_type": config.ResourceTypeToMetricName[config.StatefulSet],
+	}
+	return types.ResourceTags{
+		Name:         workload,
+		Type:         config.StatefulSet,
+		Namespace:    &namespace,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
+		Annotations:  &annotations,
+	}
+}

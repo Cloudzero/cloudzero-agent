@@ -13,7 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	v1 "k8s.io/api/apps/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/homedir"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -120,7 +121,7 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 						Name: "default",
 					},
 				}}},
-				&v1.DeploymentList{Items: []v1.Deployment{{
+				&appsv1.DeploymentList{Items: []appsv1.Deployment{{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "deployment",
 						Namespace: "default",
@@ -146,7 +147,7 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 						Name: "default",
 					},
 				}}},
-				&v1.StatefulSetList{Items: []v1.StatefulSet{{
+				&appsv1.StatefulSetList{Items: []appsv1.StatefulSet{{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "statefulset",
 						Namespace: "default",
@@ -172,7 +173,7 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 						Name: "default",
 					},
 				}}},
-				&v1.DaemonSetList{Items: []v1.DaemonSet{{
+				&appsv1.DaemonSetList{Items: []appsv1.DaemonSet{{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "daemonset",
 						Namespace: "default",

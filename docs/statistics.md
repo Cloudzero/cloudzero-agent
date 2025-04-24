@@ -36,13 +36,13 @@ To integrate with Prometheus, add the following job configuration to your Promet
 
 ```yaml
 scrape_configs:
-  - job_name: "cloudzero-insights-controller"
+  - job_name: "cloudzero-webhook"
     kubernetes_sd_configs:
       - role: endpoints
     relabel_configs:
       - source_labels: [__meta_kubernetes_service_label_app]
         action: keep
-        regex: cloudzero-insights-controller
+        regex: cloudzero-webhook
 ```
 
 #### Namespace and Labels

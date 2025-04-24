@@ -27,7 +27,7 @@ spec:
         - name: init-scrape
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}
           command:
-            - /app/cloudzero-insights-controller
+            - /app/cloudzero-webhook
           args:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
@@ -112,14 +112,12 @@ spec:
 
               # Check if the caBundle in the ValidatingWebhookConfiguration is the same for all webhooks
               caBundles=()
-              {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
-              {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
-              {{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
-              {{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+              {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
+              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
+              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
               {{- if or $labelsEnabled $annotationEnabled }}
-              wh_{{ $configType }}_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
-              caBundles+=("${wh_{{ $configType }}_caBundle:-missing }")
-              {{- end }}
+              wh_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
+              caBundles+=("${wh_caBundle:-missing }")
               {{- end }}
 
               CA_BUNDLE=${caBundles[0]}
@@ -174,16 +172,14 @@ spec:
               kubectl patch secret $SECRET_NAME \
                   -p '{"data": {"ca.crt": "'"$TLS_CRT"'", "tls.crt": "'"$TLS_CRT"'", "tls.key": "'"$TLS_KEY"'"}}'
 
-              {{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
-              {{- $webhookName := printf "%s-%s" (include "cloudzero-agent.validatingWebhookConfigName" $) $configType }}
-              {{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
-              {{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+              {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
+              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
+              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
               {{- if or $labelsEnabled $annotationEnabled }}
               # Patch the ValidatingWebhookConfiguration {{ $webhookName }} with the caBundle
               kubectl patch validatingwebhookconfiguration  {{ $webhookName }} \
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
-              {{- end }}
               {{- end }}
               # Now that the secret and webhook configuration are updated, roll the webhook-server pods to pick up the new certificate
               kubectl rollout restart deployment -n {{ .Release.Namespace }} {{ include "cloudzero-agent.insightsController.deploymentName" . }}
