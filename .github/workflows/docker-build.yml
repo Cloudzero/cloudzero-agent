@@ -15,22 +15,21 @@ on:
       - released
 
 env:
-  REGISTRY_LOCAL_ADDR: localhost:5000
   REGISTRY_PROD_ADDR: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/cloudzero-agent
+  UNTESTED_IMAGE_NAME: "Cloudzero/untested-cloudzero/untested-cloudzero-agent"
 
 jobs:
-  docker:
+  docker-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       id-token: write
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
+    outputs:
+      image-repo: ${{ env.REGISTRY_PROD_ADDR }}
+      image-path: ${{ env.UNTESTED_IMAGE_NAME }}
+      image-tag: ${{ steps.meta.outputs.version }}
     steps:
       # Checkout the repository code
       - name: SETUP - Checkout
@@ -44,19 +43,17 @@ jobs:
         with:
           driver-opts: network=host
 
-      # Sanity Check: Validate the k8s and Registry is Running
-      - name: SANITY CHECK - Registry are running
-        id: validate_kind_install
+      - name: Get raw repo name
         run: |
-          docker pull busybox
-          docker tag busybox ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
-          docker push ${{ env.REGISTRY_LOCAL_ADDR }}/localbusybox
+          echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
+          export REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}
 
-      # Format the image name to OCI compatible format
+      # Format the image names for OCI compliance (all lowercase)
       - name: INPUT PREP - image name formatting
         id: image_name
         run: |
           IMAGE_NAME=${{ env.IMAGE_NAME }}
+          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>${GITHUB_ENV}
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
 
       # Extract metadata (tags, labels) the docker image build
@@ -66,8 +63,8 @@ jobs:
         env:
           VALIDATOR_IMAGE_DESCRIPTION: "CloudZero Agent Validator"
         with:
-          # ONLY use the local registry address for the image until it is tested
-          images: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}
+          # ONLY use the untested registry address for the image until it is tested
+          images: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}
           # Tag generation rules:
           # 1. branch name (used for develop or main)
           # 2. PR number (used for PRs)
@@ -95,6 +92,13 @@ jobs:
           echo "TAG=${TAG}" >>${GITHUB_ENV}
           echo "BUILD_TIME=${BUILD_TIME}" >>${GITHUB_ENV}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: TEST - Build image
         id: build_image
         uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
@@ -119,47 +123,59 @@ jobs:
       - name: SECURITY - Grype Docker Image Scan
         uses: anchore/scan-action@v6
         with:
-          image: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           fail-build: true
           severity-cutoff: high
 
       - name: SECURITY - Trivy Docker Image Scan
         uses: aquasecurity/trivy-action@0.30.0
         with:
-          image-ref: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image-ref: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
 
-      - name: Save Image Location
-        env:
-          IMAGE_REPO: ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}
-          IMAGE_TAG: ${{ steps.meta.outputs.version }}
-        run: |
-          mkdir -p ./image
-          docker image save ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} | gzip > ./image/image.tar.gz
-          echo $IMAGE_REPO > ./image/image_repo.txt
-          echo $IMAGE_TAG > ./image/image_tag.txt
-
-      - uses: actions/upload-artifact@v4
+      - name: Cleanup older dev images
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        continue-on-error: true
         with:
-          name: container_image_info
-          path: ./image/
-          retention-days: 1
-          if-no-files-found: error
+          older-than: 2 weeks
+          repository: cloudzero-agent
+          package: "untested-cloudzero/untested-cloudzero-agent"
 
-      ###########################################################################
-      # PRODUCTION ONLY STEPS BEYOND THIS POINT
-      #
+  k8s-version-matrix-tests:
+    # These should match the permissions in the called workflow.
+    permissions:
+      contents: read
+      packages: read
+    needs: docker-build
+    uses: ./.github/workflows/test-matrix-k8s-k3s.yaml
+    with:
+      image-repo: ${{ needs.docker-build.outputs.image-repo }}
+      image-path: ${{ needs.docker-build.outputs.image-path }}
+      image-tag: ${{ needs.docker-build.outputs.image-tag }}
+    secrets: inherit
+
+  ###########################################################################
+  # PRODUCTION ONLY STEPS BEYOND THIS POINT
+  #
+  release-image:
+    needs: ["docker-build", "k8s-version-matrix-tests"]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
       # install regctl for registry management operations
       - name: PRODUCTION STEP - Install Regctl for registry management
         if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: install_regctl
         uses: iarekylew00t/regctl-installer@v3
 
-      # Login to product docker registry
+      # Login to the production registry
       - name: PRODUCTION STEP - login to container registry
         if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: prod_registry_login
@@ -169,20 +185,18 @@ jobs:
               --user "${{ github.actor }}" \
               --pass-stdin
 
-      # Copy the image from the local registry
-      # to the production registry (retagging at the same time)
+      # Promote the untested image to production
       # only allow on main, develop branches, or a version tag
       - name: PRODUCTION STEP - Publish Image to Production
         if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: prod_publish_image
         run: |
-          regctl registry set --tls=disabled ${{ env.REGISTRY_LOCAL_ADDR }}
           regctl image copy \
-            ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
-            ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ needs.docker-build.outputs.image-tag }} \
+            ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:${{ needs.docker-build.outputs.image-tag }}
 
-          if [[ ${{ steps.meta.outputs.version }} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ${{ needs.docker-build.outputs.image-tag }} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             regctl image copy \
-              ${{ env.REGISTRY_LOCAL_ADDR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+              ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ needs.docker-build.outputs.image-tag }} \
               ${{ env.REGISTRY_PROD_ADDR }}/${{ env.IMAGE_NAME }}:latest
           fi

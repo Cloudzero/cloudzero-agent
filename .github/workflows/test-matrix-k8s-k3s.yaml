@@ -1,57 +1,111 @@
-name: k8s+k3s-version-test-matrix
+name: test-matrix-k8s-versions
 on:
-  #pull_request:
-  #  branches:
-  #    - "*"
-  #push:
-  #  branches:
-  #    - develop
   workflow_dispatch:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
+  workflow_call:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
 
 jobs:
   k3s-version-test:
-    name: k3s-test-${{ matrix.k8s_version }}
+    name: k3s-test-${{ matrix.kver.k3s }}
     runs-on: ubuntu-latest
+    # These should match the permissions in the calling job.
+    permissions:
+      contents: read
+      packages: read
     strategy:
+      fail-fast: false
       matrix:
         # Useful for finding versions: https://eduardominguez.es/k3s-versions/
         # From: https://github.com/e-minguez/k3s-versions
-        k8s_version:
+        kver:
           [
-            v1.23.17+k3s1,
-            v1.24.17+k3s1,
-            v1.25.16+k3s4,
-            v1.26.15+k3s1,
-            v1.27.16+k3s1,
-            v1.28.14+k3s1,
-            v1.29.15+k3s1,
-            v1.30.11+k3s1,
-            v1.31.7+k3s1,
-            v1.32.3+k3s1,
+            { k8s: v1.23.17, k3s: v1.23.17+k3s1 },
+            { k8s: v1.24.17, k3s: v1.24.17+k3s1 },
+            { k8s: v1.25.16, k3s: v1.25.16+k3s4 },
+            { k8s: v1.26.15, k3s: v1.26.15+k3s1 },
+            { k8s: v1.27.16, k3s: v1.27.16+k3s1 },
+            { k8s: v1.28.14, k3s: v1.28.14+k3s1 },
+            { k8s: v1.29.15, k3s: v1.29.15+k3s1 },
+            { k8s: v1.30.11, k3s: v1.30.11+k3s1 },
+            { k8s: v1.31.7, k3s: v1.31.7+k3s1 },
+            { k8s: v1.32.3, k3s: v1.32.3+k3s1 },
           ]
 
     steps:
       - uses: actions/checkout@v4
-      - uses: alexellis/setup-arkade@v2
 
-      # Fast binary install
-      # https://github.com/alexellis/arkade?tab=readme-ov-file#catalog-of-clis
-      - uses: alexellis/arkade-get@master
+      - uses: azure/setup-kubectl@v4
         with:
-          kubectl: latest
-          helm: latest
-          yq: latest
+          version: ${{ matrix.kver.k8s }}
 
-      - name: Setup k3s ${{ matrix.k8s_version }}
-        shell: bash
+      - name: Install Krew and Plugins
+        run: |
+          (
+            set -x; cd "$(mktemp -d)" &&
+            OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+            ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+            KREW="krew-${OS}_${ARCH}" &&
+            curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+            tar zxvf "${KREW}.tar.gz" &&
+            ./"${KREW}" install krew
+          )
+          echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.krew/bin:$PATH"
+          kubectl krew install stern
+
+      - name: Install Helm
+        run: |
+          # Helm
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install apt-transport-https --yes
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install helm
+
+      - name: Install SNAP Software
+        run: |
+          sudo snap install yq --channel=v4/stable
+
+      - name: Manual Software Installs
+        run: |
+          LATEST_VERSION=$(curl https://api.github.com/repos/sigstore/cosign/releases/latest | grep tag_name | cut -d : -f2 | tr -d "v\", ")
+          curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign_${LATEST_VERSION}_amd64.deb"
+          sudo dpkg -i cosign_${LATEST_VERSION}_amd64.deb
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sudo sh -s -- -v -b /usr/local/bin
+
+      - name: Setup k3s ${{ matrix.kver.k3s }}
         run: |
           echo "Ensure UFW is disabled"
           sudo ufw disable
-          echo "Setup k3s ${{ matrix.k8s_version }}"
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.k8s_version }}" INSTALL_K3S_CHANNEL="stable" sh -s -
+          echo "Setup k3s ${{ matrix.kver.k3s }}"
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.kver.k3s }}" INSTALL_K3S_CHANNEL="stable" sh -s -
 
       - name: Prepare a kubeconfig in ~/.kube/config
-        shell: bash
         run: |
           echo "Prepare a kubeconfig in ~/.kube/config"
           mkdir -p ~/.kube
@@ -60,7 +114,6 @@ jobs:
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
 
       - name: Wait for cluster to be ready
-        shell: bash
         run: |
           echo "Waiting for nodes to be ready..."
           sleep 60s
@@ -73,50 +126,13 @@ jobs:
 
       - name: Set version output
         id: set-output
-        shell: bash
         run: |
           echo "kubeconfig=$HOME/.kube/config" >> $GITHUB_OUTPUT
-          echo "k3s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^ ]*\).*/\1/')" >> $GITHUB_OUTPUT
-          echo "k8s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^+]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "k8s-version=$(k3s --version | grep --max-count=1 'k3s' | sed 's/.*\(v[0-9][^ ]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "kubectl-version=$(kubectl version --client | grep Client | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
           echo "helm-version=$(helm version --short | sed 's/\([^+]*\).*/\1/')" >> $GITHUB_OUTPUT
 
-      # There have been some odd auth (?) issue with some of the CloudZero images in GHCR
-      # that prevent them from being found when pulled via k3d's containerd.
-      # Maybe related to this closed issue: https://github.com/k3s-io/k3s/issues/2401
-      - name: Pre-pull the CZ Agent images
-        run: |
-          set -xv
-          # We do not need the correct helm values since we only want the container images and tags.
-          for i in $(make CLOUDZERO_DEV_API_KEY="01234567890" CLUSTER_NAME="template" template | yq e '..|.image? | select(.)' - | grep -v '\-\-\-' ); do
-            set +e
-            sudo ctr image pull "${i}"
-            set -e
-            retVal=$?
-            if [ $retVal -ne 0 ]; then
-              # Let's see if we are just assuming the default image registry in the image name...
-              sudo ctr image pull "docker.io/${i}"
-            fi
-          done
-
-      - name: Install CZ Agent
-        run: |
-          echo "Applying CloudZero Agent Helm Chart"
-          helm repo add prom https://prometheus-community.github.io/helm-charts
-          helm dependency build ./helm
-          export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
-          echo $CLUSTERNAME
-          make \
-            CLOUD_HELM_EXTRA_ARGS="--set insightsController.server.replicaCount=1" \
-            CLOUDZERO_DEV_API_KEY="${{ secrets.CLOUDZERO_DEV_API_KEY }}" \
-            CLUSTER_NAME="${CLUSTERNAME}" \
-            helm-install
-          echo "Wait for cz-agent deployments"
-          kubectl wait deployment \
-            -n cz-agent \
-            --all \
-            --for condition=Available=True \
-            --timeout=240s
-
+      # Install TestKube into Cluster
       - name: Install TestKube
         run: |
           echo "Applying TestKube Helm Chart"
@@ -131,11 +147,41 @@ jobs:
             --for condition=Available=True \
             --timeout=240s
 
-      # Testkube CLI setup
+      # Install Testkube CLI
       - uses: kubeshop/setup-testkube@v1
         with:
           namespace: testkube
           version: 2.1.137
+
+      - name: Setup imagePullSecrets
+        run: |
+          kubectl create ns cz-agent
+          kubectl create secret \
+            docker-registry \
+            ghcr-registry \
+            -n cz-agent \
+            --docker-server=https://ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CZ Agent
+        run: |
+          echo "Applying CloudZero Agent Helm Chart"
+          helm repo add prom https://prometheus-community.github.io/helm-charts
+          helm dependency build ./helm
+          export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
+          echo $CLUSTERNAME
+          make \
+            CLOUD_HELM_EXTRA_ARGS="--set 'imagePullSecrets[0].name=ghcr-registry' --set insightsController.server.replicaCount=1 --set components.agent.image.repository=${{ inputs.image-repo }}/${{ inputs.image-path }} --set components.agent.image.tag=${{ inputs.image-tag }}" \
+            CLOUDZERO_DEV_API_KEY="${{ secrets.CLOUDZERO_DEV_API_KEY }}" \
+            CLUSTER_NAME="${CLUSTERNAME}" \
+            helm-install
+          echo "Wait for cz-agent deployments"
+          kubectl wait deployment \
+            -n cz-agent \
+            --all \
+            --for condition=Available=True \
+            --timeout=240s
 
       - name: Apply and Run TestKube Tests
         run: |
@@ -144,6 +190,32 @@ jobs:
 
       # Many more testkube based tests could be added in here as desired.
       # Testkube support Postman, K6, simple scripts and much more.
+
+      - name: Collect Logs
+        id: logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          rm -f /tmp/${{ matrix.kver.k3s }}.log
+          touch /tmp/${{ matrix.kver.k3s }}.log
+          echo "---Kubectl Events------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
+          kubectl events -n cz-agent &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Kubectl events command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
+          echo "---Stern Logs----------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
+          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Stern log command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
+          echo "---Testkube Logs-------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
+          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Testkube log command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
+
+      # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
+      # potential secret it detected, since they will be publicly available if uploaded.
+
+      - name: Upload Failure Logs
+        uses: actions/upload-artifact@v4
+        if: always() && steps.logs.conclusion == 'success'
+        with:
+          name: ${{ matrix.kver.k3s }}.log
+          path: /tmp/${{ matrix.kver.k3s }}.log
+          retention-days: 1
+          if-no-files-found: warn
 
       - name: Cleanup
         if: always()
