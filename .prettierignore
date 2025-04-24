@@ -1,2 +1,3 @@
-helm/templates/*.yaml
-helm/values.yaml
+/helm/templates/*.yaml
+/helm/values.yaml
+/tests/helm/template/manifest.yaml
