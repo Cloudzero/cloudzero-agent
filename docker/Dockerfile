@@ -23,7 +23,8 @@ RUN go mod download \
 COPY . .
 
 # Build the Go binary
-RUN make build OUTPUT_BIN_DIR=/go/bin \
+RUN make build -j \
+    OUTPUT_BIN_DIR=/go/bin \
     TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
     ENABLE_ZIG=true \
     REVISION=${REVISION} \
