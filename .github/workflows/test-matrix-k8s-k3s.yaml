@@ -33,6 +33,10 @@ jobs:
   k3s-version-test:
     name: k3s-test-${{ matrix.kver.k3s }}
     runs-on: ubuntu-latest
+    # These should match the permissions in the calling job.
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:

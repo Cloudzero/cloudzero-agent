@@ -146,6 +146,10 @@ jobs:
           package: "untested-cloudzero/untested-cloudzero-agent"
 
   k8s-version-matrix-tests:
+    # These should match the permissions in the called workflow.
+    permissions:
+      contents: read
+      packages: read
     needs: docker-build
     uses: ./.github/workflows/test-matrix-k8s-k3s.yaml
     with:
