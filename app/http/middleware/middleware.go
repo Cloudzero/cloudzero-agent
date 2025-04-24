@@ -63,7 +63,7 @@ func LoggingMiddlewareWrapper(next http.Handler) http.Handler {
 		log.Ctx(r.Context()).Debug().
 			Str("method", method).
 			Str("route", route).
-			Int("status_code", statusCode).
+			Int("statusCode", statusCode).
 			Str("status", http.StatusText(statusCode)).
 			Dur("duration", duration).
 			Msg("HTTP request")

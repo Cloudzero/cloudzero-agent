@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
+	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -92,6 +93,34 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 	}
 }
 
+func TestShipper_Integration_ProcessNewFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// setup env
+	apiKey, exists := os.LookupEnv("CLOUDZERO_DEV_API_KEY")
+	require.True(t, exists)
+	tmpDir := t.TempDir()
+
+	// create the metricShipper
+	settings := getMockSettingsIntegration(t, tmpDir, apiKey)
+
+	// create the disk store
+	store, err := disk.NewDiskStore(settings.Database)
+	require.NoError(t, err, "failed to create the disk store")
+
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, store)
+	require.NoError(t, err)
+
+	// create some test files to simulate resource tracking
+	createTestFiles(t, tmpDir, 5)
+
+	// process the new files
+	err = metricShipper.ProcessNewFiles(t.Context())
+	require.NoError(t, err, "failed to process new files")
+}
+
 func TestShipper_Integration_ExpiredPresignedURL(t *testing.T) {}
 
 func TestShipper_Integration_ReplayRequest(t *testing.T) {}
@@ -128,17 +157,3 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	err = metricShipper.AbandonFiles(context.Background(), refIDs, "integration-test-abandon")
 	require.NoError(t, err)
 }
-
-// func TestShipper_Integration_DiskManagement(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("skipping integration test")
-// 	}
-
-// 	// get a tmp dir
-// 	tmpDir := getTmpDir(t)
-
-// 	// create the metricShipper
-// 	settings := getMockSettingsIntegration(t, tmpDir, "")
-// 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
-// 	require.NoError(t, err)
-// }

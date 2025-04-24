@@ -49,15 +49,15 @@ func main() {
 
 	log.Info().
 		Str("version", build.GetVersion()).
-		Str("build_time", build.Time).
+		Str("buildTime", build.Time).
 		Str("rev", build.Rev).
 		Str("tag", build.Tag).
 		Str("author", build.AuthorName).
 		Str("copyright", build.Copyright).
-		Str("author_email", build.AuthorEmail).
-		Str("charts_repo", build.ChartsRepo).
-		Str("platform_endpoint", settings.Destination).
-		Interface("config_files", configFiles).
+		Str("authorEmail", build.AuthorEmail).
+		Str("chartsRepo", build.ChartsRepo).
+		Str("platformEndpoint", settings.Destination).
+		Interface("configFiles", configFiles).
 		Msg("Starting CloudZero Insights Controller")
 	if len(configFiles) == 0 {
 		log.Fatal().Msg("No configuration files provided")
