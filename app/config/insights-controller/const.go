@@ -20,6 +20,7 @@ const (
 	CustomResourceDefinition ResourceType = 11
 	ReplicaSet               ResourceType = 12
 	PersistentVolumeClaim    ResourceType = 13
+	Gateway                  ResourceType = 14
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
@@ -37,4 +38,5 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	CustomResourceDefinition: "crd",
 	ReplicaSet:               "replicaset",
 	PersistentVolumeClaim:    "pcv",
+	Gateway:                  "gateway",
 }

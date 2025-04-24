@@ -165,10 +165,10 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 		return
 	}
 
-	log.Ctx(ctx).Debug().
+	log.Ctx(ctx).Trace().
 		Int("content_length", int(r.ContentLength)).
 		Str("operation", string(review.Operation)).
-		Msg("processin review request")
+		Msg("processing review request")
 
 	result, err := a.controller.Review(ctx, review)
 	if err != nil {

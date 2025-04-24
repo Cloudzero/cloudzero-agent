@@ -96,6 +96,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
+	sigs.k8s.io/gateway-api v1.2.1
 )
 
 require (
