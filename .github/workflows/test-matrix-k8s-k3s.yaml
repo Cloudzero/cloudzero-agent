@@ -28,6 +28,10 @@ on:
         description: "The image tag"
         default: "latest"
         type: "string"
+    outputs:
+      version-test-status:
+        description: "The completion status of the k3s-version-test job"
+        value: ${{ jobs.k3s-version-test.outputs.version-test-status }}
 
 jobs:
   k3s-version-test:
@@ -37,6 +41,8 @@ jobs:
     permissions:
       contents: read
       packages: read
+    outputs:
+      version-test-status: ${{ job.status }}
     strategy:
       fail-fast: false
       matrix:
