@@ -5,6 +5,12 @@ metadata:
   name: agent-basic-test
   namespace: testkube
 spec:
+  pod:
+    tolerations:
+      - key: kubernetes.io/arch
+        operator: Equal
+        value: arm64
+        effect: NoSchedule
   steps:
     - run:
         image: "curlimages/curl:8.13.0"

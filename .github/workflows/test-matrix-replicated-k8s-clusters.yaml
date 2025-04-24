@@ -1,0 +1,403 @@
+name: test-matrix-replicated-k8s-clusters
+
+# NOTE: There is a `replicated` CLI should anyone be interested:
+# https://docs.replicated.com/reference/replicated-cli-installing
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
+  workflow_call:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
+    outputs:
+      cluster-test-status:
+        description: "The completion status of the replicated-test job"
+        value: ${{ jobs.compatibility-matrix.outputs.cluster-test-status }}
+
+concurrency:
+  # This concurrency group ensures that only one job in the group runs at a time.
+  # If a new job is triggered, the previous one will be canceled.
+  group: matrix-replicated-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility-matrix:
+    name: replicated-test-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      cluster-test-status: ${{ job.status }}
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster:
+          [
+            {
+              distribution: rke2,
+              version: v1.32.3,
+              instance-type: r1.large,
+              arch: amd64,
+            },
+            {
+              distribution: eks,
+              version: v1.32,
+              instance-type: m5.large,
+              arch: arm64,
+            },
+            {
+              distribution: eks,
+              version: v1.32,
+              instance-type: m7g.large,
+              arch: amd64,
+            },
+            {
+              distribution: aks,
+              version: v1.32,
+              instance-type: Standard_DS3_v2,
+              arch: amd64,
+            },
+            {
+              distribution: aks,
+              version: v1.32,
+              instance-type: Standard_D4ps_v5,
+              arch: arm64,
+            },
+            {
+              distribution: gke,
+              version: v1.32,
+              instance-type: e2-standard-2,
+              arch: amd64,
+            },
+            {
+              distribution: gke,
+              version: v1.32,
+              instance-type: t2a-standard-4,
+              arch: arm64,
+            },
+          ]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Krew and Plugins
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            (
+              set -x; cd "$(mktemp -d)" &&
+              OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+              ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+              KREW="krew-${OS}_${ARCH}" &&
+              curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+              tar zxvf "${KREW}.tar.gz" &&
+              ./"${KREW}" install krew
+            )
+            echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.krew/bin:$PATH"
+            kubectl krew install stern
+
+      - name: Generate Valid Cluster Name
+        run: |
+          CNAME=${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}
+          CLUSTER_NAME="${CNAME//\//-}"
+          echo "CLUSTER_NAME=${CLUSTER_NAME}" >> $GITHUB_ENV
+
+      - name: Create Cluster
+        id: create-cluster
+        uses: replicatedhq/replicated-actions/create-cluster@v1
+        with:
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+          kubernetes-distribution: ${{ matrix.cluster.distribution }}
+          kubernetes-version: ${{ matrix.cluster.version }}
+          cluster-name: ${{ env.CLUSTER_NAME }}
+          timeout-minutes: 20 # Some clusters can take this long to spin up.
+          instance-type: ${{ matrix.cluster.instance-type }}
+          nodes: 1
+          ttl: 20m # How long they should stay up after they become available.
+          tags: |
+            - key: "team"
+              value: "cirrus"
+            - key: "purpose"
+              value: "testing"
+            - key: "lifespan"
+              value: "ephemeral"
+
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ steps.create-cluster.outputs.cluster-kubeconfig }}" > ~/.kube/config
+
+      - name: Add TestKube Tolerations for GKE/ARM64
+        if: matrix.cluster.distribution == 'gke' && matrix.cluster.arch == 'arm64'
+        run: |
+          cat <<EOF > ${{ runner.temp }}/testkube-values.yaml
+          nats:
+            podTemplate:
+              merge:
+                spec:
+                  tolerations:
+                    - key: kubernetes.io/arch
+                      operator: Equal
+                      value: arm64
+                      effect: NoSchedule
+          mongodb:
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          preUpgradeHook:
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          preUpgradeHookNATS:
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          testkube-api:
+            minio:
+              tolerations:
+                - key: kubernetes.io/arch
+                  operator: Equal
+                  value: arm64
+                  effect: NoSchedule
+            testConnection:
+              tolerations:
+                - key: kubernetes.io/arch
+                  operator: Equal
+                  value: arm64
+                  effect: NoSchedule
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          testkube-operator:
+            preUpgrade:
+              tolerations:
+                - key: kubernetes.io/arch
+                  operator: Equal
+                  value: arm64
+                  effect: NoSchedule
+            testConnection:
+              tolerations:
+                - key: kubernetes.io/arch
+                  operator: Equal
+                  value: arm64
+                  effect: NoSchedule
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+            webhook:
+              patch:
+                tolerations:
+                  - key: kubernetes.io/arch
+                    operator: Equal
+                    value: arm64
+                    effect: NoSchedule
+          EOF
+
+      - name: Add CloudZero Agent Tolerations for GKE/ARM64
+        if: matrix.cluster.distribution == 'gke' && matrix.cluster.arch == 'arm64'
+        run: |
+          cat <<EOF > ${{ runner.temp }}/cz-agent-values.yaml
+          defaults:
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          kubeStateMetrics:
+            tolerations:
+              - key: kubernetes.io/arch
+                operator: Equal
+                value: arm64
+                effect: NoSchedule
+          EOF
+
+      - name: Set default StorageClass in EKS
+        if: matrix.cluster.distribution == 'eks'
+        run: |
+          kubectl patch storageclass gp2 -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+      # Note: When adding OpenShift support someday, both TestKube and the
+      # CloudZero Agent will likely need additional manifests due to the
+      # security setup in OpenShift.
+      # see: https://docs.testkube.io/articles/install/standalone-agent#deploying-on-openshift
+
+      # Install TestKube into Cluster
+      - name: Install TestKube
+        run: |
+          echo "Applying TestKube Helm Chart"
+          touch ${{ runner.temp }}/testkube-values.yaml
+          if [[ -f ${{ runner.temp }}/testkube-k8s-manifests.yaml ]]; then
+            kubectl apply -f ${{ runner.temp }}/testkube-k8s-manifests.yaml
+          else
+            kubectl create namespace testkube
+          fi
+          helm repo add kubeshop https://kubeshop.github.io/helm-charts
+          helm install testkube kubeshop/testkube \
+            --version=v2.1.137 \
+            -n testkube \
+            --values ${{ runner.temp }}/testkube-values.yaml
+          echo "Wait for testkube deployments"
+          kubectl wait deployment \
+            -n testkube \
+            --all \
+            --for condition=Available=True \
+            --timeout=600s
+
+      # Install Testkube CLI
+      - uses: kubeshop/setup-testkube@v1
+        with:
+          namespace: testkube
+          version: 2.1.137
+
+      - name: Setup imagePullSecrets
+        run: |
+          kubectl create ns cz-agent
+          kubectl create secret \
+            docker-registry \
+            ghcr-registry \
+            -n cz-agent \
+            --docker-server=https://ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare for helm install
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            helm repo add prom https://prometheus-community.github.io/helm-charts
+            helm dependency build ./helm
+
+      # Install CloudZero Agent into Cluster
+      - name: Install CloudZero Agent
+        run: |
+          echo "Applying CloudZero Agent Helm Chart"
+          touch ${{ runner.temp }}/cz-agent-values.yaml
+          # Be aware that this logic could lead to some values duplication.
+          cat <<EOF >> ${{ runner.temp }}/cz-agent-values.yaml
+          cloudAccountId: ID12345
+          clusterName: ${{ env.CLUSTER_NAME }}
+          region: us-east-1
+          apiKey: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+          host: dev-api.cloudzero.com
+          imagePullSecrets:
+            - name: ghcr-registry
+          insightsController:
+            server:
+              replicaCount: 1
+          components:
+            agent:
+              image:
+                repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
+                tag: ${{ inputs.image-tag }}
+          EOF
+          helm install cz-agent ./helm \
+            -n cz-agent \
+            --values ${{ runner.temp }}/cz-agent-values.yaml
+          echo "Wait for CloudZero Agent deployments"
+          kubectl wait deployment \
+            -n cz-agent \
+            --all \
+            --for condition=Available=True \
+            --timeout=600s
+
+      - name: Apply and Run TestKube Tests
+        run: |
+          kubectl apply -f ./tests/testkube/tests.yaml
+          testkube run testworkflow agent-basic-test -f
+
+      # Many more testkube based tests could be added in here as desired.
+      # Testkube support Postman, K6, simple scripts and much more.
+
+      - name: Collect Logs
+        id: logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          rm -f ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          touch ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #echo "---Kubectl Nodes-------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #kubectl get nodes -o json &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get nodes command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #echo "---Kubectl Storage Info------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #kubectl get storageclasses &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get storageclasses command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #kubectl describe pv -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pv command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          #kubectl describe pvc -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pvc command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Kubectl Describe Pods (testkube)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl describe pods -n testkube &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe pods (testkube) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Kubectl Describe Pods (cz-agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl describe pods -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe pods (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Kubectl Events------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl events -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Stern Logs (testkube)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl stern -n testkube --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Stern Logs (cz-agent)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "---Testkube Logs--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Testkube log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+      # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
+      # potential secret it detected, since they will be publicly available if uploaded.
+
+      - name: Upload Failure Logs
+        uses: actions/upload-artifact@v4
+        if: always() && steps.logs.conclusion == 'success'
+        with:
+          name: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          path: ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          retention-days: 1
+          if-no-files-found: warn
+
+      - name: Remove Cluster
+        if: ${{ always() }}
+        id: remove-cluster
+        uses: replicatedhq/replicated-actions/remove-cluster@v1
+        continue-on-error: true # It could be that the cluster is already removed
+        with:
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+          cluster-id: ${{ steps.create-cluster.outputs.cluster-id }}
+
+      - name: Cleanup
+        if: ${{ always() }}
+        id: cleanup
+        continue-on-error: true
+        run: |
+          rm -f ~/.kube/config

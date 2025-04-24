@@ -33,10 +33,16 @@ on:
         description: "The completion status of the k3s-version-test job"
         value: ${{ jobs.k3s-version-test.outputs.version-test-status }}
 
+concurrency:
+  # This concurrency group ensures that only one job in the group runs at a time.
+  # If a new job is triggered, the previous one will be canceled.
+  group: matrix-kver-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   k3s-version-test:
-    name: k3s-test-${{ matrix.kver.k3s }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.kver.platform }}-k3s-test-${{ matrix.kver.k3s }}
+    runs-on: ${{ matrix.kver.platform == 'linux/amd64' && 'ubuntu-latest' || matrix.kver.platform == 'linux/arm64' && 'ubuntu-24.04-arm' }}
     # These should match the permissions in the calling job.
     permissions:
       contents: read
@@ -46,22 +52,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Useful for finding versions: https://eduardominguez.es/k3s-versions/
+        # Useful for finding the current k3s versions: https://eduardominguez.es/k3s-versions/
         # From: https://github.com/e-minguez/k3s-versions
+        #
+        # NOTE: We also switch up the platforms, just to try and catch any image build issues early.
         kver:
           [
-            { k8s: v1.21.14, k3s: v1.21.14+k3s1 },
-            { k8s: v1.22.17, k3s: v1.22.17+k3s1 },
-            { k8s: v1.23.17, k3s: v1.23.17+k3s1 },
-            { k8s: v1.24.17, k3s: v1.24.17+k3s1 },
-            { k8s: v1.25.16, k3s: v1.25.16+k3s4 },
-            { k8s: v1.26.15, k3s: v1.26.15+k3s1 },
-            { k8s: v1.27.16, k3s: v1.27.16+k3s1 },
-            { k8s: v1.28.14, k3s: v1.28.14+k3s1 },
-            { k8s: v1.29.15, k3s: v1.29.15+k3s1 },
-            { k8s: v1.30.11, k3s: v1.30.11+k3s1 },
-            { k8s: v1.31.7, k3s: v1.31.7+k3s1 },
-            { k8s: v1.32.3, k3s: v1.32.3+k3s1 },
+            { k8s: v1.21.14, k3s: v1.21.14+k3s1, platform: linux/amd64 },
+            { k8s: v1.22.17, k3s: v1.22.17+k3s1, platform: linux/arm64 },
+            { k8s: v1.23.17, k3s: v1.23.17+k3s1, platform: linux/amd64 },
+            { k8s: v1.24.17, k3s: v1.24.17+k3s1, platform: linux/arm64 },
+            { k8s: v1.25.16, k3s: v1.25.16+k3s4, platform: linux/amd64 },
+            { k8s: v1.26.15, k3s: v1.26.15+k3s1, platform: linux/arm64 },
+            { k8s: v1.27.16, k3s: v1.27.16+k3s1, platform: linux/amd64 },
+            { k8s: v1.28.14, k3s: v1.28.14+k3s1, platform: linux/arm64 },
+            { k8s: v1.29.15, k3s: v1.29.15+k3s1, platform: linux/amd64 },
+            { k8s: v1.30.11, k3s: v1.30.11+k3s1, platform: linux/arm64 },
+            { k8s: v1.31.7, k3s: v1.31.7+k3s1, platform: linux/amd64 },
+            { k8s: v1.32.3, k3s: v1.32.3+k3s1, platform: linux/arm64 },
           ]
 
     steps:
@@ -72,46 +80,55 @@ jobs:
           version: ${{ matrix.kver.k8s }}
 
       - name: Install Krew and Plugins
-        run: |
-          (
-            set -x; cd "$(mktemp -d)" &&
-            OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
-            ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-            KREW="krew-${OS}_${ARCH}" &&
-            curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
-            tar zxvf "${KREW}.tar.gz" &&
-            ./"${KREW}" install krew
-          )
-          echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.krew/bin:$PATH"
-          kubectl krew install stern
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            (
+              set -x; cd "$(mktemp -d)" &&
+              OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+              ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+              KREW="krew-${OS}_${ARCH}" &&
+              curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+              tar zxvf "${KREW}.tar.gz" &&
+              ./"${KREW}" install krew
+            )
+            echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.krew/bin:$PATH"
+            kubectl krew install stern
 
       - name: Install Helm
-        run: |
-          # Helm
-          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-          sudo apt-get install apt-transport-https --yes
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-          sudo apt-get update
-          sudo apt-get install helm
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            # Helm
+            curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+            sudo apt-get install apt-transport-https --yes
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+            sudo apt-get update
+            sudo apt-get install helm
 
-      - name: Install SNAP Software
-        run: |
-          sudo snap install yq --channel=v4/stable
-
-      - name: Manual Software Installs
-        run: |
-          LATEST_VERSION=$(curl https://api.github.com/repos/sigstore/cosign/releases/latest | grep tag_name | cut -d : -f2 | tr -d "v\", ")
-          curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign_${LATEST_VERSION}_amd64.deb"
-          sudo dpkg -i cosign_${LATEST_VERSION}_amd64.deb
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sudo sh -s -- -v -b /usr/local/bin
+      - name: Install Helm
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            sudo snap install yq --channel=v4/stable
 
       - name: Setup k3s ${{ matrix.kver.k3s }}
-        run: |
-          echo "Ensure UFW is disabled"
-          sudo ufw disable
-          echo "Setup k3s ${{ matrix.kver.k3s }}"
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.kver.k3s }}" INSTALL_K3S_CHANNEL="stable" sh -s -
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            echo "Ensure UFW is disabled"
+            sudo ufw disable
+            echo "Setup k3s ${{ matrix.kver.k3s }}"
+            curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${{ matrix.kver.k3s }}" INSTALL_K3S_CHANNEL="stable" sh -s -
 
       - name: Prepare a kubeconfig in ~/.kube/config
         run: |
@@ -153,7 +170,7 @@ jobs:
             -n testkube \
             --all \
             --for condition=Available=True \
-            --timeout=500s
+            --timeout=600s
 
       # Install Testkube CLI
       - uses: kubeshop/setup-testkube@v1
@@ -189,7 +206,7 @@ jobs:
             -n cz-agent \
             --all \
             --for condition=Available=True \
-            --timeout=500s
+            --timeout=600s
 
       - name: Apply and Run TestKube Tests
         run: |
@@ -204,14 +221,18 @@ jobs:
         if: failure()
         continue-on-error: true
         run: |
-          rm -f /tmp/${{ matrix.kver.k3s }}.log
-          touch /tmp/${{ matrix.kver.k3s }}.log
-          echo "---Kubectl Events------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
-          kubectl events -n cz-agent &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Kubectl events command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
-          echo "---Stern Logs----------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
-          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Stern log command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
-          echo "---Testkube Logs-------------------------------------------------------" &>> /tmp/${{ matrix.kver.k3s }}.log
-          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) &>> /tmp/${{ matrix.kver.k3s }}.log || echo "[ERROR] Testkube log command exited error." &>> /tmp/${{ matrix.kver.k3s }}.log
+          rm -f ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          touch ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          echo "---Kubectl Events------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          kubectl events -A &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          echo "---Stern Logs (testkube)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          kubectl stern -n testkube --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          echo "---Stern Logs (cz-agent)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          echo "---Testkube Logs--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
+          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log || echo "[ERROR] Testkube log command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
 
       # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
       # potential secret it detected, since they will be publicly available if uploaded.
@@ -221,7 +242,7 @@ jobs:
         if: always() && steps.logs.conclusion == 'success'
         with:
           name: ${{ matrix.kver.k3s }}.log
-          path: /tmp/${{ matrix.kver.k3s }}.log
+          path: ${{ runner.temp }}/${{ matrix.kver.k3s }}.log
           retention-days: 1
           if-no-files-found: warn
 
