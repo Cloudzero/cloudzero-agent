@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 )
 
 func TestCloudzeroSettings_Defaults(t *testing.T) {
@@ -294,4 +295,34 @@ func TestCloudzeroSettings_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUnit_Settings_RemoteAPIBase(t *testing.T) {
+	s := config.Settings{
+		CloudAccountID: "123456789012",
+		Region:         "us-east-1",
+		ClusterName:    "test-cluster",
+		Server: config.Server{
+			Mode: "http",
+			Port: 8080,
+		},
+		Database: config.Database{
+			StoragePath:      "testdata",
+			MaxRecords:       1000000,
+			CompressionLevel: 7,
+		},
+		Cloudzero: config.Cloudzero{
+			APIKeyPath:   "testdata/api_key.txt",
+			SendInterval: 60 * time.Second,
+			SendTimeout:  10 * time.Second,
+			Host:         "api.cloudzero.com",
+		},
+	}
+
+	err := s.Validate()
+	require.NoError(t, err, "failed to validate")
+
+	u, err := s.GetRemoteAPIBase()
+	require.NoError(t, err, "failed to get the remote api base")
+	require.NotEmpty(t, u.String())
 }

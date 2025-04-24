@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var simpleMetric = types.Metric{
@@ -142,6 +143,28 @@ func TestMetric_ImportLabels(t *testing.T) {
 			if diff := cmp.Diff(tt.want, m); diff != "" {
 				t.Errorf("Metric.ImportLabels() mismatch (-want +got):\n%s", diff)
 			}
+		})
+	}
+}
+
+func TestMetric_ToParquet_RoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		metric  types.Metric
+		wantErr bool
+	}{
+		{
+			name:    "basic",
+			metric:  simpleMetric,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := tt.metric
+			pm := m.Parquet()
+			m2 := pm.Metric()
+			require.Equal(t, m.MetricName, m2.MetricName)
 		})
 	}
 }
