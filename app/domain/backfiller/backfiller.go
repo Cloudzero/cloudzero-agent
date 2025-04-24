@@ -26,14 +26,15 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
-	"github.com/cloudzero/cloudzero-agent/app/http/handler"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 

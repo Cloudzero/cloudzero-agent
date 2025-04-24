@@ -117,7 +117,7 @@ data:
           enable_http2: true
       {{- end }}
       {{- if .Values.insightsController.enabled }}
-      - job_name: cloudzero-insights-controller-job
+      - job_name: cloudzero-webhook-job
         metrics_path: /metrics
         scheme: https
         enable_compression: true

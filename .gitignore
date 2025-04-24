@@ -10,6 +10,7 @@ go.work.sum
 
 # app configuration
 /.cloudzero-insights-controller.yaml
+override-values.yaml
 
 # tool and bin directories
 .tmp/

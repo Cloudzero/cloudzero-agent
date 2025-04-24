@@ -4,7 +4,7 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-obvious/server"
 	"github.com/go-obvious/server/api"
 
@@ -16,7 +16,7 @@ type ShipperAPI struct {
 	shipper *shipper.MetricShipper
 }
 
-func NewShipperAPI(base string, d *shipper.MetricShipper) *ShipperAPI {
+func NewShipperAPI(base string, d *shipper.MetricShipper) server.API {
 	a := &ShipperAPI{
 		shipper: d,
 		Service: api.Service{
