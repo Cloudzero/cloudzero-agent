@@ -20,11 +20,13 @@ database:
   cleanup_interval: 3h
   batch_update_size: 500
 api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
+{{- $namespace := .Release.Namespace }}
 {{- with .Values.insightsController }}
 certificate:
   key: {{ .tls.mountPath }}/tls.key
   cert: {{ .tls.mountPath }}/tls.crt
 server:
+  domain: {{ $namespace }}-{{ .server.name }}-svc
   port: {{ .server.port }}
   read_timeout: {{ .server.read_timeout }}
   write_timeout: {{ .server.write_timeout }}

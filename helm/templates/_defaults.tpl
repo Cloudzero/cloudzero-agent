@@ -47,6 +47,7 @@ insightsMetrics:
   - remote_write_db_failures_total
   - http_requests_total
   - storage_write_failure_total
+  - cloudzero_webhook_event_total
 prometheusMetrics:
   - go_memstats_alloc_bytes
   - go_memstats_heap_alloc_bytes

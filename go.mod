@@ -80,9 +80,8 @@ require (
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.2.1
-	github.com/go-obvious/server v0.1.8
+	github.com/go-obvious/server v0.1.15
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
@@ -97,7 +96,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
-	gotest.tools/v3 v3.5.2
+	sigs.k8s.io/gateway-api v1.2.1
 )
 
 require (
@@ -215,6 +214,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/prometheus/client_model v0.6.2
+	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.62.0
 )

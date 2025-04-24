@@ -21,7 +21,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
-	czhttp "github.com/cloudzero/cloudzero-agent/app/http"
+	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 )
@@ -108,15 +108,22 @@ func main() {
 		}
 	}()
 
-	logger.Info().Msg("Starting service")
-	server.New(
-		build.Version(),
-		[]server.Middleware{
-			czhttp.LoggingMiddlewareWrapper,
-			handlers.PromHTTPMiddleware,
-		},
+	middleware := []server.Middleware{
+		middleware.LoggingMiddlewareWrapper,
+		middleware.PromHTTPMiddleware,
+	}
+
+	apis := []server.API{
 		handlers.NewShipperAPI("/", domain),
-	).Run(ctx)
+	}
+
+	logger.Info().Msg("Starting service")
+	server.New(build.Version()).
+		WithAddress(fmt.Sprintf(":%d", settings.Server.Port)).
+		WithMiddleware(middleware...).
+		WithAPIs(apis...).
+		WithListener(server.HTTPListener()).
+		Run(ctx)
 	logger.Info().Msg("Service stopping")
 
 	defer func() {

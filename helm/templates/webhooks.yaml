@@ -1,13 +1,12 @@
 {{- if .Values.insightsController.enabled }}
-{{- range $configType, $configs := .Values.insightsController.webhooks.configurations }}
-{{ $labelsEnabled := and $.Values.insightsController.labels.enabled (ne (index $.Values.insightsController.labels.resources $configType) false)}}
-{{ $annotationEnabled := and $.Values.insightsController.annotations.enabled (ne (index $.Values.insightsController.annotations.resources $configType) false)}}
+{{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
+{{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
 {{- if or $labelsEnabled $annotationEnabled }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}-{{ $configType }}
+  name: {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}
   namespace: {{ $.Release.Namespace }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" $ | nindent 4 }}
@@ -21,16 +20,16 @@ webhooks:
     namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector | nindent 6 }}
     failurePolicy: Ignore
     rules:
-      - operations: [ "CREATE", "UPDATE" ]
-        apiGroups: {{ $configs.apiGroups }}
-        apiVersions: [ "v1" ]
-        resources: [ {{ $configType }} ]
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["*"]
         scope: "*"
     clientConfig:
       service:
         namespace: {{ $.Release.Namespace }}
         name: {{ include "cloudzero-agent.serviceName" $ }}
-        path: "{{ $configs.path }}"
+        path: {{ $.Values.insightsController.webhooks.path }}
         port: {{ $.Values.insightsController.service.port }}
       {{- if (gt (len $.Values.insightsController.tls.caBundle) 1 ) }}
       caBundle: {{ $.Values.insightsController.tls.caBundle | quote }}
@@ -39,7 +38,6 @@ webhooks:
       {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 5
-{{- end }}
+    timeoutSeconds: 15
 {{- end }}
 {{- end }}
