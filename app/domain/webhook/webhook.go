@@ -17,7 +17,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -118,22 +117,23 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 	})
 
 	// register each resource you care about:
-	wc.register(CoreGroup, Version1, "pods", handler.NewPodHandler(store, settings, clock))                 // ✓ check
-	wc.register(CoreGroup, Version1, "namespaces", handler.NewNamespaceHandler(store, settings, clock))     // ✓ check
-	wc.register(CoreGroup, Version1, "nodes", handler.NewNodeHandler(store, settings, clock))               // ✓ check
 	wc.register(AppsGroup, Version1, "deployments", handler.NewDeploymentHandler(store, settings, clock))   // ✓ check
 	wc.register(AppsGroup, Version1, "statefulsets", handler.NewStatefulsetHandler(store, settings, clock)) // ✓ check
 	wc.register(AppsGroup, Version1, "daemonsets", handler.NewDaemonSetHandler(store, settings, clock))     // ✓ check
+	wc.register(CoreGroup, Version1, "pods", handler.NewPodHandler(store, settings, clock))                 // ✓ check
+	wc.register(CoreGroup, Version1, "namespaces", handler.NewNamespaceHandler(store, settings, clock))     // ✓ check
+	wc.register(CoreGroup, Version1, "nodes", handler.NewNodeHandler(store, settings, clock))               // ✓ check
 	wc.register(BatchGroup, Version1, "jobs", handler.NewJobHandler(store, settings, clock))                // ✓ check
 	wc.register(BatchGroup, Version1, "cronjobs", handler.NewCronJobHandler(store, settings, clock))        // ✓ check
 
 	// Note: handlers beyond this point will not capture labels/annotations and will later be used to correlate resources
 	// to cloud resources (providerID) - to the pod using them.
+	wc.register(AppsGroup, Version1, "replicasets", handler.NewReplicaSetHandler(store, settings, clock))                                          // ✓ new
 	wc.register(CoreGroup, Version1, "services", handler.NewServiceHandler(store, settings, clock))                                                // ✓ new
 	wc.register(CoreGroup, Version1, "persistentvolumeclaims", handler.NewPersistentVolumeClaimHandler(store, settings, clock))                    // ✓ new
 	wc.register("networking.k8s.io", Version1, "ingresses", handler.NewIngressHandler(store, settings, clock))                                     // ✓ new
 	wc.register("apiextensions.k8s.io", Version1, "customresourcedefinitions", handler.NewCustomResourceDefinitionHandler(store, settings, clock)) // ✓ new
-	wc.register(AppsGroup, Version1, "replicasets", handler.NewReplicaSetHandler(store, settings, clock))                                          // ✓ new
+	wc.register("gateway.networking.k8s.io", Version1, "gateways", handler.NewGatewayHandler(store, settings, clock))                              // ✓ new
 
 	return wc, nil
 }
@@ -159,13 +159,11 @@ func (wc *webhookController) Review(ctx context.Context, ar *types.AdmissionRevi
 	//
 	metricWebhookEventTotal.WithLabelValues(grp, ver, res, op).Inc()
 
-	// no specific handler → allow by default
+	// no specific handler -> allow by default
 	if !wc.registered(grp, ver, res) {
-		log.Debug().Str("group", grp).Str("version", ver).Str("resource", res).Msg("default review")
 		return wc.defaultHandler.Execute(ctx, ar)
 	}
 
-	log.Debug().Str("group", grp).Str("version", ver).Str("resource", res).Msg("registered review")
 	processor := wc.dispatch[grp][ver][res]
 	return processor.Execute(ctx, ar)
 }
