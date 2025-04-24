@@ -250,7 +250,7 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 
 	ts := h.formatMetrics(batch)
 	log.Ctx(h.ctx).Info().
-		Int("record_count", len(ts)).
+		Int("recordCount", len(ts)).
 		Msg("Pushing records to remote write endpoint")
 
 	if err := h.pushMetrics(h.settings.RemoteWrite.Host, apiToken, ts); err != nil {
@@ -285,7 +285,7 @@ func (h *MetricsPusher) Flush() error {
 		if next.Namespace != nil {
 			namespace = *next.Namespace
 		}
-		log.Ctx(h.ctx).Debug().Str("namespace", namespace).Str("name", next.Name).Str("resource_type", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
+		log.Ctx(h.ctx).Debug().Str("namespace", namespace).Str("name", next.Name).Str("resourceType", config.ResourceTypeToMetricName[next.Type]).Msg("Sending record for namespace")
 		RemoteWriteBacklog.WithLabelValues(h.settings.RemoteWrite.Host).Set(float64(len(found)))
 
 		if next.Size+totalSize > h.sentMaxBytes && len(batch) > 0 {
@@ -441,8 +441,8 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, statusCode).Inc()
 			resp.Body.Close()
 			log.Ctx(h.ctx).Error().
-				Int("status_code", resp.StatusCode).
-				Str("status_text", resp.Status).
+				Int("statusCode", resp.StatusCode).
+				Str("statusText", resp.Status).
 				Msg("Received non-2xx response, retrying...")
 		} else {
 			// If resp is nil, we can track it as a failure as well

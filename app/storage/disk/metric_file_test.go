@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMetricFile_ReadAll(t *testing.T) {
+func TestUnit_Storage_Disk_MetricFile_ReadAll(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	osFile, err := os.CreateTemp(tmpDir, "test-file-*.json.br")
@@ -36,7 +36,22 @@ func TestMetricFile_ReadAll(t *testing.T) {
 	file, err := disk.NewMetricFile(osFile.Name())
 	require.NoError(t, err)
 
+	// get a unique id
+	require.NotEmpty(t, file.UniqueID(), "failed to get the unique id")
+
+	// get the location
+	_, err = file.Location()
+	require.NoError(t, err, "failed to get the location")
+
+	// get the filesize
+	s, err := file.Size()
+	require.NoError(t, err, "failed to get the size")
+	require.NotEqual(t, 0, s)
+
 	// read the data
 	_, err = io.ReadAll(file)
 	require.NoError(t, err)
+
+	// close the file
+	require.NoError(t, file.Close(), "failed to close the file")
 }

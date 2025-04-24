@@ -303,7 +303,7 @@ func (s *Settings) GetAvailableSizeBytes() (uint64, error) {
 
 	quantity, err := resource.ParseQuantity(s.Database.AvailableStorage)
 	if err != nil {
-		log.Ctx(context.Background()).Warn().Err(err).Str("size_limit", s.Database.AvailableStorage).Msg("failed to parse the size_limit, using 0 as the default value (all available space)")
+		log.Ctx(context.Background()).Warn().Err(err).Str("sizeLimit", s.Database.AvailableStorage).Msg("failed to parse the size_limit, using 0 as the default value (all available space)")
 		return 0, nil
 	}
 

@@ -105,7 +105,7 @@ func (h *HouseKeeper) Run() error {
 						}
 					}
 					log.Debug().
-						Int("deleted_count", expiredLen).
+						Int("deletedCount", expiredLen).
 						Msg("Deleted old records")
 					return nil // commit the transaction
 				}); err != nil {
