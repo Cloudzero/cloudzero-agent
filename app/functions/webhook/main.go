@@ -19,7 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"

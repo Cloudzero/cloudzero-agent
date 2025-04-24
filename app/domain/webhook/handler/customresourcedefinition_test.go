@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )

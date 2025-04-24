@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"

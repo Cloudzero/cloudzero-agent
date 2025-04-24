@@ -9,7 +9,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"

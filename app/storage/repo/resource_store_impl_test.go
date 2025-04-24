@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/insights-controller"
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
