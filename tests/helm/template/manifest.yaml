@@ -1,0 +1,1901 @@
+---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+  name: cz-agent-cloudzero-state-metrics
+  namespace: default
+---
+# Source: cloudzero-agent/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+  name: cz-agent-cloudzero-agent-server
+  namespace: default
+---
+# Source: cloudzero-agent/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  name: cz-agent-cloudzero-agent-webhook-server-init-cert
+  namespace: default
+---
+# Source: cloudzero-agent/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+  name: cz-agent-api-key
+  namespace: default
+data:
+  value:
+          "MDQ5YTNjOGItNzI1OS00YWQzLTkzMWEtNzM1OTZjNjQ3Y2Y4"
+---
+# Source: cloudzero-agent/templates/tls-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+  name: cz-agent-cloudzero-agent-webhook-server-tls
+  namespace: default
+---
+# Source: cloudzero-agent/templates/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  name: cz-agent-configuration
+  namespace: default
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 60s
+    scrape_configs:
+      - job_name: static-kube-state-metrics
+        honor_timestamps: true
+        track_timestamps_staleness: false
+        scrape_interval: 60s
+        scrape_timeout: 10s
+        scrape_protocols:
+        - OpenMetricsText1.0.0
+        - OpenMetricsText0.0.1
+        - PrometheusText0.0.4
+        metrics_path: /metrics
+        scheme: http
+        enable_compression: true
+        follow_redirects: true
+        enable_http2: true
+        relabel_configs:
+        - separator: ;
+          regex: __meta_kubernetes_service_label_(.+)
+          replacement: $1
+          action: labelmap
+        - source_labels: [__meta_kubernetes_namespace]
+          separator: ;
+          regex: (.*)
+          target_label: namespace
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_service_name]
+          separator: ;
+          regex: (.*)
+          target_label: service
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          separator: ;
+          regex: (.*)
+          target_label: node
+          replacement: $1
+          action: replace
+        metric_relabel_configs:
+        - source_labels: [__name__]
+          regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$"
+          action: keep
+        - separator: ;
+          regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+          replacement: $1
+          action: labelkeep
+        static_configs:
+        - targets:
+            - cz-agent-cloudzero-state-metrics.default.svc.cluster.local:8080
+      - job_name: cloudzero-nodes-cadvisor # container_* metrics
+        honor_timestamps: true
+        track_timestamps_staleness: false
+        scrape_interval: 60s
+        scrape_timeout: 10s
+        scrape_protocols:
+        - OpenMetricsText1.0.0
+        - OpenMetricsText0.0.1
+        - PrometheusText0.0.4
+        metrics_path: /metrics
+        scheme: https
+        enable_compression: true
+        authorization:
+          type: Bearer
+          credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        follow_redirects: true
+        enable_http2: true
+        relabel_configs:
+        - separator: ;
+          regex: __meta_kubernetes_node_label_(.+)
+          replacement: $1
+          action: labelmap
+        - separator: ;
+          regex: (.*)
+          target_label: __address__
+          replacement: kubernetes.default.svc:443
+          action: replace
+        - source_labels: [__meta_kubernetes_node_name]
+          separator: ;
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+          action: replace
+        - source_labels: [__meta_kubernetes_node_name]
+          target_label: node
+          action: replace
+        metric_relabel_configs:
+        - action: labelkeep
+          regex: "^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$"
+        - source_labels: [__name__]
+          regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$"
+          action: keep
+        kubernetes_sd_configs:
+        - role: node
+          kubeconfig_file: ""
+          follow_redirects: true
+          enable_http2: true
+      - job_name: cloudzero-webhook-job
+        metrics_path: /metrics
+        scheme: https
+        enable_compression: true
+        tls_config:
+          insecure_skip_verify: true
+        follow_redirects: true
+        enable_http2: true
+        kubernetes_sd_configs:
+          - role: endpoints
+            kubeconfig_file: ""
+            follow_redirects: true
+            enable_http2: true
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_endpoints_name]
+            action: keep
+            regex: cz-agent-cloudzero-agent-webhook-server-svc
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|cloudzero_webhook_event_total)$"
+            action: keep
+      - job_name: cloudzero-aggregator-job
+        scrape_interval: 120s
+        kubernetes_sd_configs:
+          - role: endpoints
+            kubeconfig_file: ""
+            follow_redirects: true
+            enable_http2: true
+            namespaces:
+              names:
+                - default
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: cz-agent-aggregator
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: port-(shipper|collector)
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|go_gc_duration_seconds|go_gc_duration_seconds_count|go_gc_duration_seconds_sum|go_gc_gogc_percent|go_gc_gomemlimit_bytes|go_goroutines|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_stack_inuse_bytes|go_threads|http_request_duration_seconds_bucket|http_request_duration_seconds_count|http_request_duration_seconds_sum|http_requests_total|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_exemplars_in_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_in_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_remote_storage_string_interner_zero_reference_releases_total|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds|promhttp_metric_handler_requests_in_flight|promhttp_metric_handler_requests_total|remote_write_db_failures_total|remote_write_failures_total|remote_write_payload_size_bytes|remote_write_records_processed_total|remote_write_response_codes_total|remote_write_timeseries_total|storage_write_failure_total|function_execution_seconds|shipper_shutdown_total|shipper_new_files_error_total|shipper_new_files_processing_current|shipper_handle_request_file_count|shipper_handle_request_success_total|shipper_presigned_url_error_total|shipper_replay_request_total|shipper_replay_request_current|shipper_replay_request_file_count|shipper_replay_request_error_total|shipper_replay_request_abandon_files_total|shipper_replay_request_abandon_files_error_total|shipper_disk_total_size_bytes|shipper_current_disk_usage_bytes|shipper_current_disk_usage_percentage|shipper_current_disk_unsent_file|shipper_current_disk_sent_file|shipper_disk_replay_request_current|shipper_disk_cleanup_failure_total|shipper_disk_cleanup_success_total|shipper_disk_cleanup_percentage)$|^(cloudzero_|czo_)"
+            action: keep
+      - job_name: static-prometheus
+        scrape_interval: 120s
+        static_configs:
+          - targets:
+              - localhost:9090
+        metrics_path: /metrics
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
+            action: keep
+    remote_write:
+      - url: 'http://cz-agent-aggregator.default.svc.cluster.local/collector'
+        authorization:
+          credentials_file: /etc/config/secrets/value
+        write_relabel_configs:
+          - source_labels: [__name__]
+            regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|cloudzero_webhook_event_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
+            action: keep
+        metadata_config:
+          send: false
+---
+# Source: cloudzero-agent/templates/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  name: cz-agent-webhook-configuration
+  namespace: default
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+data:
+  server-config.yaml: |-
+    cloud_account_id: 1234567890
+    region: us-east-1
+    cluster_name: my-cluster
+    destination: 'http://cz-agent-aggregator.default.svc.cluster.local/collector'
+    logging:
+      level: info
+    remote_write:
+      send_interval: 1m
+      max_bytes_per_send: 500000
+      send_timeout: 1m
+      max_retries: 3
+    k8s_client:
+      timeout: 30s
+    database:
+      retention_time: 24h
+      cleanup_interval: 3h
+      batch_update_size: 500
+    api_key_path: /etc/config/secrets/value
+    certificate:
+      key: /etc/certs/tls.key
+      cert: /etc/certs/tls.crt
+    server:
+      domain: default-webhook-server-svc
+      port: 8443
+      read_timeout: 10s
+      write_timeout: 10s
+      idle_timeout: 120s
+    filters:
+      labels:
+        enabled: true
+        patterns:
+        - app.kubernetes.io/component
+      annotations:
+        enabled: false
+        patterns:
+        - .*
+---
+# Source: cloudzero-agent/templates/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cz-agent-aggregator
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+data:
+  config.yml: |-
+    cloud_account_id: "1234567890"
+    region: "us-east-1"
+    cluster_name: "my-cluster"
+    
+    metrics:
+      
+      cost:
+        - pattern: "container_cpu_usage_seconds_total"
+          match: exact
+        - pattern: "container_memory_working_set_bytes"
+          match: exact
+        - pattern: "container_network_receive_bytes_total"
+          match: exact
+        - pattern: "container_network_transmit_bytes_total"
+          match: exact
+        - pattern: "kube_node_info"
+          match: exact
+        - pattern: "kube_node_status_capacity"
+          match: exact
+        - pattern: "kube_pod_container_resource_limits"
+          match: exact
+        - pattern: "kube_pod_container_resource_requests"
+          match: exact
+        - pattern: "kube_pod_labels"
+          match: exact
+        - pattern: "kube_pod_info"
+          match: exact
+        - pattern: "cloudzero_"
+          match: prefix
+      
+      cost_labels:
+        - pattern: "board_asset_tag"
+          match: exact
+        - pattern: "container"
+          match: exact
+        - pattern: "created_by_kind"
+          match: exact
+        - pattern: "created_by_name"
+          match: exact
+        - pattern: "image"
+          match: exact
+        - pattern: "instance"
+          match: exact
+        - pattern: "name"
+          match: exact
+        - pattern: "namespace"
+          match: exact
+        - pattern: "node"
+          match: exact
+        - pattern: "node_kubernetes_io_instance_type"
+          match: exact
+        - pattern: "pod"
+          match: exact
+        - pattern: "product_name"
+          match: exact
+        - pattern: "provider_id"
+          match: exact
+        - pattern: "resource"
+          match: exact
+        - pattern: "unit"
+          match: exact
+        - pattern: "uid"
+          match: exact
+        - pattern: "_"
+          match: prefix
+        - pattern: "label_"
+          match: prefix
+        - pattern: "app.kubernetes.io/"
+          match: prefix
+        - pattern: "k8s."
+          match: prefix
+      
+      observability:
+        - pattern: "go_gc_duration_seconds"
+          match: exact
+        - pattern: "go_gc_duration_seconds_count"
+          match: exact
+        - pattern: "go_gc_duration_seconds_sum"
+          match: exact
+        - pattern: "go_gc_gogc_percent"
+          match: exact
+        - pattern: "go_gc_gomemlimit_bytes"
+          match: exact
+        - pattern: "go_goroutines"
+          match: exact
+        - pattern: "go_memstats_alloc_bytes"
+          match: exact
+        - pattern: "go_memstats_heap_alloc_bytes"
+          match: exact
+        - pattern: "go_memstats_heap_idle_bytes"
+          match: exact
+        - pattern: "go_memstats_heap_inuse_bytes"
+          match: exact
+        - pattern: "go_memstats_heap_objects"
+          match: exact
+        - pattern: "go_memstats_last_gc_time_seconds"
+          match: exact
+        - pattern: "go_memstats_stack_inuse_bytes"
+          match: exact
+        - pattern: "go_threads"
+          match: exact
+        - pattern: "http_request_duration_seconds_bucket"
+          match: exact
+        - pattern: "http_request_duration_seconds_count"
+          match: exact
+        - pattern: "http_request_duration_seconds_sum"
+          match: exact
+        - pattern: "http_requests_total"
+          match: exact
+        - pattern: "process_cpu_seconds_total"
+          match: exact
+        - pattern: "process_max_fds"
+          match: exact
+        - pattern: "process_open_fds"
+          match: exact
+        - pattern: "process_resident_memory_bytes"
+          match: exact
+        - pattern: "process_start_time_seconds"
+          match: exact
+        - pattern: "process_virtual_memory_bytes"
+          match: exact
+        - pattern: "process_virtual_memory_max_bytes"
+          match: exact
+        - pattern: "prometheus_agent_corruptions_total"
+          match: exact
+        - pattern: "prometheus_api_remote_read_queries"
+          match: exact
+        - pattern: "prometheus_http_requests_total"
+          match: exact
+        - pattern: "prometheus_notifications_alertmanagers_discovered"
+          match: exact
+        - pattern: "prometheus_notifications_dropped_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_bytes_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_exemplars_in_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_histograms_failed_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_histograms_in_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_histograms_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_metadata_bytes_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_metadata_failed_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_metadata_retried_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_metadata_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_samples_dropped_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_samples_failed_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_samples_in_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_samples_total"
+          match: exact
+        - pattern: "prometheus_remote_storage_shard_capacity"
+          match: exact
+        - pattern: "prometheus_remote_storage_shards"
+          match: exact
+        - pattern: "prometheus_remote_storage_shards_desired"
+          match: exact
+        - pattern: "prometheus_remote_storage_shards_max"
+          match: exact
+        - pattern: "prometheus_remote_storage_shards_min"
+          match: exact
+        - pattern: "prometheus_remote_storage_string_interner_zero_reference_releases_total"
+          match: exact
+        - pattern: "prometheus_sd_azure_cache_hit_total"
+          match: exact
+        - pattern: "prometheus_sd_azure_failures_total"
+          match: exact
+        - pattern: "prometheus_sd_discovered_targets"
+          match: exact
+        - pattern: "prometheus_sd_dns_lookup_failures_total"
+          match: exact
+        - pattern: "prometheus_sd_failed_configs"
+          match: exact
+        - pattern: "prometheus_sd_file_read_errors_total"
+          match: exact
+        - pattern: "prometheus_sd_file_scan_duration_seconds"
+          match: exact
+        - pattern: "prometheus_sd_file_watcher_errors_total"
+          match: exact
+        - pattern: "prometheus_sd_http_failures_total"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_events_total"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_http_request_duration_seconds"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_http_request_total"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_depth"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_items_total"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_latency_seconds"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_unfinished_work_seconds"
+          match: exact
+        - pattern: "prometheus_sd_kubernetes_workqueue_work_duration_seconds"
+          match: exact
+        - pattern: "prometheus_sd_received_updates_total"
+          match: exact
+        - pattern: "prometheus_sd_updates_delayed_total"
+          match: exact
+        - pattern: "prometheus_sd_updates_total"
+          match: exact
+        - pattern: "prometheus_target_scrape_pool_reloads_failed_total"
+          match: exact
+        - pattern: "prometheus_target_scrape_pool_reloads_total"
+          match: exact
+        - pattern: "prometheus_target_scrape_pool_sync_total"
+          match: exact
+        - pattern: "prometheus_target_scrape_pools_failed_total"
+          match: exact
+        - pattern: "prometheus_target_scrape_pools_total"
+          match: exact
+        - pattern: "prometheus_target_sync_failed_total"
+          match: exact
+        - pattern: "prometheus_target_sync_length_seconds"
+          match: exact
+        - pattern: "promhttp_metric_handler_requests_in_flight"
+          match: exact
+        - pattern: "promhttp_metric_handler_requests_total"
+          match: exact
+        - pattern: "remote_write_db_failures_total"
+          match: exact
+        - pattern: "remote_write_failures_total"
+          match: exact
+        - pattern: "remote_write_payload_size_bytes"
+          match: exact
+        - pattern: "remote_write_records_processed_total"
+          match: exact
+        - pattern: "remote_write_response_codes_total"
+          match: exact
+        - pattern: "remote_write_timeseries_total"
+          match: exact
+        - pattern: "storage_write_failure_total"
+          match: exact
+        - pattern: "function_execution_seconds"
+          match: exact
+        - pattern: "shipper_shutdown_total"
+          match: exact
+        - pattern: "shipper_new_files_error_total"
+          match: exact
+        - pattern: "shipper_new_files_processing_current"
+          match: exact
+        - pattern: "shipper_handle_request_file_count"
+          match: exact
+        - pattern: "shipper_handle_request_success_total"
+          match: exact
+        - pattern: "shipper_presigned_url_error_total"
+          match: exact
+        - pattern: "shipper_replay_request_total"
+          match: exact
+        - pattern: "shipper_replay_request_current"
+          match: exact
+        - pattern: "shipper_replay_request_file_count"
+          match: exact
+        - pattern: "shipper_replay_request_error_total"
+          match: exact
+        - pattern: "shipper_replay_request_abandon_files_total"
+          match: exact
+        - pattern: "shipper_replay_request_abandon_files_error_total"
+          match: exact
+        - pattern: "shipper_disk_total_size_bytes"
+          match: exact
+        - pattern: "shipper_current_disk_usage_bytes"
+          match: exact
+        - pattern: "shipper_current_disk_usage_percentage"
+          match: exact
+        - pattern: "shipper_current_disk_unsent_file"
+          match: exact
+        - pattern: "shipper_current_disk_sent_file"
+          match: exact
+        - pattern: "shipper_disk_replay_request_current"
+          match: exact
+        - pattern: "shipper_disk_cleanup_failure_total"
+          match: exact
+        - pattern: "shipper_disk_cleanup_success_total"
+          match: exact
+        - pattern: "shipper_disk_cleanup_percentage"
+          match: exact
+        - pattern: "czo_"
+          match: prefix
+      
+    server:
+      mode: http
+      port: 8080
+      profiling: false
+    logging:
+      level: "info"
+    database:
+      storage_path: /cloudzero/data
+      max_records: 1.5e+06
+      max_interval: 10m
+      compression_level: 8
+      purge_rules:
+        metrics_older_than: 2160h
+        lazy: true
+        percent: 20
+      available_storage: 
+    cloudzero:
+      api_key_path: /etc/config/secrets/value
+      send_interval: 1m
+      send_timeout: 30s
+      rotate_interval: 30m
+      host: api.cloudzero.com
+---
+# Source: cloudzero-agent/templates/validatorcm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  name: cz-agent-validator-configuration
+  namespace: default
+  
+data:
+  validator.yml: |-
+    versions:
+      chart_version: 1.1.0-dev
+      agent_version: 
+
+    logging:
+      level: info
+      location: ./cloudzero-agent-validator.log
+
+    deployment:
+      account_id: 1234567890
+      cluster_name: my-cluster
+      region: us-east-1
+
+    cloudzero:
+      host:  https://api.cloudzero.com
+      credentials_file: /etc/config/secrets/value
+      disable_telemetry: false
+
+    services:
+      namespace: default
+      insights_service:  cz-agent-cloudzero-agent-webhook-server-svc
+      collector_service: cz-agent-aggregator
+
+    prometheus:
+      kube_state_metrics_service_endpoint: http://cz-agent-cloudzero-state-metrics.default.svc.cluster.local:8080
+      executable: /bin/prometheus
+      kube_metrics:
+        - kube_node_info
+        - kube_node_status_capacity
+        - kube_pod_container_resource_limits
+        - kube_pod_container_resource_requests
+        - kube_pod_labels
+        - kube_pod_info
+      configurations:
+        - /etc/prometheus/prometheus.yml
+        - /etc/config/prometheus/configmaps/prometheus.yml
+
+    diagnostics:
+      stages:
+        - name: pre-start
+          enforce: true
+          checks:
+            - api_key_valid
+        - name: post-start
+          enforce: false
+          checks:
+            - k8s_version
+            - kube_state_metrics_reachable
+            - prometheus_version
+            - scrape_cfg
+            - webhook_server_reachable
+        - name: pre-stop
+          enforce: false
+          checks:
+---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+  name: cz-agent-cloudzero-state-metrics
+rules:
+
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+  - certificatesigningrequests
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["list", "watch"]
+
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - daemonsets
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - deployments
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs: ["list", "watch"]
+
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources:
+  - ingresses
+  verbs: ["list", "watch"]
+
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs: ["list", "watch"]
+
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - limitranges
+  verbs: ["list", "watch"]
+
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - mutatingwebhookconfigurations
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["list", "watch"]
+
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - persistentvolumes
+  verbs: ["list", "watch"]
+
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - replicasets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - replicationcontrollers
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - resourcequotas
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["list", "watch"]
+
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - storageclasses
+  verbs: ["list", "watch"]
+
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - validatingwebhookconfigurations
+  verbs: ["list", "watch"]
+
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - volumeattachments
+  verbs: ["list", "watch"]
+---
+# Source: cloudzero-agent/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  name: cz-agent-cloudzero-agent-server
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+      - "statefulsets"
+      - "daemonsets"
+    verbs:
+      - "get"
+      - "list"
+  - apiGroups:
+      - "batch"
+    resources:
+      - "jobs"
+      - "cronjobs"
+    verbs:
+      - "get"
+      - "list"
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - namespaces
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
+      - services
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "extensions"
+      - "networking.k8s.io"
+    resources:
+      - ingresses/status
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "discovery.k8s.io"
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - "/metrics"
+    verbs:
+      - get
+---
+# Source: cloudzero-agent/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  name: cz-agent-cloudzero-agent-webhook-server-init-cert
+  namespace: default
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    resourceNames:
+      - cz-agent-cloudzero-agent-webhook-server
+    verbs:
+      - "get"
+      - "list"
+      - "patch"
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    resourceNames:
+      - cz-agent-cloudzero-agent-webhook-server-tls
+    verbs:
+      - get
+      - list
+      - patch
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - "validatingwebhookconfigurations"
+    resourceNames:
+      - cz-agent-cloudzero-agent-webhook-server-webhook
+    verbs:
+      - get
+      - list
+      - patch
+---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+  name: cz-agent-cloudzero-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cz-agent-cloudzero-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: cz-agent-cloudzero-state-metrics
+  namespace: default
+---
+# Source: cloudzero-agent/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  name: cz-agent-cloudzero-agent-server
+subjects:
+  - kind: ServiceAccount
+    name: cz-agent-cloudzero-agent-server
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cz-agent-cloudzero-agent-server
+---
+# Source: cloudzero-agent/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  name: cz-agent-cloudzero-agent-webhook-server-init-cert
+subjects:
+  - kind: ServiceAccount
+    name: cz-agent-cloudzero-agent-webhook-server-init-cert
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cz-agent-cloudzero-agent-webhook-server-init-cert
+---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cz-agent-cloudzero-state-metrics
+  namespace: default
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+  annotations:
+spec:
+  type: "ClusterIP"
+  ports:
+  - name: "http"
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  
+  selector:    
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+---
+# Source: cloudzero-agent/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cz-agent-cloudzero-agent-webhook-server-svc
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 8443
+      name: http
+  selector:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+---
+# Source: cloudzero-agent/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: cz-agent-aggregator
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  selector:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/instance: cz-agent
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cz-agent-cloudzero-state-metrics
+  namespace: default
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+spec:
+  selector:
+    matchLabels:      
+      app.kubernetes.io/name: cloudzero-state-metrics
+      app.kubernetes.io/instance: cz-agent
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:        
+        helm.sh/chart: kubeStateMetrics-5.15.3
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: metrics
+        app.kubernetes.io/part-of: cloudzero-state-metrics
+        app.kubernetes.io/name: cloudzero-state-metrics
+        app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/version: "2.10.1"
+    spec:
+      hostNetwork: false
+      serviceAccountName: cz-agent-cloudzero-state-metrics
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: cloudzero-state-metrics
+        args:
+        - --port=8080
+        - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+        imagePullPolicy: IfNotPresent
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+        ports:
+        - containerPort: 8080
+          name: "http"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+# Source: cloudzero-agent/templates/aggregator-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cz-agent-aggregator
+  namespace: default
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: aggregator
+      app.kubernetes.io/name: cz-agent-aggregator
+      app.kubernetes.io/instance: cz-agent
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+      labels:
+        app.kubernetes.io/component: aggregator
+        app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cz-agent-aggregator
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.50.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
+    spec:
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      
+      containers:
+        - name: cz-agent-aggregator-collector
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          ports:
+            - name: port-collector
+              containerPort: 8080
+          command: ["/app/cloudzero-collector", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+            - name: aggregator-config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: aggregator-persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+
+        - name: cz-agent-aggregator-shipper
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          ports:
+            - name: port-shipper
+              containerPort: 8081
+          command: ["/app/cloudzero-shipper", "-config", "/cloudzero/config/config.yml"]
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+            - name: aggregator-config-volume
+              mountPath: /cloudzero/config
+              readOnly: true
+            - name: aggregator-persistent-storage
+              mountPath: /cloudzero/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+      
+      
+      
+      
+      
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cz-agent-configuration
+        - name: validator-config-volume
+          configMap:
+            name: cz-agent-validator-configuration
+        - name: lifecycle-volume
+          emptyDir: {}
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+        - name: cloudzero-agent-storage-volume
+          emptyDir:
+            sizeLimit: 8Gi
+        - name: aggregator-config-volume
+          configMap:
+            name: cz-agent-aggregator
+        - name: aggregator-persistent-storage
+          emptyDir:
+            {}
+---
+# Source: cloudzero-agent/templates/deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  name: cz-agent-cloudzero-agent-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: server
+      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/instance: cz-agent
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: server
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.50.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
+    spec:
+      
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      initContainers:
+        - name: env-validator-copy
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          command:
+            - /app/cloudzero-agent-validator
+            - install
+            - --destination
+            - /checks/bin/cloudzero-agent-validator
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+            - name: lifecycle-volume
+              mountPath: /checks/bin/
+            - name: validator-config-volume
+              mountPath: /checks/config/
+        - name: env-validator-run
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          command:
+            - /checks/bin/cloudzero-agent-validator
+            - diagnose
+            - pre-start
+            - -f
+            - /checks/config/validator.yml
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+            - name: lifecycle-volume
+              mountPath: /checks/bin/
+            - name: validator-config-volume
+              mountPath: /checks/config/
+      containers:
+        - name: cloudzero-agent-server-configmap-reload
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.70.0"
+          imagePullPolicy: "IfNotPresent"
+          
+          args:
+            - --watched-dir=/etc/config
+            - --reload-url=http://127.0.0.1:9090/-/reload
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+              readOnly: true
+        - name: cloudzero-agent-server
+          
+          image: "quay.io/prometheus/prometheus:v2.50.1"
+          imagePullPolicy: "IfNotPresent"
+          
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /checks/cloudzero-agent-validator
+                  - diagnose
+                  - post-start
+                  - -f
+                  - /checks/app/config/validator.yml
+            preStop:
+              exec:
+                command:
+                  - /checks/cloudzero-agent-validator
+                  - diagnose
+                  - pre-stop
+                  - -f
+                  - /check/app/config/validator.yml
+          args:
+            
+            - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
+            - --web.enable-lifecycle
+            - --web.console.libraries=/etc/prometheus/console_libraries
+            - --web.console.templates=/etc/prometheus/consoles
+            - --enable-feature=agent
+          ports:
+            - containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          resources:
+            limits:
+              memory: 1024Mi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config/prometheus/configmaps/
+            - name: cloudzero-agent-storage-volume
+              mountPath: /data
+              subPath: ""
+            - name: lifecycle-volume
+              mountPath: /checks/
+            - name: validator-config-volume
+              mountPath: /checks/app/config/
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+      
+      
+      
+      
+      
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cz-agent-configuration
+        - name: validator-config-volume
+          configMap:
+            name: cz-agent-validator-configuration
+        - name: lifecycle-volume
+          emptyDir: {}
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+        - name: cloudzero-agent-storage-volume
+          emptyDir:
+            sizeLimit: 8Gi
+---
+# Source: cloudzero-agent/templates/insights-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cz-agent-cloudzero-agent-webhook-server
+  namespace: default
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: webhook-server
+      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/instance: cz-agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: webhook-server
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.50.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
+      annotations:
+        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    spec:
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webhook-server
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      
+      
+      
+      
+      containers:
+        - name: webhook-server
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          command:
+            - /app/cloudzero-webhook
+          args:
+            - -config
+            - "/etc/cloudzero-agent-insights/server-config.yaml"
+          ports:
+            - containerPort: 8443
+          resources:
+            {}
+          volumeMounts:
+            - name: insights-server-config
+              mountPath: /etc/cloudzero-agent-insights
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 8443
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 8443
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 5
+      volumes:
+        - name: insights-server-config
+          configMap:
+            name: cz-agent-webhook-configuration
+        - name: tls-certs
+          secret:
+            secretName: cz-agent-cloudzero-agent-webhook-server-tls
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+---
+# Source: cloudzero-agent/templates/init-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+  namespace: default
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  template:
+    metadata:
+      name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+      namespace: default
+      labels:
+        app.kubernetes.io/component: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+      annotations:
+        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    spec:
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      restartPolicy: OnFailure
+      
+      
+      
+      containers:
+        - name: init-scrape
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.0-rc-1"
+          imagePullPolicy: "IfNotPresent"
+          
+          command:
+            - /app/cloudzero-webhook
+          args:
+            - -config
+            - "/etc/cloudzero-agent-insights/server-config.yaml"
+            - -backfill
+          resources:
+            {}
+          volumeMounts:
+            - name: insights-server-config
+              mountPath: /etc/cloudzero-agent-insights
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+      volumes:
+        - name: insights-server-config
+          configMap:
+            name: cz-agent-webhook-configuration
+        - name: tls-certs
+          secret:
+            secretName: cz-agent-cloudzero-agent-webhook-server-tls
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webhook-server
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+---
+# Source: cloudzero-agent/templates/init-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+  namespace: default
+  annotations:
+    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  template:
+    metadata:
+      name: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+      labels:
+        app.kubernetes.io/component: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+      annotations:
+        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    spec:
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webhook-server
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      
+      serviceAccountName: cz-agent-cloudzero-agent-webhook-server-init-cert
+      restartPolicy: Never
+      
+      
+      
+      containers:
+        - name: init-cert
+          image: "docker.io/bitnami/kubectl:1.32.0"
+          imagePullPolicy: "IfNotPresent"
+          
+          command: ["/bin/bash", "-c"]
+          workingDir: /var/tmp
+          args:
+            - |
+              #!/bin/bash
+              set -e
+              GENERATE_CERTIFICATE=false
+
+              # Check if the caBundle in the ValidatingWebhookConfiguration is the same for all webhooks
+              caBundles=()
+              
+              
+              wh_caBundle=($(kubectl get validatingwebhookconfiguration cz-agent-cloudzero-agent-webhook-server-webhook -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
+              caBundles+=("${wh_caBundle:-missing }")
+
+              CA_BUNDLE=${caBundles[0]}
+              for caBundle in "${caBundles[@]}"; do
+                  if [[ "$caBundle" == "missing" ]]; then
+                      echo "Empty caBundle found in ValidatingWebhookConfiguration."
+                      GENERATE_CERTIFICATE=true
+                  fi
+                  if [[ "$caBundle" != "$CA_BUNDLE" ]]; then
+                      echo "Mismatch found between ValidatingWebhookConfiguration caBundle values."
+                        GENERATE_CERTIFICATE=true
+                  fi
+              done
+
+              SECRET_NAME=cz-agent-cloudzero-agent-webhook-server-tls
+              NAMESPACE=default
+
+              EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}')
+              EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}')
+
+              if [[ -n "$EXISTING_TLS_CRT" ]]; then
+                  # Check if the SANs in the certificate match the service name
+                  SAN=$(echo "$EXISTING_TLS_CRT" | base64 -d | openssl x509 -text -noout | grep DNS | sed 's/.*DNS://')
+                  if [[ "$SAN" != "cz-agent-cloudzero-agent-webhook-server-svc.default.svc" ]]; then
+                      echo "The SANs in the certificate do not match the service name."
+                      GENERATE_CERTIFICATE=true
+                  fi
+                  # Check that caBundle and tls.crt are the same
+                  if [[ "$CA_BUNDLE" != $EXISTING_TLS_CRT ]]; then
+                      echo "The caBundle in the ValidatingWebhookConfiguration does not match the tls.crt in the TLS Secret."
+                      GENERATE_CERTIFICATE=true
+                  fi
+              fi
+
+              # Check if the TLS Secret already has certificate information
+              if [[ -z "$EXISTING_TLS_CRT" ]] || [[ -z "$EXISTING_TLS_KEY" ]] || [[ $GENERATE_CERTIFICATE == "true" ]] ; then
+                  echo "The TLS Secret and/or at least one webhook configuration contains empty certificate information, or the certificate is invalid/expired. Creating a new certificate..."
+              else
+                  echo "The TLS Secret and all webhook configurations contain non-empty certificate information. Will not create a new certificate and will not patch resources."
+                  exit 0
+              fi
+
+              # Generate self-signed certificate and private key
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN=cz-agent-cloudzero-agent-webhook-server-svc" -addext "subjectAltName = DNS:cz-agent-cloudzero-agent-webhook-server-svc.default.svc"
+              
+              # Base64 encode the certificate
+              export CA_BUNDLE=$(cat tls.crt | base64 | tr -d '\n')
+              export TLS_CRT=$(cat tls.crt | base64 | tr -d '\n')
+              export TLS_KEY=$(cat tls.key | base64 | tr -d '\n')
+
+              # Update the TLS Secret with the certificate and key
+              kubectl patch secret $SECRET_NAME \
+                  -p '{"data": {"ca.crt": "'"$TLS_CRT"'", "tls.crt": "'"$TLS_CRT"'", "tls.key": "'"$TLS_KEY"'"}}'
+              
+              
+              # Patch the ValidatingWebhookConfiguration cz-agent-cloudzero-agent-webhook-server-webhook with the caBundle
+              kubectl patch validatingwebhookconfiguration  cz-agent-cloudzero-agent-webhook-server-webhook \
+                --type='json' \
+                -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
+              # Now that the secret and webhook configuration are updated, roll the webhook-server pods to pick up the new certificate
+              kubectl rollout restart deployment -n default cz-agent-cloudzero-agent-webhook-server
+              exit 0
+---
+# Source: cloudzero-agent/templates/webhooks.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cz-agent-cloudzero-agent-webhook-server-webhook
+  namespace: default
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.50.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+webhooks:
+  - name: cz-agent-cloudzero-agent-webhook-server-webhook.default.svc
+    namespaceSelector: 
+      {}
+    failurePolicy: Ignore
+    rules:
+      - operations: [ "CREATE", "UPDATE", "DELETE" ]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["*"]
+        scope: "*"
+    clientConfig:
+      service:
+        namespace: default
+        name: cz-agent-cloudzero-agent-webhook-server-svc
+        path: /validate
+        port: 443
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 15
