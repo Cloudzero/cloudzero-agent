@@ -21,8 +21,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
@@ -185,7 +185,8 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 			assert.NoError(t, err)
 
 			clientset := fake.NewClientset(tc.setupObjects...)
-			s := backfiller.NewBackfiller(clientset, controller, settings)
+			s := backfiller.NewKubernetesObjectEnumerator(clientset, controller, settings)
+			s.DisableServiceWait()
 			s.Start(ctx)
 		})
 	}
@@ -209,7 +210,8 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 
 		controller, err := webhook.NewWebhookFactory(store, settings, clock)
 		require.NoError(t, err)
-		s := backfiller.NewBackfiller(k8sClient, controller, settings)
+		s := backfiller.NewKubernetesObjectEnumerator(k8sClient, controller, settings)
+		s.DisableServiceWait()
 		s.Start(context.Background())
 
 		// Wait for Backfiller to process resources

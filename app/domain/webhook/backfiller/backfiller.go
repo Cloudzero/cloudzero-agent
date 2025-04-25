@@ -5,15 +5,23 @@
 package backfiller
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"net/http"
 	"reflect"
 	goruntime "runtime"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/google/uuid"
+	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/protoadapt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -31,32 +39,72 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
+	diag "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 )
 
-const MaxThreads = 10
+const (
+	MaxWorkersPerPool     = 10
+	MaxConnectionAttempts = 10 // The most amount of sleep time possible across all attempts is 1033 seconds (approximately 17 minutes and 13 seconds).
+	ConnectionTimeout     = 5 * time.Second
+)
 
-type Backfiller struct {
-	k8sClient  kubernetes.Interface
-	settings   *config.Settings
-	controller webhook.WebhookController
+// KubernetesObjectEnumerator defines the interface for enumerating Kubernetes objects.
+// It provides methods to start the enumeration process and to disable the waiting mechanism
+// for dependent services, which can be useful for testing or specific scenarios.
+type KubernetesObjectEnumerator interface {
+	// Start begins the enumeration process for Kubernetes objects.
+	// It takes a context for managing cancellation and deadlines.
+	Start(ctx context.Context) error
+
+	// DisableServiceWait disables the waiting mechanism for dependent services.
+	// This can be useful for testing or scenarios where waiting is not required.
+	DisableServiceWait()
 }
 
-func NewBackfiller(k8sClient kubernetes.Interface, controller webhook.WebhookController, settings *config.Settings) *Backfiller {
-	return &Backfiller{
+type backfiller struct {
+	k8sClient   kubernetes.Interface
+	settings    *config.Settings
+	controller  webhook.WebhookController
+	disableWait bool
+}
+
+func NewKubernetesObjectEnumerator(k8sClient kubernetes.Interface, controller webhook.WebhookController, settings *config.Settings) KubernetesObjectEnumerator {
+	return &backfiller{
 		k8sClient:  k8sClient,
 		settings:   settings,
 		controller: controller,
 	}
 }
 
-func (s *Backfiller) Start(ctx context.Context) {
-	log.Info().
-		Time("currentTime", time.Now().UTC()).
-		Msg("Starting backfill of existing resources")
+func (s *backfiller) DisableServiceWait() {
+	s.disableWait = true
+}
+
+func (s *backfiller) Start(ctx context.Context) error {
+	// put behind flag for testing
+	if !s.disableWait {
+		log.Info().Time("currentTime", time.Now().UTC()).Msg("Waiting for dependent services to become available")
+
+		// Ensure the webhook service is ready before proceeding
+		// to avoid missing any events during the enumeration process
+		if err := AwaitWebhookService(s.settings.Server.Namespace, s.settings.Server.Domain, MaxConnectionAttempts, ConnectionTimeout); err != nil {
+			log.Error().Err(err).Msg("Failed to await webhook service")
+			return errors.New("failed to await webhook service")
+		}
+
+		// Wait for the collector service to become available to ensure discovered data can be sent successfully
+		if err := AwaitCollectorService(s.settings.Destination, MaxConnectionAttempts, ConnectionTimeout); err != nil {
+			log.Error().Err(err).Msg("Failed to await collector service")
+			return errors.New("failed to await collector service")
+		}
+		log.Info().Time("currentTime", time.Now().UTC()).Msg("Dependent services are available.")
+	}
+
+	log.Info().Time("currentTime", time.Now().UTC()).Msg("Initiating backfill of existing Kubernetes resources")
 
 	// write all nodes in the cluster storage
 	s.enumerateNodes(ctx)
@@ -234,7 +282,7 @@ func (s *Backfiller) Start(ctx context.Context) {
 	}
 
 	// worker pool ensures we don't have unbounded growth
-	pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
+	pool := parallel.New(min(goruntime.NumCPU(), MaxWorkersPerPool))
 	defer pool.Close()
 	waiter := parallel.NewWaiter()
 
@@ -250,7 +298,7 @@ func (s *Backfiller) Start(ctx context.Context) {
 		})
 		if err != nil {
 			log.Err(err).Msg("Error listing namespaces")
-			return
+			return errors.New("failed to list namespaces")
 		}
 		allNamespaces = append(allNamespaces, namespaces.Items...)
 
@@ -341,9 +389,10 @@ func (s *Backfiller) Start(ctx context.Context) {
 		Time("currentTime", time.Now().UTC()).
 		Int("namespacesCount", len(allNamespaces)).
 		Msg("Backfill operation completed")
+	return nil
 }
 
-func (s *Backfiller) enumerateNodes(ctx context.Context) {
+func (s *backfiller) enumerateNodes(ctx context.Context) {
 	// Check if node labels or annotations are enabled; if not, skip processing nodes
 	nodeConfigAccessor := handler.NewNodeConfigAccessor(s.settings)
 	if !nodeConfigAccessor.LabelsEnabledForType() && !nodeConfigAccessor.AnnotationsEnabledForType() {
@@ -351,7 +400,7 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 	}
 
 	// Create a worker pool to limit concurrency and avoid unbounded growth
-	pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
+	pool := parallel.New(min(goruntime.NumCPU(), MaxWorkersPerPool))
 	defer pool.Close()
 	waiter := parallel.NewWaiter()
 
@@ -511,4 +560,88 @@ func ConvertObject[T metav1.Object](o any) metav1.Object {
 	}
 	log.Error().Msgf("failed to cast object to %T", new(T))
 	return nil
+}
+
+// AwaitWebhookService waits for the webhook service to be ready by sending validation requests.
+// It retries the validation for a specified number of attempts with exponential backoff and jitter.
+func AwaitWebhookService(namespace, serviceName string, maxRetries int, timeout time.Duration) error {
+	ctx := context.Background()
+	url := diag.ValidateURLPathProtocol + "://" + serviceName + "." + namespace + ".svc.cluster.local" + diag.ValidateURLPath
+
+	for attempt := range maxRetries {
+		// Create a context with a timeout for the current attempt
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		// Attempt to send a pod to the validating webhook
+		_, err := diag.SendPodToValidatingWebhook(ctxWithTimeout, url)
+		if err == nil {
+			return nil // Validation succeeded
+		}
+		// Apply exponential backoff with jitter
+		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
+		log.Warn().
+			Int("attempt", attempt+1).
+			Str("url", url).
+			Msgf("still awaiting webhook API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
+		time.Sleep(backoff + jitter)
+	}
+
+	return fmt.Errorf("received non-2xx response: after %d retries", maxRetries)
+}
+
+// AwaitCollectorService attempts to send a WriteRequest to the specified collector service endpoint
+// using an HTTP POST request. It retries the request up to a specified number of times with exponential
+// backoff and jitter in case of failures.
+func AwaitCollectorService(endpoint string, maxRetries int, timeout time.Duration) error {
+	data, err := proto.Marshal(protoadapt.MessageV2Of(&prompb.WriteRequest{
+		Timeseries: []prompb.TimeSeries{},
+	}))
+	if err != nil {
+		log.Err(err).Msg("error marshaling WriteRequest for collector service")
+		return fmt.Errorf("error marshaling WriteRequest: %v", err)
+	}
+
+	compressed := snappy.Encode(nil, data)
+
+	var resp *http.Response
+	var req *http.Request
+
+	for attempt := range maxRetries {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(compressed))
+		if err != nil {
+			return fmt.Errorf("error creating HTTP request: %v", err)
+		}
+
+		req.Header.Set("Content-Type", "application/x-protobuf")
+		req.Header.Set("Content-Encoding", "snappy")
+
+		client := &http.Client{}
+		resp, err = client.Do(req)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		if err != nil {
+			log.Warn().Int("attempt", attempt+1).Err(err).Msg("still awaiting remote write API availability")
+			continue
+		}
+
+		if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
+			return nil
+		}
+		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
+		log.Warn().
+			Int("attempt", attempt+1).
+			Str("url", endpoint).
+			Int("statusCode", resp.StatusCode).
+			Msgf("still awaiting remote write API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
+		time.Sleep(backoff + jitter)
+	}
+
+	return fmt.Errorf("received non-2xx response: after %d retries", maxRetries)
 }

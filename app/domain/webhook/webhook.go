@@ -46,11 +46,12 @@ import (
 //
 // Ensure that the metric is registered with the Prometheus registry before use:
 // prometheus.MustRegister(metricWebhookEventTotal)
+
 var (
 	webhookStatsOnce        sync.Once
 	metricWebhookEventTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cz_webhook_types_total",
+			Name: types.ObservabilityMetric("webhook_types_total"),
 			Help: "Total number of webhook events filterable by kind_group, kind_version, kind_resource, and operation",
 		},
 		[]string{"kind_group", "kind_version", "kind_resource", "operation"},

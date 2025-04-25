@@ -12,7 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/rand"
 	net "net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -29,7 +32,13 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
 
-const DiagnosticInsightsIngress = config.DiagnosticInsightsIngress
+const (
+	DiagnosticInsightsIngress = config.DiagnosticInsightsIngress
+	MaxConnectionAttempts     = 10 // The most amount of sleep time possible across all attempts is 1033 seconds (approximately 17 minutes and 13 seconds).
+	ConnectionTimeout         = 5 * time.Second
+	ValidateURLPathProtocol   = "https"
+	ValidateURLPath           = "/validate"
+)
 
 type checker struct {
 	cfg    *config.Settings
@@ -45,13 +54,28 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 }
 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
-	// Hit an authenticated API to verify the API token
-	url := fmt.Sprintf("https://%s.%s.svc.cluster.local/validate/pod", c.cfg.Services.InsightsService, c.cfg.Services.Namespace)
-	if _, err := SendPodToValidatingWebhook(ctx, url); err != nil {
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: false, Error: err.Error()})
-		return nil
+	url := ValidateURLPathProtocol + "://" + c.cfg.Services.InsightsService + "." + c.cfg.Services.Namespace + ".svc.cluster.local" + ValidateURLPath
+
+	for attempt := range MaxConnectionAttempts {
+		// Create a context with a timeout for the current attempt
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, MaxConnectionAttempts)
+		defer cancel()
+
+		// Attempt to send a pod to the validating webhook
+		_, err := SendPodToValidatingWebhook(ctxWithTimeout, url)
+		if err == nil {
+			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: true})
+			return nil // Validation succeeded
+		}
+
+		// Apply exponential backoff with jitter
+		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
+		time.Sleep(backoff + jitter)
 	}
-	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: true})
+
+	err := fmt.Errorf("received non-2xx response: after %d retries", MaxConnectionAttempts)
+	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: false, Error: err.Error()})
 	return nil
 }
 
