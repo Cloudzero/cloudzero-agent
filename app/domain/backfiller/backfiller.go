@@ -37,6 +37,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 )
 
+const MaxThreads = 10
+
 type Backfiller struct {
 	k8sClient  kubernetes.Interface
 	settings   *config.Settings
@@ -226,7 +228,7 @@ func (s *Backfiller) Start(ctx context.Context) {
 		allNamespaces = append(allNamespaces, namespaces.Items...)
 
 		// worker pool ensures we don't have unbounded growth
-		pool := parallel.New(min(goruntime.NumCPU(), 10))
+		pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
 		defer pool.Close()
 		waiter := parallel.NewWaiter()
 
@@ -325,7 +327,7 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 	}
 
 	// Create a worker pool to limit concurrency and avoid unbounded growth
-	pool := parallel.New(min(goruntime.NumCPU(), 10))
+	pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
 	defer pool.Close()
 	waiter := parallel.NewWaiter()
 
