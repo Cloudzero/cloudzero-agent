@@ -4,6 +4,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
@@ -64,7 +65,7 @@ func EncodeToRawBytes(obj metav1.Object) ([]byte, error) {
 	// Ensure the object also implements runtime.Object
 	runtimeObj, ok := obj.(runtime.Object)
 	if !ok {
-		return nil, fmt.Errorf("object does not implement runtime.Object")
+		return nil, errors.New("object does not implement runtime.Object")
 	}
 
 	// Use the helper function to encode the runtime.Object

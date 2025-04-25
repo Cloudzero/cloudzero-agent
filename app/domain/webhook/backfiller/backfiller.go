@@ -540,10 +540,10 @@ func AwaitCollectorService(ctx context.Context, endpoint string, maxRetries int,
 	var req *http.Request
 
 	for attempt := range maxRetries {
-		ctx, cancel := context.WithTimeout(ctx, timeout)
+		timedCtx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(compressed))
+		req, err = http.NewRequestWithContext(timedCtx, "POST", endpoint, bytes.NewBuffer(compressed))
 		if err != nil {
 			return fmt.Errorf("error creating HTTP request: %v", err)
 		}
