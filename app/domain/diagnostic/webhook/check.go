@@ -6,8 +6,11 @@ package webhook
 
 import (
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,17 +20,18 @@ import (
 	net "net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
@@ -79,14 +83,31 @@ func (c *checker) Check(ctx context.Context, client *net.Client, accessor status
 	return nil
 }
 
-// SendPodToValidatingWebhook encodes the given Pod into an AdmissionReview and submits it
-// to webhookURL. It returns the AdmissionResponse for inspection in your tests.
+// SendPodToValidatingWebhook sends a Pod to the validating webhook and returns the AdmissionResponse.
 func SendPodToValidatingWebhook(ctx context.Context, webhookURL string) (*admissionv1.AdmissionResponse, error) {
-	// build the AdmissionReview request
-	review := &admissionv1.AdmissionReview{
+	review, err := buildAdmissionReview()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build AdmissionReview: %w", err)
+	}
+
+	resp, err := sendWebhookRequest(ctx, webhookURL, review)
+	if err != nil {
+		return nil, fmt.Errorf("webhook request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != net.StatusOK {
+		return nil, handleNonOKResponse(resp)
+	}
+
+	return parseWebhookResponse(resp)
+}
+
+func buildAdmissionReview() (*admissionv1.AdmissionReview, error) {
+	return &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{Kind: "AdmissionReview"},
 		Request: &admissionv1.AdmissionRequest{
-			UID:       types.UID("test-uid-12345"),
+			UID:       types.UID("test-" + uuid.NewString()),
 			Kind:      metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"},
 			Resource:  metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
 			Operation: admissionv1.Create,
@@ -101,59 +122,75 @@ func SendPodToValidatingWebhook(ctx context.Context, webhookURL string) (*admiss
 				},
 			},
 		},
+	}, nil
+}
+
+func sendWebhookRequest(ctx context.Context, webhookURL string, review *admissionv1.AdmissionReview) (*net.Response, error) {
+	body, err := helper.EncodeRuntimeObject(review)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode AdmissionReview: %w", err)
 	}
 
-	// set up a codec for JSON
-	scheme := runtime.NewScheme()
-	_ = admissionv1.AddToScheme(scheme)
-	_ = corev1.AddToScheme(scheme)
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.EncoderForVersion(codecs.LegacyCodec(admissionv1.SchemeGroupVersion), admissionv1.SchemeGroupVersion)
-
-	// serialize the review
-	var body bytes.Buffer
-	if err := encoder.Encode(review, &body); err != nil {
-		return nil, fmt.Errorf("could not encode AdmissionReview: %w", err)
-	}
-
-	// send it to the webhook
-	req, err := net.NewRequestWithContext(ctx, net.MethodPost, webhookURL, &body)
+	req, err := net.NewRequestWithContext(ctx, net.MethodPost, webhookURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// disable TLS verification - we are trying to see if we can get to the API
-	// not validate the cert chain.
-	// #nosec G402: InsecureSkipVerify is set to true intentionally for testing purposes
 	client := &net.Client{Transport: &net.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402
 	}}
-	resp, err := client.Do(req)
+	return client.Do(req)
+}
+
+func handleNonOKResponse(resp *net.Response) error {
+	body, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("webhook returned %d: %s", resp.StatusCode, string(body))
+}
+
+func parseWebhookResponse(resp *net.Response) (*admissionv1.AdmissionResponse, error) {
+	reader, err := getResponseReader(resp)
 	if err != nil {
-		return nil, fmt.Errorf("webhook POST failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != net.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("webhook returned %d: %s", resp.StatusCode, string(b))
+		return nil, err
 	}
 
-	// parse the response AdmissionReview
-	respData, err := io.ReadAll(resp.Body)
+	respData, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read webhook response: %w", err)
 	}
 
 	var reviewResponse admissionv1.AdmissionReview
 	if err := json.Unmarshal(respData, &reviewResponse); err != nil {
-		return nil, fmt.Errorf("could not unmarshal response AdmissionReview: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal AdmissionReview: %w", err)
 	}
 
 	if reviewResponse.Response == nil {
 		return nil, errors.New("no AdmissionResponse in webhook reply")
 	}
-
 	return reviewResponse.Response, nil
+}
+
+func getResponseReader(resp *net.Response) (io.Reader, error) {
+	contentEncoding := resp.Header.Get("Content-Encoding")
+	switch contentEncoding {
+	case "base64":
+		decodedBody, err := base64.StdEncoding.DecodeString(string(readResponseBody(resp)))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode base64 response: %w", err)
+		}
+		return bytes.NewReader(decodedBody), nil
+	case "gzip":
+		return gzip.NewReader(resp.Body)
+	case "deflate":
+		return flate.NewReader(resp.Body), nil
+	case "":
+		return resp.Body, nil
+	default:
+		return nil, fmt.Errorf("unsupported Content-Encoding: %s", contentEncoding)
+	}
+}
+
+func readResponseBody(resp *net.Response) []byte {
+	body, _ := io.ReadAll(resp.Body)
+	return body
 }

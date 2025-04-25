@@ -33,15 +33,14 @@ import (
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	diag "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 )
@@ -91,13 +90,13 @@ func (s *backfiller) Start(ctx context.Context) error {
 
 		// Ensure the webhook service is ready before proceeding
 		// to avoid missing any events during the enumeration process
-		if err := AwaitWebhookService(s.settings.Server.Namespace, s.settings.Server.Domain, MaxConnectionAttempts, ConnectionTimeout); err != nil {
+		if err := AwaitWebhookService(ctx, s.settings.Server.Namespace, s.settings.Server.Domain, MaxConnectionAttempts, ConnectionTimeout); err != nil {
 			log.Error().Err(err).Msg("Failed to await webhook service")
 			return errors.New("failed to await webhook service")
 		}
 
 		// Wait for the collector service to become available to ensure discovered data can be sent successfully
-		if err := AwaitCollectorService(s.settings.Destination, MaxConnectionAttempts, ConnectionTimeout); err != nil {
+		if err := AwaitCollectorService(ctx, s.settings.Destination, MaxConnectionAttempts, ConnectionTimeout); err != nil {
 			log.Error().Err(err).Msg("Failed to await collector service")
 			return errors.New("failed to await collector service")
 		}
@@ -125,133 +124,133 @@ func (s *backfiller) Start(ctx context.Context) error {
 	catalog := []BackFillJobDescription[metav1.Object]{
 		{
 			types.GroupApps, types.V1, types.KindDeployment,
-			ConvertObject[*appsv1.Deployment],
+			helper.ConvertObject[*appsv1.Deployment],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1Client.Deployments(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta2, types.KindDeployment,
-			ConvertObject[*appsv1beta2.Deployment],
+			helper.ConvertObject[*appsv1beta2.Deployment],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta2Client.Deployments(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta1, types.KindDeployment,
-			ConvertObject[*appsv1beta1.Deployment],
+			helper.ConvertObject[*appsv1beta1.Deployment],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta1Client.Deployments(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1, types.KindStatefulSet,
-			ConvertObject[*appsv1.StatefulSet],
+			helper.ConvertObject[*appsv1.StatefulSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1Client.StatefulSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta2, types.KindStatefulSet,
-			ConvertObject[*appsv1beta2.StatefulSet],
+			helper.ConvertObject[*appsv1beta2.StatefulSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta2Client.StatefulSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta1, types.KindStatefulSet,
-			ConvertObject[*appsv1beta1.StatefulSet],
+			helper.ConvertObject[*appsv1beta1.StatefulSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta1Client.StatefulSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1, types.KindDaemonSet,
-			ConvertObject[*appsv1.DaemonSet],
+			helper.ConvertObject[*appsv1.DaemonSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1Client.DaemonSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta2, types.KindDaemonSet,
-			ConvertObject[*appsv1beta2.DaemonSet],
+			helper.ConvertObject[*appsv1beta2.DaemonSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta2Client.DaemonSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1, types.KindReplicaSet,
-			ConvertObject[*appsv1.ReplicaSet],
+			helper.ConvertObject[*appsv1.ReplicaSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1Client.ReplicaSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupApps, types.V1Beta2, types.KindReplicaSet,
-			ConvertObject[*appsv1beta2.ReplicaSet],
+			helper.ConvertObject[*appsv1beta2.ReplicaSet],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return appsv1beta2Client.ReplicaSets(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupCore, types.V1, types.KindPod,
-			ConvertObject[*corev1.Pod],
+			helper.ConvertObject[*corev1.Pod],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return corev1Client.Pods(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupCore, types.V1, types.KindService,
-			ConvertObject[*corev1.Service],
+			helper.ConvertObject[*corev1.Service],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return corev1Client.Services(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupCore, types.V1, types.KindPersistentVolume,
-			ConvertObject[*corev1.PersistentVolume],
+			helper.ConvertObject[*corev1.PersistentVolume],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return corev1Client.PersistentVolumes().List(ctx, opts)
 			},
 		},
 		{
 			types.GroupCore, types.V1, types.KindPersistentVolumeClaim,
-			ConvertObject[*corev1.PersistentVolumeClaim],
+			helper.ConvertObject[*corev1.PersistentVolumeClaim],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return corev1Client.PersistentVolumeClaims(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupBatch, types.V1, types.KindJob,
-			ConvertObject[*batchv1.Job],
+			helper.ConvertObject[*batchv1.Job],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return batchv1Client.Jobs(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupBatch, types.V1, types.KindCronJob,
-			ConvertObject[*batchv1.CronJob],
+			helper.ConvertObject[*batchv1.CronJob],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return batchv1Client.CronJobs(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupBatch, types.V1Beta1, types.KindCronJob,
-			ConvertObject[*batchv1beta1.CronJob],
+			helper.ConvertObject[*batchv1beta1.CronJob],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return batchv1beta1Client.CronJobs(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupNet, types.V1, types.KindIngress,
-			ConvertObject[*networkingv1.Ingress],
+			helper.ConvertObject[*networkingv1.Ingress],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return networkingv1Client.Ingresses(namespace).List(ctx, opts)
 			},
 		},
 		{
 			types.GroupNet, types.V1Beta1, types.KindIngress,
-			ConvertObject[*networkingv1beta1.Ingress],
+			helper.ConvertObject[*networkingv1beta1.Ingress],
 			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
 				return networkingv1beta1Client.Ingresses(namespace).List(ctx, opts)
 			},
@@ -309,7 +308,7 @@ func (s *backfiller) Start(ctx context.Context) error {
 			pool.Run(
 				func() error {
 					log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("discovered")
-					if ar, err2 := resourceReview(ns.GroupVersionKind(), &ns); err2 == nil {
+					if ar, err2 := buildAdmissionReview(ns.GroupVersionKind(), &ns); err2 == nil {
 						log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("published")
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
@@ -355,7 +354,7 @@ func (s *backfiller) Start(ctx context.Context) error {
 								obj := items.Index(i).Addr().Interface()
 								if resource := task.Convert(obj); resource != nil {
 									name := resource.GetName()
-									if ar, err := resourceReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
+									if ar, err := buildAdmissionReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
 										log.Info().Str("group", g).Str("version", v).Str("kind", k).Str("namespace", namespace).Str("name", name).Msg("published")
 										_, _ = s.controller.Review(context.Background(), ar) // Post the review
 										continue
@@ -425,7 +424,7 @@ func (s *backfiller) enumerateNodes(ctx context.Context) {
 				func() error {
 					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", o.GetName()).Msg("published")
 					// Create an AdmissionReview for the node and post it to the controller
-					if ar, err2 := resourceReview(o.GroupVersionKind(), &o); err2 == nil {
+					if ar, err2 := buildAdmissionReview(o.GroupVersionKind(), &o); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
 					}
@@ -447,12 +446,12 @@ func (s *backfiller) enumerateNodes(ctx context.Context) {
 	waiter.Wait()
 }
 
-// resourceReview is a generic function that creates an AdmissionReview object for a given resource.
+// buildAdmissionReview is a generic function that creates an AdmissionReview object for a given resource.
 // It takes a resource of any type T and a GroupVersionKind (GVK) as input parameters.
 // The function encodes the resource into raw bytes and constructs an AdmissionReview object.
-func resourceReview[T metav1.Object](gvk schema.GroupVersionKind, o T) (*types.AdmissionReview, error) {
+func buildAdmissionReview[T metav1.Object](gvk schema.GroupVersionKind, o T) (*types.AdmissionReview, error) {
 	// Encode the resource object into raw bytes
-	raw, err := encodeToRawBytes(o)
+	raw, err := helper.EncodeToRawBytes(o)
 	if err != nil {
 		log.Err(err).Str("group", gvk.Group).Str("version", gvk.Version).Str("kind", gvk.Kind).Msg("encode failure")
 		return nil, err
@@ -478,64 +477,6 @@ func resourceReview[T metav1.Object](gvk schema.GroupVersionKind, o T) (*types.A
 	}, nil
 }
 
-// registerSchemes registers the API schemes for various Kubernetes resource types.
-// It ensures that the runtime.Scheme is aware of the resource types used in the application.
-func registerSchemes(scheme *runtime.Scheme) error {
-	// List of functions to add resource types to the scheme
-	schemeFuncs := []func(*runtime.Scheme) error{
-		appsv1.AddToScheme,
-		appsv1beta1.AddToScheme,
-		appsv1beta2.AddToScheme,
-		batchv1.AddToScheme,
-		batchv1beta1.AddToScheme,
-		corev1.AddToScheme,
-		networkingv1.AddToScheme,
-		networkingv1beta1.AddToScheme,
-	}
-
-	// Register each scheme function
-	for _, addToScheme := range schemeFuncs {
-		if err := addToScheme(scheme); err != nil {
-			return fmt.Errorf("failed to add scheme: %w", err)
-		}
-	}
-	return nil
-}
-
-// encodeToRawBytes encodes a Kubernetes resource object into raw bytes.
-// It uses the runtime.Scheme and CodecFactory to serialize the object.
-func encodeToRawBytes(obj metav1.Object) ([]byte, error) {
-	// Ensure the object implements runtime.Object
-	runtimeObj, ok := obj.(runtime.Object)
-	if !ok {
-		return nil, errors.New("failed to convert metav1.Object to runtime.Object")
-	}
-
-	// Create a new runtime.Scheme and register the necessary schemes
-	scheme := runtime.NewScheme()
-	_ = registerSchemes(scheme)
-
-	// Create a CodecFactory and an encoder for the registered schemes
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(
-		appsv1.SchemeGroupVersion,
-		appsv1beta1.SchemeGroupVersion,
-		appsv1beta2.SchemeGroupVersion,
-		batchv1.SchemeGroupVersion,
-		batchv1beta1.SchemeGroupVersion,
-		corev1.SchemeGroupVersion,
-		networkingv1.SchemeGroupVersion,
-		networkingv1beta1.SchemeGroupVersion,
-	)
-
-	// Encode the runtime object into raw bytes
-	raw, err := runtime.Encode(encoder, runtimeObj)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode object: %w", err)
-	}
-	return raw, nil
-}
-
 // ObjectConverter is a type alias for a function that converts an object of any type to a specific metav1.Object type.
 type ObjectConverter[T metav1.Object] func(o any) T
 
@@ -552,20 +493,9 @@ type BackFillJobDescription[T metav1.Object] struct {
 	List    ListFunc           // Function to list resources of this type
 }
 
-// ConvertObject attempts to cast an object to the specified metav1.Object type.
-// If the cast fails, it logs an error and returns nil.
-func ConvertObject[T metav1.Object](o any) metav1.Object {
-	if obj, ok := o.(T); ok {
-		return obj
-	}
-	log.Error().Msgf("failed to cast object to %T", new(T))
-	return nil
-}
-
 // AwaitWebhookService waits for the webhook service to be ready by sending validation requests.
 // It retries the validation for a specified number of attempts with exponential backoff and jitter.
-func AwaitWebhookService(namespace, serviceName string, maxRetries int, timeout time.Duration) error {
-	ctx := context.Background()
+func AwaitWebhookService(ctx context.Context, namespace, serviceName string, maxRetries int, timeout time.Duration) error {
 	url := diag.ValidateURLPathProtocol + "://" + serviceName + "." + namespace + ".svc.cluster.local" + diag.ValidateURLPath
 
 	for attempt := range maxRetries {
@@ -584,6 +514,7 @@ func AwaitWebhookService(namespace, serviceName string, maxRetries int, timeout 
 		log.Warn().
 			Int("attempt", attempt+1).
 			Str("url", url).
+			Err(err).
 			Msgf("still awaiting webhook API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
 		time.Sleep(backoff + jitter)
 	}
@@ -594,7 +525,7 @@ func AwaitWebhookService(namespace, serviceName string, maxRetries int, timeout 
 // AwaitCollectorService attempts to send a WriteRequest to the specified collector service endpoint
 // using an HTTP POST request. It retries the request up to a specified number of times with exponential
 // backoff and jitter in case of failures.
-func AwaitCollectorService(endpoint string, maxRetries int, timeout time.Duration) error {
+func AwaitCollectorService(ctx context.Context, endpoint string, maxRetries int, timeout time.Duration) error {
 	data, err := proto.Marshal(protoadapt.MessageV2Of(&prompb.WriteRequest{
 		Timeseries: []prompb.TimeSeries{},
 	}))
@@ -609,7 +540,7 @@ func AwaitCollectorService(endpoint string, maxRetries int, timeout time.Duratio
 	var req *http.Request
 
 	for attempt := range maxRetries {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(compressed))
@@ -625,21 +556,17 @@ func AwaitCollectorService(endpoint string, maxRetries int, timeout time.Duratio
 		if resp != nil {
 			resp.Body.Close()
 		}
-		if err != nil {
-			log.Warn().Int("attempt", attempt+1).Err(err).Msg("still awaiting remote write API availability")
-			continue
-		}
-
-		if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
+		if err == nil && resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 			return nil
 		}
+
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
 		log.Warn().
 			Int("attempt", attempt+1).
 			Str("url", endpoint).
 			Int("statusCode", resp.StatusCode).
-			Msgf("still awaiting remote write API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
+			Msgf("still awaiting collector API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
 		time.Sleep(backoff + jitter)
 	}
 

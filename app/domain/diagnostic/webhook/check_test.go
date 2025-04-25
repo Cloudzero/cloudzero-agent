@@ -79,5 +79,5 @@ func TestSendPodToValidatingWebhook_InvalidResponse(t *testing.T) {
 	response, err := webhook.SendPodToValidatingWebhook(ctx, server.URL)
 	assert.Error(t, err)
 	assert.Nil(t, response)
-	assert.Contains(t, err.Error(), "could not unmarshal response AdmissionReview")
+	assert.Contains(t, err.Error(), "failed to unmarshal AdmissionReview")
 }
