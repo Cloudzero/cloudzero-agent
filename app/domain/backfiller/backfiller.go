@@ -236,7 +236,8 @@ func (s *Backfiller) Start(ctx context.Context) {
 			namespace := ns.GetName()
 			pool.Run(
 				func() error {
-					log.Info().Str("namespace", namespace).Msg("namespace discovered")
+					kind := ns.GroupVersionKind()
+					log.Info().Str("namespace", namespace).Str("g", kind.Group).Str("v", kind.Version).Str("k", kind.Kind).Msg("discovered")
 					if ar, err2 := resourceReview(ns.GroupVersionKind(), &ns); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
@@ -275,6 +276,8 @@ func (s *Backfiller) Start(ctx context.Context) {
 							for i := range count {
 								obj := items.Index(i).Addr().Interface()
 								if resource := task.Convert(obj); resource != nil {
+									name := resource.GetName()
+									log.Info().Str("namespace", namespace).Str("name", name).Str("g", g).Str("v", v).Str("k", k).Msg("discovered")
 									if ar, err := resourceReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
 										_, _ = s.controller.Review(context.Background(), ar) // Post the review
 										continue
@@ -345,6 +348,8 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 		for _, o := range nodes.Items {
 			pool.Run(
 				func() error {
+					kind := o.GetObjectKind().GroupVersionKind()
+					log.Info().Str("name", o.GetName()).Str("g", kind.Group).Str("v", kind.Version).Str("k", kind.Kind).Msg("discovered")
 					// Create an AdmissionReview for the node and post it to the controller
 					if ar, err2 := resourceReview(o.GroupVersionKind(), &o); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
