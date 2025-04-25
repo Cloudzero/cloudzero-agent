@@ -127,6 +127,11 @@ func main() {
 		}
 	}()
 
+	wd, err := webhook.NewWebhookFactory(store, settings, clock)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
+	}
+
 	if backfill {
 		log.Ctx(ctx).Info().Msg("Starting backfill mode")
 		// setup k8s client
@@ -134,13 +139,8 @@ func main() {
 		if err2 != nil {
 			log.Fatal().Err(err2).Msg("Failed to build k8s client")
 		}
-		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
+		backfiller.NewBackfiller(k8sClient, wd, settings).Start(context.Background())
 		return
-	}
-
-	wd, err := webhook.NewWebhookFactory(store, settings, clock)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
 	}
 
 	defer func() {

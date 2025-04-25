@@ -1,81 +1,78 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint:dupl // There is currently substantial duplication in the handlers :(
 package handler
 
 import (
-	"context"
-
-	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/rs/zerolog/log"
 )
 
-type CronJobHandler struct {
-	hook.Handler
+type CronJobConfigAccessor struct {
 	settings *config.Settings
-	clock    types.TimeProvider
 }
 
-func NewCronJobHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
-	h := &CronJobHandler{settings: settings}
-	h.ObjectCreator = helper.NewStaticObjectCreator(&batchv1.CronJob{})
-	h.Handler.Create = h.Create()
-	h.Handler.Update = h.Update()
-	h.Handler.Delete = h.Delete()
-	h.Handler.Store = store
-	h.clock = clock
-	return &h.Handler
+func NewCronJobConfigAccessor(settings *config.Settings) config.ConfigAccessor {
+	return &CronJobConfigAccessor{settings: settings}
 }
 
-func (h *CronJobHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.CronJob)
-		if !ok {
-			log.Warn().Msg("unable to cast to cronjob object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "cron create")
-		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
-			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
-		}
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (c *CronJobConfigAccessor) LabelsEnabled() bool {
+	return c.settings.Filters.Labels.Enabled
 }
 
-func (h *CronJobHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.CronJob)
-		if !ok {
-			log.Warn().Msg("unable to cast to cronjob object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "cron updated")
-		if h.settings.Filters.Labels.Resources.CronJobs || h.settings.Filters.Annotations.Resources.CronJobs {
-			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatCronJobData(o, h.settings))
-		}
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (c *CronJobConfigAccessor) AnnotationsEnabled() bool {
+	return c.settings.Filters.Annotations.Enabled
 }
 
-func (h *CronJobHandler) Delete() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*batchv1.CronJob)
-		if !ok {
-			log.Warn().Msg("unable to cast to cronjob object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "cron deleted")
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (c *CronJobConfigAccessor) LabelsEnabledForType() bool {
+	return c.settings.Filters.Labels.Resources.CronJobs
 }
 
+func (c *CronJobConfigAccessor) AnnotationsEnabledForType() bool {
+	return c.settings.Filters.Annotations.Resources.CronJobs
+}
+
+func (c *CronJobConfigAccessor) ResourceType() config.ResourceType {
+	return config.CronJob
+}
+
+func (c *CronJobConfigAccessor) Settings() *config.Settings {
+	return c.settings
+}
+
+// NewCronJobHandler creates a new webhook handler for Kubernetes CronJob resources.
+// This handler is responsible for processing CronJob objects and applying the necessary
+// filters and transformations based on the provided settings.
+//
+// Type Parameter:
+//   - T: The type of the Kubernetes resource, which must implement the metav1.Object interface.
+//     For this handler, it should be a CronJob resource, such as *batchv1.CronJob.
+//
+// Parameters:
+//   - store: A ResourceStore instance used to manage the state of resources.
+//   - settings: A pointer to the configuration settings that define filters and other options.
+//   - clock: A TimeProvider instance used for time-related operations.
+//   - resource: The CronJob resource to be processed by the handler.
+//
+// Returns:
+//   - A pointer to a hook.Handler configured for CronJob resources.
+func NewCronJobHandler[T metav1.Object](store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, resource T) *hook.Handler {
+	return NewGenericHandler[T](
+		store,
+		settings,
+		clock,
+		resource,
+		NewCronJobConfigAccessor(settings),
+		WorkloadDataFormatter,
+	)
+}
+
+// FormatCronJobData formats the data for a CronJob resource based on the provided settings.
 func FormatCronJobData(o *batchv1.CronJob, settings *config.Settings) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}

@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -27,23 +28,55 @@ import (
 
 type MockAdmissionController struct{}
 
+func (a *MockAdmissionController) GetSupported() map[string]map[string]map[string]metav1.Object {
+	return map[string]map[string]map[string]metav1.Object{
+		"": {
+			"v1": {
+				"Pod": &corev1.Pod{},
+			},
+		},
+	}
+}
+
+func (a *MockAdmissionController) IsSupported(g, v, k string) bool {
+	if supported, ok := a.GetSupported()[g]; ok {
+		if versions, ok := supported[v]; ok {
+			if _, ok := versions[k]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (a *MockAdmissionController) GetConfigurationAccessor(g, v, k string) config.ConfigAccessor {
+	// Mock implementation, returning nil for simplicity
+	return nil
+}
+
 func (a *MockAdmissionController) Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error) {
 	return &types.AdmissionResponse{Allowed: true, Message: "success"}, nil
 }
 
-type MockNilController struct{}
+type MockNilController struct {
+	*MockAdmissionController // simply deref the complete and override the function we want (gotta love go)
+}
 
 func (a *MockNilController) Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error) {
 	return nil, nil
 }
 
-type MockReviewErrorController struct{}
+type MockReviewErrorController struct {
+	*MockAdmissionController // simply deref the complete and override the function we want (gotta love go)
+}
 
 func (a *MockReviewErrorController) Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error) {
 	return &types.AdmissionResponse{Allowed: true, Message: "success"}, errors.New("this is an error")
 }
 
-type MockNotAllowedController struct{}
+type MockNotAllowedController struct {
+	*MockAdmissionController // simply deref the complete and override the function we want (gotta love go)
+}
 
 func (a *MockNotAllowedController) Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error) {
 	return &types.AdmissionResponse{Allowed: false, Message: "nope"}, nil

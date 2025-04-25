@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewPodHandler(t *testing.T) {
+func TestNewPersistentVolumeHandler(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
@@ -28,46 +28,34 @@ func TestNewPodHandler(t *testing.T) {
 		Filters: config.Filters{
 			Labels: config.Labels{
 				Enabled: true,
-				Resources: config.Resources{
-					Pods: true,
-				},
 			},
 			Annotations: config.Annotations{
 				Enabled: true,
-				Resources: config.Resources{
-					Pods: true,
-				},
 			},
 		},
 	}
 
-	h := handler.NewPodHandler(store, settings, types.TimeProvider(clock), &corev1.Pod{})
+	h := handler.NewPersistentVolumeHandler(store, settings, types.TimeProvider(clock), &corev1.PersistentVolume{})
 	assert.NotNil(t, h, "Handler should not be nil")
 	assert.IsType(t, &hook.Handler{}, h, "Handler should be of type *hook.Handler")
 }
 
-func TestPodConfigAccessor(t *testing.T) {
+func TestNewPersistentVolumeConfigAccessor(t *testing.T) {
 	settings := &config.Settings{
 		Filters: config.Filters{
 			Labels: config.Labels{
 				Enabled: true,
-				Resources: config.Resources{
-					Pods: true,
-				},
 			},
 			Annotations: config.Annotations{
-				Enabled: false,
-				Resources: config.Resources{
-					Pods: false,
-				},
+				Enabled: true,
 			},
 		},
 	}
 
-	accessor := handler.NewPodConfigAccessor(settings)
+	accessor := handler.NewPersistentVolumeConfigAccessor(settings)
 
 	t.Run("LabelsEnabled", func(t *testing.T) {
-		assert.True(t, accessor.LabelsEnabled(), "LabelsEnabled should return true")
+		assert.False(t, accessor.LabelsEnabled(), "LabelsEnabled should return false")
 	})
 
 	t.Run("AnnotationsEnabled", func(t *testing.T) {
@@ -75,7 +63,7 @@ func TestPodConfigAccessor(t *testing.T) {
 	})
 
 	t.Run("LabelsEnabledForType", func(t *testing.T) {
-		assert.True(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return true")
+		assert.False(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return false")
 	})
 
 	t.Run("AnnotationsEnabledForType", func(t *testing.T) {
@@ -83,7 +71,7 @@ func TestPodConfigAccessor(t *testing.T) {
 	})
 
 	t.Run("ResourceType", func(t *testing.T) {
-		assert.Equal(t, config.Pod, accessor.ResourceType(), "ResourceType should return config.Pod")
+		assert.Equal(t, config.PersistentVolume, accessor.ResourceType(), "ResourceType should return config.PersistentVolume")
 	})
 
 	t.Run("Settings", func(t *testing.T) {

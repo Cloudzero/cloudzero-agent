@@ -1,109 +1,74 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint:dupl // There is currently substantial duplication in the handlers :(
+//nolint:dupl // Duplication is acceptable we expect to extend the definitions later
 package handler
 
 import (
-	"context"
-
-	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/rs/zerolog/log"
 )
 
-type DeploymentHandler struct {
-	hook.Handler
+type DeploymentConfigAccessor struct {
 	settings *config.Settings
-	clock    types.TimeProvider
 }
 
-// NewDeploymentHandler creates a new instance of deployment validation hook
-func NewDeploymentHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
-	// Need little trick to protect internal data
-	h := &DeploymentHandler{settings: settings}
-	h.ObjectCreator = helper.NewStaticObjectCreator(&appsv1.Deployment{})
-	h.Handler.Create = h.Create()
-	h.Handler.Update = h.Update()
-	h.Handler.Delete = h.Delete()
-	h.Handler.Store = store
-	h.clock = clock
-	return &h.Handler
-}
-
-func (h *DeploymentHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			log.Warn().Msg("unable to cast to deployment object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "deployment created")
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
-			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
-		}
-		return &types.AdmissionResponse{Allowed: true}, nil
+func NewDeploymentConfigAccessor(settings *config.Settings) config.ConfigAccessor {
+	return &DeploymentConfigAccessor{
+		settings: settings,
 	}
 }
 
-func (h *DeploymentHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			log.Warn().Msg("unable to cast to deployment object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "deployment updated")
-		// only process if enabled, always return allowed to not block an admission
-		if h.settings.Filters.Labels.Resources.Deployments || h.settings.Filters.Annotations.Resources.Deployments {
-			genericWriteDataToStorage(ctx, h.Store, h.clock, FormatDeploymentData(o, h.settings))
-		}
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (d *DeploymentConfigAccessor) LabelsEnabled() bool {
+	return d.settings.Filters.Labels.Enabled
 }
 
-func (h *DeploymentHandler) Delete() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			log.Warn().Msg("unable to cast to deployment object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "deployment deleted")
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (d *DeploymentConfigAccessor) AnnotationsEnabled() bool {
+	return d.settings.Filters.Annotations.Enabled
 }
 
-func FormatDeploymentData(o *appsv1.Deployment, settings *config.Settings) types.ResourceTags {
-	var (
-		labels      = config.MetricLabelTags{}
-		annotations = config.MetricLabelTags{}
-		namespace   = o.GetNamespace()
-		workload    = o.GetName()
+func (d *DeploymentConfigAccessor) LabelsEnabledForType() bool {
+	return d.settings.Filters.Labels.Resources.Deployments
+}
+
+func (d *DeploymentConfigAccessor) AnnotationsEnabledForType() bool {
+	return d.settings.Filters.Annotations.Resources.Deployments
+}
+
+func (d *DeploymentConfigAccessor) ResourceType() config.ResourceType {
+	return config.Deployment
+}
+
+func (d *DeploymentConfigAccessor) Settings() *config.Settings {
+	return d.settings
+}
+
+// NewDeploymentHandler creates a new webhook handler for Kubernetes Deployment resources.
+// This handler is responsible for processing Deployment objects and applying the necessary
+// filters and transformations based on the provided settings.
+//
+// Type Parameter:
+//   - T: The type of the Kubernetes resource, which must implement the metav1.Object interface.
+//     For this handler, it should be a Deployment resource, such as *appsv1.Deployment.
+//
+// Parameters:
+//   - store: A ResourceStore instance used to manage the state of resources.
+//   - settings: A pointer to the configuration settings that define filters and other options.
+//   - clock: A TimeProvider instance used for time-related operations.
+//   - resource: The Deployment resource to be processed by the handler.
+//
+// Returns:
+//   - A pointer to a hook.Handler configured for Deployment resources.
+func NewDeploymentHandler[T metav1.Object](store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, resource T) *hook.Handler {
+	return NewGenericHandler[T](
+		store,
+		settings,
+		clock,
+		resource,
+		NewDeploymentConfigAccessor(settings),
+		WorkloadDataFormatter,
 	)
-	if settings.Filters.Labels.Enabled {
-		labels = config.Filter(o.GetLabels(), settings.LabelMatches, (settings.Filters.Labels.Enabled && settings.Filters.Labels.Resources.Deployments), settings)
-	}
-	if settings.Filters.Annotations.Enabled {
-		annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, (settings.Filters.Annotations.Enabled && settings.Filters.Annotations.Resources.Deployments), settings)
-	}
-	metricLabels := config.MetricLabels{
-		"workload":      workload, // standard metric labels to attach to metric
-		"namespace":     namespace,
-		"resource_type": config.ResourceTypeToMetricName[config.Deployment],
-	}
-	return types.ResourceTags{
-		Type:         config.Deployment,
-		Name:         workload,
-		Namespace:    &namespace,
-		MetricLabels: &metricLabels,
-		Labels:       &labels,
-		Annotations:  &annotations,
-	}
 }

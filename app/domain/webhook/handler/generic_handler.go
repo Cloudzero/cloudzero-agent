@@ -16,23 +16,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ConfigAccessor defines the interface for accessing settings related to labels and annotations
-type ConfigAccessor interface {
-	LabelsEnabled() bool
-	AnnotationsEnabled() bool
-	LabelsEnabledForType() bool
-	AnnotationsEnabledForType() bool
-	ResourceType() string
-	Settings() *config.Settings
-}
-
-type DataFormatter func(accessor ConfigAccessor, obj metav1.Object) types.ResourceTags
+type DataFormatter func(accessor config.ConfigAccessor, obj metav1.Object) types.ResourceTags
 
 type GenericHandler[T metav1.Object] struct {
 	hook.Handler
 	settings   *config.Settings
 	clock      types.TimeProvider
-	accessor   ConfigAccessor
 	formatData DataFormatter
 }
 
@@ -40,8 +29,8 @@ func NewGenericHandler[T metav1.Object](
 	store types.ResourceStore,
 	settings *config.Settings,
 	clock types.TimeProvider,
-	objectCreator metav1.Object,
-	accessor ConfigAccessor,
+	objTemplate metav1.Object,
+	accessor config.ConfigAccessor,
 	formatData DataFormatter,
 ) *hook.Handler {
 	h := &GenericHandler[T]{
@@ -49,7 +38,9 @@ func NewGenericHandler[T metav1.Object](
 		clock:      clock,
 		formatData: formatData,
 	}
-	h.ObjectCreator = helper.NewStaticObjectCreator(objectCreator)
+	h.Accessor = accessor
+	h.ObjectType = objTemplate
+	h.ObjectCreator = helper.NewStaticObjectCreator(objTemplate)
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Delete = h.Delete()
@@ -76,17 +67,18 @@ func (h *GenericHandler[T]) admitFunc(action string) hook.AdmitFunc {
 			log.Warn().Msgf("unable to cast to object instance of type %T", o)
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
-		debugPrintObject(o, action)
 
-		if h.accessor.LabelsEnabledForType() || h.accessor.AnnotationsEnabledForType() {
-			genericWriteDataToStorage(ctx, h.Store, h.clock, h.formatData(h.accessor, o))
+		debugPrintObject(o, action+" "+config.ResourceTypeToMetricName[h.Accessor.ResourceType()])
+
+		if h.Accessor.LabelsEnabledForType() || h.Accessor.AnnotationsEnabledForType() {
+			genericWriteDataToStorage(ctx, h.Store, h.clock, h.formatData(h.Accessor, o))
 		}
 
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }
 
-func WorkloadDataFormatter(accessor ConfigAccessor, obj metav1.Object) types.ResourceTags {
+func PodDataFormatter(accessor config.ConfigAccessor, obj metav1.Object) types.ResourceTags {
 	var (
 		labels      = config.MetricLabelTags{}
 		annotations = config.MetricLabelTags{}
@@ -100,12 +92,92 @@ func WorkloadDataFormatter(accessor ConfigAccessor, obj metav1.Object) types.Res
 		annotations = config.Filter(obj.GetAnnotations(), accessor.Settings().AnnotationMatches, accessor.AnnotationsEnabledForType(), accessor.Settings())
 	}
 	metricLabels := config.MetricLabels{
-		"workload":      objectName,
-		"namespace":     namespace,
-		"resource_type": accessor.ResourceType(),
+		config.FieldPod:          objectName,
+		config.FieldNamespace:    namespace,
+		config.FieldResourceType: config.ResourceTypeToMetricName[accessor.ResourceType()],
 	}
 	return types.ResourceTags{
 		Type:         config.Pod,
+		Name:         objectName,
+		Namespace:    &namespace,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
+		Annotations:  &annotations,
+	}
+}
+
+func NamespaceDataFormatter(accessor config.ConfigAccessor, obj metav1.Object) types.ResourceTags {
+	var (
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		objectName  = obj.GetName()
+	)
+	if accessor.LabelsEnabled() {
+		labels = config.Filter(obj.GetLabels(), accessor.Settings().LabelMatches, accessor.LabelsEnabledForType(), accessor.Settings())
+	}
+	if accessor.AnnotationsEnabled() {
+		annotations = config.Filter(obj.GetAnnotations(), accessor.Settings().AnnotationMatches, accessor.AnnotationsEnabledForType(), accessor.Settings())
+	}
+	metricLabels := config.MetricLabels{
+		config.FieldNamespace:    objectName,
+		config.FieldResourceType: config.ResourceTypeToMetricName[accessor.ResourceType()],
+	}
+	return types.ResourceTags{
+		Type:         accessor.ResourceType(),
+		Name:         objectName,
+		Namespace:    nil,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
+		Annotations:  &annotations,
+	}
+}
+
+func NodeDataFormatter(accessor config.ConfigAccessor, obj metav1.Object) types.ResourceTags {
+	var (
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		objectName  = obj.GetName()
+	)
+	if accessor.LabelsEnabled() {
+		labels = config.Filter(obj.GetLabels(), accessor.Settings().LabelMatches, accessor.LabelsEnabledForType(), accessor.Settings())
+	}
+	if accessor.AnnotationsEnabled() {
+		annotations = config.Filter(obj.GetAnnotations(), accessor.Settings().AnnotationMatches, accessor.AnnotationsEnabledForType(), accessor.Settings())
+	}
+	metricLabels := config.MetricLabels{
+		config.FieldNode:         objectName,
+		config.FieldResourceType: config.ResourceTypeToMetricName[accessor.ResourceType()],
+	}
+	return types.ResourceTags{
+		Type:         accessor.ResourceType(),
+		Name:         objectName,
+		Namespace:    nil,
+		MetricLabels: &metricLabels,
+		Labels:       &labels,
+		Annotations:  &annotations,
+	}
+}
+
+func WorkloadDataFormatter(accessor config.ConfigAccessor, obj metav1.Object) types.ResourceTags {
+	var (
+		labels      = config.MetricLabelTags{}
+		annotations = config.MetricLabelTags{}
+		namespace   = obj.GetNamespace()
+		objectName  = obj.GetName()
+	)
+	if accessor.LabelsEnabled() {
+		labels = config.Filter(obj.GetLabels(), accessor.Settings().LabelMatches, accessor.LabelsEnabledForType(), accessor.Settings())
+	}
+	if accessor.AnnotationsEnabled() {
+		annotations = config.Filter(obj.GetAnnotations(), accessor.Settings().AnnotationMatches, accessor.AnnotationsEnabledForType(), accessor.Settings())
+	}
+	metricLabels := config.MetricLabels{
+		config.FieldWorkload:     objectName,
+		config.FieldNamespace:    namespace,
+		config.FieldResourceType: config.ResourceTypeToMetricName[accessor.ResourceType()],
+	}
+	return types.ResourceTags{
+		Type:         accessor.ResourceType(),
 		Name:         objectName,
 		Namespace:    &namespace,
 		MetricLabels: &metricLabels,

@@ -14,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +22,7 @@ import (
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
@@ -44,218 +43,149 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 		{
 			name: "Node",
 			setupObjects: []runtime.Object{
-				&apiv1.NodeList{Items: []apiv1.Node{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "demo",
-					},
-					Status: apiv1.NodeStatus{
-						Addresses: []apiv1.NodeAddress{
-							{
-								Type:    apiv1.NodeInternalIP,
-								Address: "10.0.0.1",
+				&apiv1.NodeList{
+					Items: []apiv1.Node{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Node",
+								APIVersion: "v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "demo",
+							},
+							Status: apiv1.NodeStatus{
+								Addresses: []apiv1.NodeAddress{
+									{
+										Type:    apiv1.NodeInternalIP,
+										Address: "10.0.0.1",
+									},
+								},
 							},
 						},
 					},
-				}}},
+				},
 			},
 			expectations: func(store *mocks.MockResourceStore) {
+				store.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+				store.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
 					if r.Type != config.Node || r.Name != "demo" || r.Namespace != nil {
 						t.Errorf("Unexpected resource tags: %+v", r)
 					}
 					return nil
-				}).AnyTimes()
+				}).Times(1)
 			},
 		},
 		{
 			name: "Namespace",
 			setupObjects: []runtime.Object{
 				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Namespace",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "namespace",
 					},
 				}}},
 			},
 			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if r.Type != config.Namespace || r.Name != "namespace" || r.Namespace != nil {
-						t.Errorf("Unexpected resource tags: %+v", r)
-					}
-					return nil
-				}).AnyTimes()
+				store.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+				store.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, r *types.ResourceTags) error {
+						if r.Type != config.Namespace || r.Name != "namespace" || r.Namespace != nil {
+							t.Errorf("Unexpected resource tags: %+v", r)
+						}
+						return nil
+					},
+				).Times(1)
 			},
 		},
 		{
-			name: "Pod",
+			name: "Multiple Pods",
 			setupObjects: []runtime.Object{
 				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Namespace",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "default",
 					},
 				}}},
 				&apiv1.PodList{Items: []apiv1.Pod{
 					{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Pod",
+							APIVersion: "v1",
+						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "pod",
+							Name:      "pod-1",
+							Namespace: "default",
+						},
+					},
+					{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Pod",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pod-2",
+							Namespace: "default",
+						},
+					},
+					{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Pod",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pod-3",
 							Namespace: "default",
 						},
 					},
 				}},
 			},
 			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.Pod && r.Name == "pod" && r.Namespace != nil && *r.Namespace == "default") {
+				store.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil).Times(4)
+				store.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil).AnyTimes().Times(4)
+				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, r *types.ResourceTags) error {
+						switch r.Type {
+						case config.Namespace:
+							if r.Name == "default" && r.Namespace == nil {
+								return nil
+							}
+						case config.Pod:
+							if r.Namespace != nil && *r.Namespace == "default" {
+								if r.Name == "pod-1" || r.Name == "pod-2" || r.Name == "pod-3" {
+									return nil
+								}
+							}
+						}
+						t.Errorf("Unexpected resource tags: %+v", r)
 						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
-			},
-		},
-		{
-			name: "Deployments",
-			setupObjects: []runtime.Object{
-				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
 					},
-				}}},
-				&appsv1.DeploymentList{Items: []appsv1.Deployment{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "deployment",
-						Namespace: "default",
-					},
-				}}},
-			},
-			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.Deployment && r.Name == "deployment" && r.Namespace != nil && *r.Namespace == "default") {
-						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
-			},
-		},
-		{
-			name: "StatefulSets",
-			setupObjects: []runtime.Object{
-				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
-				}}},
-				&appsv1.StatefulSetList{Items: []appsv1.StatefulSet{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "statefulset",
-						Namespace: "default",
-					},
-				}}},
-			},
-			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.StatefulSet && r.Name == "statefulset" && r.Namespace != nil && *r.Namespace == "default") {
-						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
-			},
-		},
-		{
-			name: "DaemonSets",
-			setupObjects: []runtime.Object{
-				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
-				}}},
-				&appsv1.DaemonSetList{Items: []appsv1.DaemonSet{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "daemonset",
-						Namespace: "default",
-					},
-				}}},
-			},
-			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.DaemonSet && r.Name == "daemonset" && r.Namespace != nil && *r.Namespace == "default") {
-						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
-			},
-		},
-		{
-			name: "Jobs",
-			setupObjects: []runtime.Object{
-				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
-				}}},
-				&batchv1.JobList{Items: []batchv1.Job{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "job",
-						Namespace: "default",
-					},
-				}}},
-			},
-			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.Job && r.Name == "job" && r.Namespace != nil && *r.Namespace == "default") {
-						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
-			},
-		},
-		{
-			name: "CronJobs",
-			setupObjects: []runtime.Object{
-				&apiv1.NamespaceList{Items: []apiv1.Namespace{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
-				}}},
-				&batchv1.CronJobList{Items: []batchv1.CronJob{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cronjob",
-						Namespace: "default",
-					},
-				}}},
-			},
-			expectations: func(store *mocks.MockResourceStore) {
-				store.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.ResourceTags) error {
-					if (r.Type == config.Namespace && r.Name == "default" && r.Namespace == nil) ||
-						(r.Type == config.CronJob && r.Name == "cronjob" && r.Namespace != nil && *r.Namespace == "default") {
-						return nil
-					}
-					t.Errorf("Unexpected resource tags: %+v", r)
-					return nil
-				}).AnyTimes()
+				).Times(4)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
-			ctlr := gomock.NewController(t)
-			defer ctlr.Finish()
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
 
-			mockStore := mocks.NewMockResourceStore(ctlr)
-			tc.expectations(mockStore)
+			clock := mocks.NewMockClock(time.Now())
+			store := mocks.NewMockResourceStore(mockCtl)
+			tc.expectations(store)
 
-			clientset := fake.NewSimpleClientset(tc.setupObjects...)
-			s := backfiller.NewBackfiller(clientset, mockStore, settings)
+			controller, err := webhook.NewWebhookFactory(store, settings, clock)
+			assert.NoError(t, err)
+
+			clientset := fake.NewClientset(tc.setupObjects...)
+			s := backfiller.NewBackfiller(clientset, controller, settings)
 			s.Start(ctx)
 		})
 	}
@@ -265,8 +195,9 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 		if os.Getenv("RUN_INTEGRATION_TESTS") != "true" {
 			t.Skip("Skipping integration test as RUN_INTEGRATION_TESTS is not set to true")
 		}
+		clock := &utils.Clock{}
 
-		store, err := repo.NewInMemoryResourceRepository(&utils.Clock{})
+		store, err := repo.NewInMemoryResourceRepository(clock)
 		require.NoError(t, err)
 		require.NotNil(t, store)
 
@@ -276,7 +207,9 @@ func TestBackfiller_FakeK8s_Start(t *testing.T) {
 		k8sClient, err := k8s.NewClient(kubeconfig)
 		require.NoError(t, err)
 
-		s := backfiller.NewBackfiller(k8sClient, store, settings)
+		controller, err := webhook.NewWebhookFactory(store, settings, clock)
+		require.NoError(t, err)
+		s := backfiller.NewBackfiller(k8sClient, controller, settings)
 		s.Start(context.Background())
 
 		// Wait for Backfiller to process resources

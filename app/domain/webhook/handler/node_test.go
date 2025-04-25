@@ -4,395 +4,89 @@
 package handler_test
 
 import (
-	"context"
-	"reflect"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-func makeNodeRequest(record TestRecord) *types.AdmissionReview {
-	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        record.Name,
-			Labels:      record.Labels,
-			Annotations: record.Annotations,
-		},
-	}
-
-	return &types.AdmissionReview{
-		NewObjectRaw: getRawObject(corev1.SchemeGroupVersion, node),
-	}
-}
-
-func TestFormatNodeData(t *testing.T) {
-	tests := []struct {
-		name     string
-		node     *corev1.Node
-		settings *config.Settings
-		expected types.ResourceTags
-	}{
-		{
-			name: "Test with labels and annotations enabled",
-			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						"app": "test",
-					},
-					Annotations: map[string]string{
-						"annotation-key": "annotation-value",
-					},
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-				},
-				LabelMatches: []regexp.Regexp{
-					*regexp.MustCompile("app"),
-				},
-				AnnotationMatches: []regexp.Regexp{
-					*regexp.MustCompile("annotation-key"),
-				},
-			},
-			expected: types.ResourceTags{
-				Type: config.Node,
-				Name: "test-node",
-				MetricLabels: &config.MetricLabels{
-					"node":          "test-node",
-					"resource_type": "node",
-				},
-				Labels: &config.MetricLabelTags{
-					"app": "test",
-				},
-				Annotations: &config.MetricLabelTags{
-					"annotation-key": "annotation-value",
-				},
-			},
-		},
-		{
-			name: "Test with labels and annotations disabled",
-			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
-				},
-			},
-			expected: types.ResourceTags{
-				Type: config.Node,
-				Name: "test-node",
-				MetricLabels: &config.MetricLabels{
-					"node":          "test-node",
-					"resource_type": "node",
-				},
-				Labels:      &config.MetricLabelTags{},
-				Annotations: &config.MetricLabelTags{},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := handler.FormatNodeData(tt.node, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, result.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, result.MetricLabels)
-			}
-			if !reflect.DeepEqual(tt.expected.Labels, result.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, result.Labels)
-			}
-			if !reflect.DeepEqual(tt.expected.Annotations, result.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, result.Annotations)
-			}
-			assert.Equal(t, tt.expected.Type, result.Type)
-			assert.Equal(t, tt.expected.Name, result.Name)
-		})
-	}
-}
-
 func TestNewNodeHandler(t *testing.T) {
-	tests := []struct {
-		name     string
-		settings *config.Settings
-	}{
-		{
-			name: "Test with valid settings",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	clock := mocks.NewMockClock(time.Now())
+	store := mocks.NewMockResourceStore(mockCtl)
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
+				Resources: config.Resources{
+					Nodes: true,
+				},
+			},
+			Annotations: config.Annotations{
+				Enabled: true,
+				Resources: config.Resources{
+					Nodes: true,
 				},
 			},
 		},
-		{
-			name:     "Test with nil settings",
-			settings: nil,
-		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
-			mockClock := mocks.NewMockClock(time.Now())
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
-			assert.NotNil(t, h)
-			assert.Equal(t, writer, h.Store)
-		})
-	}
+	h := handler.NewNodeHandler(store, settings, types.TimeProvider(clock), &corev1.Node{})
+	assert.NotNil(t, h, "Handler should not be nil")
+	assert.IsType(t, &hook.Handler{}, h, "Handler should be of type *hook.Handler")
 }
 
-func TestNodeHandler_Create(t *testing.T) {
-	tests := []struct {
-		name     string
-		settings *config.Settings
-		request  *types.AdmissionReview
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "Test create with labels and annotations enabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
+func TestNodeConfigAccessor(t *testing.T) {
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
+				Resources: config.Resources{
+					Nodes: true,
 				},
 			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name: "Test create with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
+			Annotations: config.Annotations{
+				Enabled: false,
+				Resources: config.Resources{
+					Nodes: false,
 				},
 			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(nil, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-			}
-			mockClock := mocks.NewMockClock(time.Now())
+	accessor := handler.NewNodeConfigAccessor(settings)
 
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
-			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
+	t.Run("LabelsEnabled", func(t *testing.T) {
+		assert.True(t, accessor.LabelsEnabled(), "LabelsEnabled should return true")
+	})
 
-func TestNodeHandler_Update(t *testing.T) {
-	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := mocks.NewMockClock(initialTime)
+	t.Run("AnnotationsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabled(), "AnnotationsEnabled should return false")
+	})
 
-	tests := []struct {
-		name     string
-		settings *config.Settings
-		request  *types.AdmissionReview
-		dbresult *types.ResourceTags
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "Test update with labels and annotations enabled no previous record",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-				},
-			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations enabled with previous record",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-						Resources: config.Resources{
-							Nodes: true,
-						},
-					},
-				},
-			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			dbresult: &types.ResourceTags{
-				ID:            "1",
-				Type:          config.Node,
-				Name:          "test-node",
-				Labels:        &config.MetricLabelTags{"app": "test"},
-				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
-				RecordCreated: mockClock.GetCurrentTime(),
-				RecordUpdated: mockClock.GetCurrentTime(),
-			},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations disabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-						Resources: config.Resources{
-							Nodes: false,
-						},
-					},
-				},
-			},
-			request: makeNodeRequest(TestRecord{
-				Name: "test-node",
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-	}
+	t.Run("LabelsEnabledForType", func(t *testing.T) {
+		assert.True(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return true")
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
-			if tt.settings.Filters.Labels.Enabled {
-				writer.EXPECT().FindFirstBy(gomock.Any(), gomock.Any()).Return(tt.dbresult, nil)
-				writer.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(nil)
-				if tt.dbresult == nil {
-					writer.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				} else {
-					writer.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-				}
-			}
-			mockClock := mocks.NewMockClock(time.Now())
+	t.Run("AnnotationsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabledForType(), "AnnotationsEnabledForType should return false")
+	})
 
-			h := handler.NewNodeHandler(writer, tt.settings, mockClock)
-			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+	t.Run("ResourceType", func(t *testing.T) {
+		assert.Equal(t, config.Node, accessor.ResourceType(), "ResourceType should return config.Node")
+	})
+
+	t.Run("Settings", func(t *testing.T) {
+		assert.Equal(t, settings, accessor.Settings(), "Settings should return the provided settings")
+	})
 }

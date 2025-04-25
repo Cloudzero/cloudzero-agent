@@ -19,8 +19,9 @@ const (
 	Service                  ResourceType = 10
 	CustomResourceDefinition ResourceType = 11
 	ReplicaSet               ResourceType = 12
-	PersistentVolumeClaim    ResourceType = 13
-	Gateway                  ResourceType = 14
+	PersistentVolume         ResourceType = 13
+	PersistentVolumeClaim    ResourceType = 14
+	Gateway                  ResourceType = 15
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
@@ -37,6 +38,15 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	Service:                  "service",
 	CustomResourceDefinition: "crd",
 	ReplicaSet:               "replicaset",
+	PersistentVolume:         "pv",
 	PersistentVolumeClaim:    "pcv",
 	Gateway:                  "gateway",
 }
+
+const (
+	FieldNamespace    = "namespace"
+	FieldNode         = "node"
+	FieldPod          = "pod"
+	FieldResourceType = "resource_type"
+	FieldWorkload     = "workload"
+)
