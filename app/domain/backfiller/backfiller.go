@@ -210,10 +210,14 @@ func (s *Backfiller) Start(ctx context.Context) {
 		},
 	}
 
+	// worker pool ensures we don't have unbounded growth
+	pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
+	defer pool.Close()
+	waiter := parallel.NewWaiter()
+
 	// cursor values
 	limit := s.settings.K8sClient.PaginationLimit
 	var _continue string
-
 	allNamespaces := []corev1.Namespace{}
 	for {
 		// List all namespaces
@@ -227,20 +231,15 @@ func (s *Backfiller) Start(ctx context.Context) {
 		}
 		allNamespaces = append(allNamespaces, namespaces.Items...)
 
-		// worker pool ensures we don't have unbounded growth
-		pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
-		defer pool.Close()
-		waiter := parallel.NewWaiter()
-
 		// For each namespace, gather all resources
 		for _, ns := range namespaces.Items {
 			// dispatch job post namespace validation AdmissionReview
 			namespace := ns.GetName()
 			pool.Run(
 				func() error {
-					kind := ns.GroupVersionKind()
-					log.Info().Str("namespace", namespace).Str("g", kind.Group).Str("v", kind.Version).Str("k", kind.Kind).Msg("discovered")
+					log.Info().Str("namespace", namespace).Str("g", "").Str("v", "v1").Str("k", "namespace").Msg("discovered")
 					if ar, err2 := resourceReview(ns.GroupVersionKind(), &ns); err2 == nil {
+						log.Info().Str("namespace", namespace).Str("g", "").Str("v", "v1").Str("k", "namespace").Msg("published")
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
 					}
@@ -256,7 +255,14 @@ func (s *Backfiller) Start(ctx context.Context) {
 				cfg := s.controller.GetConfigurationAccessor(g, v, k)
 
 				// If not enabled, skip enumeration task
-				if !((cfg.LabelsEnabled() && cfg.LabelsEnabledForType()) && (cfg.AnnotationsEnabled() && cfg.AnnotationsEnabledForType())) {
+				if !((cfg.LabelsEnabled() && cfg.LabelsEnabledForType()) || (cfg.AnnotationsEnabled() && cfg.AnnotationsEnabledForType())) {
+					log.Info().
+						Str("g", g).Str("v", v).Str("k", k).
+						Bool("labelsEnabled", cfg.LabelsEnabled()).
+						Bool("labelsEnabledForType", cfg.LabelsEnabledForType()).
+						Bool("annotationsEnabled", cfg.AnnotationsEnabled()).
+						Bool("annotationsEnabledForType", cfg.AnnotationsEnabledForType()).
+						Msg("scanning disabled")
 					continue
 				}
 
@@ -275,12 +281,19 @@ func (s *Backfiller) Start(ctx context.Context) {
 
 							items := reflect.ValueOf(resources).Elem().FieldByName("Items")
 							count := items.Len()
+							log.Info().
+								Str("g", g).Str("v", v).Str("k", k).
+								Str("namespace", namespace).
+								Int("count", count).
+								Msg("discovered")
+
 							for i := range count {
 								obj := items.Index(i).Addr().Interface()
+								log.Info().Str("g", g).Str("v", v).Str("k", k).Str("namespace", namespace).Msg("discovered")
 								if resource := task.Convert(obj); resource != nil {
 									name := resource.GetName()
-									log.Info().Str("namespace", namespace).Str("name", name).Str("g", g).Str("v", v).Str("k", k).Msg("discovered")
 									if ar, err := resourceReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
+										log.Info().Str("g", g).Str("v", v).Str("k", k).Str("namespace", namespace).Str("name", name).Msg("published")
 										_, _ = s.controller.Review(context.Background(), ar) // Post the review
 										continue
 									}
@@ -301,22 +314,18 @@ func (s *Backfiller) Start(ctx context.Context) {
 			}
 		}
 
-		// Don't process the next namespace
-		// until we have run all the jobs for that namespace
-		waiter.Wait()
-
 		// Escape
 		if namespaces.GetContinue() != "" {
 			_continue = namespaces.GetContinue()
 			continue
 		}
-
-		log.Info().
-			Time("currentTime", time.Now().UTC()).
-			Int("namespacesCount", len(allNamespaces)).
-			Msg("Backfill operation completed")
 		break
 	}
+	waiter.Wait()
+	log.Info().
+		Time("currentTime", time.Now().UTC()).
+		Int("namespacesCount", len(allNamespaces)).
+		Msg("Backfill operation completed")
 }
 
 func (s *Backfiller) enumerateNodes(ctx context.Context) {
@@ -350,8 +359,7 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 		for _, o := range nodes.Items {
 			pool.Run(
 				func() error {
-					kind := o.GetObjectKind().GroupVersionKind()
-					log.Info().Str("name", o.GetName()).Str("g", kind.Group).Str("v", kind.Version).Str("k", kind.Kind).Msg("discovered")
+					log.Info().Str("name", o.GetName()).Str("g", "").Str("v", "v1").Str("k", "node").Msg("discovered")
 					// Create an AdmissionReview for the node and post it to the controller
 					if ar, err2 := resourceReview(o.GroupVersionKind(), &o); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
@@ -364,16 +372,15 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 				waiter,
 			)
 		}
-
-		// Wait for all jobs in the current batch to complete
-		waiter.Wait()
-
 		// If there are no more nodes to process, exit the loop
 		if nodes.Continue == "" {
 			break
 		}
 		_continue = nodes.Continue
 	}
+
+	// Wait for all jobs in the current batch to complete
+	waiter.Wait()
 }
 
 // resourceReview is a generic function that creates an AdmissionReview object for a given resource.
@@ -383,6 +390,7 @@ func resourceReview[T metav1.Object](gvk schema.GroupVersionKind, o T) (*types.A
 	// Encode the resource object into raw bytes
 	raw, err := encodeToRawBytes(o)
 	if err != nil {
+		log.Err(err).Str("g", gvk.Group).Str("v", gvk.Version).Str("k", gvk.Kind).Msg("encode failure")
 		return nil, err
 	}
 
