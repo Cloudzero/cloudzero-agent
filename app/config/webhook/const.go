@@ -6,22 +6,22 @@ package config
 type ResourceType int
 
 const (
-	Unknown                  ResourceType = 0
-	Deployment               ResourceType = 1
-	StatefulSet              ResourceType = 2
-	Pod                      ResourceType = 3
-	Node                     ResourceType = 4
-	Namespace                ResourceType = 5
-	Job                      ResourceType = 6
-	CronJob                  ResourceType = 7
-	DaemonSet                ResourceType = 8
-	Ingress                  ResourceType = 9
-	Service                  ResourceType = 10
-	CustomResourceDefinition ResourceType = 11
-	ReplicaSet               ResourceType = 12
-	PersistentVolume         ResourceType = 13
-	PersistentVolumeClaim    ResourceType = 14
-	Gateway                  ResourceType = 15
+	Unknown ResourceType = iota
+	Deployment
+	StatefulSet
+	Pod
+	Node
+	Namespace
+	Job
+	CronJob
+	DaemonSet
+	Ingress
+	Service
+	CustomResourceDefinition
+	ReplicaSet
+	PersistentVolume
+	PersistentVolumeClaim
+	Gateway
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
