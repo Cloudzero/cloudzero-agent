@@ -84,7 +84,7 @@ require (
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
-	github.com/minio/minio-go/v7 v7.0.90
+	github.com/minio/minio-go/v7 v7.0.91
 	github.com/parquet-go/parquet-go v0.25.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/prometheus v0.303.0
