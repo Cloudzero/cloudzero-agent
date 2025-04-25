@@ -210,6 +210,29 @@ func (s *Backfiller) Start(ctx context.Context) {
 		},
 	}
 
+	// Notify use of enabled/disabled objects
+	for _, task := range catalog {
+		g, v, k := task.g, task.v, task.k
+		cfg := s.controller.GetConfigurationAccessor(g, v, k)
+		if !((cfg.LabelsEnabled() && cfg.LabelsEnabledForType()) || (cfg.AnnotationsEnabled() && cfg.AnnotationsEnabledForType())) {
+			log.Info().
+				Str("group", g).Str("version", v).Str("kind", k).
+				Bool("labelsEnabled", cfg.LabelsEnabled()).
+				Bool("labelsEnabledForType", cfg.LabelsEnabledForType()).
+				Bool("annotationsEnabled", cfg.AnnotationsEnabled()).
+				Bool("annotationsEnabledForType", cfg.AnnotationsEnabledForType()).
+				Msg("scanning disabled")
+			continue
+		}
+		log.Info().
+			Str("group", g).Str("version", v).Str("kind", k).
+			Bool("labelsEnabled", cfg.LabelsEnabled()).
+			Bool("labelsEnabledForType", cfg.LabelsEnabledForType()).
+			Bool("annotationsEnabled", cfg.AnnotationsEnabled()).
+			Bool("annotationsEnabledForType", cfg.AnnotationsEnabledForType()).
+			Msg("scanning enabled")
+	}
+
 	// worker pool ensures we don't have unbounded growth
 	pool := parallel.New(min(goruntime.NumCPU(), MaxThreads))
 	defer pool.Close()
@@ -237,9 +260,9 @@ func (s *Backfiller) Start(ctx context.Context) {
 			namespace := ns.GetName()
 			pool.Run(
 				func() error {
-					log.Info().Str("namespace", namespace).Str("g", "").Str("v", "v1").Str("k", "namespace").Msg("discovered")
+					log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("discovered")
 					if ar, err2 := resourceReview(ns.GroupVersionKind(), &ns); err2 == nil {
-						log.Info().Str("namespace", namespace).Str("g", "").Str("v", "v1").Str("k", "namespace").Msg("published")
+						log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("published")
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
 					}
@@ -254,15 +277,8 @@ func (s *Backfiller) Start(ctx context.Context) {
 				g, v, k := task.g, task.v, task.k
 				cfg := s.controller.GetConfigurationAccessor(g, v, k)
 
-				// If not enabled, skip enumeration task
 				if !((cfg.LabelsEnabled() && cfg.LabelsEnabledForType()) || (cfg.AnnotationsEnabled() && cfg.AnnotationsEnabledForType())) {
-					log.Info().
-						Str("g", g).Str("v", v).Str("k", k).
-						Bool("labelsEnabled", cfg.LabelsEnabled()).
-						Bool("labelsEnabledForType", cfg.LabelsEnabledForType()).
-						Bool("annotationsEnabled", cfg.AnnotationsEnabled()).
-						Bool("annotationsEnabledForType", cfg.AnnotationsEnabledForType()).
-						Msg("scanning disabled")
+					// we notified above - so just skip enumeration task
 					continue
 				}
 
@@ -274,7 +290,7 @@ func (s *Backfiller) Start(ctx context.Context) {
 							if err != nil {
 								log.Err(err).
 									Str("namespace", namespace).
-									Str("g", g).Str("v", v).Str("k", k).
+									Str("group", g).Str("version", v).Str("kind", k).
 									Msg("error listing resources")
 								break
 							}
@@ -282,18 +298,17 @@ func (s *Backfiller) Start(ctx context.Context) {
 							items := reflect.ValueOf(resources).Elem().FieldByName("Items")
 							count := items.Len()
 							log.Info().
-								Str("g", g).Str("v", v).Str("k", k).
+								Str("group", g).Str("version", v).Str("kind", k).
 								Str("namespace", namespace).
 								Int("count", count).
 								Msg("discovered")
 
 							for i := range count {
 								obj := items.Index(i).Addr().Interface()
-								log.Info().Str("g", g).Str("v", v).Str("k", k).Str("namespace", namespace).Msg("discovered")
 								if resource := task.Convert(obj); resource != nil {
 									name := resource.GetName()
 									if ar, err := resourceReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
-										log.Info().Str("g", g).Str("v", v).Str("k", k).Str("namespace", namespace).Str("name", name).Msg("published")
+										log.Info().Str("group", g).Str("version", v).Str("kind", k).Str("namespace", namespace).Str("name", name).Msg("published")
 										_, _ = s.controller.Review(context.Background(), ar) // Post the review
 										continue
 									}
@@ -359,7 +374,7 @@ func (s *Backfiller) enumerateNodes(ctx context.Context) {
 		for _, o := range nodes.Items {
 			pool.Run(
 				func() error {
-					log.Info().Str("name", o.GetName()).Str("g", "").Str("v", "v1").Str("k", "node").Msg("discovered")
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", o.GetName()).Msg("published")
 					// Create an AdmissionReview for the node and post it to the controller
 					if ar, err2 := resourceReview(o.GroupVersionKind(), &o); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
@@ -390,7 +405,7 @@ func resourceReview[T metav1.Object](gvk schema.GroupVersionKind, o T) (*types.A
 	// Encode the resource object into raw bytes
 	raw, err := encodeToRawBytes(o)
 	if err != nil {
-		log.Err(err).Str("g", gvk.Group).Str("v", gvk.Version).Str("k", gvk.Kind).Msg("encode failure")
+		log.Err(err).Str("group", gvk.Group).Str("version", gvk.Version).Str("kind", gvk.Kind).Msg("encode failure")
 		return nil, err
 	}
 
