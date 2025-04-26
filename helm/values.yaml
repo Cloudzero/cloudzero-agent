@@ -355,14 +355,38 @@ server:
 insightsController:
   enabled: true
   labels:
+    # (recommended) Enable collection of specific labels for cost attribution dimensions
     enabled: true
     patterns:
       - "app.kubernetes.io/component"
-      # - '.*'
+      # Uncomment the following line to collect all labels
+      # - ".*"
+    # Specify which resources to collect labels from
+    resources:
+      cronjobs: false
+      daemonsets: false
+      deployments: false
+      jobs: false
+      namespaces: true
+      nodes: false
+      pods: true
+      statefulsets: false
   annotations:
+    # Enable this section if your organization uses specific annotations for cost attribution or cost dimensions.
+    # This allows you to collect and analyze labels for selected resources.
     enabled: false
     patterns:
-      - ".*"
+      - ".*"  # Use regex patterns to specify which annotations to collect. ".*" collects all annotations.
+    # Specify the resources from which annotations should be collected.
+    resources:
+      cronjobs: false
+      daemonsets: false
+      deployments: false
+      jobs: false
+      namespaces: true
+      nodes: false
+      pods: true
+      statefulsets: false
   tls:
     # -- If disabled, the insights controller will not mount a TLS certificate from a Secret, and the user is responsible for configuring a method of providing TLS information to the webhook-server container.
     enabled: true

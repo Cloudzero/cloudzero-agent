@@ -26,6 +26,7 @@ certificate:
   key: {{ .tls.mountPath }}/tls.key
   cert: {{ .tls.mountPath }}/tls.crt
 server:
+  namespace: {{ $namespace }}
   domain: {{ $namespace }}-{{ .server.name }}-svc
   port: {{ .server.port }}
   read_timeout: {{ .server.read_timeout }}

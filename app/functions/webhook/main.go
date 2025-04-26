@@ -20,11 +20,11 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/domain/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/domain/housekeeper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 	"github.com/cloudzero/cloudzero-agent/app/domain/pusher"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
 	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
@@ -127,6 +127,11 @@ func main() {
 		}
 	}()
 
+	wd, err := webhook.NewWebhookFactory(store, settings, clock)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
+	}
+
 	if backfill {
 		log.Ctx(ctx).Info().Msg("Starting backfill mode")
 		// setup k8s client
@@ -134,13 +139,10 @@ func main() {
 		if err2 != nil {
 			log.Fatal().Err(err2).Msg("Failed to build k8s client")
 		}
-		backfiller.NewBackfiller(k8sClient, store, settings).Start(context.Background())
+		if err3 := backfiller.NewKubernetesObjectEnumerator(k8sClient, wd, settings).Start(context.Background()); err3 != nil {
+			log.Fatal().Err(err3).Msg("Failed to start Kubernetes object enumerator")
+		}
 		return
-	}
-
-	wd, err := webhook.NewWebhookFactory(store, settings, clock)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
 	}
 
 	defer func() {
