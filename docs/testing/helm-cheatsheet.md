@@ -127,6 +127,7 @@ To upgrade an existing release and inspect the changes before applying:
 ```bash
 helm upgrade --install <release-name> . --values values.yaml --values override-values.yaml --namespace <namespace> --dry-run --debug
 ```
+
 ## Wait for Install to Complete with Timeout
 
 To make Helm wait for the install to complete, use the `--wait` flag. You can also set a timeout for the operation using the `--timeout` flag.
@@ -136,6 +137,7 @@ helm install <release-name> . --values values.yaml --values override-values.yaml
 ```
 
 ### Explanation:
+
 - `--wait`: Ensures Helm waits until all resources are in a ready state before completing the install.
 - `--timeout`: Specifies the maximum time to wait for the operation to complete (e.g., `5m` for 5 minutes).
 
@@ -255,6 +257,7 @@ kubectl delete events --namespace <namespace>
 > **Note:** Replace `<namespace>` with the appropriate namespace name.
 
 ---
+
 ### Get Pod Manifest and Delete Pod or Deployment
 
 #### 1. Get the Manifest for a Pod
@@ -277,7 +280,6 @@ kubectl delete pod <pod-name> --namespace <namespace>
 
 > **Note:** Replace `<pod-name>` and `<namespace>` with the appropriate values.
 
-
 #### 2. Get the Manifest for a Pod
 
 To retrieve the manifest for a specific pod running in a namespace:
@@ -287,7 +289,6 @@ kubectl get deployment <pod-name> --namespace <namespace> -o yaml
 ```
 
 > **Note:** Replace `<pod-name>` and `<namespace>` with the appropriate values.
-
 
 #### 2. Delete a Deployment
 
