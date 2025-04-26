@@ -38,7 +38,7 @@ import (
 
 const (
 	DiagnosticInsightsIngress = config.DiagnosticInsightsIngress
-	MaxConnectionAttempts     = 10 // The most amount of sleep time possible across all attempts is 1033 seconds (approximately 17 minutes and 13 seconds).
+	MaxConnectionAttempts     = 6
 	ConnectionTimeout         = 5 * time.Second
 	ValidateURLPathProtocol   = "https"
 	ValidateURLPath           = "/validate"
@@ -60,13 +60,19 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 func (c *checker) Check(ctx context.Context, client *net.Client, accessor status.Accessor) error {
 	url := ValidateURLPathProtocol + "://" + c.cfg.Services.InsightsService + "." + c.cfg.Services.Namespace + ".svc.cluster.local" + ValidateURLPath
 
+	var err error
 	for attempt := range MaxConnectionAttempts {
+		logrus.WithFields(logrus.Fields{
+			"attempt": attempt + 1,
+			"url":     url,
+		}).Info("Attempt to validate webhook")
+
 		// Create a context with a timeout for the current attempt
-		ctxWithTimeout, cancel := context.WithTimeout(ctx, MaxConnectionAttempts)
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, ConnectionTimeout)
 		defer cancel()
 
 		// Attempt to send a pod to the validating webhook
-		_, err := SendPodToValidatingWebhook(ctxWithTimeout, url)
+		_, err = SendPodToValidatingWebhook(ctxWithTimeout, url)
 		if err == nil {
 			accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: true})
 			return nil // Validation succeeded
@@ -75,10 +81,19 @@ func (c *checker) Check(ctx context.Context, client *net.Client, accessor status
 		// Apply exponential backoff with jitter
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
+
+		logrus.WithFields(logrus.Fields{
+			"attempt": attempt + 1,
+			"error":   err.Error(),
+			"nextTry": time.Now().Add(backoff + jitter),
+		}).Warn("Validation attempt failed, retrying")
+
+		// Total time ~= 70 seconds max plus or minus
 		time.Sleep(backoff + jitter)
 	}
 
-	err := fmt.Errorf("received non-2xx response: after %d retries", MaxConnectionAttempts)
+	err = fmt.Errorf("received non-2xx response from %s after %d retries: %w", url, MaxConnectionAttempts, err)
+	logrus.WithError(err).WithField("url", url).Error("unable to contact webhook")
 	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticInsightsIngress, Passing: false, Error: err.Error()})
 	return nil
 }
