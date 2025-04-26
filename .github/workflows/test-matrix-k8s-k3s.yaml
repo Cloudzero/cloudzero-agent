@@ -151,7 +151,7 @@ jobs:
             -n testkube \
             --all \
             --for condition=Available=True \
-            --timeout=240s
+            --timeout=500s
 
       # Install Testkube CLI
       - uses: kubeshop/setup-testkube@v1
@@ -187,7 +187,7 @@ jobs:
             -n cz-agent \
             --all \
             --for condition=Available=True \
-            --timeout=240s
+            --timeout=500s
 
       - name: Apply and Run TestKube Tests
         run: |
