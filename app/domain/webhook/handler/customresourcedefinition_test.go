@@ -4,257 +4,77 @@
 package handler_test
 
 import (
-	"context"
-	"regexp"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestFormatCustomResourceDefinitionData(t *testing.T) {
-	tests := []struct {
-		name     string
-		object   *metav1.PartialObjectMetadata
-		settings *config.Settings
-		expected types.ResourceTags
-	}{
-		{
-			name: "ValidDataWithLabelsAndAnnotations",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-					Labels: map[string]string{
-						"app": "test",
-					},
-					Annotations: map[string]string{
-						"annotation-key": "annotation-value",
-					},
-				},
+func TestNewCustomResourceDefinitionHandler(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	clock := mocks.NewMockClock(time.Now())
+	store := mocks.NewMockResourceStore(mockCtl)
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
 			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-				LabelMatches: []regexp.Regexp{
-					*regexp.MustCompile("app"),
-				},
-				AnnotationMatches: []regexp.Regexp{
-					*regexp.MustCompile("annotation-key"),
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.CustomResourceDefinition,
-				Name:      "test-crd",
-				Namespace: stringPtr("test-crd-namespace"),
-				MetricLabels: &config.MetricLabels{
-					"workload":      "test-crd",
-					"namespace":     "test-crd-namespace",
-					"resource_type": config.ResourceTypeToMetricName[config.CustomResourceDefinition],
-				},
-				Labels: &config.MetricLabelTags{
-					"app": "test",
-				},
-				Annotations: &config.MetricLabelTags{
-					"annotation-key": "annotation-value",
-				},
-			},
-		},
-		{
-			name: "ValidDataWithoutLabelsAndAnnotations",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-					},
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.CustomResourceDefinition,
-				Name:      "test-crd",
-				Namespace: stringPtr("test-crd-namespace"),
-				MetricLabels: &config.MetricLabels{
-					"workload":      "test-crd",
-					"namespace":     "test-crd-namespace",
-					"resource_type": config.ResourceTypeToMetricName[config.CustomResourceDefinition],
-				},
-				Labels:      &config.MetricLabelTags{},
-				Annotations: &config.MetricLabelTags{},
-			},
-		},
-		{
-			name: "NoMatchingLabelsOrAnnotations",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-					Labels: map[string]string{
-						"other-label": "value",
-					},
-					Annotations: map[string]string{
-						"other-annotation": "value",
-					},
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-				LabelMatches: []regexp.Regexp{
-					*regexp.MustCompile("app"),
-				},
-				AnnotationMatches: []regexp.Regexp{
-					*regexp.MustCompile("annotation-key"),
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.CustomResourceDefinition,
-				Name:      "test-crd",
-				Namespace: stringPtr("test-crd-namespace"),
-				MetricLabels: &config.MetricLabels{
-					"workload":      "test-crd",
-					"namespace":     "test-crd-namespace",
-					"resource_type": config.ResourceTypeToMetricName[config.CustomResourceDefinition],
-				},
-				Labels:      &config.MetricLabelTags{},
-				Annotations: &config.MetricLabelTags{},
+			Annotations: config.Annotations{
+				Enabled: true,
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := handler.FormatCustomResourceDefinitionData(tt.object, tt.settings)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+	h := handler.NewCustomResourceDefinitionHandler(store, settings, types.TimeProvider(clock), &metav1.PartialObjectMetadata{})
+	assert.NotNil(t, h, "Handler should not be nil")
+	assert.IsType(t, &hook.Handler{}, h, "Handler should be of type *hook.Handler")
 }
 
-func TestCustomResourceDefinitionHandler_Create(t *testing.T) {
-	handler := &handler.CustomResourceDefinitionHandler{}
-	admitFunc := handler.Create()
-
-	tests := []struct {
-		name     string
-		object   metav1.Object
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "ValidCRDObject",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-				},
+func TestCustomResourceDefinitionConfigAccessor(t *testing.T) {
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
 			},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name:     "InvalidObjectType",
-			object:   &metav1.ObjectMeta{},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := admitFunc(context.Background(), nil, tt.object)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, resp)
-		})
-	}
-}
-
-func TestCustomResourceDefinitionHandler_Update(t *testing.T) {
-	handler := &handler.CustomResourceDefinitionHandler{}
-	admitFunc := handler.Update()
-
-	tests := []struct {
-		name     string
-		object   metav1.Object
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "ValidCRDObject",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-				},
+			Annotations: config.Annotations{
+				Enabled: true,
 			},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name:     "InvalidObjectType",
-			object:   &metav1.ObjectMeta{},
-			expected: &types.AdmissionResponse{Allowed: true},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := admitFunc(context.Background(), nil, tt.object)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, resp)
-		})
-	}
-}
+	accessor := handler.NewCustomResourceDefinitionConfigAccessor(settings)
 
-func TestCustomResourceDefinitionHandler_Delete(t *testing.T) {
-	handler := &handler.CustomResourceDefinitionHandler{}
-	admitFunc := handler.Delete()
+	t.Run("LabelsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabled(), "LabelsEnabled should return false")
+	})
 
-	tests := []struct {
-		name     string
-		object   metav1.Object
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "ValidCRDObject",
-			object: &metav1.PartialObjectMetadata{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-crd",
-					Namespace: "test-crd-namespace",
-				},
-			},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name:     "InvalidObjectType",
-			object:   &metav1.ObjectMeta{},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-	}
+	t.Run("AnnotationsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabled(), "AnnotationsEnabled should return false")
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := admitFunc(context.Background(), nil, tt.object)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, resp)
-		})
-	}
+	t.Run("LabelsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return false")
+	})
+
+	t.Run("AnnotationsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabledForType(), "AnnotationsEnabledForType should return false")
+	})
+
+	t.Run("ResourceType", func(t *testing.T) {
+		assert.Equal(t, config.CustomResourceDefinition, accessor.ResourceType(), "ResourceType should return config.CustomResourceDefinition")
+	})
+
+	t.Run("Settings", func(t *testing.T) {
+		assert.Equal(t, settings, accessor.Settings(), "Settings should return the provided settings")
+	})
 }

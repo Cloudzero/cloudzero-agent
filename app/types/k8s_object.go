@@ -8,6 +8,68 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	GroupApps    = "apps"
+	GroupBatch   = "batch"
+	GroupCore    = ""
+	GroupExt     = "apiextensions.k8s.io"
+	GroupNet     = "networking.k8s.io"
+	GroupGateway = "gateway.networking.k8s.io"
+
+	V1      = "v1"
+	V1Beta2 = "v1beta2"
+	V1Beta1 = "v1beta1"
+
+	KindDeployment            = "deployment"
+	KindStatefulSet           = "statefulset"
+	KindDaemonSet             = "daemonset"
+	KindReplicaSet            = "replicaset"
+	KindPod                   = "pod"
+	KindNamespace             = "namespace"
+	KindNode                  = "node"
+	KindService               = "service"
+	KindPersistentVolume      = "persistentvolume"
+	KindPersistentVolumeClaim = "persistentvolumeclaim"
+	KindJob                   = "job"
+	KindCronJob               = "cronjob"
+	KindCRD                   = "customresourcedefinition"
+	KindIngress               = "ingress"
+	KindGateway               = "gateway"
+)
+
+var Groups = []string{
+	GroupApps,
+	GroupBatch,
+	GroupCore,
+	GroupExt,
+	GroupNet,
+	GroupGateway,
+}
+
+var Versions = []string{
+	V1,
+	V1Beta2,
+	V1Beta1,
+}
+
+var Kinds = []string{
+	KindDeployment,
+	KindStatefulSet,
+	KindDaemonSet,
+	KindReplicaSet,
+	KindPod,
+	KindNamespace,
+	KindNode,
+	KindService,
+	KindPersistentVolume,
+	KindPersistentVolumeClaim,
+	KindJob,
+	KindCronJob,
+	KindCRD,
+	KindIngress,
+	KindGateway,
+}
+
 // K8sObject defines a Kubernetes object that implements both metav1.Object and runtime.Object interfaces.
 // For unknown or unsupported Kubernetes objects, use `unstructured.Unstructured` instead
 // (e.g., objects like `corev1.PodExecOptions` that do not satisfy both interfaces).

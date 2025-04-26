@@ -128,6 +128,45 @@ func TestSetJSON(t *testing.T) {
 	})
 }
 
+func TestNewSetFromList(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		items := []string{"apple", "banana", "cherry", "apple"}
+		set := types.NewSetFromList(items)
+
+		require.Equal(t, 3, set.Size(), "Set size should match the number of unique items")
+		require.True(t, set.Contains("apple"), "Set should contain 'apple'")
+		require.True(t, set.Contains("banana"), "Set should contain 'banana'")
+		require.True(t, set.Contains("cherry"), "Set should contain 'cherry'")
+	})
+
+	t.Run("int", func(t *testing.T) {
+		items := []int{1, 2, 3, 2}
+		set := types.NewSetFromList(items)
+
+		require.Equal(t, 3, set.Size(), "Set size should match the number of unique items")
+		require.True(t, set.Contains(1), "Set should contain 1")
+		require.True(t, set.Contains(2), "Set should contain 2")
+		require.True(t, set.Contains(3), "Set should contain 3")
+	})
+
+	t.Run("float32", func(t *testing.T) {
+		items := []float32{1.1, 2.2, 3.3, 1.1}
+		set := types.NewSetFromList(items)
+
+		require.Equal(t, 3, set.Size(), "Set size should match the number of unique items")
+		require.True(t, set.Contains(1.1), "Set should contain 1.1")
+		require.True(t, set.Contains(2.2), "Set should contain 2.2")
+		require.True(t, set.Contains(3.3), "Set should contain 3.3")
+	})
+
+	t.Run("empty list", func(t *testing.T) {
+		items := []string{}
+		set := types.NewSetFromList(items)
+
+		require.Equal(t, 0, set.Size(), "Set size should be 0 for an empty list")
+	})
+}
+
 func testSetJSON[T comparable](t *testing.T, items []T) {
 	t.Helper()
 
