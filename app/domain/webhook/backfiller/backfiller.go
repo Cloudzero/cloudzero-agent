@@ -597,12 +597,18 @@ func AwaitCollectorService(ctx context.Context, endpoint string, maxRetries int,
 			return nil
 		}
 
+		errCode := 0
+		if resp != nil {
+			errCode = resp.StatusCode
+		}
+
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 		jitter := time.Duration(rand.Int63n(int64(time.Second))) // #nosec G404
 		log.Warn().
 			Int("attempt", attempt+1).
 			Str("url", endpoint).
-			Int("statusCode", resp.StatusCode).
+			Err(err).
+			Int("statusCode", errCode).
 			Msgf("still awaiting collector API availability, next attempt in %v seconds", (backoff + jitter).Seconds())
 		time.Sleep(backoff + jitter)
 	}
