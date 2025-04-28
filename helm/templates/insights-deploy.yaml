@@ -8,7 +8,7 @@ metadata:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
   {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.insightsController.server.deploymentAnnotations) | nindent 2 }}
 spec:
-  replicas: {{ .Values.insightsController.server.replicaCount }}
+  replicas: {{ .Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas }}
   selector:
     matchLabels:
       {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
@@ -107,3 +107,9 @@ spec:
         {{- end }}
       {{- end }}
 {{- end }}
+{{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
+    "component" .Values.components.webhookServer
+    "name" (include "cloudzero-agent.insightsController.deploymentName" .)
+    "matchLabels" (include "cloudzero-agent.insightsController.server.matchLabels" .)
+    "replicas" .Values.insightsController.server.replicaCount
+  ) }}
