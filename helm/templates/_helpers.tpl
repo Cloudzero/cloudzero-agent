@@ -639,6 +639,9 @@ Generate labels for a component
     "app.kubernetes.io/managed-by" .globals.Release.Service
     "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .globals)
 -}}
+{{- if .component -}}
+{{- $labels = merge (dict "app.kubernetes.io/component" .component) $labels -}}
+{{- end -}}
 {{- if len $labels -}}
 labels:
 {{- (merge $labels (.labels | default (dict)) .globals.Values.defaults.labels .globals.Values.commonMetaLabels) | toYaml | nindent 2 -}}
@@ -688,4 +691,32 @@ Generate nodeSelector sections
 nodeSelector:
 {{- $nodeSelector | toYaml | nindent 2 -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Generate a pod disruption budget
+*/}}
+{{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
+{{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
+{{- if (.component.podDisruptionBudget.minAvailable | default .component.podDisruptionBudget.maxUnavailable) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  {{- if .component.podDisruptionBudget.minAvailable }}
+  {{- if le $replicas (int .component.podDisruptionBudget.minAvailable) -}}
+  {{- fail (printf "Insufficient replicas in %s (%d) for pod disruption budget minAvailable (%v)" .name $replicas .component.podDisruptionBudget.minAvailable) -}}
+  {{- end }}
+  minAvailable: {{ .component.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .component.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .component.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- .matchLabels | nindent 6 }}
+{{- end }}
 {{- end -}}
