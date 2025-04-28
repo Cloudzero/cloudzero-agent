@@ -137,20 +137,26 @@ defaults:
 
 # Component-specific configuration settings.
 components:
-  # The agent here refers to the CloudZero Agent, which contains most of the
-  # code that makes this chart work. Since 1.1, CloudZero uses a single
-  # container image, with multiple executables, to provide CloudZero
-  # functionality.
+  # The agent here refers to the CloudZero Agent, which is the component that
+  # collects metrics from the cluster and sends them to the aggregator.
   agent:
+    # This is the image which contains most of the code that makes this chart
+    # work. Since 1.1, CloudZero uses a single container image, with multiple
+    # executables, to provide CloudZero functionality.
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
       tag: 1.1.0-rc-1  # <- Software release corresponding to this chart version.
+    podDisruptionBudget:
+      minAvailable:
+      maxUnavailable:
+
   # kubectl contains details about where to find the kubectl image.  This chart
   # uses the kubectl image as part of the job to initialize certificates.
   kubectl:
     image:
       repository: docker.io/bitnami/kubectl
       tag: "1.32.0"
+
   # prometheus contains details about where to find the Prometheus image.
   # Prometheus is critical to the functionality of this chart, and is used to
   # scrape metrics.
@@ -158,6 +164,7 @@ components:
     image:
       repository: quay.io/prometheus/prometheus
       tag:  # This will fall back on .Chart.AppVersion if not set.
+
   # prometheusReloader contains details about where to find the Prometheus
   # reloader image.
   #
@@ -167,6 +174,22 @@ components:
     image:
       repository: quay.io/prometheus-operator/prometheus-config-reloader
       tag: "v0.70.0"
+
+  # Settings for the aggregator component. This is the piece which accepts
+  # metrics from the agent, webhook, etc., and sends them to the CloudZero API
+  # after some processing.
+  aggregator:
+    replicas: 3
+    podDisruptionBudget:
+      minAvailable:
+      maxUnavailable:
+
+  # Settings for the webhook server.
+  webhookServer:
+    replicas: 3
+    podDisruptionBudget:
+      minAvailable:
+      maxUnavailable:
 
 # Due to limitations of Helm, we are unfortunately not able to automatically configure the
 # kube-state-metrics subchart using the configuration above, and instead need to configure
@@ -410,7 +433,7 @@ insightsController:
     useCertManager: false
   server:
     name: webhook-server
-    replicaCount: 3
+    replicaCount:
     # -- Uncomment to use a specific imagePullSecrets; otherwise, the default top level imagePullSecrets is used.
     # imagePullSecrets: []
     image:
@@ -489,7 +512,6 @@ configmapReload:
 # ensuring that there is no data loss in the event of any loss of communication with the CloudZero API,
 # even when a misconfiguration (such as an incorrect API key) prevents it.
 aggregator:
-  replicas: 1
   logging:
     # Logging level that will be posted to stdout.
     # Valid values are: 'debug', 'info', 'warn', 'error'
