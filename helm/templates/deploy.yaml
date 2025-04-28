@@ -104,7 +104,7 @@ spec:
                   - diagnose
                   - pre-stop
                   - -f
-                  - /check/app/config/validator.yml
+                  - /checks/app/config/validator.yml
           args:
             {{ toYaml .Values.server.args | nindent 12}}
             {{- if .Values.server.agentMode }}

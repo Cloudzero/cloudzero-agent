@@ -1518,7 +1518,7 @@ spec:
                   - diagnose
                   - pre-stop
                   - -f
-                  - /check/app/config/validator.yml
+                  - /checks/app/config/validator.yml
           args:
             
             - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
