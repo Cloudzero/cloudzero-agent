@@ -1263,9 +1263,9 @@ metadata:
     checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   labels:
     app.kubernetes.io/component: aggregator
-    app.kubernetes.io/name: cz-agent-aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.50.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -1275,7 +1275,7 @@ spec:
       app.kubernetes.io/component: aggregator
       app.kubernetes.io/name: cz-agent-aggregator
       app.kubernetes.io/instance: cz-agent
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       annotations:
