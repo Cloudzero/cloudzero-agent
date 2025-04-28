@@ -41,11 +41,11 @@ func NewStorageClassConfigAccessor(settings *config.Settings) config.ConfigAcces
 }
 
 func (s *StorageClassConfigAccessor) LabelsEnabled() bool {
-	return false
+	return s.settings.Filters.Labels.Enabled
 }
 
 func (s *StorageClassConfigAccessor) AnnotationsEnabled() bool {
-	return false
+	return s.settings.Filters.Annotations.Enabled
 }
 
 func (s *StorageClassConfigAccessor) LabelsEnabledForType() bool {

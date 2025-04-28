@@ -40,11 +40,11 @@ func NewGatewayClassConfigAccessor(settings *config.Settings) config.ConfigAcces
 }
 
 func (g *GatewayClassConfigAccessor) LabelsEnabled() bool {
-	return false
+	return g.settings.Filters.Labels.Enabled
 }
 
 func (g *GatewayClassConfigAccessor) AnnotationsEnabled() bool {
-	return false
+	return g.settings.Filters.Annotations.Enabled
 }
 
 func (g *GatewayClassConfigAccessor) LabelsEnabledForType() bool {

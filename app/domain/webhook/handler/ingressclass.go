@@ -40,11 +40,11 @@ func NewIngressClassConfigAccessor(settings *config.Settings) config.ConfigAcces
 }
 
 func (i *IngressClassConfigAccessor) LabelsEnabled() bool {
-	return false
+	return i.settings.Filters.Labels.Enabled
 }
 
 func (i *IngressClassConfigAccessor) AnnotationsEnabled() bool {
-	return false
+	return i.settings.Filters.Annotations.Enabled
 }
 
 func (i *IngressClassConfigAccessor) LabelsEnabledForType() bool {
