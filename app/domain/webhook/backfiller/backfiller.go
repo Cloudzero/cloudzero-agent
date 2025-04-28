@@ -31,6 +31,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -116,8 +118,10 @@ func (s *backfiller) Start(ctx context.Context) error {
 		appsv1beta2Client       = s.k8sClient.AppsV1beta2()
 		batchv1Client           = s.k8sClient.BatchV1()
 		batchv1beta1Client      = s.k8sClient.BatchV1beta1()
-		networkingv1Client      = s.k8sClient.NetworkingV1()
+		networkingv1Client      = s.k8sClient.NetworkingV1() // s.k8sClient.NetworkingV1().IngressClasses()
 		networkingv1beta1Client = s.k8sClient.NetworkingV1beta1()
+		storagev1Client         = s.k8sClient.StorageV1()
+		storagev1betav1Client   = s.k8sClient.StorageV1beta1()
 	)
 
 	// NOTE: some types are not supported here - this must be updated as we add more Resource/object support
@@ -255,6 +259,39 @@ func (s *backfiller) Start(ctx context.Context) error {
 				return networkingv1beta1Client.Ingresses(namespace).List(ctx, opts)
 			},
 		},
+		// Classes
+		// Storage storagev1Client
+		{
+			types.GroupStorage, types.V1, types.KindStorageClass,
+			helper.ConvertObject[*storagev1.StorageClass],
+			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
+				return storagev1Client.StorageClasses().List(ctx, opts)
+			},
+		},
+		{
+			types.GroupStorage, types.V1Beta1, types.KindStorageClass,
+			helper.ConvertObject[*storagev1beta1.StorageClass],
+			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
+				return storagev1betav1Client.StorageClasses().List(ctx, opts)
+			},
+		},
+		// Network networkingv1Client
+		{
+			types.GroupNet, types.V1, types.KindIngressClass,
+			helper.ConvertObject[*networkingv1.IngressClass],
+			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
+				return networkingv1Client.IngressClasses().List(ctx, opts)
+			},
+		},
+		{
+			types.GroupNet, types.V1Beta1, types.KindIngressClass,
+			helper.ConvertObject[*networkingv1beta1.IngressClass],
+			func(namespace string, opts metav1.ListOptions) (metav1.ListInterface, error) {
+				return networkingv1beta1Client.IngressClasses().List(ctx, opts)
+			},
+		},
+		// Gateway gateway
+
 	}
 
 	// Notify use of enabled/disabled objects

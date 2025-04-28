@@ -15,6 +15,7 @@ const (
 	GroupExt     = "apiextensions.k8s.io"
 	GroupNet     = "networking.k8s.io"
 	GroupGateway = "gateway.networking.k8s.io"
+	GroupStorage = "storage.k8s.io"
 
 	V1      = "v1"
 	V1Beta2 = "v1beta2"
@@ -28,13 +29,16 @@ const (
 	KindNamespace             = "namespace"
 	KindNode                  = "node"
 	KindService               = "service"
+	KindStorageClass          = "storageclass"
 	KindPersistentVolume      = "persistentvolume"
 	KindPersistentVolumeClaim = "persistentvolumeclaim"
 	KindJob                   = "job"
 	KindCronJob               = "cronjob"
 	KindCRD                   = "customresourcedefinition"
 	KindIngress               = "ingress"
+	KindIngressClass          = "ingressclass"
 	KindGateway               = "gateway"
+	KindGatewayClass          = "gatewayclass"
 )
 
 var Groups = []string{
