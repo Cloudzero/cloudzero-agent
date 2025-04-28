@@ -938,6 +938,8 @@ rules:
       - nodes/metrics
       - services
       - pods
+      - persistentvolumes
+      - persistentvolumeclaims
     verbs:
       - get
       - list
@@ -948,6 +950,23 @@ rules:
     resources:
       - ingresses/status
       - ingresses
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "gateway.networking.k8s.io"
+    resources:
+      - gatewayclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "storage.k8s.io"
+    resources:
+      - storageclasses
     verbs:
       - get
       - list
@@ -1499,7 +1518,7 @@ spec:
                   - diagnose
                   - pre-stop
                   - -f
-                  - /check/app/config/validator.yml
+                  - /checks/app/config/validator.yml
           args:
             
             - --config.file=/etc/config/prometheus/configmaps/prometheus.yml

@@ -17,10 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
@@ -511,11 +511,7 @@ func encodeObject(t *testing.T, handler *hook.Handler, rawOjb []byte) metav1.Obj
 }
 
 func getRawObject(s schema.GroupVersion, o runtime.Object) []byte {
-	scheme := runtime.NewScheme()
-	corev1.AddToScheme(scheme)
-	codecs := serializer.NewCodecFactory(scheme)
-	encoder := codecs.LegacyCodec(s)
-	raw, _ := runtime.Encode(encoder, o)
+	raw, _ := helper.EncodeRuntimeObject(o)
 	return raw
 }
 
