@@ -194,8 +194,8 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 	wc.register(types.GroupStorage, types.V1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1.StorageClass{}))
 	wc.register(types.GroupStorage, types.V1Beta1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1beta1.StorageClass{}))
 	// NetworkClass API Objects
-	wc.register(types.GroupNet, types.V1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1.Ingress{}))
-	wc.register(types.GroupNet, types.V1Beta1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1beta1.Ingress{}))
+	wc.register(types.GroupNet, types.V1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1.IngressClass{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1beta1.IngressClass{}))
 	// GatewayClass API Objects
 	wc.register(types.GroupNet, types.V1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1.GatewayClass{}))
 	wc.register(types.GroupNet, types.V1Beta1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1beta1.GatewayClass{}))
