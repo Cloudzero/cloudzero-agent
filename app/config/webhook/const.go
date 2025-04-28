@@ -15,12 +15,15 @@ const (
 	Job
 	CronJob
 	DaemonSet
+	IngressClass
 	Ingress
 	Service
 	CustomResourceDefinition
 	ReplicaSet
+	StorageClass
 	PersistentVolume
 	PersistentVolumeClaim
+	GatewayClass
 	Gateway
 )
 
@@ -34,12 +37,15 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	Job:                      "job",
 	CronJob:                  "cronjob",
 	DaemonSet:                "daemonset",
+	IngressClass:             "ingressclass",
 	Ingress:                  "ingress",
 	Service:                  "service",
 	CustomResourceDefinition: "crd",
 	ReplicaSet:               "replicaset",
+	StorageClass:             "storageclass",
 	PersistentVolume:         "pv",
 	PersistentVolumeClaim:    "pcv",
+	GatewayClass:             "gatewayclass",
 	Gateway:                  "gateway",
 }
 

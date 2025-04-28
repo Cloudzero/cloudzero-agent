@@ -17,6 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -188,6 +190,15 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 	// Gateway API Objects
 	wc.register(types.GroupGateway, types.V1, types.KindGateway, handler.NewGatewayHandler(store, settings, clock, &gatewayv1.Gateway{}))
 	wc.register(types.GroupGateway, types.V1Beta1, types.KindGateway, handler.NewGatewayHandler(store, settings, clock, &gatewayv1beta1.Gateway{}))
+	// StorageClass API Objects
+	wc.register(types.GroupStorage, types.V1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1.StorageClass{}))
+	wc.register(types.GroupStorage, types.V1Beta1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1beta1.StorageClass{}))
+	// NetworkClass API Objects
+	wc.register(types.GroupNet, types.V1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1.IngressClass{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1beta1.IngressClass{}))
+	// GatewayClass API Objects
+	wc.register(types.GroupNet, types.V1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1.GatewayClass{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1beta1.GatewayClass{}))
 
 	return wc, nil
 }
