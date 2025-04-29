@@ -25,7 +25,7 @@ var (
 	storageOnce      sync.Once
 	StorageInfoTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: types.ObservabilityMetric("storage_type_totals"),
+			Name: types.ObservabilityMetric("storage_types_total"),
 			Help: "Tracks the total number of storage class events, categorized by name and provisioner.",
 		},
 		[]string{"name", "provisioner"},
