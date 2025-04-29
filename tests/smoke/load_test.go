@@ -129,6 +129,7 @@ func TestLoad_ClientApplication(t *testing.T) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true
 		settings.Cloudzero.SendTimeout = time.Second * 30
-		settings.Database.MaxInterval = time.Second * 10
+		settings.Database.CostMaxInterval = time.Second * 10
+		settings.Database.ObservabilityMaxInterval = time.Second * 10
 	}))
 }
