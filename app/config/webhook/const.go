@@ -6,21 +6,25 @@ package config
 type ResourceType int
 
 const (
-	Unknown                  ResourceType = 0
-	Deployment               ResourceType = 1
-	StatefulSet              ResourceType = 2
-	Pod                      ResourceType = 3
-	Node                     ResourceType = 4
-	Namespace                ResourceType = 5
-	Job                      ResourceType = 6
-	CronJob                  ResourceType = 7
-	DaemonSet                ResourceType = 8
-	Ingress                  ResourceType = 9
-	Service                  ResourceType = 10
-	CustomResourceDefinition ResourceType = 11
-	ReplicaSet               ResourceType = 12
-	PersistentVolumeClaim    ResourceType = 13
-	Gateway                  ResourceType = 14
+	Unknown ResourceType = iota
+	Deployment
+	StatefulSet
+	Pod
+	Node
+	Namespace
+	Job
+	CronJob
+	DaemonSet
+	IngressClass
+	Ingress
+	Service
+	CustomResourceDefinition
+	ReplicaSet
+	StorageClass
+	PersistentVolume
+	PersistentVolumeClaim
+	GatewayClass
+	Gateway
 )
 
 var ResourceTypeToMetricName = map[ResourceType]string{
@@ -33,10 +37,22 @@ var ResourceTypeToMetricName = map[ResourceType]string{
 	Job:                      "job",
 	CronJob:                  "cronjob",
 	DaemonSet:                "daemonset",
+	IngressClass:             "ingressclass",
 	Ingress:                  "ingress",
 	Service:                  "service",
 	CustomResourceDefinition: "crd",
 	ReplicaSet:               "replicaset",
+	StorageClass:             "storageclass",
+	PersistentVolume:         "pv",
 	PersistentVolumeClaim:    "pcv",
+	GatewayClass:             "gatewayclass",
 	Gateway:                  "gateway",
 }
+
+const (
+	FieldNamespace    = "namespace"
+	FieldNode         = "node"
+	FieldPod          = "pod"
+	FieldResourceType = "resource_type"
+	FieldWorkload     = "workload"
+)

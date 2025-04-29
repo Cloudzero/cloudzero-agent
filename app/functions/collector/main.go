@@ -62,7 +62,11 @@ func main() {
 		fmt.Println(string(enc))
 	}
 
-	costMetricStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier(disk.CostContentIdentifier))
+	costMetricStore, err := disk.NewDiskStore(
+		settings.Database,
+		disk.WithContentIdentifier(disk.CostContentIdentifier),
+		disk.WithMaxInterval(settings.Database.CostMaxInterval),
+	)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}
@@ -75,7 +79,11 @@ func main() {
 		}
 	}()
 
-	observabilityMetricStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier(disk.ObservabilityContentIdentifier))
+	observabilityMetricStore, err := disk.NewDiskStore(
+		settings.Database,
+		disk.WithContentIdentifier(disk.ObservabilityContentIdentifier),
+		disk.WithMaxInterval(settings.Database.ObservabilityMaxInterval),
+	)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize database")
 	}

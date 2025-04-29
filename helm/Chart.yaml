@@ -8,7 +8,7 @@ kubeVersion: ">= 1.23.0-0"
 maintainers:
   - name: CloudZero
     email: support@cloudzero.com
-appVersion: "v2.50.1"
+appVersion: "v2.55.1"
 dependencies:
   - name: kube-state-metrics
     version: "5.15.*"

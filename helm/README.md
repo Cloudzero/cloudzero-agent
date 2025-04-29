@@ -85,7 +85,8 @@ insightsController:
   labels:
     # -- Determines whether the agent will gather labels from Kubernetes resources.
     enabled: true
-    # -- This value MUST be set to a list of regular expressions which will be used to gather labels from pods, deployments, statefulsets, daemonsets, cronjobs, jobs, nodes, and namespaces
+    # -- This value must be set to a list of regular expressions which will be used to gather labels from pods, deployments, statefulsets, daemonsets, cronjobs, jobs, nodes, and namespaces
+    # -- The CloudZero system has a limit of 300 labels and annotations, so it is advisable to provide a specific list of required labels rather than a wildcard.
     patterns:
       - "^foo" # -- Match all labels whose key starts with "foo"
       - "bar$" # -- Match all labels whose key ends with "bar"
@@ -102,6 +103,7 @@ insightsController:
   annotations:
     # -- By default, the gathering of annotations is not enabled. To enable, set this field to true
     enabled: false
+    # -- The CloudZero system has a limit of 300 labels and annotations, so it is advisable to provide a specific list of required annotations rather than a wildcard.
     patterns:
       - ".*" # -- match all annotations. This is not recommended.
   tls:

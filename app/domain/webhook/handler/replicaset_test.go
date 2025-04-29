@@ -4,173 +4,77 @@
 package handler_test
 
 import (
-	"context"
-	"reflect"
-	"regexp"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-func TestFormatReplicaSetData(t *testing.T) {
-	tests := []struct {
-		name       string
-		replicaset *appsv1.ReplicaSet
-		settings   *config.Settings
-		expected   types.ResourceTags
-	}{
-		{
-			name: "Test with labels and annotations enabled",
-			replicaset: &appsv1.ReplicaSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-replicaset",
-					Namespace: "default",
-					Labels: map[string]string{
-						"app": "test",
-					},
-					Annotations: map[string]string{
-						"annotation-key": "annotation-value",
-					},
-				},
+func TestNewReplicaSetHandler(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	clock := mocks.NewMockClock(time.Now())
+	store := mocks.NewMockResourceStore(mockCtl)
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
 			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-				LabelMatches: []regexp.Regexp{
-					*regexp.MustCompile("app"),
-				},
-				AnnotationMatches: []regexp.Regexp{
-					*regexp.MustCompile("annotation-key"),
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.ReplicaSet,
-				Name:      "test-replicaset",
-				Namespace: stringPtr("default"),
-				MetricLabels: &config.MetricLabels{
-					"replicaset":    "test-replicaset",
-					"namespace":     "default",
-					"resource_type": "replicaset",
-				},
-				Labels: &config.MetricLabelTags{
-					"app": "test",
-				},
-				Annotations: &config.MetricLabelTags{
-					"annotation-key": "annotation-value",
-				},
-			},
-		},
-		{
-			name: "Test with labels and annotations disabled",
-			replicaset: &appsv1.ReplicaSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-replicaset",
-					Namespace: "default",
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: false,
-					},
-					Annotations: config.Annotations{
-						Enabled: false,
-					},
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.ReplicaSet,
-				Name:      "test-replicaset",
-				Namespace: stringPtr("default"),
-				MetricLabels: &config.MetricLabels{
-					"replicaset":    "test-replicaset",
-					"namespace":     "default",
-					"resource_type": "replicaset",
-				},
-				Labels:      &config.MetricLabelTags{},
-				Annotations: &config.MetricLabelTags{},
+			Annotations: config.Annotations{
+				Enabled: true,
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := handler.FormatReplicaSetData(tt.replicaset, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, result.MetricLabels) {
-				t.Errorf("MetricLabels are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, result.MetricLabels)
-			}
-			if !reflect.DeepEqual(tt.expected.Labels, result.Labels) {
-				t.Errorf("Labels are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, result.Labels)
-			}
-			if !reflect.DeepEqual(tt.expected.Annotations, result.Annotations) {
-				t.Errorf("Annotations are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, result.Annotations)
-			}
-			assert.Equal(t, tt.expected.Type, result.Type)
-			assert.Equal(t, tt.expected.Name, result.Name)
-			assert.Equal(t, tt.expected.Namespace, result.Namespace)
-		})
-	}
+	h := handler.NewReplicaSetHandler(store, settings, types.TimeProvider(clock), &appsv1.ReplicaSet{})
+	assert.NotNil(t, h, "Handler should not be nil")
+	assert.IsType(t, &hook.Handler{}, h, "Handler should be of type *hook.Handler")
 }
 
-func TestReplicaSetHandler_Create(t *testing.T) {
-	handler := &handler.ReplicaSetHandler{}
-	admissionReview := &types.AdmissionReview{}
-	replicaSet := &appsv1.ReplicaSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-replicaset",
-			Namespace: "default",
+func TestNewReplicaSetConfigAccessor(t *testing.T) {
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
+			},
+			Annotations: config.Annotations{
+				Enabled: true,
+			},
 		},
 	}
 
-	admitFunc := handler.Create()
-	response, err := admitFunc(context.Background(), admissionReview, replicaSet)
-	assert.NoError(t, err)
-	assert.NotNil(t, response)
-	assert.True(t, response.Allowed)
-}
+	accessor := handler.NewReplicaSetConfigAccessor(settings)
 
-func TestReplicaSetHandler_Update(t *testing.T) {
-	handler := &handler.ReplicaSetHandler{}
-	admissionReview := &types.AdmissionReview{}
-	replicaSet := &appsv1.ReplicaSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-replicaset",
-			Namespace: "default",
-		},
-	}
+	t.Run("LabelsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabled(), "LabelsEnabled should return false")
+	})
 
-	admitFunc := handler.Update()
-	response, err := admitFunc(context.Background(), admissionReview, replicaSet)
-	assert.NoError(t, err)
-	assert.NotNil(t, response)
-	assert.True(t, response.Allowed)
-}
+	t.Run("AnnotationsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabled(), "AnnotationsEnabled should return false")
+	})
 
-func TestReplicaSetHandler_Delete(t *testing.T) {
-	handler := &handler.ReplicaSetHandler{}
-	admissionReview := &types.AdmissionReview{}
-	replicaSet := &appsv1.ReplicaSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-replicaset",
-			Namespace: "default",
-		},
-	}
+	t.Run("LabelsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return false")
+	})
 
-	admitFunc := handler.Delete()
-	response, err := admitFunc(context.Background(), admissionReview, replicaSet)
-	assert.NoError(t, err)
-	assert.NotNil(t, response)
-	assert.True(t, response.Allowed)
+	t.Run("AnnotationsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabledForType(), "AnnotationsEnabledForType should return false")
+	})
+
+	t.Run("ResourceType", func(t *testing.T) {
+		assert.Equal(t, config.ReplicaSet, accessor.ResourceType(), "ResourceType should return config.ReplicaSet")
+	})
+
+	t.Run("Settings", func(t *testing.T) {
+		assert.Equal(t, settings, accessor.Settings(), "Settings should return the provided settings")
+	})
 }

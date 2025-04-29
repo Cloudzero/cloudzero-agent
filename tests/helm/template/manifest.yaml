@@ -24,7 +24,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cloudzero-agent-server
@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
   namespace: default
@@ -55,7 +55,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-api-key
@@ -74,7 +74,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cloudzero-agent-webhook-server-tls
@@ -90,12 +90,12 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-configuration
   namespace: default
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
 data:
   prometheus.yml: |-
     global:
@@ -218,7 +218,7 @@ data:
             regex: cz-agent-cloudzero-agent-webhook-server-svc
         metric_relabel_configs:
           - source_labels: [__name__]
-            regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|cloudzero_webhook_event_total)$"
+            regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total)$"
             action: keep
       - job_name: cloudzero-aggregator-job
         scrape_interval: 120s
@@ -239,7 +239,7 @@ data:
             regex: port-(shipper|collector)
         metric_relabel_configs:
           - source_labels: [__name__]
-            regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|go_gc_duration_seconds|go_gc_duration_seconds_count|go_gc_duration_seconds_sum|go_gc_gogc_percent|go_gc_gomemlimit_bytes|go_goroutines|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_stack_inuse_bytes|go_threads|http_request_duration_seconds_bucket|http_request_duration_seconds_count|http_request_duration_seconds_sum|http_requests_total|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_exemplars_in_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_in_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_remote_storage_string_interner_zero_reference_releases_total|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds|promhttp_metric_handler_requests_in_flight|promhttp_metric_handler_requests_total|remote_write_db_failures_total|remote_write_failures_total|remote_write_payload_size_bytes|remote_write_records_processed_total|remote_write_response_codes_total|remote_write_timeseries_total|storage_write_failure_total|function_execution_seconds|shipper_shutdown_total|shipper_new_files_error_total|shipper_new_files_processing_current|shipper_handle_request_file_count|shipper_handle_request_success_total|shipper_presigned_url_error_total|shipper_replay_request_total|shipper_replay_request_current|shipper_replay_request_file_count|shipper_replay_request_error_total|shipper_replay_request_abandon_files_total|shipper_replay_request_abandon_files_error_total|shipper_disk_total_size_bytes|shipper_current_disk_usage_bytes|shipper_current_disk_usage_percentage|shipper_current_disk_unsent_file|shipper_current_disk_sent_file|shipper_disk_replay_request_current|shipper_disk_cleanup_failure_total|shipper_disk_cleanup_success_total|shipper_disk_cleanup_percentage)$|^(cloudzero_|czo_)"
+            regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|go_gc_duration_seconds|go_gc_duration_seconds_count|go_gc_duration_seconds_sum|go_gc_gogc_percent|go_gc_gomemlimit_bytes|go_goroutines|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_stack_inuse_bytes|go_threads|http_request_duration_seconds_bucket|http_request_duration_seconds_count|http_request_duration_seconds_sum|http_requests_total|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_exemplars_in_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_in_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_remote_storage_string_interner_zero_reference_releases_total|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds|promhttp_metric_handler_requests_in_flight|promhttp_metric_handler_requests_total|remote_write_db_failures_total|remote_write_failures_total|remote_write_payload_size_bytes|remote_write_records_processed_total|remote_write_response_codes_total|remote_write_timeseries_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total|function_execution_seconds|shipper_shutdown_total|shipper_new_files_error_total|shipper_new_files_processing_current|shipper_handle_request_file_count|shipper_handle_request_success_total|shipper_presigned_url_error_total|shipper_replay_request_total|shipper_replay_request_current|shipper_replay_request_file_count|shipper_replay_request_error_total|shipper_replay_request_abandon_files_total|shipper_replay_request_abandon_files_error_total|shipper_disk_total_size_bytes|shipper_current_disk_usage_bytes|shipper_current_disk_usage_percentage|shipper_current_disk_unsent_file|shipper_current_disk_sent_file|shipper_disk_replay_request_current|shipper_disk_cleanup_failure_total|shipper_disk_cleanup_success_total|shipper_disk_cleanup_percentage)$|^(cloudzero_|czo_)"
             action: keep
       - job_name: static-prometheus
         scrape_interval: 120s
@@ -257,7 +257,7 @@ data:
           credentials_file: /etc/config/secrets/value
         write_relabel_configs:
           - source_labels: [__name__]
-            regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|cloudzero_webhook_event_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
+            regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
         metadata_config:
           send: false
@@ -272,12 +272,12 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-webhook-configuration
   namespace: default
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
 data:
   server-config.yaml: |-
     cloud_account_id: 1234567890
@@ -302,6 +302,7 @@ data:
       key: /etc/certs/tls.key
       cert: /etc/certs/tls.crt
     server:
+      namespace: default
       domain: default-webhook-server-svc
       port: 8443
       read_timeout: 10s
@@ -312,10 +313,28 @@ data:
         enabled: true
         patterns:
         - app.kubernetes.io/component
+        resources:
+          cronjobs: false
+          daemonsets: false
+          deployments: false
+          jobs: false
+          namespaces: true
+          nodes: false
+          pods: true
+          statefulsets: false
       annotations:
         enabled: false
         patterns:
         - .*
+        resources:
+          cronjobs: false
+          daemonsets: false
+          deployments: false
+          jobs: false
+          namespaces: true
+          nodes: false
+          pods: true
+          statefulsets: false
 ---
 # Source: cloudzero-agent/templates/cm.yaml
 apiVersion: v1
@@ -326,10 +345,10 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
 data:
   config.yml: |-
     cloud_account_id: "1234567890"
@@ -577,6 +596,14 @@ data:
           match: exact
         - pattern: "storage_write_failure_total"
           match: exact
+        - pattern: "czo_webhook_types_total"
+          match: exact
+        - pattern: "czo_storage_types_total"
+          match: exact
+        - pattern: "czo_ingress_types_total"
+          match: exact
+        - pattern: "czo_gateway_types_total"
+          match: exact
         - pattern: "function_execution_seconds"
           match: exact
         - pattern: "shipper_shutdown_total"
@@ -633,7 +660,8 @@ data:
     database:
       storage_path: /cloudzero/data
       max_records: 1.5e+06
-      max_interval: 10m
+      cost_max_interval: 10m
+      observability_max_interval: 30m
       compression_level: 8
       purge_rules:
         metrics_older_than: 2160h
@@ -657,7 +685,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-validator-configuration
   namespace: default
@@ -879,14 +907,14 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   labels:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-cloudzero-agent-server
 rules:
@@ -917,6 +945,8 @@ rules:
       - nodes/metrics
       - services
       - pods
+      - persistentvolumes
+      - persistentvolumeclaims
     verbs:
       - get
       - list
@@ -927,6 +957,23 @@ rules:
     resources:
       - ingresses/status
       - ingresses
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "gateway.networking.k8s.io"
+    resources:
+      - gatewayclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "storage.k8s.io"
+    resources:
+      - storageclasses
     verbs:
       - get
       - list
@@ -954,10 +1001,10 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
   namespace: default
 rules:
@@ -1024,10 +1071,10 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   name: cz-agent-cloudzero-agent-server
 subjects:
   - kind: ServiceAccount
@@ -1048,10 +1095,10 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
 subjects:
   - kind: ServiceAccount
@@ -1100,7 +1147,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   annotations:
@@ -1129,7 +1176,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   selector:
@@ -1220,14 +1267,14 @@ metadata:
   name: cz-agent-aggregator
   namespace: default
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   labels:
     app.kubernetes.io/component: aggregator
-    app.kubernetes.io/name: cz-agent-aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   selector:
@@ -1235,18 +1282,18 @@ spec:
       app.kubernetes.io/component: aggregator
       app.kubernetes.io/name: cz-agent-aggregator
       app.kubernetes.io/instance: cz-agent
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       annotations:
-        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+        checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
       labels:
         app.kubernetes.io/component: aggregator
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cz-agent-aggregator
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.50.1
+        app.kubernetes.io/version: v2.55.1
         helm.sh/chart: cloudzero-agent-1.1.0-dev
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
@@ -1381,10 +1428,10 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   name: cz-agent-cloudzero-agent-server
   namespace: default
 spec:
@@ -1402,7 +1449,7 @@ spec:
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.50.1
+        app.kubernetes.io/version: v2.55.1
         helm.sh/chart: cloudzero-agent-1.1.0-dev
     spec:
       
@@ -1447,7 +1494,7 @@ spec:
               mountPath: /checks/config/
       containers:
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.70.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
           imagePullPolicy: "IfNotPresent"
           
           args:
@@ -1459,7 +1506,7 @@ spec:
               readOnly: true
         - name: cloudzero-agent-server
           
-          image: "quay.io/prometheus/prometheus:v2.50.1"
+          image: "quay.io/prometheus/prometheus:v2.55.1"
           imagePullPolicy: "IfNotPresent"
           
           lifecycle:
@@ -1478,7 +1525,7 @@ spec:
                   - diagnose
                   - pre-stop
                   - -f
-                  - /check/app/config/validator.yml
+                  - /checks/app/config/validator.yml
           args:
             
             - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
@@ -1567,7 +1614,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 spec:
@@ -1585,10 +1632,10 @@ spec:
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.50.1
+        app.kubernetes.io/version: v2.55.1
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       annotations:
-        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+        checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       
@@ -1673,14 +1720,14 @@ metadata:
   name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   namespace: default
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   template:
@@ -1692,7 +1739,7 @@ spec:
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+        checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
@@ -1747,14 +1794,14 @@ metadata:
   name: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   namespace: default
   annotations:
-    checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+    checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   template:
@@ -1765,7 +1812,7 @@ spec:
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 9c6c4084549bff3fd3f721ab41c5c258da06afce76476ac423a7dd5b57d13905
+        checksum/config: 0cfb77ac8a608fb64953d9a8da0a97aae3fb490c443db1b9c32e0d7761d1eefb
     spec:
       
       affinity:
@@ -1876,7 +1923,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.50.1
+    app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 webhooks:

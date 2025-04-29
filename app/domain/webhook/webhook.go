@@ -9,7 +9,20 @@ import (
 	"strings"
 	"sync"
 
+	appsv1 "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
@@ -17,13 +30,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/prometheus/client_golang/prometheus"
-)
-
-const (
-	AppsGroup  = "apps"
-	CoreGroup  = ""
-	BatchGroup = "batch"
-	Version1   = "v1"
 )
 
 // metricWebhookEventTotal is a Prometheus counter vector that tracks the total number of webhook events.
@@ -42,11 +48,12 @@ const (
 //
 // Ensure that the metric is registered with the Prometheus registry before use:
 // prometheus.MustRegister(metricWebhookEventTotal)
+
 var (
 	webhookStatsOnce        sync.Once
 	metricWebhookEventTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cloudzero_webhook_event_total",
+			Name: types.ObservabilityMetric("webhook_types_total"),
 			Help: "Total number of webhook events filterable by kind_group, kind_version, kind_resource, and operation",
 		},
 		[]string{"kind_group", "kind_version", "kind_resource", "operation"},
@@ -58,6 +65,42 @@ var (
 // based on the resource's Group, Version, and Resource (G/V/R). If no specific handler is registered,
 // the default handler is used to allow the request by default.
 type WebhookController interface {
+	// GetSupported returns a nested map structure that indicates the supported
+	// Group-Version-Kind (GVK) combinations for the webhook controller.
+	//
+	// Returns:
+	//   - map[string]map[string]map[string]metav1.Object: A nested map where the first
+	//     key represents the API group, the second key represents the API version,
+	//     and the third key represents the kind. The value is a metav1.Object
+	//     representing the supported resource.
+	GetSupported() map[string]map[string]map[string]metav1.Object
+
+	// IsSupported checks whether a specific Group-Version-Kind (GVK)
+	// combination is supported for GET operations by the webhook controller.
+	//
+	// Parameters:
+	//   - g: The API group of the resource.
+	//   - v: The API version of the resource.
+	//   - k: The kind of the resource.
+	//
+	// Returns:
+	//   - bool: True if the specified GVK combination is supported for GET operations,
+	//     otherwise false.
+	IsSupported(g, v, k string) bool
+
+	// GetConfigurationAccessor retrieves the configuration accessor for a specific
+	// Group-Version-Kind (GVK) combination, if it is registered.
+	//
+	// Parameters:
+	//   - g: The API group of the resource.
+	//   - v: The API version of the resource.
+	//   - k: The kind of the resource.
+	//
+	// Returns:
+	//   - config.ConfigAccessor: The configuration accessor for the specified GVK,
+	//     or nil if the GVK is not registered.
+	GetConfigurationAccessor(g, v, k string) config.ConfigAccessor
+
 	// Review processes an AdmissionReview request and determines whether the request
 	// should be allowed or denied. It dispatches the request to the appropriate handler
 	// based on the resource's G/V/R or falls back to the default handler if no specific
@@ -116,55 +159,94 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 		)
 	})
 
-	// register each resource you care about:
-	wc.register(AppsGroup, Version1, "deployments", handler.NewDeploymentHandler(store, settings, clock))   // ✓ check
-	wc.register(AppsGroup, Version1, "statefulsets", handler.NewStatefulsetHandler(store, settings, clock)) // ✓ check
-	wc.register(AppsGroup, Version1, "daemonsets", handler.NewDaemonSetHandler(store, settings, clock))     // ✓ check
-	wc.register(CoreGroup, Version1, "pods", handler.NewPodHandler(store, settings, clock))                 // ✓ check
-	wc.register(CoreGroup, Version1, "namespaces", handler.NewNamespaceHandler(store, settings, clock))     // ✓ check
-	wc.register(CoreGroup, Version1, "nodes", handler.NewNodeHandler(store, settings, clock))               // ✓ check
-	wc.register(BatchGroup, Version1, "jobs", handler.NewJobHandler(store, settings, clock))                // ✓ check
-	wc.register(BatchGroup, Version1, "cronjobs", handler.NewCronJobHandler(store, settings, clock))        // ✓ check
-
-	// Note: handlers beyond this point will not capture labels/annotations and will later be used to correlate resources
-	// to cloud resources (providerID) - to the pod using them.
-	wc.register(AppsGroup, Version1, "replicasets", handler.NewReplicaSetHandler(store, settings, clock))                                          // ✓ new
-	wc.register(CoreGroup, Version1, "services", handler.NewServiceHandler(store, settings, clock))                                                // ✓ new
-	wc.register(CoreGroup, Version1, "persistentvolumeclaims", handler.NewPersistentVolumeClaimHandler(store, settings, clock))                    // ✓ new
-	wc.register("networking.k8s.io", Version1, "ingresses", handler.NewIngressHandler(store, settings, clock))                                     // ✓ new
-	wc.register("apiextensions.k8s.io", Version1, "customresourcedefinitions", handler.NewCustomResourceDefinitionHandler(store, settings, clock)) // ✓ new
-	wc.register("gateway.networking.k8s.io", Version1, "gateways", handler.NewGatewayHandler(store, settings, clock))                              // ✓ new
+	// Apps API
+	wc.register(types.GroupApps, types.V1, types.KindDeployment, handler.NewDeploymentHandler(store, settings, clock, &appsv1.Deployment{}))
+	wc.register(types.GroupApps, types.V1Beta2, types.KindDeployment, handler.NewDeploymentHandler(store, settings, clock, &appsv1beta2.Deployment{}))
+	wc.register(types.GroupApps, types.V1Beta1, types.KindDeployment, handler.NewDeploymentHandler(store, settings, clock, &appsv1beta1.Deployment{}))
+	wc.register(types.GroupApps, types.V1, types.KindStatefulSet, handler.NewStatefulSetHandler(store, settings, clock, &appsv1.StatefulSet{}))
+	wc.register(types.GroupApps, types.V1Beta2, types.KindStatefulSet, handler.NewStatefulSetHandler(store, settings, clock, &appsv1beta2.StatefulSet{}))
+	wc.register(types.GroupApps, types.V1Beta1, types.KindStatefulSet, handler.NewStatefulSetHandler(store, settings, clock, &appsv1beta1.StatefulSet{}))
+	wc.register(types.GroupApps, types.V1, types.KindDaemonSet, handler.NewDaemonSetHandler(store, settings, clock, &appsv1.DaemonSet{}))
+	wc.register(types.GroupApps, types.V1Beta2, types.KindDaemonSet, handler.NewDaemonSetHandler(store, settings, clock, &appsv1beta2.DaemonSet{}))
+	wc.register(types.GroupApps, types.V1, types.KindReplicaSet, handler.NewReplicaSetHandler(store, settings, clock, &appsv1.ReplicaSet{}))
+	wc.register(types.GroupApps, types.V1Beta2, types.KindReplicaSet, handler.NewReplicaSetHandler(store, settings, clock, &appsv1beta2.ReplicaSet{}))
+	// Core API
+	wc.register(types.GroupCore, types.V1, types.KindPod, handler.NewPodHandler(store, settings, clock, &corev1.Pod{}))
+	wc.register(types.GroupCore, types.V1, types.KindNamespace, handler.NewNamespaceHandler(store, settings, clock, &corev1.Namespace{}))
+	wc.register(types.GroupCore, types.V1, types.KindNode, handler.NewNodeHandler(store, settings, clock, &corev1.Node{}))
+	wc.register(types.GroupCore, types.V1, types.KindService, handler.NewServiceHandler(store, settings, clock, &corev1.Service{}))
+	wc.register(types.GroupCore, types.V1, types.KindPersistentVolume, handler.NewPersistentVolumeClaimHandler(store, settings, clock, &corev1.PersistentVolume{}))
+	wc.register(types.GroupCore, types.V1, types.KindPersistentVolumeClaim, handler.NewPersistentVolumeClaimHandler(store, settings, clock, &corev1.PersistentVolumeClaim{}))
+	// Batch API
+	wc.register(types.GroupBatch, types.V1, types.KindJob, handler.NewJobHandler(store, settings, clock, &batchv1.Job{}))
+	wc.register(types.GroupBatch, types.V1, types.KindCronJob, handler.NewCronJobHandler(store, settings, clock, &batchv1.CronJob{}))
+	wc.register(types.GroupBatch, types.V1Beta1, types.KindCronJob, handler.NewCronJobHandler(store, settings, clock, &batchv1beta1.CronJob{}))
+	// CRD API Objects
+	wc.register(types.GroupExt, types.V1, types.KindCRD, handler.NewCustomResourceDefinitionHandler(store, settings, clock, &metav1.PartialObjectMetadata{}))
+	wc.register(types.GroupExt, types.V1Beta1, types.KindCRD, handler.NewCustomResourceDefinitionHandler(store, settings, clock, &metav1beta1.PartialObjectMetadata{}))
+	// Network API Objects
+	wc.register(types.GroupNet, types.V1, types.KindIngress, handler.NewIngressHandler(store, settings, clock, &networkingv1.Ingress{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindIngress, handler.NewIngressHandler(store, settings, clock, &networkingv1beta1.Ingress{}))
+	// Gateway API Objects
+	wc.register(types.GroupGateway, types.V1, types.KindGateway, handler.NewGatewayHandler(store, settings, clock, &gatewayv1.Gateway{}))
+	wc.register(types.GroupGateway, types.V1Beta1, types.KindGateway, handler.NewGatewayHandler(store, settings, clock, &gatewayv1beta1.Gateway{}))
+	// StorageClass API Objects
+	wc.register(types.GroupStorage, types.V1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1.StorageClass{}))
+	wc.register(types.GroupStorage, types.V1Beta1, types.KindStorageClass, handler.NewStorageClassHandler(store, settings, clock, &storagev1beta1.StorageClass{}))
+	// NetworkClass API Objects
+	wc.register(types.GroupNet, types.V1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1.IngressClass{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindIngressClass, handler.NewIngressClassHandler(store, settings, clock, &networkingv1beta1.IngressClass{}))
+	// GatewayClass API Objects
+	wc.register(types.GroupNet, types.V1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1.GatewayClass{}))
+	wc.register(types.GroupNet, types.V1Beta1, types.KindGatewayClass, handler.NewGatewayClassHandler(store, settings, clock, &gatewayv1beta1.GatewayClass{}))
 
 	return wc, nil
 }
 
-// Execute processes an incoming AdmissionRequest and determines the appropriate
-// handler to execute based on the resource's Group, Version, and Resource (G/V/R).
-// If no specific handler is registered for the resource, the default handler is used,
-// which allows the request by default.
-//
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and deadlines.
-//   - req: The AdmissionRequest containing details about the resource and operation.
-//
-// Returns:
-//   - *hook.Result: The result of the admission process, indicating whether the request is allowed or denied.
-//   - error: Any error encountered during processing.
+func (wc *webhookController) GetSupported() map[string]map[string]map[string]metav1.Object {
+	result := map[string]map[string]map[string]metav1.Object{}
+	for g, versions := range wc.dispatch {
+		if result[g] == nil {
+			result[g] = make(map[string]map[string]metav1.Object)
+		}
+		for v, kinds := range versions {
+			if result[g][v] == nil {
+				result[g][v] = make(map[string]metav1.Object)
+			}
+			for k, h := range kinds {
+				result[g][v][k] = h.ObjectType
+			}
+		}
+	}
+	return result
+}
+
+func (wc *webhookController) IsSupported(g, v, k string) bool {
+	return wc.registered(g, v, k)
+}
+
+func (wc *webhookController) GetConfigurationAccessor(g, v, k string) config.ConfigAccessor {
+	if !wc.registered(g, v, k) {
+		return nil
+	}
+	return wc.dispatch[g][v][k].Accessor
+}
+
 func (wc *webhookController) Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error) {
-	grp := ar.RequestGVR.Group
-	ver := ar.RequestGVR.Version
-	res := strings.ToLower(ar.RequestGVR.Resource) // e.g. "pods"
-	op := string(ar.Operation)
+	g := ar.RequestGVK.Group
+	v := ar.RequestGVK.Version
+	k := strings.ToLower(ar.RequestGVK.Kind) // e.g. "pod"
+	o := string(ar.Operation)
 
 	//
-	metricWebhookEventTotal.WithLabelValues(grp, ver, res, op).Inc()
+	metricWebhookEventTotal.WithLabelValues(g, v, k, o).Inc()
 
 	// no specific handler -> allow by default
-	if !wc.registered(grp, ver, res) {
+	if !wc.registered(g, v, k) {
 		return wc.defaultHandler.Execute(ctx, ar)
 	}
 
-	processor := wc.dispatch[grp][ver][res]
+	processor := wc.dispatch[g][v][k]
 	return processor.Execute(ctx, ar)
 }
 
@@ -201,10 +283,10 @@ func (wc *webhookController) register(group, version, resource string, h *hook.H
 //
 // Returns:
 //   - bool: True if a handler is registered, false otherwise.
-func (wc *webhookController) registered(grp, ver, res string) bool {
-	if versMap, ok := wc.dispatch[grp]; ok {
-		if resMap, ok := versMap[ver]; ok {
-			_, ok := resMap[res]
+func (wc *webhookController) registered(g, v, k string) bool {
+	if versMap, ok := wc.dispatch[g]; ok {
+		if resMap, ok := versMap[v]; ok {
+			_, ok := resMap[k]
 			return ok
 		}
 	}

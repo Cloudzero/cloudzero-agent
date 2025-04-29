@@ -10,6 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
@@ -19,7 +20,9 @@ type AdmitFunc func(ctx context.Context, r *types.AdmissionReview, obj metav1.Ob
 
 // Handler represents the set of functions for each operation in an admission webhook.
 type Handler struct {
+	Accessor      config.ConfigAccessor
 	ObjectCreator types.ObjectCreator
+	ObjectType    metav1.Object
 	Create        AdmitFunc
 	Delete        AdmitFunc
 	Update        AdmitFunc

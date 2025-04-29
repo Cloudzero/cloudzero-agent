@@ -18,7 +18,7 @@ import (
 	"github.com/go-obvious/server/request"
 
 	"github.com/rs/zerolog/log"
-	admission "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +37,8 @@ import (
 // Taken from https://github.com/istio/istio/commit/6ca5055a4db6695ef5504eabdfde3799f2ea91fd
 const (
 	MaxRequestBodyBytes = int64(6 * 1024 * 1024)
-	MaxAPIDuration      = 15 * time.Second
+	DefaultTimeout      = 15 * time.Second
+	MinTimeout          = 5 * time.Second
 )
 
 var (
@@ -64,7 +65,7 @@ func NewValidationWebhookAPI(base string, controller webhook.WebhookController) 
 		decoder: func() runtime.Decoder {
 			r := runtime.NewScheme()
 			r.AddKnownTypes(admissionv1beta1.SchemeGroupVersion, &admissionv1beta1.AdmissionReview{})
-			r.AddKnownTypes(admission.SchemeGroupVersion, &admission.AdmissionReview{})
+			r.AddKnownTypes(admissionv1.SchemeGroupVersion, &admissionv1.AdmissionReview{})
 			codecs := serializer.NewCodecFactory(r)
 			return codecs.UniversalDeserializer()
 		}(),
@@ -101,7 +102,7 @@ func (a *ValidationWebhookAPI) requestBodyToModelReview(body []byte) (*types.Adm
 	case *admissionv1beta1.AdmissionReview:
 		res := types.NewAdmissionReviewV1Beta1(ar)
 		return &res, nil
-	case *admission.AdmissionReview:
+	case *admissionv1.AdmissionReview:
 		res := types.NewAdmissionReviewV1(ar)
 		return &res, nil
 	}
@@ -120,13 +121,16 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 	defer r.Body.Close()
 
 	// Our API should never time more than 15 seconds
-	timeout := MaxAPIDuration
+	timeout := DefaultTimeout
 	if to := request.QS(r, "timeout"); to != "" {
 		if duration, err := time.ParseDuration(to); err == nil {
 			timeout = duration
 		}
-		if timeout <= 0 {
-			timeout = MaxAPIDuration
+		if timeout < MinTimeout {
+			timeout = MinTimeout
+		}
+		if timeout > DefaultTimeout {
+			timeout = DefaultTimeout
 		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -191,7 +195,8 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	request.Reply(r, w, resp, http.StatusOK)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(resp)
 }
 
 // configReader is reads an HTTP request, imposing size restrictions aligned with Kubernetes limits.
@@ -226,8 +231,8 @@ func (a *ValidationWebhookAPI) errorToJSON(review *types.AdmissionReview, err er
 			TypeMeta: v1beta1AdmissionReviewTypeMeta,
 			Response: r,
 		})
-	case *admission.AdmissionReview:
-		r := &admission.AdmissionResponse{
+	case *admissionv1.AdmissionReview:
+		r := &admissionv1.AdmissionResponse{
 			UID: k8stypes.UID(review.ID),
 			Result: &metav1.Status{
 				Message: err.Error(),
@@ -235,7 +240,7 @@ func (a *ValidationWebhookAPI) errorToJSON(review *types.AdmissionReview, err er
 			},
 		}
 
-		return json.Marshal(admission.AdmissionReview{
+		return json.Marshal(admissionv1.AdmissionReview{
 			TypeMeta: v1AdmissionReviewTypeMeta,
 			Response: r,
 		})
@@ -246,6 +251,7 @@ func (a *ValidationWebhookAPI) errorToJSON(review *types.AdmissionReview, err er
 
 func (a *ValidationWebhookAPI) marshallResponseToJSON(ctx context.Context, review *types.AdmissionReview, resp *types.AdmissionResponse) (data []byte, err error) {
 	if resp == nil {
+		log.Ctx(ctx).Warn().Msg("admission response is nil")
 		return nil, errors.New("invalid admission response")
 	}
 
@@ -275,10 +281,10 @@ func (a *ValidationWebhookAPI) marshallResponseToJSON(ctx context.Context, revie
 		})
 		return data, err
 
-	case *admission.AdmissionReview:
-		data, err := json.Marshal(admission.AdmissionReview{
+	case *admissionv1.AdmissionReview:
+		data, err := json.Marshal(admissionv1.AdmissionReview{
 			TypeMeta: v1AdmissionReviewTypeMeta,
-			Response: &admission.AdmissionResponse{
+			Response: &admissionv1.AdmissionResponse{
 				UID:      k8stypes.UID(review.ID),
 				Warnings: resp.Warnings,
 				Allowed:  resp.Allowed,
@@ -288,5 +294,8 @@ func (a *ValidationWebhookAPI) marshallResponseToJSON(ctx context.Context, revie
 		return data, err
 	}
 
+	log.Ctx(ctx).Warn().
+		Str("type", fmt.Sprintf("%T", review.OriginalAdmissionReview)).
+		Msg("unsupported admission review type")
 	return nil, errors.New("invalid admission response type")
 }
