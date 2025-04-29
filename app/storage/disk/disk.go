@@ -46,6 +46,14 @@ func WithContentIdentifier(identifier string) DiskStoreOpt {
 	}
 }
 
+func WithMaxInterval(interval time.Duration) DiskStoreOpt {
+	return func(d *DiskStore) error {
+		d.maxInterval = interval
+		d.ticker.Reset(interval)
+		return nil
+	}
+}
+
 // DiskStore is a data store intended to be backed by a disk. Currently, data is stored in Brotli-compressed JSON, but transcoded to Snappy-compressed Parquet
 type DiskStore struct {
 	dirPath           string
@@ -76,8 +84,11 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 	if settings.MaxRecords <= 0 {
 		settings.MaxRecords = config.DefaultDatabaseMaxRecords
 	}
-	if settings.MaxInterval <= 0 {
-		settings.MaxInterval = config.DefaultDatabaseMaxInterval
+	if settings.CostMaxInterval <= 0 {
+		settings.CostMaxInterval = config.DefaultDatabaseCostMaxInterval
+	}
+	if settings.ObservabilityMaxInterval <= 0 {
+		settings.ObservabilityMaxInterval = config.DefaultDatabaseObservabilityMaxInterval
 	}
 	if settings.CompressionLevel <= 0 || settings.CompressionLevel > brotli.BestCompression {
 		settings.CompressionLevel = config.DefaultDatabaseCompressionLevel
@@ -93,8 +104,8 @@ func NewDiskStore(settings config.Database, opts ...DiskStoreOpt) (*DiskStore, e
 		rowLimit:         settings.MaxRecords,
 		id:               uuid.New().String()[:8],
 		compressionLevel: settings.CompressionLevel,
-		maxInterval:      settings.MaxInterval,
-		ticker:           time.NewTicker(settings.MaxInterval),
+		maxInterval:      settings.CostMaxInterval,
+		ticker:           time.NewTicker(settings.CostMaxInterval),
 	}
 
 	// apply the opts
@@ -385,4 +396,8 @@ func (d *DiskStore) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, 
 	}
 
 	return usage, nil
+}
+
+func (d *DiskStore) MaxInterval() time.Duration {
+	return d.maxInterval
 }

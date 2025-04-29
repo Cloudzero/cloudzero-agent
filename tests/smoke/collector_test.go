@@ -68,7 +68,8 @@ func TestSmoke_Controller_FileRotate(t *testing.T) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true
 		settings.Cloudzero.SendTimeout = time.Second * 30
-		settings.Database.MaxInterval = time.Second * 10
+		settings.Database.CostMaxInterval = time.Second * 10
+		settings.Database.ObservabilityMaxInterval = time.Second * 10
 		settings.Database.MaxRecords = 10_000 // small record count to encourage file rotation
 	}))
 }
