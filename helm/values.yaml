@@ -380,10 +380,11 @@ insightsController:
   labels:
     # (recommended) Enable collection of specific labels for cost attribution dimensions
     enabled: true
+    # List of Go-style regular expressions used to filter desired labels.
+    # Caution: The CloudZero system has a limit of 300 labels and annotations,
+    # so it is advisable to provide a specific list of required labels rather than a wildcard.
     patterns:
       - "app.kubernetes.io/component"
-      # Uncomment the following line to collect all labels
-      # - ".*"
     # Specify which resources to collect labels from
     resources:
       cronjobs: false
@@ -398,6 +399,9 @@ insightsController:
     # Enable this section if your organization uses specific annotations for cost attribution or cost dimensions.
     # This allows you to collect and analyze labels for selected resources.
     enabled: false
+    # List of Go-style regular expressions used to filter desired labels.
+    # Caution: The CloudZero system has a limit of 300 labels and annotations,
+    # so it is advisable to provide a specific list of required annotations rather than a wildcard.
     patterns:
       - ".*"  # Use regex patterns to specify which annotations to collect. ".*" collects all annotations.
     # Specify the resources from which annotations should be collected.
