@@ -1,97 +1,71 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint:dupl // There is currently substantial duplication in the handlers :(
+//nolint:dupl // Duplication is acceptable we expect to extend the definitions later
 package handler
 
 import (
-	"context"
-
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
-	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/helper"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/rs/zerolog/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ReplicaSetHandler struct {
-	hook.Handler
+type ReplicaSetConfigAccessor struct {
 	settings *config.Settings
-	clock    types.TimeProvider
 }
 
-func NewReplicaSetHandler(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) *hook.Handler {
-	h := &ReplicaSetHandler{settings: settings}
-	h.ObjectCreator = helper.NewStaticObjectCreator(&appsv1.ReplicaSet{})
-	h.Handler.Create = h.Create()
-	h.Handler.Update = h.Update()
-	h.Handler.Delete = h.Delete()
-	h.Handler.Store = store
-	h.clock = clock
-	return &h.Handler
+func NewReplicaSetConfigAccessor(settings *config.Settings) config.ConfigAccessor {
+	return &ReplicaSetConfigAccessor{settings: settings}
 }
 
-func (h *ReplicaSetHandler) Create() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.ReplicaSet)
-		if !ok {
-			log.Warn().Msg("unable to cast to replicaset object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "replica add")
-		// Don't save labels/annotations
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (r *ReplicaSetConfigAccessor) LabelsEnabled() bool {
+	return false
 }
 
-func (h *ReplicaSetHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.ReplicaSet)
-		if !ok {
-			log.Warn().Msg("unable to cast to replicaset object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "replica update")
-		// Don't save labels/annotations
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (r *ReplicaSetConfigAccessor) AnnotationsEnabled() bool {
+	return false
 }
 
-func (h *ReplicaSetHandler) Delete() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		o, ok := obj.(*appsv1.ReplicaSet)
-		if !ok {
-			log.Warn().Msg("unable to cast to node object instance")
-			return &types.AdmissionResponse{Allowed: true}, nil
-		}
-		debugPrintObject(o, "replica deleted")
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+func (r *ReplicaSetConfigAccessor) LabelsEnabledForType() bool {
+	return false
 }
 
-func FormatReplicaSetData(o *appsv1.ReplicaSet, settings *config.Settings) types.ResourceTags {
-	var (
-		labels      = config.MetricLabelTags{}
-		annotations = config.MetricLabelTags{}
-		namespace   = o.GetNamespace()
-		rsName      = o.GetName()
+func (r *ReplicaSetConfigAccessor) AnnotationsEnabledForType() bool {
+	return false
+}
+
+func (r *ReplicaSetConfigAccessor) ResourceType() config.ResourceType {
+	return config.ReplicaSet
+}
+
+func (r *ReplicaSetConfigAccessor) Settings() *config.Settings {
+	return r.settings
+}
+
+// NewReplicaSetHandler creates a new webhook handler for Kubernetes ReplicaSet resources.
+// This handler is responsible for processing ReplicaSet objects and applying the necessary
+// filters and transformations based on the provided settings.
+//
+// Type Parameter:
+//   - T: The type of the Kubernetes resource, which must implement the metav1.Object interface.
+//     For this handler, it should be a ReplicaSet resource, such as *apps/v1.ReplicaSet.
+//
+// Parameters:
+//   - store: A ResourceStore instance used to manage the state of resources.
+//   - settings: A pointer to the configuration settings that define filters and other options.
+//   - clock: A TimeProvider instance used for time-related operations.
+//   - resource: The ReplicaSet resource to be processed by the handler.
+//
+// Returns:
+//   - A pointer to a hook.Handler configured for ReplicaSet resources.
+func NewReplicaSetHandler[T metav1.Object](store types.ResourceStore, settings *config.Settings, clock types.TimeProvider, resource T) *hook.Handler {
+	return NewGenericHandler[T](
+		store,
+		settings,
+		clock,
+		resource,
+		NewReplicaSetConfigAccessor(settings),
+		WorkloadDataFormatter,
 	)
-	labels = config.Filter(o.GetLabels(), settings.LabelMatches, settings.Filters.Labels.Enabled, settings)
-	annotations = config.Filter(o.GetAnnotations(), settings.AnnotationMatches, settings.Filters.Annotations.Enabled, settings)
-	metricLabels := config.MetricLabels{
-		"replicaset":    rsName, // standard metric labels to attach to metric
-		"namespace":     namespace,
-		"resource_type": config.ResourceTypeToMetricName[config.ReplicaSet],
-	}
-	return types.ResourceTags{
-		Type:         config.ReplicaSet,
-		Name:         rsName,
-		Namespace:    &namespace,
-		MetricLabels: &metricLabels,
-		Labels:       &labels,
-		Annotations:  &annotations,
-	}
 }

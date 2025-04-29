@@ -4,286 +4,77 @@
 package handler_test
 
 import (
-	"context"
-	"reflect"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/handler"
+	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/hook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-func makeIngressRequest(record TestRecord) *types.AdmissionReview {
-	ingress := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        record.Name,
-			Labels:      record.Labels,
-			Annotations: record.Annotations,
-		},
-	}
-
-	if record.Namespace != nil {
-		ingress.Namespace = *record.Namespace
-	}
-
-	return &types.AdmissionReview{
-		NewObjectRaw: getRawObject(appsv1.SchemeGroupVersion, ingress),
-	}
-}
-
-func TestFormatIngressData(t *testing.T) {
-	tests := []struct {
-		name     string
-		ingress  *networkingv1.Ingress
-		settings *config.Settings
-		expected types.ResourceTags
-	}{
-		{
-			name: "Test with labels and annotations enabled",
-			ingress: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "default",
-					Labels: map[string]string{
-						"app": "test",
-					},
-					Annotations: map[string]string{
-						"annotation-key": "annotation-value",
-					},
-				},
-			},
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-				LabelMatches: []regexp.Regexp{
-					*regexp.MustCompile("app"),
-				},
-				AnnotationMatches: []regexp.Regexp{
-					*regexp.MustCompile("annotation-key"),
-				},
-			},
-			expected: types.ResourceTags{
-				Type:      config.Ingress,
-				Name:      "test-ingress",
-				Namespace: stringPtr("default"),
-				MetricLabels: &config.MetricLabels{
-					"ingress":       "test-ingress",
-					"namespace":     "default",
-					"resource_type": "ingress",
-				},
-				Labels: &config.MetricLabelTags{
-					"app": "test",
-				},
-				Annotations: &config.MetricLabelTags{
-					"annotation-key": "annotation-value",
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := handler.FormatIngressData(tt.ingress, tt.settings)
-			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
-			}
-			if !reflect.DeepEqual(tt.expected.Labels, tt.expected.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, tt.expected.Labels)
-			}
-			if !reflect.DeepEqual(tt.expected.Annotations, tt.expected.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, tt.expected.Annotations)
-			}
-			assert.Equal(t, tt.expected.Type, result.Type)
-			assert.Equal(t, tt.expected.Name, result.Name)
-			assert.Equal(t, tt.expected.Namespace, result.Namespace)
-		})
-	}
-}
-
 func TestNewIngressHandler(t *testing.T) {
-	tests := []struct {
-		name     string
-		settings *config.Settings
-	}{
-		{
-			name: "Test with valid settings",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	clock := mocks.NewMockClock(time.Now())
+	store := mocks.NewMockResourceStore(mockCtl)
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
+			},
+			Annotations: config.Annotations{
+				Enabled: true,
 			},
 		},
-		{
-			name:     "Test with nil settings",
-			settings: nil,
-		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-			writer := mocks.NewMockResourceStore(mockCtl)
-			mockClock := mocks.NewMockClock(time.Now())
-
-			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
-			assert.NotNil(t, h)
-			assert.Equal(t, writer, h.Store)
-		})
-	}
+	h := handler.NewIngressHandler(store, settings, types.TimeProvider(clock), &networkingv1.Ingress{})
+	assert.NotNil(t, h, "Handler should not be nil")
+	assert.IsType(t, &hook.Handler{}, h, "Handler should be of type *hook.Handler")
 }
 
-func TestIngressHandler_Create(t *testing.T) {
-	tests := []struct {
-		name     string
-		settings *config.Settings
-		request  *types.AdmissionReview
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "Test create with labels and annotations enabled",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
+func TestNewIngressConfigAccessor(t *testing.T) {
+	settings := &config.Settings{
+		Filters: config.Filters{
+			Labels: config.Labels{
+				Enabled: true,
 			},
-			request: makeIngressRequest(TestRecord{
-				Name:      "test-ingress",
-				Namespace: stringPtr("default"),
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
+			Annotations: config.Annotations{
+				Enabled: true,
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
+	accessor := handler.NewIngressConfigAccessor(settings)
 
-			writer := mocks.NewMockResourceStore(mockCtl)
-			mockClock := mocks.NewMockClock(time.Now())
+	t.Run("LabelsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabled(), "LabelsEnabled should return false")
+	})
 
-			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
-			result, err := h.Create(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
+	t.Run("AnnotationsEnabled", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabled(), "AnnotationsEnabled should return false")
+	})
 
-func TestIngressHandler_Update(t *testing.T) {
-	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)
-	mockClock := mocks.NewMockClock(initialTime)
+	t.Run("LabelsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.LabelsEnabledForType(), "LabelsEnabledForType should return false")
+	})
 
-	tests := []struct {
-		name     string
-		settings *config.Settings
-		request  *types.AdmissionReview
-		dbresult *types.ResourceTags
-		expected *types.AdmissionResponse
-	}{
-		{
-			name: "Test update with labels and annotations enabled no previous record",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-			},
-			request: makeIngressRequest(TestRecord{
-				Name:      "test-ingress",
-				Namespace: stringPtr("default"),
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-		{
-			name: "Test update with labels and annotations enabled with previous record",
-			settings: &config.Settings{
-				Filters: config.Filters{
-					Labels: config.Labels{
-						Enabled: true,
-					},
-					Annotations: config.Annotations{
-						Enabled: true,
-					},
-				},
-			},
-			request: makeIngressRequest(TestRecord{
-				Name:      "test-ingress",
-				Namespace: stringPtr("default"),
-				Labels: map[string]string{
-					"app": "test",
-				},
-				Annotations: map[string]string{
-					"annotation-key": "annotation-value",
-				},
-			}),
-			dbresult: &types.ResourceTags{
-				ID:            "1",
-				Type:          config.Ingress,
-				Name:          "test-ingress",
-				Labels:        &config.MetricLabelTags{"app": "test"},
-				Annotations:   &config.MetricLabelTags{"annotation-key": "annotation-value"},
-				RecordCreated: mockClock.GetCurrentTime(),
-				RecordUpdated: mockClock.GetCurrentTime(),
-			},
-			expected: &types.AdmissionResponse{Allowed: true},
-		},
-	}
+	t.Run("AnnotationsEnabledForType", func(t *testing.T) {
+		assert.False(t, accessor.AnnotationsEnabledForType(), "AnnotationsEnabledForType should return false")
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
+	t.Run("ResourceType", func(t *testing.T) {
+		assert.Equal(t, config.Ingress, accessor.ResourceType(), "ResourceType should return config.CustomResourceDefinition")
+	})
 
-			writer := mocks.NewMockResourceStore(mockCtl)
-			mockClock := mocks.NewMockClock(time.Now())
-
-			h := handler.NewIngressHandler(writer, tt.settings, mockClock)
-			result, err := h.Update(context.Background(), tt.request, encodeObject(t, h, tt.request.NewObjectRaw))
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+	t.Run("Settings", func(t *testing.T) {
+		assert.Equal(t, settings, accessor.Settings(), "Settings should return the provided settings")
+	})
 }

@@ -26,6 +26,7 @@ certificate:
   key: {{ .tls.mountPath }}/tls.key
   cert: {{ .tls.mountPath }}/tls.crt
 server:
+  namespace: {{ $namespace }}
   domain: {{ $namespace }}-{{ .server.name }}-svc
   port: {{ .server.port }}
   read_timeout: {{ .server.read_timeout }}
@@ -62,7 +63,8 @@ logging:
 database:
   storage_path: {{ .Values.aggregator.mountRoot }}/data
   max_records: {{ .Values.aggregator.database.maxRecords }}
-  max_interval: {{ .Values.aggregator.database.maxInterval }}
+  cost_max_interval: {{ .Values.aggregator.database.costMaxInterval }}
+  observability_max_interval: {{ .Values.aggregator.database.observabilityMaxInterval }}
   compression_level: {{ .Values.aggregator.database.compressionLevel }}
   purge_rules:
     metrics_older_than: {{ .Values.aggregator.database.purgeRules.metricsOlderThan }}

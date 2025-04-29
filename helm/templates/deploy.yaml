@@ -104,7 +104,7 @@ spec:
                   - diagnose
                   - pre-stop
                   - -f
-                  - /check/app/config/validator.yml
+                  - /checks/app/config/validator.yml
           args:
             {{ toYaml .Values.server.args | nindent 12}}
             {{- if .Values.server.agentMode }}
@@ -188,3 +188,8 @@ spec:
             {}
           {{- end }}
         {{- end }}
+{{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
+    "component" .Values.components.agent
+    "name" (include "cloudzero-agent.server.fullname" .)
+    "matchLabels" (include "cloudzero-agent.server.matchLabels" .)
+  ) }}

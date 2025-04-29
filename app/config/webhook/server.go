@@ -7,6 +7,7 @@ import "time"
 
 type Server struct {
 	Mode      string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
+	Namespace string `yaml:"namespace" env:"NAMESPACE" env-description:"namespace of the webhook"`
 	Domain    string `yaml:"domain" default:"" env:"SERVER_DOMAIN" env-description:"server domain"`
 	Port      uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
 	Profiling bool   `yaml:"profiling" default:"false" env:"SERVER_PROFILING" env-description:"enable profiling"`
