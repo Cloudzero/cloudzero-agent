@@ -103,7 +103,7 @@ insightsController:
   annotations:
     # -- By default, the gathering of annotations is not enabled. To enable, set this field to true
     enabled: false
-    # -- The CloudZero system has a limit of 300 labels and annotations, so it is advisable to provide a specific list of required labels rather than a wildcard.
+    # -- The CloudZero system has a limit of 300 labels and annotations, so it is advisable to provide a specific list of required annotations rather than a wildcard.
     patterns:
       - ".*" # -- match all annotations. This is not recommended.
   tls:
