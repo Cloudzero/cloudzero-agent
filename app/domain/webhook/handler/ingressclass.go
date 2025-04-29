@@ -24,7 +24,7 @@ var (
 	ingressClassOnce  sync.Once
 	IngressTypesTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: types.ObservabilityMetric("ingress_classes_total"),
+			Name: types.ObservabilityMetric("ingress_types_total"),
 			Help: "Tracks the total number of ingress class events, categorized by name and controller.",
 		},
 		[]string{"name", "controller"},

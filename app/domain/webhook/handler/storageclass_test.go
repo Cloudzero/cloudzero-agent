@@ -197,6 +197,6 @@ func TestBaseStorageClassHandler_Create(t *testing.T) {
 		fmt.Println(string(body))
 
 		// Assert that the metric "storage_info_total" with the appropriate labels is present
-		assert.Contains(t, string(body), "czo_storage_type_totals{name=\"test-storage-class\",provisioner=\"alb\"} 1")
+		assert.Contains(t, string(body), "czo_storage_types_total{name=\"test-storage-class\",provisioner=\"alb\"} 1")
 	})
 }

@@ -24,7 +24,7 @@ var (
 	gatewayOnce       sync.Once
 	GatewayClassTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: types.ObservabilityMetric("gateway_classes_total"),
+			Name: types.ObservabilityMetric("gateway_types_total"),
 			Help: "Tracks the total number of gateway class events, categorized by name and controller.",
 		},
 		[]string{"name", "controller"},
