@@ -538,8 +538,10 @@ aggregator:
   database:
     # Max number of records per file. Use this to adjust file sizes uploaded to the server. The default value is good in most cases.
     maxRecords: 1500000
-    # Max interval to flush a metrics file. This is mostly useful for smaller clusters with little activity.
-    maxInterval: 10m
+    # Max interval to flush a cost metrics file. This is mostly useful for smaller clusters with little activity.
+    costMaxInterval: 10m
+    # Max interval to flush an observability metrics file. This is mostly useful for smaller clusters with little activity.
+    observabilityMaxInterval: 30m
     # Compression level to use when compressing metrics files on-disk.
     # Valid value range from 0-11, with higher values yielding improved compression ratios
     # at the expense of speed and memory usage.

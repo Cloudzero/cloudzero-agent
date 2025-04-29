@@ -95,7 +95,7 @@ func TestDiskStore_FlushTimeout(t *testing.T) {
 	dirPath := t.TempDir()
 	rowLimit := 5
 
-	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit, MaxInterval: 50 * time.Millisecond})
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithMaxInterval(50*time.Millisecond))
 	assert.NoError(t, err)
 
 	initialTime := time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC)

@@ -23,15 +23,16 @@ import (
 )
 
 const (
-	DefaultCZHost                   = "api.cloudzero.com"
-	DefaultCZSendInterval           = 10 * time.Minute
-	DefaultCZSendTimeout            = 10 * time.Second
-	DefaultCZRotateInterval         = 10 * time.Minute
-	DefaultDatabaseMaxRecords       = 1_500_000
-	DefaultDatabaseCompressionLevel = 8
-	DefaultDatabaseMaxInterval      = 10 * time.Minute
-	DefaultServerPort               = 8080
-	DefaultServerMode               = "http"
+	DefaultCZHost                           = "api.cloudzero.com"
+	DefaultCZSendInterval                   = 10 * time.Minute
+	DefaultCZSendTimeout                    = 10 * time.Second
+	DefaultCZRotateInterval                 = 10 * time.Minute
+	DefaultDatabaseMaxRecords               = 1_500_000
+	DefaultDatabaseCompressionLevel         = 8
+	DefaultDatabaseCostMaxInterval          = 10 * time.Minute
+	DefaultDatabaseObservabilityMaxInterval = 30 * time.Minute
+	DefaultServerPort                       = 8080
+	DefaultServerMode                       = "http"
 )
 
 type Settings struct {
@@ -61,10 +62,11 @@ type Logging struct {
 }
 
 type Database struct {
-	StoragePath      string        `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
-	MaxRecords       int           `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
-	CompressionLevel int           `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
-	MaxInterval      time.Duration `yaml:"max_interval" default:"10m" env:"MAX_INTERVAL" env-description:"maximum interval to wait before flushing metrics"`
+	StoragePath              string        `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
+	MaxRecords               int           `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
+	CompressionLevel         int           `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
+	CostMaxInterval          time.Duration `yaml:"cost_max_interval" default:"10m" env:"COST_MAX_INTERVAL" env-description:"maximum interval to wait before flushing cost metrics"`
+	ObservabilityMaxInterval time.Duration `yaml:"observability_max_interval" default:"10m" env:"OBSERVABILITY_MAX_INTERVAL" env-description:"maximum interval to wait before flushing observability metrics"`
 
 	PurgeRules       PurgeRules `yaml:"purge_rules"`
 	AvailableStorage string     `yaml:"available_storage" default:"" env:"DATABASE_AVAILABLE_STORAGE" env-description:"total size alloted to the gator to store metric files"`
@@ -161,8 +163,11 @@ func (d *Database) Validate() error {
 	if d.MaxRecords <= 0 {
 		d.MaxRecords = DefaultDatabaseMaxRecords
 	}
-	if d.MaxInterval <= 0 {
-		d.MaxInterval = DefaultDatabaseMaxInterval
+	if d.CostMaxInterval <= 0 {
+		d.CostMaxInterval = DefaultDatabaseCostMaxInterval
+	}
+	if d.ObservabilityMaxInterval <= 0 {
+		d.ObservabilityMaxInterval = DefaultDatabaseObservabilityMaxInterval
 	}
 	if _, err := os.Stat(d.StoragePath); os.IsNotExist(err) {
 		return errors.Wrap(err, "database storage path does not exist")
