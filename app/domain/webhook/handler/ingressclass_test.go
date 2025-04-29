@@ -97,8 +97,8 @@ func TestIngressClassHandler_Metrics(t *testing.T) {
 		// Debugging: Print the response body to see the raw metrics output
 		fmt.Println(string(body))
 
-		// Assert that the metric "ingress_classes_total" with the appropriate labels is present
-		assert.Contains(t, string(body), "czo_ingress_classes_total{controller=\"cirrus\",name=\"test-ingress\"} 1")
+		// Assert that the metric "ingress_types_total" with the appropriate labels is present
+		assert.Contains(t, string(body), "czo_ingress_types_total{controller=\"cirrus\",name=\"test-ingress\"} 1")
 	})
 
 	t.Run("Metrics incremented correctly with labels (v1beta1)", func(t *testing.T) {
@@ -161,8 +161,8 @@ func TestIngressClassHandler_Metrics(t *testing.T) {
 		// Debugging: Print the response body to see the raw metrics output
 		fmt.Println(string(body))
 
-		// Assert that the metric "ingress_classes_total" with the appropriate labels is present
-		assert.Contains(t, string(body), "czo_ingress_classes_total{controller=\"cirrus\",name=\"test-ingress-v1beta1\"} 1")
+		// Assert that the metric "ingress_types_total" with the appropriate labels is present
+		assert.Contains(t, string(body), "czo_ingress_types_total{controller=\"cirrus\",name=\"test-ingress-v1beta1\"} 1")
 	})
 }
 

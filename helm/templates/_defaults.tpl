@@ -47,7 +47,10 @@ insightsMetrics:
   - remote_write_db_failures_total
   - http_requests_total
   - storage_write_failure_total
-  - cz_webhook_types_total
+  - czo_webhook_types_total
+  - czo_storage_types_total
+  - czo_ingress_types_total
+  - czo_gateway_types_total
 prometheusMetrics:
   - go_memstats_alloc_bytes
   - go_memstats_heap_alloc_bytes
@@ -269,7 +272,10 @@ metricFilters:
         - remote_write_timeseries_total
         - storage_write_failure_total
         # webhook
-        - cz_webhook_types_total
+        - czo_webhook_types_total
+        - czo_storage_types_total
+        - czo_ingress_types_total
+        - czo_gateway_types_total
         # shipper
         - function_execution_seconds
         - shipper_shutdown_total

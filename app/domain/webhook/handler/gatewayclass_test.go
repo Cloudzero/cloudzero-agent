@@ -90,8 +90,8 @@ func TestGatewayClassHandler_Metrics(t *testing.T) {
 		// Debugging: Print the response body to see the raw metrics output
 		fmt.Println(string(body))
 
-		// Assert that the metric "gateway_classes_total" with the appropriate labels is present
-		assert.Contains(t, string(body), "czo_gateway_classes_total{controller=\"example-controller\",name=\"test-gateway\"} 1")
+		// Assert that the metric "gateway_types_total" with the appropriate labels is present
+		assert.Contains(t, string(body), "czo_gateway_types_total{controller=\"example-controller\",name=\"test-gateway\"} 1")
 	})
 }
 
