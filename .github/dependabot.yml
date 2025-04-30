@@ -30,3 +30,9 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
+
+  - package-ecosystem: "helm"
+    directory: "/helm/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
