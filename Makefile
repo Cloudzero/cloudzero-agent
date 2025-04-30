@@ -320,9 +320,12 @@ helm-template: ## Generate the Helm chart templates
 helm-lint: ## Lint the Helm chart
 	@$(HELM) lint ./helm $(HELM_ARGS)
 
-tests/helm/template/manifest.yaml: tests/helm/template/overrides.yaml helm-install-deps FORCE
+tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm-install-deps FORCE
 	@$(HELM) template "$(HELM_TARGET)" ./helm -f $< > $@
-generate: tests/helm/template/manifest.yaml
+
+helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
+
+generate: helm-generate-tests
 
 lint: helm-lint
 
