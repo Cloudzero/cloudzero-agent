@@ -181,8 +181,6 @@ spec:
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
               {{- end }}
-              # Now that the secret and webhook configuration are updated, roll the webhook-server pods to pick up the new certificate
-              kubectl rollout restart deployment -n {{ .Release.Namespace }} {{ include "cloudzero-agent.insightsController.deploymentName" . }}
               {{- else }}
               echo "The useCertManager flag is set to true. Skipping certificate generation and patching of resources."
               {{- end }}
