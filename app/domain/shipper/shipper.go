@@ -83,10 +83,10 @@ func (m *MetricShipper) GetMetricHandler() http.Handler {
 // Run starts the MetricShipper service and blocks until a shutdown signal is received.
 func (m *MetricShipper) Run() error {
 	// create the required directories for this application
-	if err := os.Mkdir(m.GetUploadedDir(), filePermissions); err != nil {
+	if err := os.MkdirAll(m.GetUploadedDir(), filePermissions); err != nil {
 		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the uploaded directory: %w", err))
 	}
-	if err := os.Mkdir(m.GetReplayRequestDir(), filePermissions); err != nil {
+	if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
 		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 	}
 
