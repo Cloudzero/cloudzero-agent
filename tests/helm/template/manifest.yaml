@@ -1017,7 +1017,6 @@ rules:
     verbs:
       - "get"
       - "list"
-      - "patch"
   - apiGroups:
       - ""
     resources:
@@ -1907,8 +1906,6 @@ spec:
               kubectl patch validatingwebhookconfiguration  cz-agent-cloudzero-agent-webhook-server-webhook \
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
-              # Now that the secret and webhook configuration are updated, roll the webhook-server pods to pick up the new certificate
-              kubectl rollout restart deployment -n default cz-agent-cloudzero-agent-webhook-server
               exit 0
 ---
 # Source: cloudzero-agent/templates/webhooks.yaml
