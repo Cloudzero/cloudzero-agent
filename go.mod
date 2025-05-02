@@ -87,7 +87,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.91
 	github.com/parquet-go/parquet-go v0.25.0
 	github.com/prometheus/client_golang v1.22.0
-	github.com/prometheus/prometheus v0.303.0
+	github.com/prometheus/prometheus v0.303.1
 	github.com/shirou/gopsutil/v4 v4.25.4
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
@@ -217,5 +217,5 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.62.0
+	github.com/prometheus/common v0.63.0
 )
