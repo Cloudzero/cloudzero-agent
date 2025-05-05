@@ -1,0 +1,40 @@
+{{- if .Values.initCertJob.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  name: {{ include "cloudzero-agent.initCertJob.clusterRoleName" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    resourceNames:
+      - {{ include "cloudzero-agent.insightsController.deploymentName" . }}
+    verbs:
+      - "get"
+      - "list"
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    resourceNames:
+      - {{ include "cloudzero-agent.tlsSecretName" . }}
+    verbs:
+      - get
+      - list
+      - patch
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - "validatingwebhookconfigurations"
+    resourceNames:
+      - {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}
+    verbs:
+      - get
+      - list
+      - patch
+{{- end }}
