@@ -188,8 +188,3 @@ spec:
             {}
           {{- end }}
         {{- end }}
-{{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
-    "component" .Values.components.agent
-    "name" (include "cloudzero-agent.server.fullname" .)
-    "matchLabels" (include "cloudzero-agent.server.matchLabels" .)
-  ) }}
