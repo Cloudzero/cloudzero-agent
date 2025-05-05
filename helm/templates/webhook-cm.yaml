@@ -1,0 +1,27 @@
+{{- if .Values.insightsController.enabled }}
+{{- with .Values.insightsController }}
+{{- if and .labels.enabled (not .labels.patterns) }}
+{{- $msg := "\n\nThe required field(s) 'insightsController.labels.enabled' and/or 'insightsController.labels.patterns' is not set! See the README.md for more information." }}
+{{- $enabledMsg:=""}}
+{{- $patternMsg:=""}}
+{{- if not .labels.enabled  }}
+{{- $enabledMsg = "Ensure that 'insightsController.labels.enabled' is a boolean (true or false). Set 'true' to enable exporting labels."}}
+{{- end }}
+{{- if not .labels.patterns }}
+{{- $patternMsg = "The required field 'labels.patterns' is not set or set incorrectly. It must be an array of regular expressions that match label keys to be exported."}}
+{{- end }}
+{{- fail (printf "\n %s \n %s \n %s" $msg $enabledMsg $patternMsg) }}
+{{- end }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+data:
+  server-config.yaml: |-
+{{- include "cloudzero-agent.insightsController.configuration" . | nindent 4 -}}
+{{- end }}

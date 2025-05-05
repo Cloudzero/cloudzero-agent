@@ -699,12 +699,11 @@ Generate a pod disruption budget
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
 {{- if (.component.podDisruptionBudget.minAvailable | default .component.podDisruptionBudget.maxUnavailable) }}
----
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
-  namespace: {{ $.Release.Namespace }}
+  namespace: {{ .root.Release.Namespace }}
 spec:
   {{- if .component.podDisruptionBudget.minAvailable }}
   {{- if le $replicas (int .component.podDisruptionBudget.minAvailable) -}}

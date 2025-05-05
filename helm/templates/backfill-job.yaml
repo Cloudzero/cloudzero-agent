@@ -1,0 +1,74 @@
+{{- if .Values.insightsController.enabled }}
+{{ $backFillValues := (include "cloudzero-agent.backFill" . | fromYaml) }}
+{{- if $backFillValues.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudzero-agent.initBackfillJobName" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.initBackfillJob.annotations) | nindent 2 }}
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: {{ include "cloudzero-agent.initBackfillJobName" . }}
+      namespace: {{ .Release.Namespace }}
+      labels:
+        {{- include "cloudzero-agent.insightsController.initBackfillJob.matchLabels" . | nindent 8 }}
+      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+    spec:
+      serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      restartPolicy: OnFailure
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" . | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      containers:
+        - name: init-scrape
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.insightsController.server.image) | nindent 10 }}
+          command:
+            - /app/cloudzero-webhook
+          args:
+            - -config
+            - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
+            - -backfill
+          resources:
+            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+          volumeMounts:
+            - name: insights-server-config
+              mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}
+          {{- if or .Values.insightsController.volumeMounts .Values.insightsController.tls.enabled }}
+          {{- if or .Values.existingSecretName .Values.apiKey }}
+            - name: cloudzero-api-key
+              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+              subPath: ""
+              readOnly: true
+          {{- end }}
+            {{- with .Values.insightsController.volumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or .Values.insightsController.volumes .Values.insightsController.tls.enabled }}
+      volumes:
+        - name: insights-server-config
+          configMap:
+            name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+        {{- if .Values.insightsController.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "cloudzero-agent.tlsSecretName" . }}
+        {{- end }}
+        {{- if or .Values.existingSecretName .Values.apiKey }}
+        - name: cloudzero-api-key
+          secret:
+            secretName: {{ include "cloudzero-agent.secretName" . }}
+        {{- end }}
+        {{- with .Values.insightsController.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" (.Values.initBackfillJob.nodeSelector | default .Values.insightsController.server.nodeSelector)) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initBackfillJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
+{{- end }}
+{{- end }}

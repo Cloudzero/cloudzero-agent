@@ -102,7 +102,7 @@ spec:
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.aggregator.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations) | nindent 6 }}
-  
+
     {{- with .Values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
@@ -146,8 +146,3 @@ spec:
             {}
         {{- end }}
 {{- end }}
-{{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
-    "component" .Values.components.aggregator
-    "name" (include "cloudzero-agent.aggregator.name" .)
-    "matchLabels" (include "cloudzero-agent.aggregator.matchLabels" .)
-  ) }}
