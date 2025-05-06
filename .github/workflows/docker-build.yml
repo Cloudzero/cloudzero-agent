@@ -400,7 +400,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       statuses: write
-    needs: [
+    needs:
+      [
         "docker-build",
         "docker-merge",
         "k8s-version-matrix-tests",
