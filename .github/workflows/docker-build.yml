@@ -1,5 +1,7 @@
 name: DockerBuild
 on:
+  merge_group:
+    types: [checks_requested]
   push:
     branches:
       - develop
@@ -296,6 +298,8 @@ jobs:
       contents: read
       packages: read
     needs: ["docker-build", "docker-merge"]
+    # We primarily want to run this when we are in a merge queue.
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/test-matrix-replicated-k8s-clusters.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
@@ -326,7 +330,7 @@ jobs:
     permissions:
       statuses: write
     needs: ["replicated-compatibility-matrix-tests"]
-    if: ${{ always() }}
+    if: ${{ always() && github.event_name != 'pull_request' }}
     steps:
       - uses: ouzi-dev/commit-status-updater@v2
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
