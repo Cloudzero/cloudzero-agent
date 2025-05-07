@@ -1,0 +1,7 @@
+host: "test-host"
+clusterName: "test-cluster"
+cloudAccountId: "test-account"
+region: "us-west-2"
+defaults:
+  image:
+    tag: 123

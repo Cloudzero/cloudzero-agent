@@ -1,0 +1,6 @@
+prometheusConfig:
+  globalScrapeInterval: 60s
+  scrapeJobs:
+    cadvisor:
+      enabled: false
+      scrapeInterval: 60s

@@ -155,10 +155,6 @@ components:
     podDisruptionBudget:
       minAvailable:
       maxUnavailable:
-    # Replicas to deploy.
-    #
-    # Note that in federated mode, this will be the number of replicas per node.
-    replicas: 1
 
   # kubectl contains details about where to find the kubectl image.  This chart
   # uses the kubectl image as part of the job to initialize certificates.
@@ -193,6 +189,7 @@ components:
     podDisruptionBudget:
       minAvailable:
       maxUnavailable:
+    tolerations: []
 
   # Settings for the webhook server.
   webhookServer:
@@ -331,9 +328,6 @@ initCertJob:
 secretAnnotations: {}
 imagePullSecrets: []
 
-scheme: https
-endpoint: /v1/container-metrics
-
 # environment validator image allows for CI to use a different image in testing
 validator:
   serviceEndpoints:
@@ -409,6 +403,24 @@ server:
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
+  # Topology spread constraints for pod scheduling
+  topologySpreadConstraints: []
+  # Termination grace period in seconds
+  terminationGracePeriodSeconds: 300
+  # Readiness probe configuration
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 4
+    failureThreshold: 3
+    successThreshold: 1
+  # Liveness probe configuration
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
 
 # Configuration for the webhook server (née Insights Controller), which collects
 # and processes Kubernetes resource metadata for cost attribution and analysis.
@@ -603,6 +615,9 @@ insightsController:
     namespaceSelector: {}
     # Path for the validating admission webhook.
     path: /validate
+    caInjection:
+  configurationMountPath:
+  ConfigMapNameOverride:
 
 # Configuration for the service account in the chart.
 serviceAccount:
@@ -804,7 +819,7 @@ aggregator:
   #
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  tolerations: {}
+  tolerations: []
   # Affinity rules for the aggregator pods.
   #
   # See the Kubernetes documentation for details:

@@ -1,0 +1,5 @@
+aggregator:
+  image:
+    registry: "docker.io"
+    repository: "cloudzero/aggregator"
+    tag: "latest"

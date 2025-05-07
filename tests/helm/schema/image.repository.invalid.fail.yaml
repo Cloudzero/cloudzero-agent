@@ -1,0 +1,4 @@
+components:
+  agent:
+    image:
+      repository: 123 # Should fail as it's not a string

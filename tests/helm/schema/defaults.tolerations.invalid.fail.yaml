@@ -1,0 +1,7 @@
+defaults:
+  tolerations:
+    - key: 123 # Invalid: should be a string
+      operator: true # Invalid: should be a string
+      value: ["not", "a", "string"] # Invalid: should be a string
+      effect: 42 # Invalid: should be a string
+      tolerationSeconds: "notanumber" # Invalid: should be an integer or null

@@ -2,6 +2,6 @@
     "component" .Values.components.webhookServer
     "name" (include "cloudzero-agent.insightsController.deploymentName" .)
     "matchLabels" (include "cloudzero-agent.insightsController.server.matchLabels" .)
-    "replicas" .Values.insightsController.server.replicaCount
+    "replicas" (.Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas)
     "root" .
   ) }}

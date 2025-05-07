@@ -1,0 +1,4 @@
+defaults:
+  annotations:
+    kubernetes.io/description: "CloudZero Agent"
+    prometheus.io/scrape: "true"

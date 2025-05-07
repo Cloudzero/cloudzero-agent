@@ -1,0 +1,23 @@
+prometheusConfig:
+  configMapNameOverride: "custom-config"
+  configMapAnnotations:
+    my.annotation: value
+  configOverride: "custom config"
+  globalScrapeInterval: 60s
+  scrapeJobs:
+    kubeStateMetrics:
+      enabled: true
+      scrapeInterval: 60s
+    cadvisor:
+      enabled: true
+      scrapeInterval: 60s
+    prometheus:
+      enabled: true
+      scrapeInterval: 120s
+    aggregator:
+      enabled: true
+      scrapeInterval: 120s
+    additionalScrapeJobs:
+      - job_name: custom-job
+        static_configs:
+          - targets: ["localhost:9090"]
