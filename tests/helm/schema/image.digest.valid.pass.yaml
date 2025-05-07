@@ -1,0 +1,4 @@
+components:
+  agent:
+    image:
+      digest: sha256:5c474275684bbf271ec40502ab50158b2f9826de5877d8feec27e22e8d6ee3d2

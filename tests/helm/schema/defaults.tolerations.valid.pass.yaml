@@ -1,0 +1,10 @@
+defaults:
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "experimental"
+      effect: "NoSchedule"
+    - key: "workload"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 3600
