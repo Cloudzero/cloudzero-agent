@@ -6,6 +6,7 @@
 package tools
 
 import (
+	_ "github.com/itchyny/gojq/cmd/gojq"
 	_ "go.uber.org/mock/mockgen"
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 	_ "honnef.co/go/tools/cmd/staticcheck"

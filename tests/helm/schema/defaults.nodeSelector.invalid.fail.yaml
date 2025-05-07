@@ -1,0 +1,4 @@
+defaults:
+  nodeSelector:
+    kubernetes.io/os: 123 # Should fail as it's not a string
+    node-role.kubernetes.io/worker: true # Should fail as it's not a string

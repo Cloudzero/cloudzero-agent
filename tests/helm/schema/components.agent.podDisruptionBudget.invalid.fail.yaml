@@ -1,0 +1,5 @@
+components:
+  agent:
+    podDisruptionBudget:
+      maxUnavailable: "invalid" # Should fail as it's not an integer
+      minAvailable: "invalid" # Should fail as it's not an integer

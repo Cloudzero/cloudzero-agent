@@ -1,0 +1,4 @@
+components:
+  agent:
+    image:
+      pullPolicy: "" # Should fail as empty string is not a valid enum value

@@ -1,0 +1,4 @@
+components:
+  agent:
+    podDisruptionBudget:
+      minAvailable: true # Should fail as it expects an integer or percentage

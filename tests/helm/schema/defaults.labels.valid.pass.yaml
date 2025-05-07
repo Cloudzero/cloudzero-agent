@@ -1,0 +1,4 @@
+defaults:
+  labels:
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: my-instance

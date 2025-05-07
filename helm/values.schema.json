@@ -1,20 +1,450 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "object",
+  "$defs": {
+    "affinity": {
+      "type": "object"
+    },
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "dns": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "type": "object"
+        },
+        "policy": {
+          "additionalProperties": false,
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "additionalProperties": false,
+          "type": ["string", "null"]
+        },
+        "pullPolicy": {
+          "additionalProperties": false,
+          "oneOf": [
+            {
+              "enum": ["Always", "IfNotPresent", "Never"],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pullSecrets": {
+          "additionalProperties": false,
+          "items": {
+            "additionalProperties": false,
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "registry": {
+          "additionalProperties": false,
+          "type": ["string", "null"]
+        },
+        "repository": {
+          "additionalProperties": false,
+          "type": ["string", "null"]
+        },
+        "tag": {
+          "additionalProperties": false,
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "podDisruptionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "maxUnavailable": {
+          "oneOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+%$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minAvailable": {
+          "oneOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+%$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "tolerations": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
-    "host": {
+    "aggregator": {
+      "additionalProperties": false,
+      "properties": {
+        "affinity": {
+          "$ref": "#/$defs/affinity"
+        },
+        "cloudzero": {
+          "additionalProperties": false,
+          "properties": {
+            "apiKey": {
+              "type": "string"
+            },
+            "caCert": {
+              "type": "string"
+            },
+            "clientCert": {
+              "type": "string"
+            },
+            "clientKey": {
+              "type": "string"
+            },
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "rotateInterval": {
+              "type": "string"
+            },
+            "sendInterval": {
+              "type": "string"
+            },
+            "sendTimeout": {
+              "type": "string"
+            },
+            "tls": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "collector": {
+          "additionalProperties": false,
+          "properties": {
+            "batchSize": {
+              "type": "integer"
+            },
+            "batchTimeout": {
+              "type": "string"
+            },
+            "maxRetries": {
+              "type": "integer"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "replicas": {
+              "type": "integer"
+            },
+            "resources": {
+              "type": "object"
+            },
+            "retryDelay": {
+              "type": "string"
+            },
+            "workers": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "database": {
+          "additionalProperties": false,
+          "properties": {
+            "caCert": {
+              "type": "string"
+            },
+            "clientCert": {
+              "type": "string"
+            },
+            "clientKey": {
+              "type": "string"
+            },
+            "compressionLevel": {
+              "type": "integer"
+            },
+            "costMaxInterval": {
+              "type": "string"
+            },
+            "emptyDir": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "sizeLimit": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "host": {
+              "type": "string"
+            },
+            "maxRecords": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "observabilityMaxInterval": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "purgeRules": {
+              "type": "object"
+            },
+            "tls": {
+              "type": "boolean"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "image": {
+          "$ref": "#/$defs/image",
+          "deprecated": true
+        },
+        "logging": {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "enum": ["json", "text"],
+              "type": "string"
+            },
+            "level": {
+              "enum": ["debug", "info", "warn", "error"],
+              "type": "string"
+            },
+            "output": {
+              "enum": ["stdout", "stderr", "file"],
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "mountRoot": {
+          "type": "string"
+        },
+        "nodeSelector": {
+          "$ref": "#/$defs/nodeSelector"
+        },
+        "podDisruptionBudget": {
+          "$ref": "#/$defs/podDisruptionBudget"
+        },
+        "profiling": {
+          "type": "boolean"
+        },
+        "replicas": {
+          "deprecated": true,
+          "type": ["integer", "null"]
+        },
+        "shipper": {
+          "additionalProperties": false,
+          "properties": {
+            "batchSize": {
+              "type": "integer"
+            },
+            "batchTimeout": {
+              "type": "string"
+            },
+            "maxRetries": {
+              "type": "integer"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "replicas": {
+              "type": "integer"
+            },
+            "resources": {
+              "type": "object"
+            },
+            "retryDelay": {
+              "type": "string"
+            },
+            "workers": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "tolerations": {
+          "$ref": "#/$defs/tolerations"
+        }
+      },
+      "type": "object"
+    },
+    "cloudAccountId": {
       "type": "string"
     },
     "clusterName": {
-      "type": "string",
-      "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?$"
+      "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?$",
+      "type": "string"
     },
-    "cloudAccountId": {
+    "components": {
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "$ref": "#/$defs/image"
+            },
+            "podDisruptionBudget": {
+              "$ref": "#/$defs/podDisruptionBudget"
+            }
+          },
+          "type": "object"
+        },
+        "aggregator": {
+          "additionalProperties": false,
+          "properties": {
+            "podDisruptionBudget": {
+              "$ref": "#/$defs/podDisruptionBudget"
+            },
+            "replicas": {
+              "additionalProperties": false,
+              "type": ["integer", "null"]
+            }
+          },
+          "type": "object"
+        },
+        "kubectl": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "$ref": "#/$defs/image"
+            }
+          },
+          "type": "object"
+        },
+        "prometheus": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "$ref": "#/$defs/image"
+            }
+          },
+          "type": "object"
+        },
+        "prometheusReloader": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "$ref": "#/$defs/image"
+            }
+          },
+          "type": "object"
+        },
+        "webhookServer": {
+          "additionalProperties": false,
+          "properties": {
+            "podDisruptionBudget": {
+              "$ref": "#/$defs/podDisruptionBudget"
+            },
+            "replicas": {
+              "additionalProperties": false,
+              "type": ["integer", "null"]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "affinity": {
+          "$ref": "#/$defs/affinity"
+        },
+        "annotations": {
+          "$ref": "#/$defs/annotations"
+        },
+        "dns": {
+          "$ref": "#/$defs/dns"
+        },
+        "image": {
+          "$ref": "#/$defs/image"
+        },
+        "labels": {
+          "$ref": "#/$defs/labels"
+        },
+        "nodeSelector": {
+          "$ref": "#/$defs/nodeSelector"
+        },
+        "priorityClassName": {
+          "type": ["string", "null"]
+        },
+        "tolerations": {
+          "$ref": "#/$defs/tolerations"
+        }
+      },
+      "type": "object"
+    },
+    "host": {
       "type": "string"
     },
     "region": {
       "type": "string"
     }
   },
-  "required": ["host", "clusterName", "cloudAccountId", "region"]
+  "required": ["host", "clusterName", "cloudAccountId", "region"],
+  "type": "object"
 }

@@ -1,0 +1,451 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+
+# Common types used in multiple components.
+$defs:
+  # image is a container image.
+  image:
+    additionalProperties: false
+    properties:
+      # pullPolicy corresponds to the Kubernetes imagePullPolicy. For documentation, see
+      # https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy
+      pullPolicy:
+        additionalProperties: false
+        oneOf:
+          - type: string
+            enum:
+              - Always
+              - IfNotPresent
+              - Never
+          - type: "null"
+
+      # registry is the container registry to pull the image from.
+      registry:
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      # repository is the name of the container image repository.
+      repository:
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      # digest is the digest of the container image.
+      digest:
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      # tag is the tag of the container image to use.
+      tag:
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      # pullSecrets is a list of image pull secrets to use.
+      pullSecrets:
+        additionalProperties: false
+        type:
+          - array
+          - "null"
+        items:
+          additionalProperties: false
+          type: string
+    type: object
+
+  # podDisruptionBudget corresponds to the Kubernetes PodDisruptionBudget resource.
+  # For documentation, see
+  # https://kubernetes.io/docs/concepts/workloads/pods/disruptions/ and
+  # https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/pod-disruption-budget-v1/
+  podDisruptionBudget:
+    additionalProperties: false
+    type: object
+    properties:
+      maxUnavailable:
+        oneOf:
+          - type: integer
+            minimum: 0
+          - type: string
+            pattern: ^[0-9]+%$
+          - type: "null"
+      minAvailable:
+        oneOf:
+          - type: integer
+            minimum: 0
+          - type: string
+            pattern: ^[0-9]+%$
+          - type: "null"
+
+  # dns specifies DNS configurations, both the dnsPolicy and dnsConfig. For
+  # documentation, see
+  # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+  dns:
+    additionalProperties: false
+    type: object
+    properties:
+      # DNS policy to use.
+      #
+      # For documentation, see
+      # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      policy:
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      # DNS configuration to use.
+      #
+      # For documentation, see
+      # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+      config:
+        type: object
+
+  # labels are key/value pairs that can be attached to Kubernetes resources
+  labels:
+    type: object
+    additionalProperties:
+      type: string
+
+  # annotations are key/value pairs that can be attached to Kubernetes resources
+  annotations:
+    type: object
+    additionalProperties:
+      type: string
+
+  # tolerations are used to control pod scheduling with taints
+  tolerations:
+    type: array
+    items:
+      type: object
+
+  # affinity settings control pod scheduling preferences
+  affinity:
+    type: object
+
+  # nodeSelector is used to constrain pod scheduling to specific nodes
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+
+properties:
+  host:
+    type: string
+  clusterName:
+    type: string
+    pattern: ^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?$
+  cloudAccountId:
+    type: string
+  region:
+    type: string
+
+  aggregator:
+    additionalProperties: false
+    type: object
+    properties:
+      image:
+        deprecated: true
+        $ref: "#/$defs/image"
+      replicas:
+        deprecated: true
+        type:
+          - integer
+          - "null"
+      podDisruptionBudget:
+        $ref: "#/$defs/podDisruptionBudget"
+      tolerations:
+        $ref: "#/$defs/tolerations"
+      affinity:
+        $ref: "#/$defs/affinity"
+      nodeSelector:
+        $ref: "#/$defs/nodeSelector"
+      mountRoot:
+        type: string
+      profiling:
+        type: boolean
+      database:
+        type: object
+        additionalProperties: false
+        properties:
+          # The hostname of the database server
+          host:
+            type: string
+          # The port the database server is listening on
+          port:
+            type: integer
+          # The name of the database to use
+          name:
+            type: string
+          # The username to use when connecting to the database
+          username:
+            type: string
+          # The password to use when connecting to the database
+          password:
+            type: string
+          # Whether to use TLS when connecting to the database
+          tls:
+            type: boolean
+          # The path to the CA certificate to use when connecting to the database
+          caCert:
+            type: string
+          # The path to the client certificate to use when connecting to the database
+          clientCert:
+            type: string
+          # The path to the client key to use when connecting to the database
+          clientKey:
+            type: string
+          # The compression level to use for database operations
+          compressionLevel:
+            type: integer
+          # The maximum interval for cost data
+          costMaxInterval:
+            type: string
+          # Whether to use an emptyDir for storage
+          emptyDir:
+            type: object
+            additionalProperties: false
+            properties:
+              # Whether to enable emptyDir storage
+              enabled:
+                type: boolean
+              # The size limit for the emptyDir volume
+              sizeLimit:
+                type: string
+          # The maximum number of records to store
+          maxRecords:
+            type: integer
+          # The maximum interval for observability data
+          observabilityMaxInterval:
+            type: string
+          # Rules for purging old data
+          purgeRules:
+            type: object
+      shipper:
+        type: object
+        additionalProperties: false
+        properties:
+          # The number of shippers to run
+          replicas:
+            type: integer
+          # The number of workers per shipper
+          workers:
+            type: integer
+          # The maximum number of items to process in a batch
+          batchSize:
+            type: integer
+          # The maximum time to wait before processing a batch
+          batchTimeout:
+            type: string
+          # The maximum number of retries for failed items
+          maxRetries:
+            type: integer
+          # The time to wait between retries
+          retryDelay:
+            type: string
+          # The port the shipper listens on
+          port:
+            type: integer
+          # Resource requirements for the shipper
+          resources:
+            type: object
+      cloudzero:
+        type: object
+        additionalProperties: false
+        properties:
+          # The API key to use when authenticating with CloudZero
+          apiKey:
+            type: string
+          # The hostname of the CloudZero API
+          host:
+            type: string
+          # The port the CloudZero API is listening on
+          port:
+            type: integer
+          # Whether to use TLS when connecting to the CloudZero API
+          tls:
+            type: boolean
+          # The path to the CA certificate to use when connecting to the CloudZero API
+          caCert:
+            type: string
+          # The path to the client certificate to use when connecting to the CloudZero API
+          clientCert:
+            type: string
+          # The path to the client key to use when connecting to the CloudZero API
+          clientKey:
+            type: string
+          # The interval at which to rotate data
+          rotateInterval:
+            type: string
+          # The interval at which to send data
+          sendInterval:
+            type: string
+          # The timeout for sending data
+          sendTimeout:
+            type: string
+      collector:
+        type: object
+        additionalProperties: false
+        properties:
+          # The number of collectors to run
+          replicas:
+            type: integer
+          # The number of workers per collector
+          workers:
+            type: integer
+          # The maximum number of items to process in a batch
+          batchSize:
+            type: integer
+          # The maximum time to wait before processing a batch
+          batchTimeout:
+            type: string
+          # The maximum number of retries for failed items
+          maxRetries:
+            type: integer
+          # The time to wait between retries
+          retryDelay:
+            type: string
+          # The port the collector listens on
+          port:
+            type: integer
+          # Resource requirements for the collector
+          resources:
+            type: object
+      logging:
+        type: object
+        additionalProperties: false
+        properties:
+          # The log level to use
+          level:
+            type: string
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+          # The format to use for logs
+          format:
+            type: string
+            enum:
+              - json
+              - text
+          # The output to write logs to
+          output:
+            type: string
+            enum:
+              - stdout
+              - stderr
+              - file
+          # The path to write logs to when output is file
+          path:
+            type: string
+
+  # Default settings for components
+  defaults:
+    additionalProperties: false
+    type: object
+    properties:
+      # The default image settings which will be fallen back on for all components.
+      image:
+        $ref: "#/$defs/image"
+      # DNS settings for all pods
+      dns:
+        $ref: "#/$defs/dns"
+      # Labels to be added to all resources
+      labels:
+        $ref: "#/$defs/labels"
+      # Annotations to be added to all resources
+      annotations:
+        $ref: "#/$defs/annotations"
+      # Affinity settings to be added to all resources
+      affinity:
+        $ref: "#/$defs/affinity"
+      # Tolerations to be added to all resources
+      tolerations:
+        $ref: "#/$defs/tolerations"
+      # Node Selector to be added to all resources
+      nodeSelector:
+        $ref: "#/$defs/nodeSelector"
+      # Priority class name to be used for all deployments and jobs
+      priorityClassName:
+        type:
+          - string
+          - "null"
+
+  components:
+    additionalProperties: false
+    type: object
+    properties:
+      # The CloudZero Agent.
+      #
+      # The Agent is responsible for gathering metrics needed by CloudZero.
+      # These metrics are then sent to the Aggregator.
+      agent:
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            $ref: "#/$defs/image"
+          podDisruptionBudget:
+            $ref: "#/$defs/podDisruptionBudget"
+
+      # The CloudZero Aggregator.
+      #
+      # The Aggregator ("Gator") provides a service which accepts metrics (e.g.,
+      # from the Agent and the Webhook Server), aggregates them, caches them,
+      # and sends them to CloudZero for processing.
+      aggregator:
+        additionalProperties: false
+        type: object
+        properties:
+          podDisruptionBudget:
+            $ref: "#/$defs/podDisruptionBudget"
+          replicas:
+            additionalProperties: false
+            type:
+              - integer
+              - "null"
+
+      # A container which includes the `kubectl` executable.
+      #
+      # This is used mostly used to gather a bit of information about the
+      # cluster during an initialization phase.
+      kubectl:
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            $ref: "#/$defs/image"
+      prometheus:
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            $ref: "#/$defs/image"
+      prometheusReloader:
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            $ref: "#/$defs/image"
+      webhookServer:
+        additionalProperties: false
+        type: object
+        properties:
+          podDisruptionBudget:
+            $ref: "#/$defs/podDisruptionBudget"
+          replicas:
+            additionalProperties: false
+            type:
+              - integer
+              - "null"
+
+required:
+  - host
+  - clusterName
+  - cloudAccountId
+  - region
+type: object

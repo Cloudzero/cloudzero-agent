@@ -1,0 +1,5 @@
+aggregator:
+  image:
+    registry: 123 # Should fail as it's not a string
+    repository: true # Should fail as it's not a string
+    tag: ["invalid"] # Should fail as it's not a string
