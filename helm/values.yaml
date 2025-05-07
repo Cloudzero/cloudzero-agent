@@ -339,26 +339,42 @@ validator:
 
 server:
   name: server
+  # Container image configuration for the server.
+  #
+  # Deprecated. Please use components.agent.image instead.
   image:
     repository:
     tag:
     digest:
     pullPolicy:
+  # Node selector configuration for the server pods.
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/
   nodeSelector: {}
+  # Resource requirements and limits for the server.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   resources:
     requests:
       memory: 512Mi
       cpu: 250m
     limits:
       memory: 1024Mi
+  # Annotations to add to the server Deployment.
   deploymentAnnotations: {}
+  # Annotations to add to the server pods.
   podAnnotations: {}
+  # Whether the server is running in agent mode.
   agentMode: true
+  # Command-line arguments to pass to the server.
   args:
     - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
     - --web.enable-lifecycle
     - --web.console.libraries=/etc/prometheus/console_libraries
     - --web.console.templates=/etc/prometheus/consoles
+  # Configuration for persistent storage.
   persistentVolume:
     existingClaim: ""
     enabled: false
@@ -368,166 +384,297 @@ server:
     size: 8Gi
     accessModes:
       - ReadWriteOnce
+    # Annotations to add to the PersistentVolumeClaim.
     annotations: {}
   # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
+  # Affinity rules
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # Tolerations configuration for the aggregator pods.
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
+# Configuration for the webhook server (née Insights Controller), which collects
+# and processes Kubernetes resource metadata for cost attribution and analysis.
 insightsController:
+  # Whether to enable the insights controller.
+  #
+  # It is strongly recommended that this feature be enabled as it provides
+  # important functionality.
   enabled: true
+  # Configuration for collecting labels from Kubernetes resources.
   labels:
-    # (recommended) Enable collection of specific labels for cost attribution dimensions
+    # Whether to enable collection of specific labels for cost attribution
+    # dimensions.
+    #
+    # It is strongly recommended that this feature be enabled as it provides
+    # important functionality.
     enabled: true
     # List of Go-style regular expressions used to filter desired labels.
+    #
     # Caution: The CloudZero system has a limit of 300 labels and annotations,
-    # so it is advisable to provide a specific list of required labels rather than a wildcard.
+    # so it is advisable to provide a specific list of required labels rather
+    # than a wildcard.
     patterns:
       - "app.kubernetes.io/component"
-    # Specify which resources to collect labels from
+    # Specify which resources to collect labels from.
     resources:
+      # Whether to collect labels from CronJobs.
       cronjobs: false
+      # Whether to collect labels from DaemonSets.
       daemonsets: false
+      # Whether to collect labels from Deployments.
       deployments: false
+      # Whether to collect labels from Jobs.
       jobs: false
+      # Whether to collect labels from Namespaces.
       namespaces: true
+      # Whether to collect labels from Nodes.
       nodes: false
+      # Whether to collect labels from Pods.
       pods: true
+      # Whether to collect labels from StatefulSets.
       statefulsets: false
+  # Configuration for collecting annotations from Kubernetes resources.
   annotations:
-    # Enable this section if your organization uses specific annotations for cost attribution or cost dimensions.
-    # This allows you to collect and analyze labels for selected resources.
+    # Whether to enable collection of annotations for cost attribution dimensions.
     enabled: false
-    # List of Go-style regular expressions used to filter desired labels.
+    # List of Go-style regular expressions used to filter desired annotations.
     # Caution: The CloudZero system has a limit of 300 labels and annotations,
     # so it is advisable to provide a specific list of required annotations rather than a wildcard.
     patterns:
       - ".*"  # Use regex patterns to specify which annotations to collect. ".*" collects all annotations.
-    # Specify the resources from which annotations should be collected.
+    # Specify which resources to collect annotations from.
     resources:
+      # Whether to collect annotations from CronJobs.
       cronjobs: false
+      # Whether to collect annotations from DaemonSets.
       daemonsets: false
+      # Whether to collect annotations from Deployments.
       deployments: false
+      # Whether to collect annotations from Jobs.
       jobs: false
+      # Whether to collect annotations from Namespaces.
       namespaces: true
+      # Whether to collect annotations from Nodes.
       nodes: false
+      # Whether to collect annotations from Pods.
       pods: true
+      # Whether to collect annotations from StatefulSets.
       statefulsets: false
+  # Configuration for TLS certificates used by the insights controller.
   tls:
-    # -- If disabled, the insights controller will not mount a TLS certificate from a Secret, and the user is responsible for configuring a method of providing TLS information to the webhook-server container.
+    # Whether to enable TLS certificate management.
     enabled: true
-    # -- If left as an empty string, the certificate will be generated by the chart. Otherwise, the provided value will be used.
+    # TLS certificate in PEM format. If empty, a certificate will be generated.
     crt: ""
-    # -- If left as an empty string, the certificate private key will be generated by the chart. Otherwise, the provided value will be used.
+    # TLS private key in PEM format. If empty, a key will be generated.
     key: ""
+    # Configuration for the TLS certificate Secret.
     secret:
-      # -- If set to true, a Secret will be created to store the TLS certificate and key.
+      # Whether to create a Secret to store the TLS certificate and key.
       create: true
-      # -- If set, the Secret will be created with this name. Otherwise, a default name will be generated.
+      # Name of the Secret to create. If empty, a name will be generated.
       name: ""
-    # -- The following TLS certificate information is for a self signed certificate. It is used as a default value for the validating admission webhook and the webhook server.
-    # -- This path determines the location within the container where the TLS certificate and key will be mounted.
+    # Path where the TLS certificate and key will be mounted in the container.
     mountPath: /etc/certs
-    # -- This is the caBundle used by the Validating Admission Webhook when sending requests to the webhook server. If left empty, the default self-signed certificate will be used.
-    # Set this value to an empty string if using cert-manager to manage the certificate instead. Otherwise, set this to the base64 encoded caBundle of the desired certificate.
+    # CA bundle for validating admission webhook requests. If empty, the default
+    # self-signed certificate will be used.
     caBundle: ""
-    # -- If enabled, the certificate will be managed by cert-manager, which must already be present in the cluster.
-    # If disabled, a default self-signed certificate will be used.
+    # Whether to use cert-manager for certificate management. If disabled, a
+    # self-signed certificate will be used.
     useCertManager: false
+  # Configuration for the webhook server component.
   server:
+    # Name of the webhook server component.
     name: webhook-server
+    # Number of replicas to run for the webhook server.
     replicaCount:
-    # -- Uncomment to use a specific imagePullSecrets; otherwise, the default top level imagePullSecrets is used.
-    # imagePullSecrets: []
+    # Container image configuration for the webhook server.
+    #
+    # Deprecated. Please use components.webhookServer.image instead.
     image:
       repository:
       tag:
       pullPolicy:
+    # Port that the webhook server listens on.
     port: 8443
+    # Timeout for reading HTTP requests.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     read_timeout: 10s
+    # Timeout for writing HTTP responses.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     write_timeout: 10s
+    # Timeout for sending data to clients.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     send_timeout: 1m
+    # Interval between sending data to clients.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     send_interval: 1m
+    # Timeout for idle connections.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     idle_timeout: 120s
+    # Configuration for logging in the webhook server.
     logging:
+      # Logging level for the webhook server.
       level: info
+    # Configuration for the health check endpoint.
     healthCheck:
+      # Whether to enable the health check endpoint.
       enabled: true
+      # Path for the health check endpoint.
       path: /healthz
+      # Port for the health check endpoint.
       port: 8443
+      # Initial delay before starting health checks.
       initialDelaySeconds: 15
+      # Interval between health checks.
       periodSeconds: 20
+      # Timeout for health check requests.
       timeoutSeconds: 3
+      # Number of successful checks required to mark as healthy.
       successThreshold: 1
+      # Number of failed checks before marking as unhealthy.
       failureThreshold: 5
+    # Node selector configuration for the webhook server pods.
+    #
+    # See the Kubernetes documentation for details:
+    # https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/
     nodeSelector: {}
+    # Tolerations configuration for the webhook server pods.
+    #
+    # See the Kubernetes documentation for details:
+    # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     tolerations: []
+    # Affinity rules for the webhook server pods.
+    #
+    # See the Kubernetes documentation for details:
+    # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
     affinity: {}
+    # Annotations to add to the webhook server Deployment.
     deploymentAnnotations: {}
+    # Annotations to add to the webhook server pods.
     podAnnotations: {}
+  # Additional volume mounts to add to the insights controller pods.
   volumeMounts: []
+  # Additional volumes to add to the insights controller pods.
   volumes: []
+  # Resource requirements and limits for the insights controller.
   resources: {}
+  # Annotations to add to the insights controller pods.
   podAnnotations: {}
+  # Labels to add to the insights controller pods.
   podLabels: {}
+  # Configuration for the insights controller Service.
   service:
+    # Port that the insights controller Service listens on.
     port: 443
+  # Configuration for the validating admission webhook.
   webhooks:
+    # Annotations to add to the validating admission webhook.
     annotations: {}
+    # Namespace selector for the validating admission webhook.
     namespaceSelector: {}
+    # Path for the validating admission webhook.
     path: /validate
 
+# Configuration for the service account in the chart.
 serviceAccount:
+  # Whether to create the service account.
   create: true
+  # Name of the service account to create.
+  #
+  # If not set, one will be generated automatically.
   name: ""
+  # Annotations to add to the service account.
+  #
+  # For more information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   annotations: {}
 
+# Configuration for the RBAC resources in the chart (e.g., ClusterRole,
+# ClusterRoleBinding, Role, RoleBinding, etc.).
 rbac:
+  # Whether to create the RBAC resources.
   create: true
 
+# These labels are added to all resources in the chart.
+#
+# Deprecated. Please use defaults.labels instead.
 commonMetaLabels: {}
 
+# Configuration for the ConfigMap reloader component, which watches for changes in
+# ConfigMaps and triggers a reload of the affected components.
 configmapReload:
-  reloadUrl: ""
-  env: []
+  # Configuration specific to the Prometheus ConfigMap reloader.
   prometheus:
+    # Whether to enable the Prometheus ConfigMap reloader.
     enabled: true
+    # Container image configuration for the Prometheus ConfigMap reloader.
     image:
       repository:
       tag:
       digest:
       pullPolicy:
-
-    containerSecurityContext: {}
+    # Resource requirements and limits for the Prometheus ConfigMap reloader.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources: {}
 
-# The aggregator provides an intermediary between the CloudZero Agent and the CloudZero API.
-# It is composed of two applications, the collector and the shipper.
-
-# The collector application provides an endpoint for the CloudZero Agent to write metrics to.
-# It filters out any unwanted metrics as it receives them, aggregates the wanted metrics,
-# and stores them in a compressed format on disk until they are ready to be uploaded to the
-# CloudZero servers. Once the collector has aggregated sufficient metrics (or a given amount of time has elapsed)
-# the data is sent to the shipper.
-
-# The shipper will process the completed metrics files and push them to the remote server.
-# It will also handle any requests from the server to re-send any missing or incomplete data,
-# ensuring that there is no data loss in the event of any loss of communication with the CloudZero API,
-# even when a misconfiguration (such as an incorrect API key) prevents it.
+# The aggregator provides an intermediary between the CloudZero Agent and the
+# CloudZero API. It is composed of two applications, the collector and the
+# shipper.
+#
+# The collector application provides an endpoint for the CloudZero Agent to
+# write metrics to. It filters out any unwanted metrics as it receives them,
+# aggregates the wanted metrics, and stores them in a compressed format on disk
+# until they are ready to be uploaded to the CloudZero servers. Once the
+# collector has aggregated sufficient metrics (or a given amount of time has
+# elapsed) the data is sent to the shipper.
+#
+# The shipper will process the completed metrics files and push them to the
+# remote server. It will also handle any requests from the server to re-send any
+# missing or incomplete data, ensuring that there is no data loss in the event
+# of any loss of communication with the CloudZero API, even when a
+# misconfiguration (such as an incorrect API key) prevents it.
 aggregator:
+  # Configuration for logging behavior of the aggregator components.
   logging:
     # Logging level that will be posted to stdout.
     # Valid values are: 'debug', 'info', 'warn', 'error'
     level: info
-  # Top-level directory containing CloudZero data. There will be subdirectories for configuration (the mounted ConfigMap)
-  # and the API key (typically a mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
-  # This value is really only visible internally in the container, so you shouldn't generally need to change it.
-  # Set `aggregator.database.purgeRules` to control the cleanup behavior of this directory
+  # Top-level directory containing CloudZero data. There will be subdirectories
+  # for configuration (the mounted ConfigMap) and the API key (typically a
+  # mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
+  # This value is really only visible internally in the container, so you
+  # shouldn't generally need to change it.
+  #
+  # Set `aggregator.database.purgeRules` to control the cleanup behavior of this
+  # directory.
   mountRoot: /cloudzero
   # Whether to enable the profiling endpoint (/debug/pprof/). This should
   # generally be disabled in production.
   profiling: false
+  # Container image configuration for the aggregator components.
+  #
+  # Deprecated. Please use components.aggregator.image instead.
   image:
     repository:
     tag:
@@ -535,48 +682,87 @@ aggregator:
     pullPolicy:
   cloudzero:
     # Interval between attempts to ship metrics to the remote endpoint.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     sendInterval: 1m
     # Max time the aggregator will spend attempting to ship metrics to the remote endpoint.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     sendTimeout: 30s
+    # Interval at which the aggregator will rotate its internal data structures.
+    #
+    # This is formatted as a Go duration string; see
+    # https://pkg.go.dev/time#ParseDuration for details.
     rotateInterval: 30m
+  # Configuration for the aggregator's database and storage behavior.
   database:
-    # Max number of records per file. Use this to adjust file sizes uploaded to the server. The default value is good in most cases.
+    # Max number of records per file. Use this to adjust file sizes uploaded to
+    # the server. The default value should generally be left unchanged.
     maxRecords: 1500000
-    # Max interval to flush a cost metrics file. This is mostly useful for smaller clusters with little activity.
+    # Max interval to flush a cost metrics file. This is mostly useful for
+    # smaller clusters with little activity.
     costMaxInterval: 10m
-    # Max interval to flush an observability metrics file. This is mostly useful for smaller clusters with little activity.
+    # Max interval to flush an observability metrics file. This is mostly useful
+    # for smaller clusters with little activity.
     observabilityMaxInterval: 30m
     # Compression level to use when compressing metrics files on-disk.
-    # Valid value range from 0-11, with higher values yielding improved compression ratios
-    # at the expense of speed and memory usage.
-    # Read more about brotli compression here: https://github.com/google/brotli/blob/master/c/tools/brotli.md#options
+    #
+    # Valid value range from 0-11, with higher values yielding improved
+    # compression ratios at the expense of speed and memory usage.
+    #
+    # Read more about brotli compression here:
+    # https://github.com/google/brotli/blob/master/c/tools/brotli.md#options
     compressionLevel: 8
-    # The rules that the application will follow in respect to cleaning up old files that have been uploaded to the
-    # Cloudzero platform.
-    # Generally, the defaults will be okay for the majority of use cases. But, the options are here for more advanced
-    # users to optimize disk usage. For example, the default case is to keep uploaded files around for 90 days, as this
-    # falls in line with most customer's data tolerance policies. But, if deployed on a more active and/or larger cluster,
-    # this value can be lowered to keep disk usage lower with the tradeoff of less data-retention. Regardless of what you
-    # define here if there is disk pressure detected, files will be deleted (oldest first) to free space.
+    # The rules that the application will follow in respect to cleaning up old
+    # files that have been uploaded to the CloudZero platform.
+    #
+    # Generally, the defaults will be okay for the majority of use cases. But,
+    # the options are here for more advanced users to optimize disk usage. For
+    # example, the default case is to keep uploaded files around for 90 days, as
+    # this falls in line with most customer's data tolerance policies. But, if
+    # deployed on a more active and/or larger cluster, this value can be lowered
+    # to keep disk usage lower with the tradeoff of less data-retention.
+    # Regardless of what you define here if there is disk pressure detected,
+    # files will be deleted (oldest first) to free space.
     purgeRules:
-      # How long to keep uploaded files. This option can be useful to optimize the storage required by the collector/shipper
-      # architecture on your nodes.
-      # `2160h` is 90 days, and is a reasonable default. This can reasonably be any value, as the application will force
-      # remove files if space is constrained.
-      # `0s` is also a valid option and can signify that you do not want to keep uploaded files at all. Though do note
-      # that this could possibly result in data loss if there are transient upload failures during the lifecycle of the application.
+      # How long to keep uploaded files. This option can be useful to optimize
+      # the storage required by the collector/shipper architecture on your
+      # nodes.
+      #
+      # `2160h` is 90 days, and is a reasonable default. This can reasonably be
+      # any value, as the application will force remove files if space is
+      # constrained.
+      #
+      # `0s` is also a valid option and can signify that you do not want to keep
+      # uploaded files at all. Though do note that this could possibly result in
+      # data loss if there are transient upload failures during the lifecycle of
+      # the application.
       metricsOlderThan: 2160h
-      # If set to true (default), then files older than `metricsOlderThan` will not be deleted unless there is detected storage pressure.
-      # For example, if there are files older than `metricsOlderThan` but only 30% of storage space is used, the files will not be deleted.
+      # If set to true (default), then files older than `metricsOlderThan` will
+      # not be deleted unless there is detected storage pressure. For example,
+      # if there are files older than `metricsOlderThan` but only 30% of storage
+      # space is used, the files will not be deleted.
       lazy: true
-      # This controls the percentage of files the application will remove when there is critical storage pressure.
-      # This is defined by >95% of storage usage.
+      # This controls the percentage of files the application will remove when
+      # there is critical storage pressure. This is defined by >95% of storage
+      # usage.
       percent: 20
+    # Configuration for the emptyDir volume used by the aggregator.
     emptyDir:
+      # Whether to enable the emptyDir volume for the aggregator.
       enabled: true
+      # Size limit for the emptyDir volume. If not set, no limit is applied.
       sizeLimit: ""
+  # Configuration for the collector component of the aggregator.
   collector:
+    # Port that the collector listens on for incoming metrics.
     port: 8080
+    # Resource requirements and limits for the collector component.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources:
       requests:
         memory: "64Mi"
@@ -584,8 +770,14 @@ aggregator:
       limits:
         memory: "1024Mi"
         cpu: "2000m"
+  # Configuration for the shipper component of the aggregator.
   shipper:
+    # Port that the shipper listens on for internal communication.
     port: 8081
+    # Resource requirements and limits for the shipper component.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources:
       requests:
         memory: "64Mi"
@@ -593,6 +785,18 @@ aggregator:
       limits:
         memory: "1024Mi"
         cpu: "2000m"
+  # Node selector configuration for the aggregator pods.
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/
   nodeSelector: {}
-  tolerations: []
+  # Tolerations configuration for the aggregator pods.
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: {}
+  # Affinity rules for the aggregator pods.
+  #
+  # See the Kubernetes documentation for details:
+  # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
