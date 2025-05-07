@@ -1,0 +1,6 @@
+prometheusConfig:
+  globalScrapeInterval: 60s
+  scrapeJobs:
+    unknownJob:
+      enabled: true
+      scrapeInterval: 60s

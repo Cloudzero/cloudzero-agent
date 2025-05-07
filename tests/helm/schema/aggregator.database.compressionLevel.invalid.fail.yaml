@@ -1,0 +1,3 @@
+aggregator:
+  database:
+    compressionLevel: 12

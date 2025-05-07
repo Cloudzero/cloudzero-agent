@@ -1,0 +1,9 @@
+initBackfillJob:
+  # enabled should be a boolean, not a string
+  enabled: "true"
+  # annotations should be an object, not an array
+  annotations: []
+  # tolerations should be an array of objects, not a string
+  tolerations: "invalid"
+  # image should be an object with specific properties, not a string
+  image: "invalid"

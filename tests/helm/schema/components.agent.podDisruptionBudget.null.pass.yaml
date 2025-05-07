@@ -1,0 +1,5 @@
+components:
+  agent:
+    podDisruptionBudget:
+      maxUnavailable: null
+      minAvailable: null

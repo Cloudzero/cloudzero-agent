@@ -1,0 +1,6 @@
+prometheusConfig:
+  globalScrapeInterval: "invalid"
+  scrapeJobs:
+    kubeStateMetrics:
+      enabled: true
+      scrapeInterval: 60s

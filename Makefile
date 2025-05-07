@@ -7,6 +7,7 @@
 # tools we install via `make install-tools` there is no need to allow overriding
 # the path to the executable.
 GO     ?= go
+GOJQ   ?= gojq
 AWK    ?= awk
 CC     ?= $(shell $(GO) env CC)
 CXX    ?= $(shell $(GO) env CXX)
@@ -312,15 +313,39 @@ helm-uninstall: ## Uninstall the Helm chart
 	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
 
 .PHONY: helm-template
-helm-template: api-tests-check-env helm-install-deps
+helm-template: api-tests-check-env helm-install-deps helm/values.schema.json
 helm-template: ## Generate the Helm chart templates
 	@$(HELM) template "$(HELM_TARGET)" ./helm $(HELM_ARGS)
 
 .PHONY: helm-lint
+helm-lint: helm/values.schema.json
 helm-lint: ## Lint the Helm chart
 	@$(HELM) lint ./helm $(HELM_ARGS)
 
-tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm-install-deps FORCE
+.PHONY: helm-test-schema
+helm-test-schema: helm/values.schema.json ## Run the Helm values schema validation tests
+	@for file in tests/helm/schema/*.yaml; do \
+		expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
+		output=$$($(HELM) template "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>&1); \
+		if [ $$? -eq 0 ]; then \
+			result="pass"; \
+		else \
+			result="fail"; \
+		fi; \
+		if [ "$$result" = "$$expected_result" ]; then \
+			echo "$(INFO_COLOR)✓ $$file$(NO_COLOR)"; \
+		else \
+			echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
+			if [ "$$expected_result" = "pass" ]; then \
+				echo "Helm command output:"; \
+				echo ""; \
+				echo "$$output"; \
+			fi; \
+			exit 1; \
+		fi; \
+	done
+
+tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/values.schema.json helm-install-deps FORCE
 	@$(HELM) template "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
 helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
@@ -328,6 +353,16 @@ helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
 generate: helm-generate-tests
 
 lint: helm-lint
+
+helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/merge-json-schema.jq
+	$(GOJQ) --yaml-input . helm/values.schema.yaml | $(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq > helm/values.schema.json
+
+generate: helm/values.schema.json
+
+helm/schema/k8s.json:
+	@$(CURL) -sSL -o "$@" "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/_definitions.json"
+
+generate: helm/schema/k8s.json
 
 # ----------- CODE GENERATION ------------
 

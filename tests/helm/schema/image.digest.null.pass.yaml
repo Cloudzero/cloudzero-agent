@@ -1,0 +1,4 @@
+components:
+  agent:
+    image:
+      digest: null

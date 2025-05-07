@@ -1,0 +1,1363 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://raw.githubusercontent.com/Cloudzero/cloudzero-agent/refs/heads/develop/helm/values.schema.json
+
+# Common types used in multiple components.
+$defs:
+  com.cloudzero.agent.image:
+    description: |
+      A container image type similar to the Kubernetes image type, but with
+      additional support for pullSecrets. This type is used to specify container
+      images across the chart.
+    additionalProperties: false
+    properties:
+      pullPolicy:
+        description: |
+          Corresponds to the Kubernetes imagePullPolicy. For documentation, see
+          https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy
+        oneOf:
+          - $ref: "#/$defs/io.k8s.api.core.v1.Container/properties/imagePullPolicy"
+          - type: "null"
+
+      registry:
+        description: |
+          The container registry to pull the image from.
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      repository:
+        description: |
+          The name of the container image repository.
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      digest:
+        description: |
+          The digest of the container image.
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      tag:
+        description: |
+          The tag of the container image to use.
+        additionalProperties: false
+        type:
+          - string
+          - "null"
+
+      pullSecrets:
+        description: |
+          A list of image pull secrets to use.
+        oneOf:
+          - $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+          - type: "null"
+    type: object
+
+  com.cloudzero.agent.dns:
+    description: |
+      Specifies DNS configurations, both the dnsPolicy and dnsConfig.
+      For documentation, see https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+    additionalProperties: false
+    type: object
+    properties:
+      policy:
+        description: |
+          DNS policy to use.
+          For documentation, see https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+        oneOf:
+          - $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/dnsPolicy"
+          - type: "null"
+      config:
+        description: |
+          DNS configuration to use.
+          For documentation, see https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+        $ref: "#/$defs/io.k8s.api.core.v1.PodDNSConfig"
+
+  com.cloudzero.agent.tolerations:
+    description: |
+      Used to control pod scheduling with taints
+    type: array
+    items:
+      $ref: "#/$defs/io.k8s.api.core.v1.Toleration"
+
+  com.cloudzero.agent.duration:
+    description: |
+      A time duration in Go's time.ParseDuration format. Valid formats include:
+      "300ms", "1.5h", "2h45m", etc. Valid time units are: "ns", "us" (or "µs"),
+      "ms", "s", "m", "h"
+    type: string
+    pattern: '^[0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$'
+
+type: object
+additionalProperties: false
+required:
+  - cloudAccountId
+  - clusterName
+  - region
+  - host
+
+properties:
+  cloudAccountId:
+    type: string
+    minLength: 1
+    description: |
+      The CloudZero Cloud Account ID.
+  clusterName:
+    type: string
+    pattern: ^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?$
+    description: |
+      The name of the Kubernetes cluster.
+  region:
+    type: string
+    minLength: 1
+    description: |
+      The cloud provider region.
+  apiKey:
+    type:
+      - string
+      - "null"
+    description: |
+      The CloudZero API key.
+  host:
+    type: string
+    minLength: 1
+    description: |
+      The CloudZero API host to connect to (e.g. api.cloudzero.com).
+  existingSecretName:
+    type:
+      - string
+      - "null"
+    description: |
+      The name of an existing Kubernetes secret containing the API key.
+
+  # Default settings for components
+  defaults:
+    description: |
+      Default settings for components, and globals.
+    type: object
+    additionalProperties: false
+    properties:
+      federation:
+        description: |
+          Federated mode deploys the agent as a DaemonSet, with each node in the
+          cluster running its own metrics collector.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: |
+              Whether to enable federated mode.
+            type: boolean
+      image:
+        description: |
+          The default image settings which will be fallen back on for all
+          components.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      dns:
+        description: |
+          DNS settings for all pods.
+        $ref: "#/$defs/com.cloudzero.agent.dns"
+      labels:
+        description: |
+          Labels to be added to all resources.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+      annotations:
+        description: |
+          Annotations to be added to all resources.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      affinity:
+        description: |
+          Affinity settings to be added to all resources.
+        $ref: "#/$defs/io.k8s.api.core.v1.Affinity"
+      tolerations:
+        description: |
+          Tolerations to be added to all resources.
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      nodeSelector:
+        description: |
+          Node Selector to be added to all resources.
+        $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+      priorityClassName:
+        description: |
+          Priority class name to be used for all deployments and jobs.
+        type:
+          - string
+          - "null"
+
+  components:
+    description: |
+      Configuration for individual components of the CloudZero agent.
+    additionalProperties: false
+    type: object
+    properties:
+      agent:
+        description: |
+          The CloudZero Agent.
+          The Agent is responsible for gathering metrics needed by CloudZero.
+          These metrics are then sent to the Aggregator.
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            description: |
+              Container image configuration for the agent.
+            $ref: "#/$defs/com.cloudzero.agent.image"
+          podDisruptionBudget:
+            description: |
+              Pod disruption budget configuration for the agent.
+
+              See the Kubernetes documentation for details:
+              https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+          replicas:
+            description: |
+              Number of replicas to deploy.
+            type: integer
+          tolerations:
+            description: |
+              Tolerations configuration for the agent pods.
+
+              See the Kubernetes documentation for details:
+              https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+            $ref: "#/$defs/com.cloudzero.agent.tolerations"
+
+      aggregator:
+        description: |
+          The CloudZero Aggregator ("Gator"). The Aggregator provides a service
+          which accepts metrics (e.g., from the Agent and the Webhook Server),
+          aggregates them, caches them, and sends them to CloudZero for
+          processing.
+        additionalProperties: false
+        type: object
+        properties:
+          podDisruptionBudget:
+            description: |
+              Pod disruption budget configuration for the aggregator.
+
+              See the Kubernetes documentation for details:
+              https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+          replicas:
+            description: |
+              Number of replicas to deploy.
+            additionalProperties: false
+            type:
+              - integer
+              - "null"
+          tolerations:
+            description: |
+              Tolerations configuration for the aggregator pods.
+
+              See the Kubernetes documentation for details:
+              https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+            $ref: "#/$defs/com.cloudzero.agent.tolerations"
+
+      kubectl:
+        description: |
+          A container which includes the `kubectl` executable. This is used
+          mostly to gather information about the cluster during an
+          initialization phase.
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            description: |
+              Container image configuration for the kubectl container.
+            $ref: "#/$defs/com.cloudzero.agent.image"
+
+      prometheus:
+        description: |
+          Configuration for the Prometheus component.
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            description: |
+              Container image configuration for Prometheus.
+            $ref: "#/$defs/com.cloudzero.agent.image"
+
+      prometheusReloader:
+        description: |
+          Configuration for the Prometheus reloader component.
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            description: |
+              Container image configuration for the Prometheus reloader.
+            $ref: "#/$defs/com.cloudzero.agent.image"
+
+      webhookServer:
+        description: |
+          Configuration for the webhook server component.
+        additionalProperties: false
+        type: object
+        properties:
+          podDisruptionBudget:
+            description: |
+              Pod disruption budget configuration for the webhook server.
+
+              See the Kubernetes documentation for details:
+              https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+          replicas:
+            description: |
+              Number of replicas to deploy.
+            additionalProperties: false
+            type:
+              - integer
+              - "null"
+
+  #######################################################################################
+  #######################################################################################
+  ####                                                                               ####
+  ####  Values below this point are not considered API stable. Use at your own risk. ####
+  ####  If you do require them for some reason, please let us know so we can work on ####
+  ####  covering your use case in the stable section.                                ####
+  ####                                                                               ####
+  #######################################################################################
+  #######################################################################################
+
+  aggregator:
+    additionalProperties: false
+    type: object
+    properties:
+      logging:
+        type: object
+        additionalProperties: false
+        properties:
+          # The log level to use
+          level:
+            type: string
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+      mountRoot:
+        type: string
+      profiling:
+        type: boolean
+      image:
+        deprecated: true
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      cloudzero:
+        type: object
+        additionalProperties: false
+        properties:
+          # The interval at which to send data
+          sendInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          # The timeout for sending data
+          sendTimeout:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          # The interval at which to rotate data
+          rotateInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+      database:
+        type: object
+        additionalProperties: false
+        properties:
+          # The maximum number of records to store
+          maxRecords:
+            type: integer
+          # The maximum interval for cost data
+          costMaxInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          # The maximum interval for observability data
+          observabilityMaxInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          # The compression level to use for database operations
+          compressionLevel:
+            type: integer
+            minimum: 0
+            maximum: 11
+          # Rules for purging old data
+          purgeRules:
+            type: object
+            additionalProperties: false
+            properties:
+              metricsOlderThan:
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+              lazy:
+                type: boolean
+              percent:
+                type: integer
+          # emptyDir volume configuration
+          emptyDir:
+            $ref: "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource"
+      collector:
+        type: object
+        additionalProperties: false
+        properties:
+          port:
+            type: integer
+          # Resource requirements for the collector
+          resources:
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+      shipper:
+        type: object
+        additionalProperties: false
+        properties:
+          port:
+            type: integer
+          # Resource requirements for the collector
+          resources:
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+      # Node selector for the aggregator
+      nodeSelector:
+        $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+      # Tolerations for the aggregator
+      tolerations:
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      # Affinity settings for the aggregator
+      affinity:
+        $ref: "#/$defs/io.k8s.api.core.v1.Affinity"
+
+  prometheusConfig:
+    description: |
+      Prometheus configuration settings.
+    type: object
+    additionalProperties: false
+    properties:
+      configMapNameOverride:
+        description: |
+          Override the name of the ConfigMap.
+        type: string
+      configMapAnnotations:
+        description: |
+          Annotations to add to the ConfigMap.
+        type: object
+        additionalProperties: true
+      configOverride:
+        description: |
+          Override the entire Prometheus configuration.
+        type: string
+      globalScrapeInterval:
+        description: |
+          Global scrape interval for all jobs.
+        $ref: "#/$defs/com.cloudzero.agent.duration"
+      scrapeJobs:
+        description: |
+          Scrape job configurations.
+        type: object
+        additionalProperties: false
+        properties:
+          kubeStateMetrics:
+            description: |
+              kube-state-metrics scrape job configuration.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the kube-state-metrics scrape job.
+                type: boolean
+              scrapeInterval:
+                description: |
+                  Scrape interval for kubeStateMetrics job.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+          cadvisor:
+            description: |
+              cadvisor scrape job configuration.
+            type: object
+            additionalProperties: false
+            required:
+              - enabled
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the cadvisor scrape job.
+                type: boolean
+                enum: [true]
+              scrapeInterval:
+                description: |
+                  Scrape interval for nodesCadvisor job.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+          prometheus:
+            description: |
+              prometheus scrape job configuration.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the prometheus scrape job.
+                type: boolean
+              scrapeInterval:
+                description: |
+                  Scrape interval for prometheus job.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+          aggregator:
+            description: |
+              aggregator scrape job configuration.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the aggregator scrape job.
+                type: boolean
+              scrapeInterval:
+                description: |
+                  Scrape interval for aggregator job.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+          additionalScrapeJobs:
+            description: |
+              Additional scrape jobs to add to the configuration.
+            type: array
+            items:
+              type: object
+
+  commonMetaLabels:
+    $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+    title: Common labels applied to all resources
+    description: |
+      This field is deprecated. Please use `defaults.labels` instead.
+
+      Labels to be added to all resources in the chart. These labels are merged
+      with `defaults.labels` and component-specific labels (e.g.,
+      `components.aggregator.labels`).
+    default: {}
+    examples:
+      - environment: production
+        team: platform
+    deprecated: true
+
+  configmapReload:
+    title: Configuration for ConfigMap reloading
+    type: object
+    deprecated: true
+    description: |
+      This field is deprecated.
+
+      This field is used to configure the reloading of ConfigMaps. It allows you
+      to specify settings for how and when ConfigMaps should be reloaded.
+    properties:
+      prometheus:
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            type: boolean
+            default: true
+          image:
+            $ref: "#/$defs/com.cloudzero.agent.image"
+          resources:
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+
+  imagePullSecrets:
+    deprecated: true
+    description: |
+      This field is deprecated. Please use `defaults.image.pullSecrets` instead.
+    $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+
+  initBackfillJob:
+    description: |
+      Configuration for the init-backfill-job, which is used to backfill data
+      from the cluster to CloudZero.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to enable the init-backfill-job.
+        type: boolean
+        default: true
+      annotations:
+        description: |
+          Annotations to add to the init-backfill-job.
+        type: object
+        additionalProperties: true
+      tolerations:
+        description: |
+          Tolerations to be added to the init-backfill-job.
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      image:
+        description: |
+          Container image configuration for the init-backfill-job.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+
+  initCertJob:
+    description: |
+      Configuration for the init-cert-job, which is used to initialize
+      certificates for the webhook server.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to enable the init-cert-job.
+        type: boolean
+        default: true
+      annotations:
+        description: |
+          Annotations to add to the init-cert-job.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      tolerations:
+        description: |
+          Tolerations to be added to the init-cert-job.
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      image:
+        description: |
+          Container image configuration for the init-cert-job.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      rbac:
+        description: |
+          RBAC configuration for the init-cert-job.
+        type: object
+        properties:
+          create:
+            description: |
+              Whether to create RBAC resources.
+            type: boolean
+            default: true
+          serviceAccountName:
+            description: |
+              Name of the service account to create.
+            $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/serviceAccountName"
+          clusterRoleName:
+            description: |
+              Name of the cluster role to create.
+            type: string
+          clusterRoleBindingName:
+            description: |
+              Name of the cluster role binding to create.
+            type: string
+
+  insightsController:
+    description: |
+      Configuration for the webhook server (née Insights Controller), which
+      collects and processes Kubernetes resource metadata for cost attribution
+      and analysis.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to enable the insights controller. It is strongly recommended
+          that this feature be enabled as it provides important functionality.
+        type: boolean
+        default: true
+      labels:
+        description: |
+          Configuration for collecting labels from Kubernetes resources.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: |
+              Whether to enable collection of specific labels for cost
+              attribution dimensions. It is strongly recommended that this
+              feature be enabled as it provides important functionality.
+            type: boolean
+            default: true
+          patterns:
+            description: |
+              List of Go-style regular expressions used to filter desired
+              labels. Caution: The CloudZero system has a limit of 300 labels
+              and annotations, so it is advisable to provide a specific list of
+              required labels rather than a wildcard.
+            type: array
+            items:
+              type: string
+          resources:
+            description: |
+              Specify which resources to collect labels from.
+            type: object
+            additionalProperties: false
+            properties:
+              cronjobs:
+                description: |
+                  Whether to collect labels from CronJobs.
+                type: boolean
+                default: false
+              daemonsets:
+                description: |
+                  Whether to collect labels from DaemonSets.
+                type: boolean
+                default: false
+              deployments:
+                description: |
+                  Whether to collect labels from Deployments.
+                type: boolean
+                default: false
+              jobs:
+                description: |
+                  Whether to collect labels from Jobs.
+                type: boolean
+                default: false
+              namespaces:
+                description: |
+                  Whether to collect labels from Namespaces.
+                type: boolean
+                default: true
+              nodes:
+                description: |
+                  Whether to collect labels from Nodes.
+                type: boolean
+                default: false
+              pods:
+                description: |
+                  Whether to collect labels from Pods.
+                type: boolean
+                default: true
+              statefulsets:
+                description: |
+                  Whether to collect labels from StatefulSets.
+                type: boolean
+                default: false
+      annotations:
+        description: |
+          Configuration for collecting annotations from Kubernetes resources.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: |
+              Whether to enable collection of annotations for cost attribution
+              dimensions.
+            type: boolean
+            default: false
+          patterns:
+            description: |
+              List of Go-style regular expressions used to filter desired
+              annotations. Caution: The CloudZero system has a limit of 300
+              labels and annotations, so it is advisable to provide a specific
+              list of required annotations rather than a wildcard.
+            type: array
+            items:
+              type: string
+          resources:
+            description: |
+              Specify which resources to collect annotations from.
+            type: object
+            additionalProperties: false
+            properties:
+              cronjobs:
+                description: |
+                  Whether to collect annotations from CronJobs.
+                type: boolean
+                default: false
+              daemonsets:
+                description: |
+                  Whether to collect annotations from DaemonSets.
+                type: boolean
+                default: false
+              deployments:
+                description: |
+                  Whether to collect annotations from Deployments.
+                type: boolean
+                default: false
+              jobs:
+                description: |
+                  Whether to collect annotations from Jobs.
+                type: boolean
+                default: false
+              namespaces:
+                description: |
+                  Whether to collect annotations from Namespaces.
+                type: boolean
+                default: true
+              nodes:
+                description: |
+                  Whether to collect annotations from Nodes.
+                type: boolean
+                default: false
+              pods:
+                description: |
+                  Whether to collect annotations from Pods.
+                type: boolean
+                default: true
+              statefulsets:
+                description: |
+                  Whether to collect annotations from StatefulSets.
+                type: boolean
+                default: false
+      tls:
+        description: |
+          Configuration for TLS certificates used by the insights controller.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: |
+              Whether to enable TLS certificate management.
+            type: boolean
+            default: true
+          crt:
+            description: |
+              TLS certificate in PEM format. If empty, a certificate will be
+              generated.
+            type: string
+            default: ""
+          key:
+            description: |
+              TLS private key in PEM format. If empty, a key will be generated.
+            type: string
+            default: ""
+          secret:
+            description: |
+              Configuration for the TLS certificate Secret.
+            type: object
+            additionalProperties: false
+            properties:
+              create:
+                description: |
+                  Whether to create a Secret to store the TLS certificate and
+                  key.
+                type: boolean
+                default: true
+              name:
+                description: |
+                  Name of the Secret to create. If empty, a name will be
+                  generated.
+                type: string
+                default: ""
+          mountPath:
+            description: |
+              Path where the TLS certificate and key will be mounted in the
+              container.
+            type: string
+            default: "/etc/certs"
+          caBundle:
+            description: |
+              CA bundle for validating admission webhook requests. If empty, the
+              default self-signed certificate will be used.
+            type: string
+            default: ""
+          useCertManager:
+            description: |
+              Whether to use cert-manager for certificate management. If
+              disabled, a self-signed certificate will be used.
+            type: boolean
+            default: false
+
+      server:
+        description: |
+          Configuration for the webhook server component.
+        type: object
+        additionalProperties: false
+        properties:
+          name:
+            description: |
+              Name of the webhook server component.
+            type: string
+            default: "webhook-server"
+          replicaCount:
+            deprecated: true
+            description: |
+              This field is deprecated. Please use `components.webhookServer.replicaCount` instead.
+
+              Number of replicas to run for the webhook server.
+            type:
+              - integer
+              - "null"
+          image:
+            description: |
+              Container image configuration for the webhook server.
+            $ref: "#/$defs/com.cloudzero.agent.image"
+          port:
+            description: |
+              Port that the webhook server listens on.
+            type: integer
+            default: 8443
+          read_timeout:
+            description: |
+              Timeout for reading HTTP requests.
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+            default: "10s"
+          write_timeout:
+            description: |
+              Timeout for writing HTTP responses.
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+            default: "10s"
+          send_timeout:
+            description: |
+              Timeout for sending data to clients.
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+            default: "1m"
+          send_interval:
+            description: |
+              Interval between sending data to clients.
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+            default: "1m"
+          idle_timeout:
+            description: |
+              Timeout for idle connections.
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+            default: "120s"
+          logging:
+            description: |
+              Configuration for logging in the webhook server.
+            type: object
+            additionalProperties: false
+            properties:
+              level:
+                description: |
+                  Logging level for the webhook server.
+                type: string
+                enum: [debug, info, warn, error]
+                default: "info"
+          healthCheck:
+            description: |
+              Configuration for the health check endpoint.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the health check endpoint.
+                type: boolean
+                default: true
+              path:
+                description: |
+                  Path for the health check endpoint.
+                type: string
+                default: "/healthz"
+              port:
+                description: |
+                  Port for the health check endpoint.
+                type: integer
+                default: 8443
+              initialDelaySeconds:
+                description: |
+                  Initial delay before starting health checks.
+                type: integer
+                default: 15
+              periodSeconds:
+                description: |
+                  Interval between health checks.
+                type: integer
+                default: 20
+              timeoutSeconds:
+                description: |
+                  Timeout for health check requests.
+                type: integer
+                default: 3
+              successThreshold:
+                description: |
+                  Number of successful checks required to mark as healthy.
+                type: integer
+                default: 1
+              failureThreshold:
+                description: |
+                  Number of failed checks before marking as unhealthy.
+                type: integer
+                default: 5
+          nodeSelector:
+            description: |
+              Node selector configuration for the webhook server pods.
+            $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+          tolerations:
+            description: |
+              Tolerations configuration for the webhook server pods.
+            $ref: "#/$defs/com.cloudzero.agent.tolerations"
+          affinity:
+            description: |
+              Affinity rules for the webhook server pods.
+            $ref: "#/$defs/io.k8s.api.core.v1.Affinity"
+          deploymentAnnotations:
+            description: |
+              Annotations to add to the webhook server Deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          podAnnotations:
+            description: |
+              Annotations to add to the webhook server pods.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      volumeMounts:
+        description: |
+          Additional volume mounts to add to the insights controller pods.
+        type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+      volumes:
+        description: |
+          Additional volumes to add to the insights controller pods.
+        type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+      resources:
+        description: |
+          Resource requirements and limits for the insights controller.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+      podAnnotations:
+        description: |
+          Annotations to add to the insights controller pods.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      podLabels:
+        description: |
+          Labels to add to the insights controller pods.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+      service:
+        description: |
+          Configuration for the insights controller Service.
+        type: object
+        additionalProperties: false
+        properties:
+          port:
+            description: |
+              Port that the insights controller Service listens on.
+            type: integer
+            default: 443
+      webhooks:
+        description: |
+          Configuration for the validating admission webhook.
+        type: object
+        additionalProperties: false
+        properties:
+          annotations:
+            description: |
+              Annotations to add to the validating admission webhook.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          namespaceSelector:
+            description: |
+              Namespace selector for the validating admission webhook.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+          path:
+            description: |
+              Path for the validating admission webhook.
+            type: string
+            default: "/validate"
+          caInjection:
+            type:
+              - string
+              - "null"
+            description: |
+              Configuration for CA injection in webhooks.
+      configurationMountPath:
+        type:
+          - string
+          - "null"
+        description: |
+          Path where the configuration will be mounted in the container.
+      ConfigMapNameOverride:
+        type:
+          - string
+          - "null"
+        description: |
+          Override the name of the ConfigMap used for configuration.
+
+  kubeStateMetrics:
+    type: object
+    description: |
+      The configuration for the kube-state-metrics chart.
+
+      For details, please see the [kube-state-metrics
+      chart](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics).
+
+  rbac:
+    type: object
+    additionalProperties: false
+    description: |
+      Configuration for the RBAC resources in the chart (e.g., ClusterRole,
+      ClusterRoleBinding, Role, RoleBinding, etc.).
+    properties:
+      # Whether to create the RBAC resources.
+      create:
+        type: boolean
+        default: true
+
+  secretAnnotations:
+    additionalProperties: true
+    deprecated: true
+    description: |
+      Annotations to be added to all Secret resources created by the chart.
+      These annotations are merged with `defaults.annotations` and
+      component-specific annotations.
+    default: {}
+    $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+
+  server:
+    description: |
+      Configuration for the server component.
+    type: object
+    additionalProperties: false
+    properties:
+      name:
+        description: |
+          Name of the server component.
+        type: string
+        default: "server"
+      image:
+        deprecated: true
+        description: |
+          This field is deprecated. Please use `components.agent.image` instead.
+
+          Container image configuration for the server.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      nodeSelector:
+        $ref: "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+        description: |
+          Node selector configuration for the server pods.
+
+          See the Kubernetes documentation for details:
+          https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/
+      resources:
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        description: |
+          Resource requirements and limits for the server.
+
+          For details, see the Kubernetes documentation on resource management:
+          https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      deploymentAnnotations:
+        description: |
+          Annotations to add to the server Deployment.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      podAnnotations:
+        description: |
+          Annotations to add to the server pods.
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      agentMode:
+        description: |
+          Whether the server is running in agent mode.
+        type: boolean
+        default: true
+      args:
+        description: |
+          Command-line arguments to pass to the server.
+        type: array
+        items:
+          type: string
+        default:
+          - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
+          - --web.enable-lifecycle
+          - --web.console.libraries=/etc/prometheus/console_libraries
+          - --web.console.templates=/etc/prometheus/consoles
+      persistentVolume:
+        description: |
+          Configuration for persistent storage.
+        type: object
+        additionalProperties: false
+        properties:
+          existingClaim:
+            description: |
+              Name of an existing PersistentVolumeClaim to use.
+            type: string
+            default: ""
+          enabled:
+            description: |
+              Whether to enable persistent storage.
+            type: boolean
+            default: false
+          mountPath:
+            description: |
+              Path where the volume will be mounted.
+            type: string
+            default: "/data"
+          subPath:
+            description: |
+              Sub-path within the volume to mount.
+            type: string
+            default: ""
+          storageClass:
+            description: |
+              Storage class to use for the PersistentVolumeClaim.
+            $ref: "#/$defs/io.k8s.api.core.v1.PersistentVolumeClaimSpec/properties/storageClassName"
+          size:
+            description: |
+              Size of the PersistentVolumeClaim.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          accessModes:
+            description: |
+              Access modes for the PersistentVolumeClaim.
+            $ref: "#/$defs/io.k8s.api.core.v1.PersistentVolumeClaimSpec/properties/accessModes"
+          annotations:
+            description: |
+              Annotations to add to the PersistentVolumeClaim.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      emptyDir:
+        description: |
+          Configuration for emptyDir volume.
+        type: object
+        additionalProperties: false
+        properties:
+          sizeLimit:
+            description: |
+              Limit the size to lower impact on the cluster, and to provide a
+              reasonable backup for the WAL.
+            $ref: "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource/properties/sizeLimit"
+            default: 8Gi
+      affinity:
+        description: |
+          Affinity rules for pod scheduling.
+          See the Kubernetes documentation for details:
+          https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+        $ref: "#/$defs/io.k8s.api.core.v1.Affinity"
+      tolerations:
+        description: |
+          Tolerations configuration for the server pods.
+
+          See the Kubernetes documentation for details:
+          https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      topologySpreadConstraints:
+        description: |
+          Topology spread constraints for pod scheduling. See the Kubernetes
+          documentation for details:
+          https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+        type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.TopologySpreadConstraint"
+      terminationGracePeriodSeconds:
+        description: |
+          Termination grace period in seconds.
+
+          See the Kubernetes documentation for details:
+          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination
+        type: integer
+        default: 300
+      readinessProbe:
+        description: |
+          Readiness probe configuration.
+        type: object
+        additionalProperties: false
+        properties:
+          initialDelaySeconds:
+            description: |
+              Initial delay before starting readiness checks.
+            type: integer
+            default: 30
+          periodSeconds:
+            description: |
+              Interval between readiness checks.
+            type: integer
+            default: 5
+          timeoutSeconds:
+            description: |
+              Timeout for readiness check requests.
+            type: integer
+            default: 4
+          failureThreshold:
+            description: |
+              Number of failed checks before marking as not ready.
+            type: integer
+            default: 3
+          successThreshold:
+            description: |
+              Number of successful checks required to mark as ready.
+            type: integer
+            default: 1
+      livenessProbe:
+        description: |
+          Liveness probe configuration.
+        type: object
+        additionalProperties: false
+        properties:
+          initialDelaySeconds:
+            description: |
+              Initial delay before starting liveness checks.
+            type: integer
+            default: 30
+          periodSeconds:
+            description: |
+              Interval between liveness checks.
+            type: integer
+            default: 15
+          timeoutSeconds:
+            description: |
+              Timeout for liveness check requests.
+            type: integer
+            default: 10
+          failureThreshold:
+            description: |
+              Number of failed checks before marking as not alive.
+            type: integer
+            default: 3
+          successThreshold:
+            description: |
+              Number of successful checks required to mark as alive.
+            type: integer
+            default: 1
+
+  serverConfig:
+    description: |
+      General server settings that apply to both the prometheus agent server and
+      the webhook server.
+    type: object
+    additionalProperties: false
+    properties:
+      containerSecretFilePath:
+        description: |
+          The agent will use this file path on the container filesystem to get
+          the CloudZero API key.
+        type: string
+        default: "/etc/config/secrets/"
+      containerSecretFileName:
+        description: |
+          The agent will look for a file with this name to get the CloudZero API
+          key.
+        type: string
+        default: "value"
+
+  serviceAccount:
+    description: |
+      Configuration for the service account in the chart.
+    type: object
+    additionalProperties: false
+    properties:
+      create:
+        description: |
+          Whether to create the service account.
+        type: boolean
+        default: true
+      name:
+        type: string
+        default: ""
+        description: |
+          Name of the service account to create. If not set, one will be
+          generated automatically.
+      # Annotations to add to the service account.
+      annotations:
+        $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+        description: |
+          For more information, see the Kubernetes documentation:
+          https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+
+  validator:
+    description: |
+      Environment validator image.
+    type: object
+    additionalProperties: false
+    properties:
+      serviceEndpoints:
+        description: |
+          Configuration for service endpoints used by the validator.
+        type: object
+        additionalProperties: false
+        properties:
+          kubeStateMetrics:
+            description: |
+              The hostname of the kube-state-metrics service.
+            type:
+              - string
+              - "null"
+            additionalProperties: true
+      name:
+        description: |
+          Name of the validator component.
+        type: string
+        default: "env-validator"
+      image:
+        $ref: "#/$defs/com.cloudzero.agent.image"
+        description: |
+          Container image configuration to use for the validator.
+
+  jobConfigID:
+    type: string
+    description: |
+      We embed a hash of the configuration in some job names, most notably the
+      backfill job. This is done so we can make sure the job gets re-run
+      whenever the configuration changes, while also preserving the job in
+      Kubernetes since setting a TTL can interfere with systems which attempt to
+      keep the cluster synced to the chart, such as ArgoCD.
+
+      Unfortunately this can result in a lot of noise in the generated manifests
+      (see tests/helm/template/), so jobConfig ID provides a way to override
+      this behavior and instead generate the same hash every time. It shouldn't
+      really be used anywhere else.

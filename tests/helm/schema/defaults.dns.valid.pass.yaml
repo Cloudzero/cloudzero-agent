@@ -1,0 +1,20 @@
+host: "test-host"
+clusterName: "test-cluster"
+cloudAccountId: "test-account"
+region: "us-west-2"
+
+defaults:
+  dns:
+    policy: "ClusterFirst"
+    config:
+      nameservers:
+        - "1.1.1.1"
+        - "8.8.8.8"
+      searches:
+        - "svc.cluster.local"
+        - "cluster.local"
+      option:
+        - name: "ndots"
+          value: "5"
+        - name: "timeout"
+          value: "3"

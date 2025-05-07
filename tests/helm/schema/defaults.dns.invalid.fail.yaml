@@ -1,0 +1,15 @@
+host: "test-host"
+clusterName: "test-cluster"
+cloudAccountId: "test-account"
+region: "us-west-2"
+
+defaults:
+  dns:
+    policy: "InvalidPolicy" # Invalid policy value
+    config:
+      nameservers:
+        - "1.1.1.1"
+      searches: "invalid" # Should be an array
+      option:
+        - name: "ndots"
+          value: 5 # Should be a string

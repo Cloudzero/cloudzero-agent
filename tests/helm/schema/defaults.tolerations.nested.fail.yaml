@@ -1,0 +1,7 @@
+defaults:
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "experimental"
+      effect: "NoSchedule"
+    - "not-an-object"
