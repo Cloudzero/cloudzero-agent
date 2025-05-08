@@ -1300,7 +1300,7 @@ spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       initContainers:
         - name: env-validator-copy
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           command:
@@ -1318,7 +1318,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
         - name: env-validator-run
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           command:
@@ -1486,7 +1486,7 @@ spec:
       
       containers:
         - name: cz-agent-aggregator-collector
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           ports:
@@ -1529,7 +1529,7 @@ spec:
               memory: 64Mi
 
         - name: cz-agent-aggregator-shipper
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           ports:
@@ -1662,7 +1662,7 @@ spec:
       
       containers:
         - name: webhook-server
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           command:
@@ -1750,7 +1750,7 @@ spec:
       
       containers:
         - name: init-scrape
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
           command:
