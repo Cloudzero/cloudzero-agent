@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -33,24 +33,34 @@ func makeReport() status.Accessor {
 
 // createMockEndpoints creates mock endpoints and adds them to the fake clientset
 func createMockEndpoints(clientset *fake.Clientset) {
-	clientset.PrependReactor("get", "endpoints", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Endpoints{
+	clientset.PrependReactor("get", "endpointslices", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, &discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cz-prom-agent-kube-state-metrics",
 				Namespace: "prom-agent",
 			},
-			Subsets: []corev1.EndpointSubset{
+			AddressType: discoveryv1.AddressTypeIPv4,
+			Endpoints: []discoveryv1.Endpoint{
 				{
-					Addresses: []corev1.EndpointAddress{
-						{IP: "192.168.1.1"},
+					Addresses: []string{"192.168.1.1"},
+					Conditions: discoveryv1.EndpointConditions{
+						Ready: ptr(true),
 					},
-					Ports: []corev1.EndpointPort{
-						{Name: "http", Port: 8080},
-					},
+				},
+			},
+			Ports: []discoveryv1.EndpointPort{
+				{
+					Name: ptr("http"),
+					Port: ptr(int32(8080)),
 				},
 			},
 		}, nil
 	})
+}
+
+// ptr returns a pointer to the given value
+func ptr[T any](v T) *T {
+	return &v
 }
 
 func TestChecker_CheckOK(t *testing.T) {
