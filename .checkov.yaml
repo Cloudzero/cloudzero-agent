@@ -1,0 +1,109 @@
+skip-path:
+  - ./helm/charts/kubeStateMetrics # Exclude kube-state-metrics chart
+  - ./helm/charts/prometheus # Exclude prometheus chart if it exists
+  - ./helm/tests # Exclude test files
+  - ./tests # Exclude test files
+  - ./docs # Exclude documentation
+
+skip-check:
+  # Rule:
+    #   Containers should have liveness probes to detect and restart unhealthy
+    #   containers.
+  - CKV_K8S_8
+
+  # Rule:
+  #   Containers should have readiness probes to control traffic routing.
+  - CKV_K8S_9
+
+  # Rule:
+  #   Containers should have CPU requests defined for proper scheduling.
+  - CKV_K8S_10
+
+  # Rule:
+  #   Containers should have CPU limits defined to prevent resource exhaustion.
+  - CKV_K8S_11
+
+  # Rule: Containers should have memory requests defined for proper scheduling.
+  # Fix: Add "resources.requests.memory" to container specifications.
+  # Currently skipped as memory requests are configured via values.yaml when needed.
+  - CKV_K8S_12
+
+  # Rule:
+  #   Containers should have memory limits defined to prevent resource
+  #   exhaustion.
+  - CKV_K8S_13
+
+  # Rule:
+  #   Image pull policy is not set to Always
+  #
+  # Users can set defaults.image.pullPolicy to Always if they want to always
+  # pull the latest images.
+  - CKV_K8S_15
+
+  # Rule:
+  #   Containers should not be able to escalate privileges.
+  - CKV_K8S_20
+
+  # Rule:
+  #   The default namespace should not be used.
+  #
+  # The namespace is configurable, the default namespace is only used if that is
+  # the configuration the user chooses.
+  - CKV_K8S_21
+
+  # Rule:
+  #   Container filesystems should be read-only when possible for security.
+  - CKV_K8S_22
+
+  # Rule:
+  #   Containers should not run as root (UID 0).
+  - CKV_K8S_23
+
+  # Rule:
+  #   Minimize the admission of containers wishing to share the host process ID
+  #   namespace.
+  - CKV_K8S_28
+
+  # Rule:
+  #   Pods should have security context defined for proper isolation.
+  - CKV_K8S_29
+
+  # Rule:
+  #   Containers should have security context defined for proper isolation.
+  - CKV_K8S_30
+
+  # Rule:
+  #   Containers should use seccomp profiles for syscall filtering.
+  - CKV_K8S_31
+
+  # Rule:
+  #   Containers should not have additional Linux capabilities assigned.
+  - CKV_K8S_37
+
+  # Rule:
+  #   Service account tokens should not be automatically mounted unless
+  #   required.
+  - CKV_K8S_38
+
+  # Rule:
+  #   Containers should run with user ID >= 10000 to avoid conflicts with host
+  #   users.
+  - CKV_K8S_40
+
+  # Rule:
+  #    Images should use immutable digest instead of mutable tags for security
+  #    and reproducibility.
+  #
+  # We currently have no plans to "fix" this. The current setup is much easier
+  # to maintain and more flexible. If customers need to use a specific image
+  # tag, they can do so by overriding the values when they install the chart.
+  - CKV_K8S_43
+
+  # Rule:
+  #    ClusterRoles should not have permissions to manage admission webhook
+  #    configurations.
+  - CKV_K8S_155
+
+  # Rule:
+  #   Minimize the admission of pods which lack an associated NetworkPolicy.
+  - CKV2_K8S_6
