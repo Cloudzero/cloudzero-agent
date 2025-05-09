@@ -10,6 +10,7 @@ GO          ?= go
 AWK         ?= awk
 CC          ?= $(shell $(GO) env CC)
 CXX         ?= $(shell $(GO) env CXX)
+CHECKOV     ?= checkov
 CURL        ?= curl
 DOCKER      ?= docker
 GREP        ?= grep
@@ -174,6 +175,23 @@ analyze-go:
 .PHONY: analyze
 analyze: ## Run static analysis
 analyze: analyze-go
+
+.PHONY: analyze-staticcheck
+analyze-staticcheck:
+	@staticcheck -checks all ./...
+
+.PHONY: analyze-checkov
+analyze-checkov: $(addsuffix -analyze-checkov,$(wildcard tests/helm/template/*.yaml))
+
+.PHONY: tests/helm/template/%.yaml-analyze-checkov
+tests/helm/template/%.yaml-analyze-checkov: tests/helm/template/%.yaml
+	@checkov -f $< \
+		--compact \
+		--quiet \
+		--framework kubernetes \
+		$(NULL)
+
+helm-test: analyze-checkov
 
 # ----------- COMPILATION ------------
 
