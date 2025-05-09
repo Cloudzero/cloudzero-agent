@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -169,19 +170,25 @@ func main() {
 	defer close(sigc)
 	signal.Notify(sigc, syscall.SIGHUP)
 
-	// Options
-	sig := monitor.WithSIGHUPReload(sigc)
-	certs := monitor.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
-	verify := monitor.WithVerifyConnection()
-	cb := monitor.WithOnReload(func(_ *tls.Config) {
-		log.Ctx(ctx).Info().Msg("TLS certificate initialized")
-	})
-	listener := server.TLSListener(
-		time.Duration(settings.Server.ReadTimeout),
-		time.Duration(settings.Server.WriteTimeout),
-		time.Duration(settings.Server.IdleTimeout),
-		func() *tls.Config { return monitor.TLSConfig(sig, certs, verify, cb) },
-	)
+	// Allow TLS key rotation monitoring if in HTTPS mode,
+	// otherwise we are running in HTTP mode - likely to support
+	// istio mTLS cluster configurations
+	listener := server.HTTPListener()
+	if strings.ToLower(settings.Server.Mode) != "http" {
+		// Options
+		sig := monitor.WithSIGHUPReload(sigc)
+		certs := monitor.WithCertificatesPaths(settings.Certificate.Cert, settings.Certificate.Key, "")
+		verify := monitor.WithVerifyConnection()
+		cb := monitor.WithOnReload(func(_ *tls.Config) {
+			log.Ctx(ctx).Info().Msg("TLS certificate initialized")
+		})
+		listener = server.TLSListener(
+			time.Duration(settings.Server.ReadTimeout),
+			time.Duration(settings.Server.WriteTimeout),
+			time.Duration(settings.Server.IdleTimeout),
+			func() *tls.Config { return monitor.TLSConfig(sig, certs, verify, cb) },
+		)
+	}
 
 	log.Ctx(ctx).Info().Msg("Starting service")
 	server.New(build.Version()).
