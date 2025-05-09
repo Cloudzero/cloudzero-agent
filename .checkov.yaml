@@ -1,0 +1,17 @@
+skip-path:
+  - ./helm/charts/kubeStateMetrics # Exclude kube-state-metrics chart
+  - ./helm/charts/prometheus # Exclude prometheus chart if it exists
+  - ./helm/tests # Exclude test files
+  - ./tests # Exclude test files
+  - ./docs # Exclude documentation
+
+skip-check:
+  # Skip "The default namespace should not be used" check. The namespace is
+  # configurable, the default namespace is only used if that is the
+  # configuration the user chooses.
+  - CKV_K8S_21
+  # Skip "Minimize the admission of containers wishing to share the host process
+  # ID namespace" check.
+  - CKV_K8S_28
+  # Skip "Image should use digest" check.
+  # - CKV_K8S_43

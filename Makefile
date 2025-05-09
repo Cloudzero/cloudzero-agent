@@ -11,6 +11,7 @@ GOJQ        ?= gojq
 AWK         ?= awk
 CC          ?= $(shell $(GO) env CC)
 CXX         ?= $(shell $(GO) env CXX)
+CHECKOV     ?= checkov
 CURL        ?= curl
 DOCKER      ?= docker
 GREP        ?= grep
@@ -155,6 +156,17 @@ analyze-go:
 .PHONY: analyze
 analyze: ## Run static analysis
 analyze: analyze-go
+
+.PHONY: analyze-staticcheck
+analyze-staticcheck:
+	@staticcheck -checks all ./...
+
+.PHONY: analyze-checkov
+analyze-checkov:
+	@echo "Scanning generated templates with Checkov..."
+	@checkov -f ./tests/helm/template/manifest.yaml \
+		--framework kubernetes \
+		$(NULL)
 
 # ----------- COMPILATION ------------
 
@@ -312,6 +324,7 @@ PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
 HELM_TARGET_NAMESPACE     ?= cz-agent
 HELM_TARGET               ?= cz-agent
 HELM                      ?= helm
+KUBE_VERSION              ?= 1.33
 
 HELM_ARGS = \
 	--namespace "$(HELM_TARGET_NAMESPACE)" \
@@ -344,7 +357,7 @@ helm-uninstall: ## Uninstall the Helm chart
 .PHONY: helm-template
 helm-template: api-tests-check-env helm-install-deps helm/values.schema.json
 helm-template: ## Generate the Helm chart templates
-	@$(HELM) template "$(HELM_TARGET)" ./helm $(HELM_ARGS)
+	@$(HELM) template --kube-version $(KUBE_VERSION) "$(HELM_TARGET)" ./helm $(HELM_ARGS)
 
 .PHONY: helm-lint
 helm-lint: helm/values.schema.json
@@ -464,7 +477,7 @@ helm-test: ## Run all Helm validation tests
 helm-test: helm-test-schema helm-test-subchart
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json FORCE
-	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
+	@$(HELM) template --kube-version $(KUBE_VERSION) "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
 helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
 
