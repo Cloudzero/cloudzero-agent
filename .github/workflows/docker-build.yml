@@ -1,15 +1,19 @@
-name: DockerBuild
+name: docker-build
 on:
   merge_group:
     types: [checks_requested]
   push:
-    branches:
-      - develop
-      - main
+    branches-ignore:
+      - "WIP-*"
+      - "wip-*"
     tags:
       - "*"
   # tag is pr-<number>
   pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - "main"
+      - "develop"
   release:
     types:
       - created
@@ -285,6 +289,7 @@ jobs:
       contents: read
       packages: read
     needs: ["docker-build", "docker-merge"]
+    if: 1 != 1
     uses: ./.github/workflows/test-matrix-k8s-k3s.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
@@ -299,7 +304,7 @@ jobs:
       packages: read
     needs: ["docker-build", "docker-merge"]
     # We primarily want to run this when we are in a merge queue.
-    if: github.event_name != 'pull_request'
+    if: ${{ github.event_name != 'pull_request' && 1 != 1 }}
     uses: ./.github/workflows/test-matrix-replicated-k8s-clusters.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
@@ -312,7 +317,7 @@ jobs:
     permissions:
       statuses: write
     needs: ["k8s-version-matrix-tests"]
-    if: ${{ always() }}
+    if: ${{ always() && 1 != 1 }}
     steps:
       - uses: ouzi-dev/commit-status-updater@v2
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status == 'success' }}
@@ -330,7 +335,7 @@ jobs:
     permissions:
       statuses: write
     needs: ["replicated-compatibility-matrix-tests"]
-    if: ${{ always() && github.event_name != 'pull_request' }}
+    if: ${{ always() && github.event_name != 'pull_request' &&  1 != 1 }}
     steps:
       - uses: ouzi-dev/commit-status-updater@v2
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
@@ -354,6 +359,12 @@ jobs:
         "k8s-version-matrix-tests",
         "replicated-compatibility-matrix-tests",
       ]
+    if: |
+      always() &&
+      needs.docker-build.result == 'success' &&
+      needs.docker-merge.result == 'success' &&
+      (needs.k8s-version-matrix-tests.result == 'success' || needs.k8s-version-matrix-tests.result == 'skipped') &&
+      (needs.replicated-compatibility-matrix-tests.result == 'success' || needs.replicated-compatibility-matrix-tests.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -413,9 +424,45 @@ jobs:
         "release-image",
       ]
     if: ${{ always() }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      STATUSES_URL: ${{ github.event_name == 'pull_request' && github.event.pull_request.statuses_url || '' }}
     steps:
+      - name: Update Status (failed)
+        if: |
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        run: |
+          if [ -n "${GITHUB_TOKEN}" ] && [ -n "${GITHUB_REPOSITORY}" ] && [ -n "${STATUSES_URL}" ]; then
+            curl -f -s --show-error -X POST \
+              --url "${STATUSES_URL}" \
+              -H 'accept: application/vnd.github.v3+json' \
+              -H "authorization: Bearer ${GITHUB_TOKEN}" \
+              -H 'content-type: application/json' \
+              -d "{ \"state\": \"error\",
+                \"target_url\": \"https://${GITHUB_DOMAIN:-github.com}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\",
+                \"description\": \"Workflow failed\", \"context\": \"docker-build\"
+                 }"
+          fi
+      - name: Update Status (success)
+        if: |
+          !contains(needs.*.result, 'failure') &&
+          !contains(needs.*.result, 'cancelled')
+        run: |
+          if [ -n "${GITHUB_TOKEN}" ] && [ -n "${GITHUB_REPOSITORY}" ] && [ -n "${STATUSES_URL}" ]; then
+            curl -f -s --show-error -X POST \
+              --url "${STATUSES_URL}" \
+              -H 'accept: application/vnd.github.v3+json' \
+              -H "authorization: Bearer ${GITHUB_TOKEN}" \
+              -H 'content-type: application/json' \
+              -d "{ \"state\": \"success\",
+                \"target_url\": \"https://${GITHUB_DOMAIN:-github.com}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\",
+                \"description\": \"Workflow succeeded\", \"context\": \"docker-build\"
+                 }"
+          fi
       - uses: ouzi-dev/commit-status-updater@v2
         if: |
+          1 != 1 &&
           !contains(needs.*.result, 'failure') &&
           !contains(needs.*.result, 'cancelled')
         with:
@@ -423,6 +470,7 @@ jobs:
           status: "success"
       - uses: ouzi-dev/commit-status-updater@v2
         if: |
+          1 != 1 &&
           contains(needs.*.result, 'failure') ||
           contains(needs.*.result, 'cancelled')
         with:
