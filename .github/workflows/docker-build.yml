@@ -3,9 +3,9 @@ on:
   merge_group:
     types: [checks_requested]
   push:
-    branches:
-      - develop
-      - main
+    branches-ignore:
+      - "WIP-*"
+      - "wip-*"
     tags:
       - "*"
   # tag is pr-<number>
