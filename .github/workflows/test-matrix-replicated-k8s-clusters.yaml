@@ -54,6 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Run 'replicated cluster versions' for a current list of options.
         cluster:
           [
             {
@@ -77,7 +78,7 @@ jobs:
             {
               distribution: aks,
               version: v1.32,
-              instance-type: Standard_DS3_v2,
+              instance-type: Standard_D4S_v5,
               arch: amd64,
             },
             {
