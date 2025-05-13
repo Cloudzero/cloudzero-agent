@@ -45,9 +45,9 @@ filters:
 Configuration for the aggregator Deployment. Configuration is defined in this tpl so that we can roll Deployment pods based on a checksum of these values
 */}}
 {{ define "cloudzero-agent.aggregator.configuration" -}}
-cloud_account_id: "{{ .Values.cloudAccountId }}"
-region: "{{ .Values.region }}"
-cluster_name: "{{ .Values.clusterName }}"
+cloud_account_id: {{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}
+cluster_name: {{ include "cloudzero-agent.cleanString" .Values.clusterName }}
+region: {{ include "cloudzero-agent.cleanString" .Values.region }}
 
 metrics:
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 2 }}

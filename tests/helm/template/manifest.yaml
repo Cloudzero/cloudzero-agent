@@ -279,9 +279,9 @@ metadata:
     checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
 data:
   config.yml: |-
-    cloud_account_id: "1234567890"
-    region: "us-east-1"
-    cluster_name: "my-cluster"
+    cloud_account_id: 1234567890
+    cluster_name: my-cluster
+    region: us-east-1
     
     metrics:
       
