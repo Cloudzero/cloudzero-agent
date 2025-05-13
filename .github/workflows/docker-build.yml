@@ -314,12 +314,12 @@ jobs:
     needs: ["k8s-version-matrix-tests"]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status == 'success' }}
         with:
           name: "k8s-version-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status != 'success' }}
         with:
           name: "k8s-version-matrix-tests"
@@ -332,12 +332,12 @@ jobs:
     needs: ["replicated-compatibility-matrix-tests"]
     if: ${{ always() && github.event_name != 'pull_request' }}
     steps:
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status != 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
@@ -414,14 +414,14 @@ jobs:
       ]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: |
           !contains(needs.*.result, 'failure') &&
           !contains(needs.*.result, 'cancelled')
         with:
           name: "docker-build"
           status: "success"
-      - uses: spkane/commit-status-updater@195469926d99add77ecbd565da92b9e2a623f77e
+      - uses: spkane/commit-status-updater@86d5f80f245391eb6089ee4414f28313bdc240f7
         if: |
           contains(needs.*.result, 'failure') ||
           contains(needs.*.result, 'cancelled')
