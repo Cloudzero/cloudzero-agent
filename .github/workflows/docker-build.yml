@@ -21,7 +21,7 @@ concurrency:
   # This concurrency group ensures that only one job in the group runs at a time.
   # If a new job is triggered, the previous one will be canceled.
   group: docker-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'release' || github.ref != 'refs/heads/develop' || github.ref != 'refs/heads/main' || !startsWith(github.ref, 'refs/tags/v') }}
 
 env:
   REGISTRY_PROD_ADDR: ghcr.io
@@ -272,14 +272,6 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
 
-      - name: Cleanup older dev images
-        uses: dataaxiom/ghcr-cleanup-action@v1
-        continue-on-error: true
-        with:
-          older-than: 2 weeks
-          repository: cloudzero-agent
-          package: "untested-cloudzero/untested-cloudzero-agent"
-
   k8s-version-matrix-tests:
     # These should match the permissions in the called workflow.
     permissions:
@@ -315,12 +307,12 @@ jobs:
     needs: ["k8s-version-matrix-tests"]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status == 'success' }}
         with:
           name: "k8s-version-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status != 'success' }}
         with:
           name: "k8s-version-matrix-tests"
@@ -331,14 +323,14 @@ jobs:
     permissions:
       statuses: write
     needs: ["replicated-compatibility-matrix-tests"]
-    if: ${{ always() && github.event_name != 'pull_request' }}
+    if: ${{ always() && github.event_name == 'merge_group' }}
     steps:
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status != 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
@@ -415,14 +407,14 @@ jobs:
       ]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: |
           !contains(needs.*.result, 'failure') &&
           !contains(needs.*.result, 'cancelled')
         with:
           name: "docker-build"
           status: "success"
-      - uses: spkane/commit-status-updater@merge-group-support
+      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
         if: |
           contains(needs.*.result, 'failure') ||
           contains(needs.*.result, 'cancelled')
