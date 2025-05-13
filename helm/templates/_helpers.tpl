@@ -579,6 +579,13 @@ Otherwise, it will be the CloudZero API endpoint.
 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
 {{- end -}}
 
+{{- define "cloudzero-agent.maybeGenerateSection" -}}
+{{- if .value -}}
+{{- .name }}:
+  {{- toYaml .value | nindent 2 }}
+{{- end -}}
+{{- end -}}
+
 {{/*
 Generate image configuration with defaults.
 */}}
@@ -687,10 +694,7 @@ Generate nodeSelector sections
 */}}
 {{- define "cloudzero-agent.generateNodeSelector" -}}
 {{- $nodeSelector := .nodeSelector | default .default -}}
-{{if $nodeSelector }}
-nodeSelector:
-{{- $nodeSelector | toYaml | nindent 2 -}}
-{{- end -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "nodeselector" "value" $nodeSelector) -}}
 {{- end -}}
 
 {{/*
