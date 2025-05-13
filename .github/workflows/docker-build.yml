@@ -4,7 +4,6 @@ on:
     types: [checks_requested]
   push:
     branches:
-      - "gh-readonly-queue/**"
       - develop
       - main
     tags:
