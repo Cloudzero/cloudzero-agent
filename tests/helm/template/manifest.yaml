@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/version: "2.10.1"
   name: cz-agent-cloudzero-state-metrics
-  namespace: default
+  namespace: argocd
 ---
 # Source: cloudzero-agent/templates/agent-serviceaccount.yaml
 apiVersion: v1
@@ -27,9 +27,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-cloudzero-agent-server
-  namespace: default
+  namespace: argocd
 ---
 # Source: cloudzero-agent/templates/webhook-serviceaccount.yaml
 apiVersion: v1
@@ -44,7 +44,7 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
-  namespace: default
+  namespace: argocd
 ---
 # Source: cloudzero-agent/templates/aggregator-secret.yaml
 apiVersion: v1
@@ -59,9 +59,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-api-key
-  namespace: default
+  namespace: argocd
 data:
   value:
           "MDQ5YTNjOGItNzI1OS00YWQzLTkzMWEtNzM1OTZjNjQ3Y2Y4"
@@ -80,7 +80,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cloudzero-agent-webhook-server-tls
-  namespace: default
+  namespace: argocd
 ---
 # Source: cloudzero-agent/templates/agent-cm.yaml
 apiVersion: v1
@@ -95,9 +95,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-configuration
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
 data:
   prometheus.yml: |-
     global:
@@ -150,7 +150,7 @@ data:
           action: labelkeep
         static_configs:
         - targets:
-            - cz-agent-cloudzero-state-metrics.default.svc.cluster.local:8080
+            - cz-agent-cloudzero-state-metrics.argocd.svc.cluster.local:8080
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
         honor_timestamps: true
         track_timestamps_staleness: false
@@ -231,7 +231,7 @@ data:
             enable_http2: true
             namespaces:
               names:
-                - default
+                - argocd
         relabel_configs:
           - source_labels: [__meta_kubernetes_service_name]
             action: keep
@@ -254,7 +254,7 @@ data:
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
     remote_write:
-      - url: 'http://cz-agent-aggregator.default.svc.cluster.local/collector'
+      - url: 'http://cz-agent-aggregator.argocd.svc.cluster.local/collector'
         authorization:
           credentials_file: /etc/config/secrets/value
         write_relabel_configs:
@@ -269,14 +269,14 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cz-agent-aggregator
-  namespace: default
+  namespace: argocd
   labels:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
 data:
   config.yml: |-
     cloud_account_id: 1234567890
@@ -616,9 +616,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-validator-configuration
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
 data:
   validator.yml: |-
     versions:
@@ -640,12 +640,12 @@ data:
       disable_telemetry: false
 
     services:
-      namespace: default
+      namespace: argocd
       insights_service:  cz-agent-cloudzero-agent-webhook-server-svc
       collector_service: cz-agent-aggregator
 
     prometheus:
-      kube_state_metrics_service_endpoint: http://cz-agent-cloudzero-state-metrics.default.svc.cluster.local:8080
+      kube_state_metrics_service_endpoint: http://cz-agent-cloudzero-state-metrics.argocd.svc.cluster.local:8080
       executable: /bin/prometheus
       kube_metrics:
         - kube_node_info
@@ -689,15 +689,15 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-webhook-configuration
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
 data:
   server-config.yaml: |-
     cloud_account_id: 1234567890
     region: us-east-1
     cluster_name: my-cluster
-    destination: 'http://cz-agent-aggregator.default.svc.cluster.local/collector'
+    destination: 'http://cz-agent-aggregator.argocd.svc.cluster.local/collector'
     logging:
       level: info
     remote_write:
@@ -716,7 +716,7 @@ data:
       key: /etc/certs/tls.key
       cert: /etc/certs/tls.crt
     server:
-      namespace: default
+      namespace: argocd
       domain: cz-agent-cloudzero-agent-webhook-server-svc
       port: 8443
       read_timeout: 10s
@@ -910,7 +910,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   labels:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: cloudzero-agent
@@ -1007,9 +1007,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
-  namespace: default
+  namespace: argocd
 rules:
   - apiGroups:
       - "apps"
@@ -1061,7 +1061,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: cz-agent-cloudzero-state-metrics
-  namespace: default
+  namespace: argocd
 ---
 # Source: cloudzero-agent/templates/agent-clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1076,12 +1076,12 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-cloudzero-agent-server
 subjects:
   - kind: ServiceAccount
     name: cz-agent-cloudzero-agent-server
-    namespace: default
+    namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1100,12 +1100,12 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
 subjects:
   - kind: ServiceAccount
     name: cz-agent-cloudzero-agent-webhook-server-init-cert
-    namespace: default
+    namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1116,7 +1116,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cz-agent-cloudzero-state-metrics
-  namespace: default
+  namespace: argocd
   labels:    
     helm.sh/chart: kubeStateMetrics-5.15.3
     app.kubernetes.io/managed-by: Helm
@@ -1142,7 +1142,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: default
+  namespace: argocd
   name: cz-agent-aggregator
   labels:
     app.kubernetes.io/component: aggregator
@@ -1179,7 +1179,7 @@ metadata:
   
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  namespace: default
+  namespace: argocd
 spec:
   type: ClusterIP
   ports:
@@ -1196,7 +1196,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cz-agent-cloudzero-state-metrics
-  namespace: default
+  namespace: argocd
   labels:    
     helm.sh/chart: kubeStateMetrics-5.15.3
     app.kubernetes.io/managed-by: Helm
@@ -1275,9 +1275,9 @@ metadata:
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   name: cz-agent-cloudzero-agent-server
-  namespace: default
+  namespace: argocd
 spec:
   selector:
     matchLabels:
@@ -1451,9 +1451,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cz-agent-aggregator
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   labels:
     app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
@@ -1472,7 +1472,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+        checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
       labels:
         app.kubernetes.io/component: aggregator
         app.kubernetes.io/instance: cz-agent
@@ -1609,7 +1609,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cz-agent-cloudzero-agent-webhook-server
-  namespace: default
+  namespace: argocd
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -1637,7 +1637,7 @@ spec:
         app.kubernetes.io/version: v2.55.1
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       annotations:
-        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+        checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       
@@ -1720,9 +1720,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -1735,13 +1735,13 @@ spec:
   template:
     metadata:
       name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
-      namespace: default
+      namespace: argocd
       labels:
         app.kubernetes.io/component: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+        checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
@@ -1794,9 +1794,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
-  namespace: default
+  namespace: argocd
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -1814,7 +1814,7 @@ spec:
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+        checksum/config: 58618997a5befc2e3ef8eb1a3fe779549fcb0b33b21d45c8be29bb9753b41777
     spec:
       
       affinity:
@@ -1865,7 +1865,7 @@ spec:
               done
 
               SECRET_NAME=cz-agent-cloudzero-agent-webhook-server-tls
-              NAMESPACE=default
+              NAMESPACE=argocd
 
               EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}')
               EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}')
@@ -1873,7 +1873,7 @@ spec:
               if [[ -n "$EXISTING_TLS_CRT" ]]; then
                   # Check if the SANs in the certificate match the service name
                   SAN=$(echo "$EXISTING_TLS_CRT" | base64 -d | openssl x509 -text -noout | grep DNS | sed 's/.*DNS://')
-                  if [[ "$SAN" != "cz-agent-cloudzero-agent-webhook-server-svc.default.svc" ]]; then
+                  if [[ "$SAN" != "cz-agent-cloudzero-agent-webhook-server-svc.argocd.svc" ]]; then
                       echo "The SANs in the certificate do not match the service name."
                       GENERATE_CERTIFICATE=true
                   fi
@@ -1893,7 +1893,7 @@ spec:
               fi
 
               # Generate self-signed certificate and private key
-              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN=cz-agent-cloudzero-agent-webhook-server-svc" -addext "subjectAltName = DNS:cz-agent-cloudzero-agent-webhook-server-svc.default.svc"
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN=cz-agent-cloudzero-agent-webhook-server-svc" -addext "subjectAltName = DNS:cz-agent-cloudzero-agent-webhook-server-svc.argocd.svc"
 
               # Base64 encode the certificate
               export CA_BUNDLE=$(cat tls.crt | base64 | tr -d '\n')
@@ -1916,7 +1916,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: cz-agent-cloudzero-agent-webhook-server-webhook
-  namespace: default
+  namespace: argocd
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -1927,7 +1927,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 webhooks:
-  - name: cz-agent-cloudzero-agent-webhook-server-webhook.default.svc
+  - name: cz-agent-cloudzero-agent-webhook-server-webhook.argocd.svc
     namespaceSelector: 
       {}
     failurePolicy: Ignore
@@ -1939,7 +1939,7 @@ webhooks:
         scope: "*"
     clientConfig:
       service:
-        namespace: default
+        namespace: argocd
         name: cz-agent-cloudzero-agent-webhook-server-svc
         path: /validate
         port: 443
