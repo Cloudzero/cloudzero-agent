@@ -321,7 +321,7 @@ helm-lint: ## Lint the Helm chart
 	@$(HELM) lint ./helm $(HELM_ARGS)
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm-install-deps FORCE
-	@$(HELM) template "$(HELM_TARGET)" ./helm -f $< > $@
+	@$(HELM) template "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
 helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
 
