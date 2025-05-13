@@ -3,10 +3,10 @@ on:
   merge_group:
     types: [checks_requested]
   push:
-    branches-ignore:
-      - "WIP-*"
-      - "wip-*"
-      - "!refs/pull/**"
+    branches:
+      - "gh-readonly-queue/**"
+      - develop
+      - main
     tags:
       - "*"
   # tag is pr-<number>
