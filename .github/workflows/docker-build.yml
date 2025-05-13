@@ -300,7 +300,7 @@ jobs:
       packages: read
     needs: ["docker-build", "docker-merge"]
     # We primarily want to run this when we are in a merge queue.
-    if: github.event_name == 'merge_queue'
+    if: github.event_name == 'merge_group'
     uses: ./.github/workflows/test-matrix-replicated-k8s-clusters.yaml
     with:
       image-repo: ${{ needs.docker-build.outputs.image-repo }}
