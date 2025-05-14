@@ -1,0 +1,27 @@
+name: CleanDaily
+on:
+  schedule:
+    - cron: "0 14 * * *"
+
+concurrency:
+  # This concurrency group ensures that only one job in the group runs at a time.
+  # If a new job is triggered, the previous one will be canceled.
+  group: cleanup-daily-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup-daily:
+    name: Daily cleanup activities
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Cleanup older GHCR dev container images
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        continue-on-error: true
+        with:
+          older-than: 2 weeks
+          repository: cloudzero-agent
+          package: "untested-cloudzero/untested-cloudzero-agent"

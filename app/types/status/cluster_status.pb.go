@@ -4,7 +4,6 @@
 // 	protoc        v5.29.3
 // source: cluster_status.proto
 
-// Package status contains generated code for reading and writing the ClusterStatus protobuf.
 package status
 
 import (
