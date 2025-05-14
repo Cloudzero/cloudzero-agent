@@ -196,7 +196,7 @@ func (fl *FileLock) Release() error {
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
 
-	// propigate the cancel across context
+	// propagate the cancel across context
 	if fl.cancel != nil {
 		fl.cancel()
 		fl.cancel = nil

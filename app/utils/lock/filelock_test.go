@@ -267,12 +267,19 @@ func TestLock_MaxRetry(t *testing.T) {
 	// acquire the lock
 	err := fl1.Acquire()
 	require.NoError(t, err)
-	defer fl1.Release()
+	defer func() {
+		relErr := fl1.Release()
+		require.NoError(t, relErr)
+	}()
 
 	// acquire from fl2, this should fail
 	err = fl2.Acquire()
 	require.Error(t, err)
 	require.Equal(t, ErrMaxRetryExceeded, err)
+
+	// Release even though acquisition failed, to make sure the file is cleaned up
+	err = fl2.Release()
+	require.NoError(t, err)
 }
 
 // ---
