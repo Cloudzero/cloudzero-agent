@@ -1,10 +1,13 @@
 name: DockerBuild
 on:
+  # The documentation for 'merge_group' leaves a lot to be desired, but
+  # it appears as if they are more similar to a 'push' then a 'pull_request'
+  # when it comes to the general details about how the function and what
+  # information you have available when they are running.
   merge_group:
     types: [checks_requested]
   push:
     branches:
-      - "gh-readonly-queue/**"
       - develop
       - main
     tags:
@@ -307,12 +310,12 @@ jobs:
     needs: ["k8s-version-matrix-tests"]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status == 'success' }}
         with:
           name: "k8s-version-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: ${{ needs.k8s-version-matrix-tests.outputs.version-test-status != 'success' }}
         with:
           name: "k8s-version-matrix-tests"
@@ -325,12 +328,12 @@ jobs:
     needs: ["replicated-compatibility-matrix-tests"]
     if: ${{ always() && github.event_name == 'merge_group' }}
     steps:
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
           status: "success"
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status != 'success' }}
         with:
           name: "replicated-compatibility-matrix-tests"
@@ -407,14 +410,14 @@ jobs:
       ]
     if: ${{ always() }}
     steps:
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: |
           !contains(needs.*.result, 'failure') &&
           !contains(needs.*.result, 'cancelled')
         with:
           name: "docker-build"
           status: "success"
-      - uses: spkane/commit-status-updater@ab7c154fa766cdd0619d3a64fccafe653180108e
+      - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: |
           contains(needs.*.result, 'failure') ||
           contains(needs.*.result, 'cancelled')
