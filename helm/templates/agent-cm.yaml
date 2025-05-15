@@ -8,11 +8,12 @@ metadata:
   {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   prometheus.yml: |-
-  {{- if .Values.prometheusConfig.configOverride }}
-  {{ .Values.prometheusConfig.configOverride | nindent 4 }}
-  {{- else }}
+    {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
+    {{ .Values.prometheusConfig.configOverride | nindent 4 }}
+    {{- else }}
     global:
       scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
+
     scrape_configs:
       {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
       - job_name: static-kube-state-metrics
@@ -63,8 +64,9 @@ data:
         static_configs:
         - targets:
             - {{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
-      {{- end }}
-      {{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+      {{- end }}{{/* End kubeStateMetrics scrape job */}}
+
+      {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
         honor_timestamps: true
         track_timestamps_staleness: false
@@ -115,7 +117,8 @@ data:
           kubeconfig_file: ""
           follow_redirects: true
           enable_http2: true
-      {{- end }}
+      {{- end }}{{/* End cadvisor scrape job */}}
+
       {{- if .Values.insightsController.enabled }}
       - job_name: cloudzero-webhook-job
         metrics_path: /metrics
@@ -138,7 +141,8 @@ data:
           - source_labels: [__name__]
             regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics }})$"
             action: keep
-      {{- end }}
+      {{- end }}{{/* End webhook (insightsController) scrape job */}}
+
       {{- if .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
       - job_name: cloudzero-aggregator-job
         scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
@@ -161,7 +165,8 @@ data:
           - source_labels: [__name__]
             regex: "{{ include "cloudzero-agent.generateMetricNameFilterRegex" .Values }}"
             action: keep
-      {{- end }}
+      {{- end }}{{/* End aggregator scrape job */}}
+
       {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
       - job_name: static-prometheus
         scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
@@ -174,10 +179,12 @@ data:
             regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
             action: keep
       {{- end }}
+
       {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
       {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
-      {{- end}}
-  {{- end}}
+      {{- end }}{{/* End additional scrape jobs */}}
+    {{- end}}
+
     remote_write:
       - url: {{ include "cloudzero-agent.metricsDestination" . }}
         authorization:
