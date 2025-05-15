@@ -723,3 +723,19 @@ spec:
       {{- .matchLabels | nindent 6 }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Generate imagePullSecrets block
+Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
+Example usage:
+{{- include "cloudzero-agent.generateImagePullSecrets" (dict 
+      "root" .
+      "image" .Values.components.foo.image
+    ) | nindent 6 }}
+*/}}
+{{- define "cloudzero-agent.generateImagePullSecrets" -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict
+      "name" "imagePullSecrets"
+      "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets)
+    ) -}}
+{{- end -}}
