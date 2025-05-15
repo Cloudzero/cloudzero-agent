@@ -17,83 +17,13 @@ data:
 
     scrape_configs:
       {{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
-      - job_name: cloudzero-nodes-cadvisor # container_* metrics
-        honor_timestamps: true
-        track_timestamps_staleness: false
-        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
-        scrape_timeout: 10s
-        scrape_protocols:
-        - OpenMetricsText1.0.0
-        - OpenMetricsText0.0.1
-        - PrometheusText0.0.4
-        metrics_path: /metrics
-        scheme: https
-        enable_compression: true
-        authorization:
-          type: Bearer
-          credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          insecure_skip_verify: true
-        follow_redirects: true
-        enable_http2: true
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_node_name]
-          action: keep # Keep only the target series for the current node
-          regex: $(NODE_NAME) # Uses Prometheus environment variable substitution
-        - separator: ;
-          regex: __meta_kubernetes_node_label_(.+)
-          replacement: $1
-          action: labelmap
-        - separator: ;
-          regex: (.*)
-          target_label: __address__
-          replacement: kubernetes.default.svc:443
-          action: replace
-        - source_labels: [__meta_kubernetes_node_name]
-          separator: ;
-          regex: "$NODE_NAME"
-          target_label: __metrics_path__
-          replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-          action: replace
-        - source_labels: [__meta_kubernetes_node_name]
-          target_label: node
-          action: replace
-        metric_relabel_configs:
-        - action: labelkeep
-          regex: "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
-        - source_labels: [__name__]
-          regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).containerMetrics }})$"
-          action: keep
-        kubernetes_sd_configs:
-        - role: node
-          kubeconfig_file: ""
-          follow_redirects: true
-          enable_http2: true
+      {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" true) | nindent 6 }}
       {{- end }}{{/* End cadvisor scrape job */}}
 
       {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
-      - job_name: static-prometheus
-        scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
-        static_configs:
-          - targets:
-              - localhost:9090
-        metrics_path: /metrics
-        metric_relabel_configs:
-          - source_labels: [__name__]
-            regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
-            action: keep
+      {{- include "cloudzero-agent.prometheus.scrapePrometheus" . | nindent 6 }}
       {{- end }}
     {{- end}}
 
-    remote_write:
-      - url: {{ include "cloudzero-agent.metricsDestination" . }}
-        authorization:
-          credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
-        write_relabel_configs:
-          - source_labels: [__name__]
-            regex: "^({{ include "cloudzero-agent.combineMetrics" . }})$"
-            action: keep
-        metadata_config:
-          send: false
+    {{- include "cloudzero-agent.aggregator.remoteWrite" . | nindent 4 }}
 {{- end }}

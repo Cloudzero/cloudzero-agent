@@ -186,4 +186,4 @@ spec:
             {}
           {{- end }}
         {{- end }}
-{{- end }}{{/* End if .Values.defaults.federation.enabled */}} 
+{{- end }}{{/* End if .Values.defaults.federation.enabled */}}
