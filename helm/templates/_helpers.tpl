@@ -728,7 +728,7 @@ spec:
 Generate imagePullSecrets block
 Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
 Example usage:
-{{- include "cloudzero-agent.generateImagePullSecrets" (dict 
+{{- include "cloudzero-agent.generateImagePullSecrets" (dict
       "root" .
       "image" .Values.components.foo.image
     ) | nindent 6 }}
