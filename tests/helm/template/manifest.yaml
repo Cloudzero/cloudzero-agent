@@ -143,7 +143,7 @@ data:
           action: replace
         metric_relabel_configs:
         - source_labels: [__name__]
-          regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$"
+          regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$
           action: keep
         - separator: ;
           regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
@@ -161,7 +161,6 @@ data:
         - OpenMetricsText1.0.0
         - OpenMetricsText0.0.1
         - PrometheusText0.0.4
-        metrics_path: /metrics
         scheme: https
         enable_compression: true
         authorization:
@@ -172,11 +171,9 @@ data:
           insecure_skip_verify: true
         follow_redirects: true
         enable_http2: true
+        metrics_path: /metrics
         relabel_configs:
-        - separator: ;
-          regex: __meta_kubernetes_node_label_(.+)
-          replacement: $1
-          action: labelmap
+        # Specific to proxied scrape (via Kubernetes API server)
         - separator: ;
           regex: (.*)
           target_label: __address__
@@ -188,14 +185,19 @@ data:
           target_label: __metrics_path__
           replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
           action: replace
+        # Common relabel_configs
+        - separator: ;
+          regex: __meta_kubernetes_node_label_(.+)
+          replacement: $1
+          action: labelmap
         - source_labels: [__meta_kubernetes_node_name]
           target_label: node
           action: replace
         metric_relabel_configs:
         - action: labelkeep
-          regex: "^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$"
+          regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
         - source_labels: [__name__]
-          regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$"
+          regex: ^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
           action: keep
         kubernetes_sd_configs:
         - role: node
@@ -254,7 +256,6 @@ data:
           - source_labels: [__name__]
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
-
     remote_write:
       - url: 'http://cz-agent-aggregator.cz-agent.svc.cluster.local/collector'
         authorization:
