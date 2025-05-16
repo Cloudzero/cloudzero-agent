@@ -23,25 +23,6 @@ Both the **`backfill`** and **`init-cert`** Jobs expire after a configurable per
 
 ---
 
-## **ArgoCD Integration**
-
-If installing this Helm chart using ArgoCD, set the following annotations in the `initBackfillJob` and `initCertJob` fields to ensure that ArgoCD does not constantly consider the Application out of sync:
-
-```yaml
-initBackfillJob:
-  annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
-initCertJob:
-  annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
-```
-
-See the ArgoCD [Hook Deletion](https://argo-cd.readthedocs.io/en/stable/user-guide/resource_hooks/#hook-deletion-policies) documentation for further details.
-
----
-
 ## **Common Issues & Troubleshooting**
 
 ### **Issue: Forced Upgrade (`--force`) Fails Due to Running `backfill` Job**
