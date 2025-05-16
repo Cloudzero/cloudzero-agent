@@ -1,0 +1,29 @@
+{{- if .Values.defaults.federation.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  name: {{ .Release.Name }}-daemonset-cm
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+data:
+  prometheus.yml.in: |-
+    {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
+    {{ .Values.prometheusConfig.configOverride | nindent 4 }}
+    {{- else }}
+    global:
+      scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
+
+    scrape_configs:
+      {{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+      {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" true) | nindent 6 }}
+      {{- end }}{{/* End cadvisor scrape job */}}
+
+      {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
+      {{- include "cloudzero-agent.prometheus.scrapePrometheus" . | nindent 6 }}
+      {{- end }}
+    {{- end}}
+
+    {{- include "cloudzero-agent.aggregator.remoteWrite" . | nindent 4 }}
+{{- end }}

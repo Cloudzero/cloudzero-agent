@@ -579,6 +579,13 @@ Otherwise, it will be the CloudZero API endpoint.
 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
 {{- end -}}
 
+{{- define "cloudzero-agent.maybeGenerateSection" -}}
+{{- if .value -}}
+{{- .name }}:
+  {{- toYaml .value | nindent 2 }}
+{{- end -}}
+{{- end -}}
+
 {{/*
 Generate image configuration with defaults.
 */}}
@@ -687,10 +694,7 @@ Generate nodeSelector sections
 */}}
 {{- define "cloudzero-agent.generateNodeSelector" -}}
 {{- $nodeSelector := .nodeSelector | default .default -}}
-{{if $nodeSelector }}
-nodeSelector:
-{{- $nodeSelector | toYaml | nindent 2 -}}
-{{- end -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "nodeselector" "value" $nodeSelector) -}}
 {{- end -}}
 
 {{/*
@@ -718,4 +722,20 @@ spec:
     matchLabels:
       {{- .matchLabels | nindent 6 }}
 {{- end }}
+{{- end -}}
+
+{{/*
+Generate imagePullSecrets block
+Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
+Example usage:
+{{- include "cloudzero-agent.generateImagePullSecrets" (dict
+      "root" .
+      "image" .Values.components.foo.image
+    ) | nindent 6 }}
+*/}}
+{{- define "cloudzero-agent.generateImagePullSecrets" -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict
+      "name" "imagePullSecrets"
+      "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets)
+    ) -}}
 {{- end -}}
