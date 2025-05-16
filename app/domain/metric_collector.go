@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
 	"github.com/prometheus/prometheus/storage/remote"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
@@ -141,11 +142,22 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	metricsReceivedCost.WithLabelValues().Add(float64(len(costMetrics)))
 	metricsReceivedObservability.WithLabelValues().Add(float64(len(observabilityMetrics)))
 
-	log.Ctx(ctx).Debug().
-		Int("metrics", len(metrics)).
-		Int("costMetrics", len(costMetrics)).
-		Int("observabilityMetrics", len(observabilityMetrics)).
-		Msg("metrics received")
+	if log.Ctx(ctx).GetLevel() <= zerolog.DebugLevel {
+		metricsCount := metricCounter{}
+		for _, metric := range costMetrics {
+			metricsCount.Add("cost", metric.MetricName)
+		}
+		for _, metric := range observabilityMetrics {
+			metricsCount.Add("observability", metric.MetricName)
+		}
+
+		log.Ctx(ctx).Debug().
+			Interface("metricCounts", metricsCount).
+			Int("metrics", len(metrics)).
+			Int("costMetrics", len(costMetrics)).
+			Int("observabilityMetrics", len(observabilityMetrics)).
+			Msg("metrics received")
+	}
 
 	if costMetrics != nil && d.costStore != nil {
 		if err := d.costStore.Put(ctx, costMetrics...); err != nil {
@@ -158,6 +170,15 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		}
 	}
 	return stats, nil
+}
+
+type metricCounter map[string]map[string]int
+
+func (m metricCounter) Add(metricName string, metricValue string) {
+	if _, ok := m[metricName]; !ok {
+		m[metricName] = map[string]int{}
+	}
+	m[metricName][metricValue]++
 }
 
 // Flush triggers the flushing of accumulated metrics.

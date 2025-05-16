@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -59,13 +60,19 @@ func LoggingMiddlewareWrapper(next http.Handler) http.Handler {
 		route := r.URL.Path
 		method := r.Method
 
+		level := zerolog.DebugLevel
+		if route == "/healthz" || route == "/metrics" {
+			level = zerolog.TraceLevel
+		}
+
 		// Log the request details
-		log.Ctx(r.Context()).Debug().
+		log.Ctx(r.Context()).WithLevel(level).
 			Str("method", method).
 			Str("route", route).
 			Int("statusCode", statusCode).
 			Str("status", http.StatusText(statusCode)).
 			Dur("duration", duration).
+			Str("client", r.RemoteAddr).
 			Msg("HTTP request")
 	})
 }
