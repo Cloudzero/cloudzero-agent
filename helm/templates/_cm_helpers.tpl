@@ -236,17 +236,12 @@ remote_write:
   {{- if $scrapeLocal }}
   metrics_path: /metrics/cadvisor # Direct kubelet cAdvisor path
   relabel_configs:
-  # The Prometheus pod in federated mode must have the NODE_NAME # environment
-  # variable set (e.g., in agent-daemonset.yaml):
-  #
-  # env:
-  #   - name: NODE_NAME
-  #     valueFrom:
-  #       fieldRef:
-  #         fieldPath: spec.nodeName
   - source_labels: [__meta_kubernetes_node_name]
+    target_label: node_name
+    action: replace
+  - source_labels: [__meta_kubernetes_node_name]
+    regex: ${NODE_NAME}
     action: keep
-    regex: $(NODE_NAME)
   - source_labels: [__meta_kubernetes_node_address_InternalIP]
     action: replace
     target_label: __address__
