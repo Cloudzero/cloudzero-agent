@@ -8,7 +8,7 @@ metadata:
   namespace: {{ include "cloudzero-agent.namespace" . }}
   {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
-  prometheus.yml: |-
+  prometheus.yml.in: |-
     {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
     {{ .Values.prometheusConfig.configOverride | nindent 4 }}
     {{- else }}

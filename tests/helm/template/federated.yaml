@@ -232,7 +232,7 @@ metadata:
   annotations:
     checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
 data:
-  prometheus.yml: |-
+  prometheus.yml.in: |-
     global:
       scrape_interval: 60s
 
@@ -258,17 +258,12 @@ data:
         enable_http2: true
         metrics_path: /metrics/cadvisor # Direct kubelet cAdvisor path
         relabel_configs:
-        # The Prometheus pod in federated mode must have the NODE_NAME # environment
-        # variable set (e.g., in agent-daemonset.yaml):
-        #
-        # env:
-        #   - name: NODE_NAME
-        #     valueFrom:
-        #       fieldRef:
-        #         fieldPath: spec.nodeName
         - source_labels: [__meta_kubernetes_node_name]
+          target_label: node_name
+          action: replace
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: ${NODE_NAME}
           action: keep
-          regex: $(NODE_NAME)
         - source_labels: [__meta_kubernetes_node_address_InternalIP]
           action: replace
           target_label: __address__
@@ -1278,43 +1273,28 @@ spec:
       
       serviceAccountName: cz-agent-cloudzero-agent-server
       initContainers:
-        - name: env-validator-copy
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
+        # Prometheus doesn't support environment variables where we need them in
+        # the prometheus.yml file so we use this job to replace the ${NODE_NAME}
+        # in the prometheus.yml.in file with the actual node name, then use that
+        # processed file in the container.
+        - name: config-subst
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
           imagePullPolicy: "IfNotPresent"
           
           command:
-            - /app/cloudzero-agent-validator
-            - install
-            - --destination
-            - /checks/bin/cloudzero-agent-validator
+            - /bin/sh
+            - -c
+            - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           volumeMounts:
-            - name: cloudzero-api-key
-              mountPath: /etc/config/secrets/
-              subPath: ""
-              readOnly: true
-            - name: lifecycle-volume
-              mountPath: /checks/bin/
-            - name: validator-config-volume
-              mountPath: /checks/config/
-        - name: env-validator-run
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
-          imagePullPolicy: "IfNotPresent"
-          
-          command:
-            - /checks/bin/cloudzero-agent-validator
-            - diagnose
-            - pre-start
-            - -f
-            - /checks/config/validator.yml
-          volumeMounts:
-            - name: cloudzero-api-key
-              mountPath: /etc/config/secrets/
-              subPath: ""
-              readOnly: true
-            - name: lifecycle-volume
-              mountPath: /checks/bin/
-            - name: validator-config-volume
-              mountPath: /checks/config/
+            - name: unprocessed-config-volume
+              mountPath: /etc/config/prometheus/configmaps/
+            - name: processed-config-volume
+              mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
         - name: cloudzero-agent-server-configmap-reload
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
@@ -1324,7 +1304,7 @@ spec:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
           volumeMounts:
-            - name: config-volume
+            - name: processed-config-volume
               mountPath: /etc/config
               readOnly: true
         - name: cloudzero-agent-server
@@ -1390,8 +1370,9 @@ spec:
               cpu: 250m
               memory: 512Mi
           volumeMounts:
-            - name: config-volume
+            - name: processed-config-volume
               mountPath: /etc/config/prometheus/configmaps/
+              readOnly: true
             - name: cloudzero-agent-storage-volume
               mountPath: /data
               subPath: ""
@@ -1415,9 +1396,11 @@ spec:
       
       terminationGracePeriodSeconds: 300
       volumes:
-        - name: config-volume
+        - name: unprocessed-config-volume
           configMap:
             name: cz-agent-daemonset-cm
+        - name: processed-config-volume
+          emptyDir: {}
         - name: validator-config-volume
           configMap:
             name: cz-agent-validator-configuration
