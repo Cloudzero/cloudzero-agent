@@ -33,7 +33,7 @@ spec:
           command:
             - /bin/sh
             - -c
-            - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
+            - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
           env:
             - name: NODE_NAME
               valueFrom:
@@ -41,7 +41,7 @@ spec:
                   fieldPath: spec.nodeName
           volumeMounts:
             - name: unprocessed-config-volume
-              mountPath: /etc/config/prometheus/configmaps/
+              mountPath: /etc/config/prometheus/configmaps/unprocessed/
             - name: processed-config-volume
               mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
@@ -71,28 +71,12 @@ spec:
             {{- if .Values.server.env }}
             {{- toYaml .Values.server.env | indent 12}}
             {{- end }}
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - /checks/cloudzero-agent-validator
-                  - diagnose
-                  - post-start
-                  - -f
-                  - /checks/app/config/validator.yml
-            preStop:
-              exec:
-                command:
-                  - /checks/cloudzero-agent-validator
-                  - diagnose
-                  - pre-stop
-                  - -f
-                  - /checks/app/config/validator.yml
           args:
-            {{ toYaml .Values.server.args | nindent 12}}
-            {{- if .Values.server.agentMode }}
+            - --config.file=/etc/config/prometheus.yml
+            - --web.enable-lifecycle
+            - --web.console.libraries=/etc/prometheus/console_libraries
+            - --web.console.templates=/etc/prometheus/consoles
             - --enable-feature=agent
-            {{- end }}
           ports:
             - containerPort: 9090
           readinessProbe:
@@ -100,36 +84,33 @@ spec:
               path: /-/ready
               port: 9090
               scheme: HTTP
-            initialDelaySeconds: {{ default 30 .Values.server.readinessProbeInitialDelay }}
-            periodSeconds: {{ default 5 .Values.server.readinessProbePeriodSeconds }}
-            timeoutSeconds: {{ default 4 .Values.server.readinessProbeTimeout }}
-            failureThreshold: {{ default 3 .Values.server.readinessProbeFailureThreshold }}
-            successThreshold: {{ default 1 .Values.server.readinessProbeSuccessThreshold }}
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 3
+            successThreshold: 1
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 9090
               scheme: HTTP
-            initialDelaySeconds: {{ default 30 .Values.server.livenessProbeInitialDelay }}
-            periodSeconds: {{ default 15 .Values.server.livenessProbePeriodSeconds }}
-            timeoutSeconds: {{ default 10 .Values.server.livenessProbeTimeout }}
-            failureThreshold: {{ default 3 .Values.server.livenessProbeFailureThreshold }}
-            successThreshold: {{ default 1 .Values.server.livenessProbeSuccessThreshold }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
           {{- with .Values.server.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: processed-config-volume
-              mountPath: /etc/config/prometheus/configmaps/
+              mountPath: /etc/config/prometheus.yml
+              subPath: prometheus.yml
               readOnly: true
             - name: cloudzero-agent-storage-volume
-              mountPath: {{ .Values.server.persistentVolume.mountPath }}
-              subPath: "{{ .Values.server.persistentVolume.subPath }}"
-            - name: lifecycle-volume
-              mountPath: /checks/
-            - name: validator-config-volume
-              mountPath: /checks/app/config/
+              mountPath: /data
+              subPath: ""
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
       securityContext:
         runAsUser: 65534
@@ -141,21 +122,13 @@ spec:
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.server.tolerations) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}
-    {{- with .Values.server.topologySpreadConstraints }}
-      topologySpreadConstraints:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
-      terminationGracePeriodSeconds: {{ default 300 .Values.server.terminationGracePeriodSeconds }}
+      {{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "topologySpreadConstraints" "value" .Values.server.topologySpreadConstraints) | nindent 6 }}
+      terminationGracePeriodSeconds: 300
       volumes:
         - name: unprocessed-config-volume
           configMap:
             name: {{ .Release.Name }}-daemonset-cm
         - name: processed-config-volume
-          emptyDir: {}
-        - name: validator-config-volume
-          configMap:
-            name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
-        - name: lifecycle-volume
           emptyDir: {}
         {{- if or .Values.existingSecretName .Values.apiKey }}
         - name: cloudzero-api-key
@@ -163,15 +136,10 @@ spec:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
         - name: cloudzero-agent-storage-volume
-        {{- if .Values.server.persistentVolume.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ if .Values.server.persistentVolume.existingClaim }}{{ .Values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
-        {{- else }}
           emptyDir:
           {{- if .Values.server.emptyDir.sizeLimit }}
             sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
           {{- else }}
             {}
           {{- end }}
-        {{- end }}
 {{- end }}{{/* End if .Values.defaults.federation.enabled */}}
