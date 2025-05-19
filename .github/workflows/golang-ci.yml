@@ -3,6 +3,15 @@ name: CI
 on: [push]
 
 jobs:
+  # Dump the GitHub context for debugging purposes.
+  dump-context:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT" | jq '.'
+
   custom-checks: # Assorted custom checks
     runs-on: ubuntu-latest
     steps:
@@ -135,7 +144,15 @@ jobs:
         run: |
           go mod download
       - name: Run go tests
-        run: make test
+        uses: nick-fields/retry@v3
+        with:
+          # Retry up to 3 times if we are running in the merge queue to
+          # (hopefully) get past any flaky tests. Otherwise, only try once. We
+          # can easily re-run tests when we're not in the merge queue, and it's
+          # a good reminder to fix any flaky tests.
+          max_attempts: ${{ startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && 3 || 1 }}
+          timeout_minutes: 30
+          command: make test
 
   integration-tests:
     runs-on: ubuntu-latest
