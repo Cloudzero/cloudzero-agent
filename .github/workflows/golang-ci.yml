@@ -112,6 +112,8 @@ jobs:
         run: make install-tools
       - name: Generate code
         run: make generate
+      - name: Format code
+        run: make format
       - name: Check file format
         run: git diff --exit-code --color
 
