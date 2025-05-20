@@ -131,7 +131,7 @@ var (
 			Name: "shipper_replay_request_error_total",
 			Help: "Number of errors observed while processing replay requests",
 		},
-		[]string{},
+		[]string{"error_status_code"},
 	)
 
 	metricReplayRequestAbandonFilesTotal = prometheus.NewCounterVec(
