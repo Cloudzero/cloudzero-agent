@@ -467,14 +467,13 @@ properties:
               cadvisor scrape job configuration.
             type: object
             additionalProperties: false
-            required:
-              - enabled
             properties:
               enabled:
                 description: |
                   Whether to enable the cadvisor scrape job.
-                type: boolean
-                enum: [true]
+                type:
+                  - boolean
+                  - "null"
               scrapeInterval:
                 description: |
                   Scrape interval for nodesCadvisor job.

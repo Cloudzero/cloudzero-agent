@@ -256,7 +256,6 @@ prometheusConfig:
       scrapeInterval: 60s
     # -- Enables the cadvisor scrape job.
     cadvisor:
-      enabled: true
       # Scrape interval for nodesCadvisor job
       scrapeInterval: 60s
     # -- Enables the prometheus scrape job.

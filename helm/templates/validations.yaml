@@ -4,6 +4,50 @@ due to limitations in Helm's schema validation capabilities and/or
 limitations in JSON Schema.
 */ -}}
 
+{{- define "cloudzero-agent.deprecatedProperty" -}}
+  {{- $root := .root -}}
+  {{- $messages := list -}}
+  {{- range .properties -}}
+    {{- $value := $root.Values -}}
+    {{- $missing := false -}}
+    {{- range $i, $path := splitList "." .property -}}
+      {{- if and (not $missing) (kindIs "map" $value) (hasKey $value $path) -}}
+        {{- $value = get $value $path -}}
+      {{- else -}}
+        {{- $missing = true -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if and (not $missing) (not (eq (toString $value) "false")) -}}
+      {{- $msg := (printf "Property '%s' is deprecated" .property) -}}
+      {{- if hasKey . "deprecatedSince" -}}
+        {{- $msg = (printf "%s (since version %s)" $msg .deprecatedSince) -}}
+      {{- end -}}
+      {{- if hasKey . "replacement" -}}
+        {{- $msg = (printf "%s. Use '%s' instead" $msg .replacement) -}}
+      {{- end -}}
+      {{- $messages = append $messages (printf "%s." $msg) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if gt (len $messages) 0 -}}
+    {{- fail (printf "\n\n%s" (join "\n" $messages)) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- include "cloudzero-agent.deprecatedProperty" (dict
+      "root" $
+      "properties" (list
+        (dict
+          "property" "prometheusConfig.scrapeJobs.cadvisor.enabled"
+          "deprecatedSince" "1.2.0"
+        )
+        (dict
+          "property" "prometheusConfig.scrapeJobs.aggregator.enabled"
+          "deprecatedSince" "1.2.0"
+          "replacement" "components.aggregator.enabled"
+        )
+      )
+    ) }}
+
 {{- /* You must set either apiKey or existingSecretName. */ -}}
 {{- if and (not .Values.apiKey) (not .Values.existingSecretName) }}
   {{- fail "Either apiKey or existingSecretName must be set" -}}

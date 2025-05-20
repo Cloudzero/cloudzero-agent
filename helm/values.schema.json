@@ -21477,15 +21477,13 @@
               "properties": {
                 "enabled": {
                   "description": "Whether to enable the cadvisor scrape job.\n",
-                  "enum": [true],
-                  "type": "boolean"
+                  "type": ["boolean", "null"]
                 },
                 "scrapeInterval": {
                   "$ref": "#/$defs/com.cloudzero.agent.duration",
                   "description": "Scrape interval for nodesCadvisor job.\n"
                 }
               },
-              "required": ["enabled"],
               "type": "object"
             },
             "kubeStateMetrics": {
