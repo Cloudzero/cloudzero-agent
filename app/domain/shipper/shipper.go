@@ -106,7 +106,6 @@ func (m *MetricShipper) Run() error {
 	if err := m.runShipper(m.ctx); err != nil {
 		log.Ctx(m.ctx).Err(err).Msg("Failed to run shipper")
 		metricShipperRunFailTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-		return fmt.Errorf("failed to run the shipper: %w", err)
 	}
 
 	for {
@@ -121,7 +120,7 @@ func (m *MetricShipper) Run() error {
 			// flush
 			if err := m.ProcessNewFiles(m.ctx); err != nil {
 				metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-				return fmt.Errorf("failed to ship the metrics: %w", err)
+				log.Ctx(m.ctx).Err(err).Msg("Failed to flush the new metric files")
 			}
 
 			err := m.Shutdown()
@@ -140,24 +139,31 @@ func (m *MetricShipper) Run() error {
 }
 
 func (m *MetricShipper) runShipper(ctx context.Context) error {
-	return m.metrics.SpanCtx(ctx, "shipper_runShipper", func(ctx context.Context, id string) error {
+	return m.metrics.SpanCtx(ctx, "shipper_runShipper", func(ctx context.Context, id string) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Ctx(ctx).Warn().Interface("panic", r).Msg("Recovered from a panic")
+				err = fmt.Errorf("panic in shipper cycle: %v", r)
+			}
+		}()
+
 		logger := instr.SpanLogger(ctx, id)
 		logger.Debug().Msg("Running shipper cycle ...")
 
 		// run the base request
-		if err := m.ProcessNewFiles(ctx); err != nil {
+		if err = m.ProcessNewFiles(ctx); err != nil {
 			metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to ship the metrics: %w", err)
 		}
 
 		// run the replay request
-		if err := m.ProcessReplayRequests(ctx); err != nil {
+		if err = m.ProcessReplayRequests(ctx); err != nil {
 			metricReplayRequestErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to process the replay requests: %w", err)
 		}
 
 		// check the disk usage
-		if err := m.HandleDisk(ctx, time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
+		if err = m.HandleDisk(ctx, time.Now().Add(-m.setting.Database.PurgeRules.MetricsOlderThan)); err != nil {
 			metricDiskHandleErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 			return fmt.Errorf("failed to handle the disk usage: %w", err)
 		}
@@ -166,7 +172,7 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 		// if you change this string, then change in the smoke tests as well.
 		logger.Debug().Msg("Successfully ran the shipper cycle")
 
-		return nil
+		return err
 	})
 }
 

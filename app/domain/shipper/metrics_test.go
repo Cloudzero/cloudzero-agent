@@ -43,7 +43,7 @@ func TestShipper_Unit_Metrics(t *testing.T) {
 	metricReplayRequestCurrent.WithLabelValues().Inc()
 	metricReplayRequestFileCount.Observe(100)
 	metricReplayRequestSaveErrorTotal.WithLabelValues("err").Inc()
-	metricReplayRequestErrorTotal.WithLabelValues().Inc()
+	metricReplayRequestErrorTotal.WithLabelValues("err").Inc()
 	metricReplayRequestAbandonFilesTotal.WithLabelValues().Inc()
 	metricReplayRequestAbandonFilesErrorTotal.WithLabelValues("err").Inc()
 
