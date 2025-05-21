@@ -104,6 +104,12 @@ data:
       scrape_interval: 60s
 
     scrape_configs:
+      # Kube State Metrics Scrape Job
+      # static-kube-state-metrics
+      #
+      # Kube State Metrics provides the CloudZero Agent with information
+      # regarding the configuration and state of various Kubernetes objects
+      # (nodes, pods, etc.), including where they are located in the cluster.
       - job_name: static-kube-state-metrics
         honor_timestamps: true
         track_timestamps_staleness: false
@@ -118,37 +124,76 @@ data:
         enable_compression: true
         follow_redirects: true
         enable_http2: true
+      
+        # Given a Kubernetes resource with a structure like:
+        #
+        #   apiVersion: v1
+        #   kind: Service
+        #   metadata:
+        #     name: my-service
+        #     namespace: my-namespace
+        #     labels:
+        #       app: my-app
+        #       environment: production
+        #
+        # Kube State Metrics should provide labels such as:
+        #
+        #   __meta_kubernetes_service_name:               my-name
+        #   __meta_kubernetes_namespace:                  my-namespace
+        #   __meta_kubernetes_service_label_app:          my-app
+        #   __meta_kubernetes_service_label_environment:  production
+        #
+        # We read these into the CloudZero Agent as:
+        #
+        #   service: my-name
+        #   namespace: my-namespace
+        #   app: my-app
+        #   environment: production
         relabel_configs:
+      
+          # Relabel __meta_kubernetes_service_label_(.+) labels to $1.
           - separator: ;
             regex: __meta_kubernetes_service_label_(.+)
             replacement: $1
             action: labelmap
+      
+          # Replace __meta_kubernetes_namespace labels with "namespace"
           - source_labels: [__meta_kubernetes_namespace]
             separator: ;
             regex: (.*)
             target_label: namespace
             replacement: $1
             action: replace
+      
+          # Replace __meta_kubernetes_service_name labels with "service"
           - source_labels: [__meta_kubernetes_service_name]
             separator: ;
             regex: (.*)
             target_label: service
             replacement: $1
             action: replace
+      
+          # Replace "__meta_kubernetes_pod_node_name" labels to "node"
           - source_labels: [__meta_kubernetes_pod_node_name]
             separator: ;
             regex: (.*)
             target_label: node
             replacement: $1
             action: replace
+        # We filter out all but a select few metrics and labels.
         metric_relabel_configs:
+      
+          # Metric names to keep.
           - source_labels: [__name__]
             regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$
             action: keep
+      
+          # Metric labels to keep.
           - separator: ;
             regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
             replacement: $1
             action: labelkeep
+      
         static_configs:
           - targets:
             - cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080
@@ -165,11 +210,15 @@ data:
             kubeconfig_file: ""
             follow_redirects: true
             enable_http2: true
+      
         relabel_configs:
+          # Keep __meta_kubernetes_endpoints_name labels.
           - source_labels: [__meta_kubernetes_endpoints_name]
             action: keep
             regex: cz-agent-cloudzero-agent-webhook-server-svc
+      
         metric_relabel_configs:
+          # Metrics to keep.
           - source_labels: [__name__]
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total)$"
             action: keep
@@ -237,6 +286,10 @@ data:
       scrape_interval: 60s
 
     scrape_configs:
+      # cAdvisor Scrape Job cloudzero-nodes-cadvisor
+      #
+      # This job scrapes metrics about container resource usage (CPU, memory,
+      # network, etc.).
       - job_name: cloudzero-nodes-cadvisor # container_* metrics
         honor_timestamps: true
         track_timestamps_staleness: false
@@ -248,40 +301,69 @@ data:
         - PrometheusText0.0.4
         scheme: https
         enable_compression: true
+      
+        # cAdvisor endpoints are protected. In order to access them we need the
+        # credentials for the ServiceAccount.
         authorization:
           type: Bearer
           credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: true
+      
         follow_redirects: true
         enable_http2: true
-        metrics_path: /metrics/cadvisor # Direct kubelet cAdvisor path
+        # Scrape metrics directly from cAdvisor endpoint.
+        metrics_path: /metrics/cadvisor
+      
+        # Scrape metrics from cAdvisor
         relabel_configs:
+      
+          # Replace "__meta_kubernetes_node_name" labels with "node_name"
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node_name
             action: replace
+      
+          # Only scrape metrics for the node we are running on.
+          #
+          #
+          # Note that Prometheus does not handle the regex being a variable. In order
+          # to get this to work, we run a sed command in an initContainer to replace
+          # '${NODE_NAME}' with the name of the node we are running on. See the agent
+          # DaemonSet configuration for details.
           - source_labels: [__meta_kubernetes_node_name]
             regex: ${NODE_NAME}
             action: keep
+      
+          # Add port number to __address__ in "__meta_kubernetes_node_address_InternalIP"
           - source_labels: [__meta_kubernetes_node_address_InternalIP]
             action: replace
             target_label: __address__
             replacement: ${1}:10250
-          # Common relabel_configs
+      
+          # Remove "__meta_kubernetes_node_label_" prefix from labels.
           - separator: ;
             regex: __meta_kubernetes_node_label_(.+)
             replacement: $1
             action: labelmap
+      
+          # Replace __meta_kubernetes_node_name labels with "node"
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
             action: replace
+      
+        # We only want to keep a select few labels.
         metric_relabel_configs:
+      
+          # Labels to keep.
           - action: labelkeep
             regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+      
+          # Metrics to keep.
           - source_labels: [__name__]
             regex: ^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
             action: keep
+      
         kubernetes_sd_configs:
           - role: node
             kubeconfig_file: ""
