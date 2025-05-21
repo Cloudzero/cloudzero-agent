@@ -151,38 +151,38 @@ remote_write:
   follow_redirects: true
   enable_http2: true
   relabel_configs:
-  - separator: ;
-    regex: __meta_kubernetes_service_label_(.+)
-    replacement: $1
-    action: labelmap
-  - source_labels: [__meta_kubernetes_namespace]
-    separator: ;
-    regex: (.*)
-    target_label: namespace
-    replacement: $1
-    action: replace
-  - source_labels: [__meta_kubernetes_service_name]
-    separator: ;
-    regex: (.*)
-    target_label: service
-    replacement: $1
-    action: replace
-  - source_labels: [__meta_kubernetes_pod_node_name]
-    separator: ;
-    regex: (.*)
-    target_label: node
-    replacement: $1
-    action: replace
+    - separator: ;
+      regex: __meta_kubernetes_service_label_(.+)
+      replacement: $1
+      action: labelmap
+    - source_labels: [__meta_kubernetes_namespace]
+      separator: ;
+      regex: (.*)
+      target_label: namespace
+      replacement: $1
+      action: replace
+    - source_labels: [__meta_kubernetes_service_name]
+      separator: ;
+      regex: (.*)
+      target_label: service
+      replacement: $1
+      action: replace
+    - source_labels: [__meta_kubernetes_pod_node_name]
+      separator: ;
+      regex: (.*)
+      target_label: node
+      replacement: $1
+      action: replace
   metric_relabel_configs:
-  - source_labels: [__name__]
-    regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics) }}
-    action: keep
-  - separator: ;
-    regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
-    replacement: $1
-    action: labelkeep
+    - source_labels: [__name__]
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics) }}
+      action: keep
+    - separator: ;
+      regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+      replacement: $1
+      action: labelkeep
   static_configs:
-  - targets:
+    - targets:
       - {{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
 {{- end -}}
 
@@ -236,49 +236,49 @@ remote_write:
   {{- if $scrapeLocal }}
   metrics_path: /metrics/cadvisor # Direct kubelet cAdvisor path
   relabel_configs:
-  - source_labels: [__meta_kubernetes_node_name]
-    target_label: node_name
-    action: replace
-  - source_labels: [__meta_kubernetes_node_name]
-    regex: ${NODE_NAME}
-    action: keep
-  - source_labels: [__meta_kubernetes_node_address_InternalIP]
-    action: replace
-    target_label: __address__
-    replacement: ${1}:10250
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: node_name
+      action: replace
+    - source_labels: [__meta_kubernetes_node_name]
+      regex: ${NODE_NAME}
+      action: keep
+    - source_labels: [__meta_kubernetes_node_address_InternalIP]
+      action: replace
+      target_label: __address__
+      replacement: ${1}:10250
   {{- else }}
   metrics_path: /metrics
   relabel_configs:
-  # Specific to proxied scrape (via Kubernetes API server)
-  - separator: ;
-    regex: (.*)
-    target_label: __address__
-    replacement: kubernetes.default.svc:443
-    action: replace
-  - source_labels: [__meta_kubernetes_node_name]
-    separator: ;
-    regex: (.+)
-    target_label: __metrics_path__
-    replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-    action: replace
+    # Specific to proxied scrape (via Kubernetes API server)
+    - separator: ;
+      regex: (.*)
+      target_label: __address__
+      replacement: kubernetes.default.svc:443
+      action: replace
+    - source_labels: [__meta_kubernetes_node_name]
+      separator: ;
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+      action: replace
   {{- end }}
-  # Common relabel_configs
-  - separator: ;
-    regex: __meta_kubernetes_node_label_(.+)
-    replacement: $1
-    action: labelmap
-  - source_labels: [__meta_kubernetes_node_name]
-    target_label: node
-    action: replace
+    # Common relabel_configs
+    - separator: ;
+      regex: __meta_kubernetes_node_label_(.+)
+      replacement: $1
+      action: labelmap
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: node
+      action: replace
   metric_relabel_configs:
-  - action: labelkeep
-    regex: {{ printf "^(%s)$" (include "cloudzero-agent.requiredMetricLabels" .root) }}
-  - source_labels: [__name__]
-    regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" .root | fromYaml).containerMetrics) }}
-    action: keep
+    - action: labelkeep
+      regex: {{ printf "^(%s)$" (include "cloudzero-agent.requiredMetricLabels" .root) }}
+    - source_labels: [__name__]
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" .root | fromYaml).containerMetrics) }}
+      action: keep
   kubernetes_sd_configs:
-  - role: node
-    kubeconfig_file: ""
-    follow_redirects: true
-    enable_http2: true
+    - role: node
+      kubeconfig_file: ""
+      follow_redirects: true
+      enable_http2: true
 {{- end -}}
