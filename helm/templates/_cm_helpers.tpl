@@ -102,7 +102,6 @@ remote_write:
   static_configs:
     - targets:
         - localhost:9090
-  metrics_path: /metrics
   metric_relabel_configs:
     - source_labels: [__name__]
       regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
@@ -116,8 +115,6 @@ remote_write:
   kubernetes_sd_configs:
     - role: endpoints
       kubeconfig_file: ""
-      follow_redirects: true
-      enable_http2: true
       namespaces:
         names:
           - {{ .Release.Namespace }}
@@ -143,19 +140,7 @@ remote_write:
 # regarding the configuration and state of various Kubernetes objects
 # (nodes, pods, etc.), including where they are located in the cluster.
 - job_name: static-kube-state-metrics
-  honor_timestamps: true
-  track_timestamps_staleness: false
   scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
-  scrape_timeout: 10s
-  scrape_protocols:
-  - OpenMetricsText1.0.0
-  - OpenMetricsText0.0.1
-  - PrometheusText0.0.4
-  metrics_path: /metrics
-  scheme: http
-  enable_compression: true
-  follow_redirects: true
-  enable_http2: true
 
   # Given a Kubernetes resource with a structure like:
   #
@@ -184,34 +169,20 @@ remote_write:
   relabel_configs:
 
     # Relabel __meta_kubernetes_service_label_(.+) labels to $1.
-    - separator: ;
-      regex: __meta_kubernetes_service_label_(.+)
-      replacement: $1
+    - regex: __meta_kubernetes_service_label_(.+)
       action: labelmap
 
     # Replace __meta_kubernetes_namespace labels with "namespace"
     - source_labels: [__meta_kubernetes_namespace]
-      separator: ;
-      regex: (.*)
       target_label: namespace
-      replacement: $1
-      action: replace
 
     # Replace __meta_kubernetes_service_name labels with "service"
     - source_labels: [__meta_kubernetes_service_name]
-      separator: ;
-      regex: (.*)
       target_label: service
-      replacement: $1
-      action: replace
 
     # Replace "__meta_kubernetes_pod_node_name" labels to "node"
     - source_labels: [__meta_kubernetes_pod_node_name]
-      separator: ;
-      regex: (.*)
       target_label: node
-      replacement: $1
-      action: replace
   # We filter out all but a select few metrics and labels.
   metric_relabel_configs:
 
@@ -221,9 +192,7 @@ remote_write:
       action: keep
 
     # Metric labels to keep.
-    - separator: ;
-      regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
-      replacement: $1
+    - regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
       action: labelkeep
 
   static_configs:
@@ -234,18 +203,13 @@ remote_write:
 {{/* Define cloudzero-webhook-job scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeWebhookJob" -}}
 - job_name: cloudzero-webhook-job
-  metrics_path: /metrics
   scheme: https
-  enable_compression: true
   tls_config:
     insecure_skip_verify: true
-  follow_redirects: true
-  enable_http2: true
+
   kubernetes_sd_configs:
     - role: endpoints
       kubeconfig_file: ""
-      follow_redirects: true
-      enable_http2: true
 
   relabel_configs:
     # Keep __meta_kubernetes_endpoints_name labels.
@@ -267,17 +231,10 @@ remote_write:
 #
 # This job scrapes metrics about container resource usage (CPU, memory,
 # network, etc.).
-- job_name: cloudzero-nodes-cadvisor # container_* metrics
-  honor_timestamps: true
-  track_timestamps_staleness: false
+- job_name: cloudzero-nodes-cadvisor
+
   scrape_interval: {{ .root.Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
-  scrape_timeout: 10s
-  scrape_protocols:
-  - OpenMetricsText1.0.0
-  - OpenMetricsText0.0.1
-  - PrometheusText0.0.4
   scheme: https
-  enable_compression: true
 
   # cAdvisor endpoints are protected. In order to access them we need the
   # credentials for the ServiceAccount.
@@ -288,8 +245,6 @@ remote_write:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
 
-  follow_redirects: true
-  enable_http2: true
   {{- if $scrapeLocal }}
   # Scrape metrics directly from cAdvisor endpoint.
   metrics_path: /metrics/cadvisor
@@ -300,7 +255,6 @@ remote_write:
     # Replace "__meta_kubernetes_node_name" labels with "node_name"
     - source_labels: [__meta_kubernetes_node_name]
       target_label: node_name
-      action: replace
 
     # Only scrape metrics for the node we are running on.
     #
@@ -315,42 +269,31 @@ remote_write:
 
     # Add port number to __address__ in "__meta_kubernetes_node_address_InternalIP"
     - source_labels: [__meta_kubernetes_node_address_InternalIP]
-      action: replace
       target_label: __address__
       replacement: ${1}:10250
   {{- else }}
-  metrics_path: /metrics
 
   # Scrape metrics from cAdvisor.
   relabel_configs:
 
     # Replace the value of __address__ labels with "kubernetes.default.svc:443"
-    - separator: ;
-      regex: (.*)
-      target_label: __address__
+    - target_label: __address__
       replacement: kubernetes.default.svc:443
-      action: replace
 
     # Replace the value of __metrics_path__ in __meta_kubernetes_node_name with
     # "/api/v1/nodes/$1/proxy/metrics/cadvisor"
     - source_labels: [__meta_kubernetes_node_name]
-      separator: ;
-      regex: (.+)
       target_label: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-      action: replace
   {{- end }}
 
     # Remove "__meta_kubernetes_node_label_" prefix from labels.
-    - separator: ;
-      regex: __meta_kubernetes_node_label_(.+)
-      replacement: $1
+    - regex: __meta_kubernetes_node_label_(.+)
       action: labelmap
 
     # Replace __meta_kubernetes_node_name labels with "node"
     - source_labels: [__meta_kubernetes_node_name]
       target_label: node
-      action: replace
 
   # We only want to keep a select few labels.
   metric_relabel_configs:
@@ -367,6 +310,4 @@ remote_write:
   kubernetes_sd_configs:
     - role: node
       kubeconfig_file: ""
-      follow_redirects: true
-      enable_http2: true
 {{- end -}}
