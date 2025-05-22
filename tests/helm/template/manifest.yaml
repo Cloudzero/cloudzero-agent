@@ -605,7 +605,7 @@ data:
       level: "info"
     database:
       storage_path: /cloudzero/data
-      max_records: 1500000
+      max_records: 1.5e+06
       cost_max_interval: 10m
       observability_max_interval: 30m
       compression_level: 8
@@ -1161,7 +1161,6 @@ spec:
   - name: "http"
     protocol: TCP
     port: 8080
-    nodePort: 0
     targetPort: 8080
   
   selector:    
@@ -1337,7 +1336,7 @@ spec:
           
           env:
             - name: NAMESPACE
-              value: default
+              value: cz-agent
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -1362,7 +1361,7 @@ spec:
           
           env:
             - name: NAMESPACE
-              value: default
+              value: cz-agent
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -1962,9 +1961,10 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
-  namespace: default
+  namespace: cz-agent
   annotations:
-    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+    checksum/values: b4af2bc08ab5a0e471b0cde16dfb74f6829da65d602d81a9f81a95a2f08da8a2
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -1977,13 +1977,13 @@ spec:
   template:
     metadata:
       name: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
-      namespace: default
+      namespace: cz-agent
       labels:
         app.kubernetes.io/component: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
@@ -1994,19 +1994,15 @@ spec:
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
-          #
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
-          imagePullPolicy: "IfNotPresent"
-          
           env:
             - name: NAMESPACE
-              value: default
+              value: cz-agent
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
           command:
-            - /checks/bin/cloudzero-agent-validator
+            - /app/cloudzero-agent-validator
             - diagnose
             - config-load 
             - -f

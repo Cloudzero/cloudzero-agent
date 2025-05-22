@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package settings contains code for checking the supplied configs
 package settings
 
 import (
@@ -78,24 +82,30 @@ func (c *checker) Check(_ context.Context, _ *net.Client, accessor status.Access
 		return nil
 	}
 
-	err = process(settingsValidator, accessor, func(s string) {
+	if err := process(settingsValidator, accessor, func(s string) {
 		accessor.WriteToReport(func(cs *status.ClusterStatus) {
 			cs.ConfigValidatorBase64 = s
 		})
-	})
-	err = process(settingsWebhook, accessor, func(s string) {
+	}); err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAgentSettings, Error: err.Error()})
+	}
+	if err := process(settingsWebhook, accessor, func(s string) {
 		accessor.WriteToReport(func(cs *status.ClusterStatus) {
 			cs.ConfigWebhookServerBase64 = s
 		})
-	})
-	err = process(settingsGator, accessor, func(s string) {
+	}); err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAgentSettings, Error: err.Error()})
+	}
+	if err := process(settingsGator, accessor, func(s string) {
 		accessor.WriteToReport(func(cs *status.ClusterStatus) {
 			cs.ConfigAggregatorBase64 = s
 		})
-	})
-	if err == nil {
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAgentSettings, Passing: true})
+	}); err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAgentSettings, Error: err.Error()})
 	}
+
+	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticAgentSettings, Passing: true})
+
 	return nil
 }
 

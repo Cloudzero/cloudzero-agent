@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package k8s contains code for checking the Kubernetes configuration.
+// Package version contains code for checking the Kubernetes configuration.
 package version
 
 import (

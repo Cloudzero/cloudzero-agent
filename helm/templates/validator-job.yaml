@@ -4,6 +4,7 @@ metadata:
   name: {{ include "cloudzero-agent.validatorJobName" . }}
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+    checksum/values: {{ .Values | toYaml | sha256sum }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
@@ -13,7 +14,7 @@ spec:
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
-      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations (dict "checksum/values" ( .Values | toYaml | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure

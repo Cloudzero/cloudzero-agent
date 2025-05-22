@@ -84,7 +84,7 @@ func (s *Settings) ToYAML() ([]byte, error) {
 	return raw, nil
 }
 
-// Implement the `Serializable` interface
+// ToBytes returns a serialized representation of the data in the class
 func (s *Settings) ToBytes() ([]byte, error) {
 	return s.ToYAML()
 }

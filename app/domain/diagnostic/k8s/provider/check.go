@@ -1,7 +1,12 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package provider contains code for checking the Kubernetes configuration.
 package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -56,11 +61,11 @@ func (c *checker) getProviderID(ctx context.Context) (string, error) {
 	// ensure the correct env variables were injected
 	ns, exists := os.LookupEnv("NAMESPACE")
 	if !exists {
-		return "", fmt.Errorf("the env variable `NAMESPACE` must exist")
+		return "", errors.New("the env variable `NAMESPACE` must exist")
 	}
 	name, exists := os.LookupEnv("POD_NAME")
 	if !exists {
-		return "", fmt.Errorf("the env variable `POD_NAME` must exist")
+		return "", errors.New("the env variable `POD_NAME` must exist")
 	}
 
 	// create the k8s client
