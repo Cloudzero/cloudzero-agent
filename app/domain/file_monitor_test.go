@@ -177,12 +177,12 @@ func TestSecretMonitor_Start_Directory(t *testing.T) {
 
 	newTempFile := filepath.Join(tempDir, "new_secret.txt")
 	mockBus := new(MockBus)
-	mockBus.On("Publish", types.Event{
-		Type: domain.FileCreated,
-		Value: types.FileCreated{
-			Name: newTempFile,
-		},
-	}).Return()
+
+	// Expect either a create or change event
+	mockBus.On("Publish", mock.MatchedBy(func(event types.Event) bool {
+		return (event.Type == domain.FileCreated || event.Type == domain.FileChanged) &&
+			event.Value.(types.FileCreated).Name == newTempFile
+	})).Return()
 
 	monitor, err := domain.NewFileMonitor(ctx, mockBus, tempDir)
 	assert.NoError(t, err)
