@@ -346,7 +346,7 @@ helm-test-schema: helm/values.schema.json ## Run the Helm values schema validati
 	done
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/values.schema.json helm-install-deps FORCE
-	@$(HELM) template "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
+	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
 helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
 
