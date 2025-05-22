@@ -605,7 +605,7 @@ data:
       level: "info"
     database:
       storage_path: /cloudzero/data
-      max_records: 1.5e+06
+      max_records: 1500000
       cost_max_interval: 10m
       observability_max_interval: 30m
       compression_level: 8
@@ -686,6 +686,8 @@ data:
           enforce: false
           checks:
             - k8s_version
+            - k8s_namespace
+            - k8s_provider
             - kube_state_metrics_reachable
             - prometheus_version
             - scrape_cfg
@@ -693,6 +695,15 @@ data:
         - name: pre-stop
           enforce: false
           checks:
+        - name: config-load
+          enforce: false
+          checks:
+            - api_key_valid
+            - k8s_version
+            - k8s_namespace
+            - k8s_provider
+            - kube_state_metrics_reachable
+            - agent_settings
 ---
 # Source: cloudzero-agent/templates/webhook-cm.yaml
 apiVersion: v1
@@ -1150,6 +1161,7 @@ spec:
   - name: "http"
     protocol: TCP
     port: 8080
+    nodePort: 0
     targetPort: 8080
   
   selector:    
@@ -1323,6 +1335,13 @@ spec:
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
+          env:
+            - name: NAMESPACE
+              value: default
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           command:
             - /app/cloudzero-agent-validator
             - install
@@ -1341,6 +1360,13 @@ spec:
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
           imagePullPolicy: "IfNotPresent"
           
+          env:
+            - name: NAMESPACE
+              value: default
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           command:
             - /checks/bin/cloudzero-agent-validator
             - diagnose
@@ -1930,6 +1956,110 @@ spec:
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
               exit 0
+---
+# Source: cloudzero-agent/templates/validator-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+  namespace: default
+  annotations:
+    checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  template:
+    metadata:
+      name: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+      namespace: default
+      labels:
+        app.kubernetes.io/component: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+      annotations:
+        checksum/config: 9a9ff43f870efab33429a0415882d2c031d205aedc523f59c52e3cc1134d5a6e
+    spec:
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      restartPolicy: OnFailure
+      
+      
+      containers:
+        - name: run-validator
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
+          imagePullPolicy: "IfNotPresent"
+          
+          #
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
+          imagePullPolicy: "IfNotPresent"
+          
+          env:
+            - name: NAMESPACE
+              value: default
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          command:
+            - /checks/bin/cloudzero-agent-validator
+            - diagnose
+            - config-load 
+            - -f
+            - /cloudzero/config/validator/validator.yml
+            - --config-webhook
+            - /etc/cloudzero-agent-insights/server-config.yaml
+            - --config-aggregator
+            - /cloudzero/config/config.yml
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config/prometheus/configmaps/
+            - name: config-validator
+              mountPath: /cloudzero/config/validator # validator.yml
+            - name: config-webhook
+              mountPath: /etc/cloudzero-agent-insights # server-config.yaml
+            - name: config-aggregator
+              mountPath: /cloudzero/config # config.yaml
+            - name: aggregator-persistent-storage
+              mountPath: /cloudzero/data
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cz-agent-configuration
+        - name: config-validator
+          configMap:
+            name: cz-agent-validator-configuration
+        - name: config-webhook
+          configMap:
+            name: cz-agent-webhook-configuration
+        - name: config-aggregator
+          configMap:
+            name: cz-agent-aggregator
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+        - name: aggregator-persistent-storage
+          emptyDir: {}
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webhook-server
+              topologyKey: kubernetes.io/hostname
+            weight: 100
 ---
 # Source: cloudzero-agent/templates/webhook-validating-config.yaml
 apiVersion: admissionregistration.k8s.io/v1
