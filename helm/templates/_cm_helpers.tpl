@@ -102,7 +102,6 @@ remote_write:
   static_configs:
     - targets:
         - localhost:9090
-  metrics_path: /metrics
   metric_relabel_configs:
     - source_labels: [__name__]
       regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
@@ -116,8 +115,6 @@ remote_write:
   kubernetes_sd_configs:
     - role: endpoints
       kubeconfig_file: ""
-      follow_redirects: true
-      enable_http2: true
       namespaces:
         names:
           - {{ .Release.Namespace }}
@@ -136,76 +133,92 @@ remote_write:
 
 {{/* Define static-kube-state-metrics scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeKubeStateMetrics" -}}
+# Kube State Metrics Scrape Job
+# static-kube-state-metrics
+#
+# Kube State Metrics provides the CloudZero Agent with information
+# regarding the configuration and state of various Kubernetes objects
+# (nodes, pods, etc.), including where they are located in the cluster.
 - job_name: static-kube-state-metrics
-  honor_timestamps: true
-  track_timestamps_staleness: false
   scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
-  scrape_timeout: 10s
-  scrape_protocols:
-  - OpenMetricsText1.0.0
-  - OpenMetricsText0.0.1
-  - PrometheusText0.0.4
-  metrics_path: /metrics
-  scheme: http
-  enable_compression: true
-  follow_redirects: true
-  enable_http2: true
+
+  # Given a Kubernetes resource with a structure like:
+  #
+  #   apiVersion: v1
+  #   kind: Service
+  #   metadata:
+  #     name: my-service
+  #     namespace: my-namespace
+  #     labels:
+  #       app: my-app
+  #       environment: production
+  #
+  # Kube State Metrics should provide labels such as:
+  #
+  #   __meta_kubernetes_service_name:               my-name
+  #   __meta_kubernetes_namespace:                  my-namespace
+  #   __meta_kubernetes_service_label_app:          my-app
+  #   __meta_kubernetes_service_label_environment:  production
+  #
+  # We read these into the CloudZero Agent as:
+  #
+  #   service: my-name
+  #   namespace: my-namespace
+  #   app: my-app
+  #   environment: production
   relabel_configs:
-  - separator: ;
-    regex: __meta_kubernetes_service_label_(.+)
-    replacement: $1
-    action: labelmap
-  - source_labels: [__meta_kubernetes_namespace]
-    separator: ;
-    regex: (.*)
-    target_label: namespace
-    replacement: $1
-    action: replace
-  - source_labels: [__meta_kubernetes_service_name]
-    separator: ;
-    regex: (.*)
-    target_label: service
-    replacement: $1
-    action: replace
-  - source_labels: [__meta_kubernetes_pod_node_name]
-    separator: ;
-    regex: (.*)
-    target_label: node
-    replacement: $1
-    action: replace
+
+    # Relabel __meta_kubernetes_service_label_(.+) labels to $1.
+    - regex: __meta_kubernetes_service_label_(.+)
+      action: labelmap
+
+    # Replace __meta_kubernetes_namespace labels with "namespace"
+    - source_labels: [__meta_kubernetes_namespace]
+      target_label: namespace
+
+    # Replace __meta_kubernetes_service_name labels with "service"
+    - source_labels: [__meta_kubernetes_service_name]
+      target_label: service
+
+    # Replace "__meta_kubernetes_pod_node_name" labels to "node"
+    - source_labels: [__meta_kubernetes_pod_node_name]
+      target_label: node
+  # We filter out all but a select few metrics and labels.
   metric_relabel_configs:
-  - source_labels: [__name__]
-    regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics) }}
-    action: keep
-  - separator: ;
-    regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
-    replacement: $1
-    action: labelkeep
+
+    # Metric names to keep.
+    - source_labels: [__name__]
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics) }}
+      action: keep
+
+    # Metric labels to keep.
+    - regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+      action: labelkeep
+
   static_configs:
-  - targets:
+    - targets:
       - {{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
 {{- end -}}
 
 {{/* Define cloudzero-webhook-job scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeWebhookJob" -}}
 - job_name: cloudzero-webhook-job
-  metrics_path: /metrics
   scheme: https
-  enable_compression: true
   tls_config:
     insecure_skip_verify: true
-  follow_redirects: true
-  enable_http2: true
+
   kubernetes_sd_configs:
     - role: endpoints
       kubeconfig_file: ""
-      follow_redirects: true
-      enable_http2: true
+
   relabel_configs:
+    # Keep __meta_kubernetes_endpoints_name labels.
     - source_labels: [__meta_kubernetes_endpoints_name]
       action: keep
       regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
+
   metric_relabel_configs:
+    # Metrics to keep.
     - source_labels: [__name__]
       regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics }})$"
       action: keep
@@ -214,71 +227,87 @@ remote_write:
 {{/* Define cloudzero-nodes-cAdvisor scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeCAdvisor" -}}
 {{- $scrapeLocal := .scrapeLocalNodeOnly | default false -}}
-- job_name: cloudzero-nodes-cadvisor # container_* metrics
-  honor_timestamps: true
-  track_timestamps_staleness: false
+# cAdvisor Scrape Job cloudzero-nodes-cadvisor
+#
+# This job scrapes metrics about container resource usage (CPU, memory,
+# network, etc.).
+- job_name: cloudzero-nodes-cadvisor
+
   scrape_interval: {{ .root.Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
-  scrape_timeout: 10s
-  scrape_protocols:
-  - OpenMetricsText1.0.0
-  - OpenMetricsText0.0.1
-  - PrometheusText0.0.4
   scheme: https
-  enable_compression: true
+
+  # cAdvisor endpoints are protected. In order to access them we need the
+  # credentials for the ServiceAccount.
   authorization:
     type: Bearer
     credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
-  follow_redirects: true
-  enable_http2: true
+
   {{- if $scrapeLocal }}
-  metrics_path: /metrics/cadvisor # Direct kubelet cAdvisor path
+  # Scrape metrics directly from cAdvisor endpoint.
+  metrics_path: /metrics/cadvisor
+
+  # Scrape metrics from cAdvisor
   relabel_configs:
-  - source_labels: [__meta_kubernetes_node_name]
-    target_label: node_name
-    action: replace
-  - source_labels: [__meta_kubernetes_node_name]
-    regex: ${NODE_NAME}
-    action: keep
-  - source_labels: [__meta_kubernetes_node_address_InternalIP]
-    action: replace
-    target_label: __address__
-    replacement: ${1}:10250
+
+    # Replace "__meta_kubernetes_node_name" labels with "node_name"
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: node_name
+
+    # Only scrape metrics for the node we are running on.
+    #
+    #
+    # Note that Prometheus does not handle the regex being a variable. In order
+    # to get this to work, we run a sed command in an initContainer to replace
+    # '${NODE_NAME}' with the name of the node we are running on. See the agent
+    # DaemonSet configuration for details.
+    - source_labels: [__meta_kubernetes_node_name]
+      regex: ${NODE_NAME}
+      action: keep
+
+    # Add port number to __address__ in "__meta_kubernetes_node_address_InternalIP"
+    - source_labels: [__meta_kubernetes_node_address_InternalIP]
+      target_label: __address__
+      replacement: ${1}:10250
   {{- else }}
-  metrics_path: /metrics
+
+  # Scrape metrics from cAdvisor.
   relabel_configs:
-  # Specific to proxied scrape (via Kubernetes API server)
-  - separator: ;
-    regex: (.*)
-    target_label: __address__
-    replacement: kubernetes.default.svc:443
-    action: replace
-  - source_labels: [__meta_kubernetes_node_name]
-    separator: ;
-    regex: (.+)
-    target_label: __metrics_path__
-    replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-    action: replace
+
+    # Replace the value of __address__ labels with "kubernetes.default.svc:443"
+    - target_label: __address__
+      replacement: kubernetes.default.svc:443
+
+    # Replace the value of __metrics_path__ in __meta_kubernetes_node_name with
+    # "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
   {{- end }}
-  # Common relabel_configs
-  - separator: ;
-    regex: __meta_kubernetes_node_label_(.+)
-    replacement: $1
-    action: labelmap
-  - source_labels: [__meta_kubernetes_node_name]
-    target_label: node
-    action: replace
+
+    # Remove "__meta_kubernetes_node_label_" prefix from labels.
+    - regex: __meta_kubernetes_node_label_(.+)
+      action: labelmap
+
+    # Replace __meta_kubernetes_node_name labels with "node"
+    - source_labels: [__meta_kubernetes_node_name]
+      target_label: node
+
+  # We only want to keep a select few labels.
   metric_relabel_configs:
-  - action: labelkeep
-    regex: {{ printf "^(%s)$" (include "cloudzero-agent.requiredMetricLabels" .root) }}
-  - source_labels: [__name__]
-    regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" .root | fromYaml).containerMetrics) }}
-    action: keep
+
+    # Labels to keep.
+    - action: labelkeep
+      regex: {{ printf "^(%s)$" (include "cloudzero-agent.requiredMetricLabels" .root) }}
+
+    # Metrics to keep.
+    - source_labels: [__name__]
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" .root | fromYaml).containerMetrics) }}
+      action: keep
+
   kubernetes_sd_configs:
-  - role: node
-    kubeconfig_file: ""
-    follow_redirects: true
-    enable_http2: true
+    - role: node
+      kubeconfig_file: ""
 {{- end -}}
