@@ -17,6 +17,7 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -232,4 +233,17 @@ func cleanString(s string) string {
 	}
 
 	return s[start:end]
+}
+
+func (s *Settings) ToYAML() ([]byte, error) {
+	raw, err := yaml.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode into yaml: %w", err)
+	}
+	return raw, nil
+}
+
+// Implement the `Serializable` interface
+func (s *Settings) ToBytes() ([]byte, error) {
+	return s.ToYAML()
 }

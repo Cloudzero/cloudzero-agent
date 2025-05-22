@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"gopkg.in/yaml.v3"
 )
 
 type Settings struct {
@@ -73,4 +74,17 @@ func (s *Settings) Validate() error {
 	}
 
 	return nil
+}
+
+func (s *Settings) ToYAML() ([]byte, error) {
+	raw, err := yaml.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode into yaml: %w", err)
+	}
+	return raw, nil
+}
+
+// Implement the `Serializable` interface
+func (s *Settings) ToBytes() ([]byte, error) {
+	return s.ToYAML()
 }
