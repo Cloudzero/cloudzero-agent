@@ -30,6 +30,7 @@ const (
 	StatusType_STATUS_TYPE_INIT_FAILED  StatusType = 3
 	StatusType_STATUS_TYPE_POD_STARTED  StatusType = 4
 	StatusType_STATUS_TYPE_POD_STOPPING StatusType = 5
+	StatusType_STATUS_TYPE_CONFIG_LOAD  StatusType = 6
 )
 
 // Enum value maps for StatusType.
@@ -41,6 +42,7 @@ var (
 		3: "STATUS_TYPE_INIT_FAILED",
 		4: "STATUS_TYPE_POD_STARTED",
 		5: "STATUS_TYPE_POD_STOPPING",
+		6: "STATUS_TYPE_CONFIG_LOAD",
 	}
 	StatusType_value = map[string]int32{
 		"STATUS_TYPE_UNSPECIFIED":  0,
@@ -49,6 +51,7 @@ var (
 		"STATUS_TYPE_INIT_FAILED":  3,
 		"STATUS_TYPE_POD_STARTED":  4,
 		"STATUS_TYPE_POD_STOPPING": 5,
+		"STATUS_TYPE_CONFIG_LOAD":  6,
 	}
 )
 
@@ -151,8 +154,15 @@ type ClusterStatus struct {
 	ValidatorVersion string                 `protobuf:"bytes,8,opt,name=validator_version,json=validatorVersion,proto3" json:"validator_version,omitempty"`
 	K8SVersion       string                 `protobuf:"bytes,9,opt,name=k8s_version,json=k8sVersion,proto3" json:"k8s_version,omitempty"`
 	Checks           []*StatusCheck         `protobuf:"bytes,10,rep,name=checks,proto3" json:"checks,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// 05/15/25 updates
+	ProviderId                string `protobuf:"bytes,11,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	ReleaseName               string `protobuf:"bytes,12,opt,name=release_name,json=releaseName,proto3" json:"release_name,omitempty"`
+	Namespace                 string `protobuf:"bytes,13,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ConfigValidatorBase64     string `protobuf:"bytes,14,opt,name=config_validator_base64,json=configValidatorBase64,proto3" json:"config_validator_base64,omitempty"`
+	ConfigWebhookServerBase64 string `protobuf:"bytes,15,opt,name=config_webhook_server_base64,json=configWebhookServerBase64,proto3" json:"config_webhook_server_base64,omitempty"`
+	ConfigAggregatorBase64    string `protobuf:"bytes,16,opt,name=config_aggregator_base64,json=configAggregatorBase64,proto3" json:"config_aggregator_base64,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ClusterStatus) Reset() {
@@ -255,6 +265,48 @@ func (x *ClusterStatus) GetChecks() []*StatusCheck {
 	return nil
 }
 
+func (x *ClusterStatus) GetProviderId() string {
+	if x != nil {
+		return x.ProviderId
+	}
+	return ""
+}
+
+func (x *ClusterStatus) GetReleaseName() string {
+	if x != nil {
+		return x.ReleaseName
+	}
+	return ""
+}
+
+func (x *ClusterStatus) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ClusterStatus) GetConfigValidatorBase64() string {
+	if x != nil {
+		return x.ConfigValidatorBase64
+	}
+	return ""
+}
+
+func (x *ClusterStatus) GetConfigWebhookServerBase64() string {
+	if x != nil {
+		return x.ConfigWebhookServerBase64
+	}
+	return ""
+}
+
+func (x *ClusterStatus) GetConfigAggregatorBase64() string {
+	if x != nil {
+		return x.ConfigAggregatorBase64
+	}
+	return ""
+}
+
 var File_cluster_status_proto protoreflect.FileDescriptor
 
 const file_cluster_status_proto_rawDesc = "" +
@@ -263,7 +315,7 @@ const file_cluster_status_proto_rawDesc = "" +
 	"\vStatusCheck\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\apassing\x18\x02 \x01(\bR\apassing\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"\xe9\x02\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\xfe\x04\n" +
 	"\rClusterStatus\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x12\n" +
@@ -276,7 +328,14 @@ const file_cluster_status_proto_rawDesc = "" +
 	"\vk8s_version\x18\t \x01(\tR\n" +
 	"k8sVersion\x12+\n" +
 	"\x06checks\x18\n" +
-	" \x03(\v2\x13.status.StatusCheckR\x06checks*\xb8\x01\n" +
+	" \x03(\v2\x13.status.StatusCheckR\x06checks\x12\x1f\n" +
+	"\vprovider_id\x18\v \x01(\tR\n" +
+	"providerId\x12!\n" +
+	"\frelease_name\x18\f \x01(\tR\vreleaseName\x12\x1c\n" +
+	"\tnamespace\x18\r \x01(\tR\tnamespace\x126\n" +
+	"\x17config_validator_base64\x18\x0e \x01(\tR\x15configValidatorBase64\x12?\n" +
+	"\x1cconfig_webhook_server_base64\x18\x0f \x01(\tR\x19configWebhookServerBase64\x128\n" +
+	"\x18config_aggregator_base64\x18\x10 \x01(\tR\x16configAggregatorBase64*\xd5\x01\n" +
 	"\n" +
 	"StatusType\x12\x1b\n" +
 	"\x17STATUS_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
@@ -284,7 +343,8 @@ const file_cluster_status_proto_rawDesc = "" +
 	"\x13STATUS_TYPE_INIT_OK\x10\x02\x12\x1b\n" +
 	"\x17STATUS_TYPE_INIT_FAILED\x10\x03\x12\x1b\n" +
 	"\x17STATUS_TYPE_POD_STARTED\x10\x04\x12\x1c\n" +
-	"\x18STATUS_TYPE_POD_STOPPING\x10\x05B\vZ\t../statusb\x06proto3"
+	"\x18STATUS_TYPE_POD_STOPPING\x10\x05\x12\x1b\n" +
+	"\x17STATUS_TYPE_CONFIG_LOAD\x10\x06B\vZ\t../statusb\x06proto3"
 
 var (
 	file_cluster_status_proto_rawDescOnce sync.Once

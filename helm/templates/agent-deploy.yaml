@@ -26,6 +26,8 @@ spec:
       initContainers:
         - name: {{ .Values.validator.name }}-copy
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
+          env:
+            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
             - /app/cloudzero-agent-validator
             - install
@@ -43,6 +45,8 @@ spec:
               mountPath: /checks/config/
         - name: {{ .Values.validator.name }}-run
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
+          env:
+            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
             - /checks/bin/cloudzero-agent-validator
             - diagnose
@@ -81,6 +85,7 @@ spec:
           {{- if .Values.server.env }}
           env:
 {{ toYaml .Values.server.env | indent 12}}
+            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           {{- end }}
           lifecycle:
             postStart:

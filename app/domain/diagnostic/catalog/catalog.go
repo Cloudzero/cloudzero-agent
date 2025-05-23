@@ -11,10 +11,13 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/cz"
-	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/namespace"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/provider"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/version"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/kms"
 	promcfg "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/config"
 	promver "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/version"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/settings"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/stage"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
@@ -39,13 +42,16 @@ type registry struct {
 	providers map[string]providerInfo
 }
 
-func NewCatalog(ctx context.Context, c *config.Settings) Registry {
+func createRegistry(ctx context.Context, c *config.Settings) *registry {
 	r := &registry{
 		providers: make(map[string]providerInfo),
 	}
+
 	// Register checks
 	r.add(config.DiagnosticAPIKey, false, cz.NewProvider(ctx, c))
-	r.add(config.DiagnosticK8sVersion, false, k8s.NewProvider(ctx, c))
+	r.add(config.DiagnosticK8sVersion, false, version.NewProvider(ctx, c))
+	r.add(config.DiagnosticK8sNamespace, false, namespace.NewProvider(ctx, c))
+	r.add(config.DiagnosticK8sProvider, false, provider.NewProvider(ctx, c))
 	r.add(config.DiagnosticKMS, false, kms.NewProvider(ctx, c))
 	r.add(config.DiagnosticScrapeConfig, false, promcfg.NewProvider(ctx, c))
 	r.add(config.DiagnosticPrometheusVersion, false, promver.NewProvider(ctx, c))
@@ -57,6 +63,26 @@ func NewCatalog(ctx context.Context, c *config.Settings) Registry {
 	r.add(config.DiagnosticInternalInitFailed, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_INIT_FAILED))
 	r.add(config.DiagnosticInternalPodStart, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_POD_STARTED))
 	r.add(config.DiagnosticInternalPodStop, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_POD_STOPPING))
+	r.add(config.DiagnosticInternalConfigLoad, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_CONFIG_LOAD))
+
+	return r
+}
+
+func NewCatalog(ctx context.Context, c *config.Settings) Registry {
+	return createRegistry(ctx, c)
+}
+
+func NewConfigCatalog(
+	ctx context.Context,
+	c *config.Settings,
+	configsValidator []string,
+	congigsWebhook []string,
+	configsAggregator []string,
+) Registry {
+	r := createRegistry(ctx, c)
+
+	// add the config check
+	r.add(config.DiagnosticAgentSettings, false, settings.NewProvider(ctx, configsValidator, congigsWebhook, configsAggregator))
 
 	return r
 }

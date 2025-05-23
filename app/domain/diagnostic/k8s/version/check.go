@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package k8s contains code for checking the Kubernetes configuration.
-package k8s
+// Package version contains code for checking the Kubernetes configuration.
+package version
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 	return &checker{
 		cfg: cfg,
 		logger: logging.NewLogger().
-			WithContext(ctx).WithField(logging.OpField, "k8s"),
+			WithContext(ctx).WithField(logging.OpField, "k8s_version"),
 	}
 }
 

@@ -23,4 +23,7 @@ const (
 	FlagDescClusterName = "kubernetes cluster name"
 	FlagRegion          = "region"
 	FlagDescRegion      = "deployment region matching the dimension in the CloudZero dashboard"
+
+	FlagConfigFileWebhook    = "config-webhook"
+	FlagConfigFileAggregator = "config-aggregator"
 )

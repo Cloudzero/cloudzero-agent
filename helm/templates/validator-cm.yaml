@@ -54,6 +54,8 @@ data:
           enforce: false
           checks:
             - k8s_version
+            - k8s_namespace
+            - k8s_provider
             - kube_state_metrics_reachable
             - prometheus_version
             - scrape_cfg
@@ -61,3 +63,12 @@ data:
         - name: pre-stop
           enforce: false
           checks:
+        - name: config-load
+          enforce: false
+          checks:
+            - api_key_valid
+            - k8s_version
+            - k8s_namespace
+            - k8s_provider
+            - kube_state_metrics_reachable
+            - agent_settings

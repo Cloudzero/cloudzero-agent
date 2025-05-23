@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package k8s_test
+package version_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
-	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/version"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/cloudzero/cloudzero-agent/tests/utils"
 )
@@ -46,7 +46,7 @@ func TestChecker_CheckOK(t *testing.T) {
 	// XXX: Replace with the expected version
 	expectedVersion := "1.29"
 
-	provider := k8s.NewProvider(context.Background(), cfg)
+	provider := version.NewProvider(context.Background(), cfg)
 
 	mock := utils.NewHTTPMock()
 	mock.Expect(http.MethodGet, k8sAPIResponseBody, 200, nil)

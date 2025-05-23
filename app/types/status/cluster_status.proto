@@ -16,6 +16,7 @@ enum StatusType {
     STATUS_TYPE_INIT_FAILED = 3;
     STATUS_TYPE_POD_STARTED = 4;
     STATUS_TYPE_POD_STOPPING = 5;
+    STATUS_TYPE_CONFIG_LOAD = 6;
 }
 
 message ClusterStatus {
@@ -31,4 +32,12 @@ message ClusterStatus {
     string k8s_version = 9;
 
     repeated StatusCheck checks = 10;
+
+    // 05/15/25 updates
+    string provider_id = 11;
+    string release_name = 12;
+    string namespace = 13;
+    string config_validator_base64 = 14;
+    string config_webhook_server_base64 = 15;
+    string config_aggregator_base64 = 16;
 }
