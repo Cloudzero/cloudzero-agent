@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -78,46 +77,39 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 			return ErrGetRemoteBase
 		}
 		uploadEndpoint.Path += uploadAPIPath
-		req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
-		if err != nil {
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
-		}
-
-		// Set necessary headers
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", m.setting.GetAPIKey())
-		req.Header.Set(ShipperIDRequestHeader, shipperID)
-		req.Header.Set(AppVersionRequestHeader, build.GetVersion())
-
-		// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
-		q := req.URL.Query()
-		q.Add("count", strconv.Itoa(len(files)))
-		q.Add("expiration", strconv.Itoa(expirationTime))
-		q.Add("cloud_account_id", m.setting.CloudAccountID)
-		q.Add("cluster_name", m.setting.ClusterName)
-		q.Add("region", m.setting.Region)
-		q.Add("shipper_id", shipperID)
-		req.URL.RawQuery = q.Encode()
 
 		logger.Debug().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
 
 		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_AllocatePresignedURLs_httpRequest", req)
+		resp, err := m.SendHTTPRequest(ctx, "shipper_AllocatePresignedURLs_httpRequest", func() (*http.Request, error) {
+			req, ierr := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
+			if ierr != nil {
+				return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", ierr))
+			}
+
+			// Set necessary headers
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", m.setting.GetAPIKey())
+			req.Header.Set(ShipperIDRequestHeader, shipperID)
+			req.Header.Set(AppVersionRequestHeader, build.GetVersion())
+
+			// Make sure we set the query parameters for count, expiration, cloud_account_id, region, cluster_name
+			q := req.URL.Query()
+			q.Add("count", strconv.Itoa(len(files)))
+			q.Add("expiration", strconv.Itoa(expirationTime))
+			q.Add("cloud_account_id", m.setting.CloudAccountID)
+			q.Add("cluster_name", m.setting.ClusterName)
+			q.Add("region", m.setting.Region)
+			q.Add("shipper_id", shipperID)
+			req.URL.RawQuery = q.Encode()
+
+			return req, nil
+		})
 		if err != nil {
 			return err
 		}
 
 		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			return ErrUnauthorized
-		}
-
-		// Check for HTTP errors
-		if resp.StatusCode != http.StatusOK {
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
-		}
 
 		// Parse the response
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {

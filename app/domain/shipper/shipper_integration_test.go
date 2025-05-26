@@ -31,7 +31,7 @@ func TestShipper_Integration_InvalidApiKey(t *testing.T) {
 
 	_, err = metricShipper.AllocatePresignedURLs(files)
 	require.Error(t, err)
-	require.Equal(t, shipper.ErrUnauthorized, err)
+	require.Equal(t, shipper.ErrUnauthorized.Code(), shipper.GetErrStatusCode(err))
 }
 
 func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
@@ -137,7 +137,7 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 
 	// create the metricShipper
 	settings := getMockSettingsIntegration(t, tmpDir, apiKey)
-	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
+	metricShipper, err := shipper.NewMetricShipper(t.Context(), settings, nil)
 	require.NoError(t, err)
 
 	// create some test files to simulate resource tracking

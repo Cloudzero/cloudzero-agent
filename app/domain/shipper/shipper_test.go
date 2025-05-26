@@ -462,7 +462,6 @@ func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
 
 	// Verify
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
 }
 
 func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {

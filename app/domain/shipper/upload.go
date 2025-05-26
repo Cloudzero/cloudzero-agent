@@ -36,25 +36,20 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 			return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
 		}
 
-		// Create a new HTTP PUT request with the file as the body
-		req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
-		if err != nil {
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", err))
-		}
-
 		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", req)
+		resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", func() (*http.Request, error) {
+			// Create a new HTTP PUT request with the file as the body
+			req, ierr := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
+			if ierr != nil {
+				return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
+			}
+			return req, nil
+		})
 		if err != nil {
 			return err
 		}
 
 		defer resp.Body.Close()
-
-		// Check for successful upload
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected upload status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
-		}
 
 		return nil
 	})
