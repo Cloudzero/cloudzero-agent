@@ -128,6 +128,7 @@ func createFailingRequestFunc(failCount int) func() (*http.Request, error) {
 
 // Test cases
 func TestShipper_Unit_SendHTTPRequest_ImmediateSuccess(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(200, "success")
 
@@ -149,6 +150,7 @@ func TestShipper_Unit_SendHTTPRequest_ImmediateSuccess(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_SuccessAfterRetries(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(500, "server error")
 	client.AddResponse(502, "bad gateway")
@@ -173,6 +175,7 @@ func TestShipper_Unit_SendHTTPRequest_SuccessAfterRetries(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_AllRetriesExhausted_ServerError(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Add maxRetries number of 500 responses
@@ -195,6 +198,7 @@ func TestShipper_Unit_SendHTTPRequest_AllRetriesExhausted_ServerError(t *testing
 }
 
 func TestShipper_Unit_SendHTTPRequest_NonRetryableClientError(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name       string
 		statusCode int
@@ -228,6 +232,7 @@ func TestShipper_Unit_SendHTTPRequest_NonRetryableClientError(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_RetryAfterHeader(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// First response with Retry-After header
@@ -255,6 +260,7 @@ func TestShipper_Unit_SendHTTPRequest_RetryAfterHeader(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_RetryAfterHeader_InvalidValue(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Response with invalid Retry-After header
@@ -277,6 +283,7 @@ func TestShipper_Unit_SendHTTPRequest_RetryAfterHeader_InvalidValue(t *testing.T
 }
 
 func TestShipper_Unit_SendHTTPRequest_NetworkErrors(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	networkErr := errors.New("network unreachable")
@@ -298,6 +305,7 @@ func TestShipper_Unit_SendHTTPRequest_NetworkErrors(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_NetworkErrorsExhausted(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	networkErr := errors.New("network unreachable")
@@ -318,6 +326,7 @@ func TestShipper_Unit_SendHTTPRequest_NetworkErrorsExhausted(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_ContextCancellation_BeforeRequest(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(200, "success")
 
@@ -334,6 +343,7 @@ func TestShipper_Unit_SendHTTPRequest_ContextCancellation_BeforeRequest(t *testi
 }
 
 func TestShipper_Unit_SendHTTPRequest_ContextCancellation_DuringRetry(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(500, "server error")
 
@@ -358,6 +368,7 @@ func TestShipper_Unit_SendHTTPRequest_ContextCancellation_DuringRetry(t *testing
 }
 
 func TestShipper_Unit_SendHTTPRequest_ContextCancellation_DuringRequest(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddError(context.Canceled)
 
@@ -373,6 +384,7 @@ func TestShipper_Unit_SendHTTPRequest_ContextCancellation_DuringRequest(t *testi
 }
 
 func TestShipper_Unit_SendHTTPRequest_RequestTimeout(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddError(context.DeadlineExceeded)
 
@@ -388,6 +400,7 @@ func TestShipper_Unit_SendHTTPRequest_RequestTimeout(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_RequestPreparationFailure(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(200, "success")
 
@@ -408,6 +421,7 @@ func TestShipper_Unit_SendHTTPRequest_RequestPreparationFailure(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_RequestPreparationAlwaysFails(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	logger := createTestLogger()
@@ -426,6 +440,7 @@ func TestShipper_Unit_SendHTTPRequest_RequestPreparationAlwaysFails(t *testing.T
 }
 
 func TestShipper_Unit_SendHTTPRequest_ResponseWithError(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Simulate case where HTTP client returns both response and error
@@ -455,6 +470,7 @@ func TestShipper_Unit_SendHTTPRequest_ResponseWithError(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_NilLogger(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 	client.AddResponse(200, "success")
 
@@ -472,6 +488,7 @@ func TestShipper_Unit_SendHTTPRequest_NilLogger(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_ExponentialBackoff(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Add multiple server errors to test backoff
@@ -501,6 +518,7 @@ func TestShipper_Unit_SendHTTPRequest_ExponentialBackoff(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_MaxDelayClamp(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Add enough retries to exceed maxRetryDelay
@@ -527,6 +545,7 @@ func TestShipper_Unit_SendHTTPRequest_MaxDelayClamp(t *testing.T) {
 }
 
 func TestShipper_Unit_SendHTTPRequest_SpecificServerErrorCodes(t *testing.T) {
+	t.Parallel()
 	retryableStatusCodes := []int{500, 501, 502, 503, 504, 505, 507, 508, 510, 511}
 
 	for _, statusCode := range retryableStatusCodes {
@@ -562,6 +581,7 @@ func (tb *trackingBody) Close() error {
 
 // Test for memory leaks - ensures response bodies are properly closed
 func TestShipper_Unit_SendHTTPRequest_BodyCleanup(t *testing.T) {
+	t.Parallel()
 	client := NewMockHTTPClient()
 
 	// Create responses with tracking bodies

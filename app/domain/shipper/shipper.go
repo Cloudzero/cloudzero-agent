@@ -153,13 +153,13 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 		// run the base request
 		if err = m.ProcessNewFiles(ctx); err != nil {
 			metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-			return fmt.Errorf("failed to ship the metrics: %w", err)
+			return fmt.Errorf("failed to ship the metrics: %w", err) // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 		}
 
 		// run the replay request
 		if err = m.ProcessReplayRequests(ctx); err != nil {
 			metricReplayRequestErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-			return fmt.Errorf("failed to process the replay requests: %w", err)
+			return fmt.Errorf("failed to process the replay requests: %w", err) // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 		}
 
 		// check the disk usage
@@ -170,7 +170,7 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 
 		// used as a marker in tests to signify that the shipper was complete.
 		// if you change this string, then change in the smoke tests as well.
-		logger.Debug().Msg("Successfully ran the shipper cycle")
+		logger.Debug().Msg("Successfully ran the shipper cycle") // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 
 		return err
 	})

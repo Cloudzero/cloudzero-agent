@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/shipper"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -126,8 +127,8 @@ func TestShipper_Unit_ReplayRequest_Run(t *testing.T) {
 	require.NoError(t, err)
 	uploaded, err := os.ReadDir(metricShipper.GetUploadedDir())
 	require.NoError(t, err)
-	require.Equal(t, 3, len(base)) // .shipperid replay/ uploaded/
-	require.Equal(t, 5, len(uploaded))
+	assert.Equal(t, 3, len(base)) // .shipperid replay/ uploaded/
+	assert.Equal(t, 5, len(uploaded))
 
 	// validate replay request was deleted
 	replays, err := os.ReadDir(metricShipper.GetReplayRequestDir())

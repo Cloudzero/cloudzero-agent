@@ -44,7 +44,7 @@ func NewReplayRequestFromHeader(value string) (*ReplayRequest, error) {
 		ReferenceIDs: types.NewSet[string](),
 	}
 	for _, item := range rrh {
-		rr.ReferenceIDs.Add(item.RefID)
+		rr.ReferenceIDs.Add(GetRootFileID(item.RefID))
 	}
 
 	return &rr, nil
@@ -59,6 +59,13 @@ func (m *MetricShipper) SaveReplayRequest(ctx context.Context, rr *ReplayRequest
 		if err := os.MkdirAll(replayDir, filePermissions); err != nil {
 			return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
 		}
+
+		// ensure the reference ids do not contain path or extension information
+		new := types.NewSet[string]()
+		for _, item := range rr.ReferenceIDs.List() {
+			new.Add(GetRootFileID(item))
+		}
+		rr.ReferenceIDs = new
 
 		// compose the filename
 		rr.Filepath = filepath.Join(m.GetReplayRequestDir(), fmt.Sprintf(replayFileFormat, timestamp.Milli()))
@@ -194,13 +201,13 @@ func (m *MetricShipper) ProcessReplayRequests(ctx context.Context) error {
 func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
-			return ctx.Str("rr", rr.Filepath).Int("numfiles", rr.ReferenceIDs.Size())
+			return ctx.Str("rr", rr.Filepath).Int("rrFiles", rr.ReferenceIDs.Size())
 		})
 		logger.Debug().Msg("Handling replay request ...")
 
 		// fetch the new files that match these ids
 		logger.Debug().Msg("Searching for new files in the disk store")
-		newFiles := make([]types.File, 0)
+		foundFiles := make([]types.File, 0)
 		if err := m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest_listNewFiles", func(ctx context.Context, id string) error {
 			return m.store.Walk("", func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
@@ -219,8 +226,8 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 				}
 
 				// check for a match
-				if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
-					newFiles = append(newFiles, storeFile)
+				if rr.ReferenceIDs.Contains(GetRootFileID(storeFile.UniqueID())) {
+					foundFiles = append(foundFiles, storeFile)
 				}
 
 				return nil
@@ -228,50 +235,12 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 		}); err != nil {
 			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the matching new files: %w", err))
 		}
-		logger.Debug().Int("files", len(newFiles)).Msg("found new files")
-
-		// fetch the already uploadedFiles files that match these ids
-		logger.Debug().Msg("Searching for previously uploaded files ...")
-		uploadedFiles := make([]types.File, 0)
-		if err := m.metrics.SpanCtx(ctx, "shipper_HandleReplayRequest_listUploadedFiles", func(ctx context.Context, id string) error {
-			return m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				// skip dir
-				if info.IsDir() {
-					return nil
-				}
-
-				// create a new types.File to compare the remote ids
-				storeFile, err := disk.NewMetricFile(path)
-				if err != nil {
-					return errors.New("failed to create a new metric file")
-				}
-
-				// check for a match
-				if rr.ReferenceIDs.Contains(GetRemoteFileID(storeFile)) {
-					uploadedFiles = append(uploadedFiles, storeFile)
-				}
-
-				return nil
-			})
-		}); err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to get matching uploaded files: %w", err))
-		}
-		logger.Debug().Int("files", len(uploadedFiles)).Msg("found uploaded files")
-
-		// create a file array of all the files found to send to the remote
-		logger.Debug().Msg("Combining all files into an array")
-		total := make([]types.File, 0)
-		total = append(total, newFiles...)
-		total = append(total, uploadedFiles...)
+		logger.Debug().Int("foundFiles", len(foundFiles)).Msg("found local files")
 
 		// check for missing files from the replay request
 		found := types.NewSet[string]()
-		for _, item := range total {
-			found.Add(GetRemoteFileID(item))
+		for _, item := range foundFiles {
+			found.Add(GetRootFileID(item.UniqueID()))
 		}
 		logger.Debug().Int("found", found.Size()).Int("totalRequested", rr.ReferenceIDs.Size()).Msg("Replay request files found")
 
@@ -292,7 +261,7 @@ func (m *MetricShipper) HandleReplayRequest(ctx context.Context, rr *ReplayReque
 		}
 
 		// run the `HandleRequest` function for the found files
-		if err := m.HandleRequest(ctx, total); err != nil {
+		if err := m.HandleRequest(ctx, foundFiles); err != nil {
 			return fmt.Errorf("failed to upload replay request files: %w", err)
 		}
 

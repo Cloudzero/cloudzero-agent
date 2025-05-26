@@ -17,10 +17,12 @@ import (
 )
 
 type WaitForLogInput struct {
-	Container *testcontainers.Container
-	Log       string
-	Timeout   time.Duration
-	Poll      time.Duration
+	Container  *testcontainers.Container
+	Log        string
+	Timeout    time.Duration
+	Poll       time.Duration
+	AllowError bool // if errors should not fail the search
+	N          int
 }
 
 // ContainerWaitForLog polls the logs of the container to see if a `log` message
@@ -35,28 +37,18 @@ func ContainerWaitForLog(ctx context.Context, input *WaitForLogInput) error {
 	if input.Log == "" {
 		return fmt.Errorf("log is empty")
 	}
+	if input.N == 0 {
+		input.N = 1
+	}
 
-	fmt.Printf("Waiting for log message: [%s]\n", input.Log)
+	fmt.Printf("Waiting for log message: '%s' (x%d)\n", input.Log, input.N)
 	return WaitForCondition(ctx, input.Timeout, input.Poll, func() (bool, error) {
-		// read the logs
-		reader, err := (*input.Container).Logs(ctx)
-		if err != nil {
-			return false, err
-		}
-		data, err := io.ReadAll(reader)
-		if err != nil {
-			return false, err
-		}
-
-		if strings.Contains(strings.ToLower(string(data)), "error") {
-			return false, fmt.Errorf("error message found")
-		}
-
-		if strings.Contains(strings.ToLower(string(data)), strings.ToLower(input.Log)) {
-			return true, nil
-		}
-
-		return false, nil
+		return ContainerHasLogMessage(ctx, &ContainerHasLogMessageInput{
+			Container:  input.Container,
+			Log:        input.Log,
+			AllowError: input.AllowError,
+			N:          input.N,
+		})
 	})
 }
 
@@ -89,4 +81,37 @@ func ContainerExternalHost(ctx context.Context, container testcontainers.Contain
 	}
 
 	return &url, nil
+}
+
+type ContainerHasLogMessageInput struct {
+	Container  *testcontainers.Container
+	Log        string
+	AllowError bool
+	N          int
+}
+
+// ContainerHasLogMessage checks the container log buffer for a specific string message
+func ContainerHasLogMessage(
+	ctx context.Context,
+	input *ContainerHasLogMessageInput,
+) (bool, error) {
+	if input.Container == nil {
+		return false, fmt.Errorf("the container is null")
+	}
+
+	// read the logs
+	reader, err := (*input.Container).Logs(ctx)
+	if err != nil {
+		return false, err
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return false, err
+	}
+
+	if !input.AllowError && strings.Contains(strings.ToLower(string(data)), "error") {
+		return false, fmt.Errorf("error message found")
+	}
+
+	return strings.Count(strings.ToLower(string(data)), strings.ToLower(input.Log)) >= input.N, nil
 }
