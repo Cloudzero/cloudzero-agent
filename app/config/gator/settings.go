@@ -19,6 +19,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -333,4 +334,17 @@ func absFilePath(location string) (string, error) {
 		location = filepath.Clean(filepath.Join(wd, location))
 	}
 	return location, nil
+}
+
+func (s *Settings) ToYAML() ([]byte, error) {
+	raw, err := yaml.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode into yaml: %w", err)
+	}
+	return raw, nil
+}
+
+// ToBytes returns a serialized representation of the data in the class
+func (s *Settings) ToBytes() ([]byte, error) {
+	return s.ToYAML()
 }

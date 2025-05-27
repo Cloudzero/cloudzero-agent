@@ -11,10 +11,13 @@ import (
 const (
 	DiagnosticAPIKey            string = "api_key_valid" //nolint:gosec // false positive for G101: Potential hardcoded credentials
 	DiagnosticK8sVersion        string = "k8s_version"
+	DiagnosticK8sNamespace      string = "k8s_namespace"
+	DiagnosticK8sProvider       string = "k8s_provider"
 	DiagnosticKMS               string = "kube_state_metrics_reachable"
 	DiagnosticPrometheusVersion string = "prometheus_version"
 	DiagnosticScrapeConfig      string = "scrape_cfg"
 	DiagnosticInsightsIngress   string = "webhook_server_reachable"
+	DiagnosticAgentSettings     string = "agent_settings"
 )
 
 const (
@@ -23,14 +26,17 @@ const (
 	DiagnosticInternalInitFailed string = "init_failed"
 	DiagnosticInternalPodStart   string = "pod_start"
 	DiagnosticInternalPodStop    string = "pod_stop"
+	DiagnosticInternalConfigLoad string = "config_load"
 )
 
 func IsValidDiagnostic(d string) bool {
 	d = strings.ToLower(strings.TrimSpace(d))
 	switch d {
 	case DiagnosticAPIKey, DiagnosticK8sVersion,
+		DiagnosticK8sNamespace, DiagnosticK8sProvider,
 		DiagnosticKMS, DiagnosticScrapeConfig,
-		DiagnosticPrometheusVersion, DiagnosticInsightsIngress:
+		DiagnosticPrometheusVersion, DiagnosticInsightsIngress,
+		DiagnosticAgentSettings:
 		return true
 	}
 	return false
