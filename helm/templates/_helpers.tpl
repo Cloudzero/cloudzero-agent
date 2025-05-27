@@ -47,6 +47,19 @@ Name for the validating webhook
 {{- printf "%s-validator-configuration" .Release.Name -}}
 {{- end}}
 
+{{ define "cloudzero-agent.validatorJobName" -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "validator" "Version" .Chart.Version "Values" .Values) -}}
+{{- end}}
+
+{{ define "cloudzero-agent.validatorEnv" -}}
+- name: NAMESPACE
+  value: {{ .Release.Namespace }}
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+{{- end}}
+
 {{/*
   This helper function trims whitespace and newlines from a given string.
 */}}
@@ -345,6 +358,11 @@ app.kubernetes.io/component: {{ include "cloudzero-agent.initBackfillJobName" . 
 
 {{- define "cloudzero-agent.insightsController.initCertJob.matchLabels" -}}
 app.kubernetes.io/component: {{ include "cloudzero-agent.initCertJobName" . }}
+{{ include "cloudzero-agent.common.matchLabels" . }}
+{{- end -}}
+
+{{- define "cloudzero-agent.insightsController.validatorJob.matchLabels" -}}
+app.kubernetes.io/component: {{ include "cloudzero-agent.validatorJobName" . }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
