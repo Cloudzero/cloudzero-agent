@@ -720,21 +720,22 @@ Generate a pod disruption budget
 */}}
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
-{{- if (.component.podDisruptionBudget.minAvailable | default .component.podDisruptionBudget.maxUnavailable) }}
+{{- $pdb := merge .component.podDisruptionBudget .root.Values.defaults.podDisruptionBudget -}}
+{{- if ($pdb.minAvailable | default $pdb.maxUnavailable) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
   namespace: {{ .root.Release.Namespace }}
 spec:
-  {{- if .component.podDisruptionBudget.minAvailable }}
-  {{- if le $replicas (int .component.podDisruptionBudget.minAvailable) -}}
-  {{- fail (printf "Insufficient replicas in %s (%d) for pod disruption budget minAvailable (%v)" .name $replicas .component.podDisruptionBudget.minAvailable) -}}
+  {{- if $pdb.minAvailable }}
+  {{- if lt $replicas (int $pdb.minAvailable) -}}
+  {{- fail (printf "Insufficient replicas in %s (%d) for pod disruption budget minAvailable (%v)" .name $replicas $pdb.minAvailable) -}}
   {{- end }}
-  minAvailable: {{ .component.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ $pdb.minAvailable }}
   {{- end }}
-  {{- if .component.podDisruptionBudget.maxUnavailable }}
-  maxUnavailable: {{ .component.podDisruptionBudget.maxUnavailable }}
+  {{- if $pdb.maxUnavailable }}
+  maxUnavailable: {{ $pdb.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:
