@@ -126,6 +126,18 @@ func NewCommand() *cli.Command {
 				},
 			},
 			{
+				Name:  config.ContextStateConfigLoad,
+				Usage: "checks current configs",
+				Flags: []cli.Flag{
+					&cli.StringSliceFlag{Name: config.FlagConfigFile, Aliases: configAlias, Usage: configFileDesc, Required: true},
+					&cli.StringSliceFlag{Name: config.FlagConfigFileWebhook, Usage: "List of locations for webhook config files", Required: true},
+					&cli.StringSliceFlag{Name: config.FlagConfigFileAggregator, Usage: "List of locations for aggregator config files", Required: true},
+				},
+				Action: func(c *cli.Context) error {
+					return runDiagnostics(c, config.ContextStateConfigLoad)
+				},
+			},
+			{
 				Name:  config.ContextStageStop,
 				Usage: "runs pre-stop diagnostic tests",
 				Flags: []cli.Flag{
@@ -159,7 +171,23 @@ func runDiagnostics(c *cli.Context, stage string) error {
 		_ = logging.LogToFile(cfg.Logging.Location)
 	}
 
-	engine := runner.NewRunner(cfg, catalog.NewCatalog(ctx, cfg), stage)
+	// parse registry based on the stage
+	var registry catalog.Registry
+	if stage == config.ContextStateConfigLoad {
+		configsWebhook := c.StringSlice(config.FlagConfigFileWebhook)
+		if len(configsWebhook) == 0 {
+			return errors.New("no webhook configuration files specified")
+		}
+		configsAggregator := c.StringSlice(config.FlagConfigFileAggregator)
+		if len(configsAggregator) == 0 {
+			return errors.New("no aggregator configuration files specified")
+		}
+		registry = catalog.NewConfigCatalog(ctx, cfg, configs, configsWebhook, configsAggregator)
+	} else {
+		registry = catalog.NewCatalog(ctx, cfg)
+	}
+
+	engine := runner.NewRunner(cfg, registry, stage)
 
 	report, err := engine.Run(ctx)
 	if err != nil {

@@ -1,0 +1,21 @@
+api_key_path: ./testdata/api_key
+server:
+  port: 8080
+certificate:
+  cert_file: "/path/to/cert"
+  key_file: "/path/to/key"
+logging:
+  level: "info"
+database:
+  host: "localhost"
+  port: 5432
+filters:
+  labels:
+    patterns:
+      - "label1"
+  annotations:
+    patterns:
+      - "annotation1"
+remote_write:
+  max_bytes_per_send: 10000000
+  send_interval: 60s
