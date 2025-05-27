@@ -725,7 +725,7 @@ aggregator:
   database:
     # Max number of records per file. Use this to adjust file sizes uploaded to
     # the server. The default value should generally be left unchanged.
-    maxRecords: 1.5e+06
+    maxRecords: 1500000
     # Max interval to flush a cost metrics file. This is mostly useful for
     # smaller clusters with little activity.
     costMaxInterval: 10m
