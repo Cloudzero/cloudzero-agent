@@ -20920,6 +20920,10 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector",
           "description": "Node Selector to be added to all resources.\n"
         },
+        "podDisruptionBudget": {
+          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget",
+          "description": "Pod Disruption Budget to be added to all resources.\n"
+        },
         "priorityClassName": {
           "description": "Priority class name to be used for all deployments and jobs.\n",
           "type": ["string", "null"]
