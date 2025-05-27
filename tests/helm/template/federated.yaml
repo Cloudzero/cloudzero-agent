@@ -737,6 +737,491 @@ data:
       rotate_interval: 30m
       host: api.cloudzero.com
 ---
+# Source: cloudzero-agent/templates/config-map.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cz-agent-config-values
+  namespace: cz-agent
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+data:
+  values.yaml: |-
+    aggregator:
+      affinity: {}
+      cloudzero:
+        rotateInterval: 30m
+        sendInterval: 1m
+        sendTimeout: 30s
+      collector:
+        port: 8080
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      database:
+        compressionLevel: 8
+        costMaxInterval: 10m
+        emptyDir:
+          enabled: true
+          sizeLimit: ""
+        maxRecords: 1500000
+        observabilityMaxInterval: 30m
+        purgeRules:
+          lazy: true
+          metricsOlderThan: 2160h
+          percent: 20
+      image:
+        digest: null
+        pullPolicy: null
+        repository: null
+        tag: null
+      logging:
+        level: info
+      mountRoot: /cloudzero
+      nodeSelector: {}
+      profiling: false
+      shipper:
+        port: 8081
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      tolerations: []
+    apiKey: '***'
+    cloudAccountId: "1234567890"
+    clusterName: my-cluster
+    commonMetaLabels: {}
+    components:
+      agent:
+        image:
+          repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
+          tag: 1.1.2
+        podDisruptionBudget:
+          maxUnavailable: null
+          minAvailable: null
+      aggregator:
+        podDisruptionBudget:
+          maxUnavailable: null
+          minAvailable: null
+        replicas: 3
+        tolerations: []
+      kubectl:
+        image:
+          repository: docker.io/bitnami/kubectl
+          tag: 1.32.0
+      prometheus:
+        image:
+          repository: quay.io/prometheus/prometheus
+          tag: null
+      prometheusReloader:
+        image:
+          repository: quay.io/prometheus-operator/prometheus-config-reloader
+          tag: v0.82.0
+      webhookServer:
+        podDisruptionBudget:
+          maxUnavailable: null
+          minAvailable: 1
+        replicas: 3
+    configmapReload:
+      prometheus:
+        enabled: true
+        image:
+          digest: null
+          pullPolicy: null
+          repository: null
+          tag: null
+        resources: {}
+    defaults:
+      affinity: {}
+      annotations:
+        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+      dns:
+        config: {}
+        policy: null
+      federation:
+        enabled: true
+      image:
+        pullPolicy: IfNotPresent
+        pullSecrets: null
+      labels: {}
+      nodeSelector: {}
+      podDisruptionBudget:
+        maxUnavailable: null
+        minAvailable: 1
+      priorityClassName: null
+      tolerations: []
+    host: api.cloudzero.com
+    imagePullSecrets: []
+    initBackfillJob:
+      annotations: {}
+      enabled: true
+      image:
+        digest: null
+        pullPolicy: null
+        repository: null
+        tag: null
+      tolerations: []
+    initCertJob:
+      annotations: {}
+      enabled: true
+      image:
+        digest: null
+        pullPolicy: null
+        repository: null
+        tag: null
+      rbac:
+        clusterRoleBindingName: ""
+        clusterRoleName: ""
+        create: true
+        serviceAccountName: ""
+      tolerations: []
+    insightsController:
+      ConfigMapNameOverride: null
+      annotations:
+        enabled: false
+        patterns:
+        - .*
+        resources:
+          cronjobs: false
+          daemonsets: false
+          deployments: false
+          jobs: false
+          namespaces: true
+          nodes: false
+          pods: true
+          statefulsets: false
+      configurationMountPath: null
+      enabled: true
+      labels:
+        enabled: true
+        patterns:
+        - app.kubernetes.io/component
+        resources:
+          cronjobs: false
+          daemonsets: false
+          deployments: false
+          jobs: false
+          namespaces: true
+          nodes: false
+          pods: true
+          statefulsets: false
+      podAnnotations: {}
+      podLabels: {}
+      resources: {}
+      server:
+        affinity: {}
+        deploymentAnnotations: {}
+        healthCheck:
+          enabled: true
+          failureThreshold: 5
+          initialDelaySeconds: 15
+          path: /healthz
+          periodSeconds: 20
+          port: 8443
+          successThreshold: 1
+          timeoutSeconds: 3
+        idle_timeout: 120s
+        image:
+          pullPolicy: null
+          repository: null
+          tag: null
+        logging:
+          level: info
+        name: webhook-server
+        nodeSelector: {}
+        podAnnotations: {}
+        port: 8443
+        read_timeout: 10s
+        replicaCount: null
+        send_interval: 1m
+        send_timeout: 1m
+        tolerations: []
+        write_timeout: 10s
+      service:
+        port: 443
+      tls:
+        caBundle: ""
+        crt: ""
+        enabled: true
+        key: ""
+        mountPath: /etc/certs
+        secret:
+          create: true
+          name: ""
+        useCertManager: false
+      volumeMounts: []
+      volumes: []
+      webhooks:
+        annotations: {}
+        caInjection: null
+        namespaceSelector: {}
+        path: /validate
+    jobConfigID: 3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
+    kubeStateMetrics:
+      affinity: {}
+      annotations: {}
+      autosharding:
+        enabled: false
+      collectors:
+      - certificatesigningrequests
+      - configmaps
+      - cronjobs
+      - daemonsets
+      - deployments
+      - endpoints
+      - horizontalpodautoscalers
+      - ingresses
+      - jobs
+      - leases
+      - limitranges
+      - mutatingwebhookconfigurations
+      - namespaces
+      - networkpolicies
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - poddisruptionbudgets
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - resourcequotas
+      - secrets
+      - services
+      - statefulsets
+      - storageclasses
+      - validatingwebhookconfigurations
+      - volumeattachments
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+      containers: []
+      customLabels: {}
+      customResourceState:
+        config: {}
+        enabled: false
+      dnsConfig: {}
+      dnsPolicy: ClusterFirst
+      enabled: true
+      extraArgs: []
+      extraManifests: []
+      global:
+        imagePullSecrets: []
+        imageRegistry: ""
+      hostNetwork: false
+      image:
+        pullPolicy: IfNotPresent
+        registry: registry.k8s.io
+        repository: kube-state-metrics/kube-state-metrics
+        tag: v2.10.1
+      imagePullSecrets: []
+      initContainers: []
+      kubeRBACProxy:
+        containerSecurityContext: {}
+        enabled: false
+        extraArgs: []
+        image:
+          pullPolicy: IfNotPresent
+          registry: quay.io
+          repository: brancz/kube-rbac-proxy
+          sha: ""
+          tag: v0.14.0
+        resources: {}
+        volumeMounts: []
+      kubeTargetVersionOverride: ""
+      kubeconfig:
+        enabled: false
+      metricAllowlist: []
+      metricAnnotationsAllowList: []
+      metricDenylist: []
+      metricLabelsAllowlist: []
+      nameOverride: cloudzero-state-metrics
+      namespaceOverride: ""
+      namespaces: ""
+      namespacesDenylist: ""
+      networkPolicy:
+        enabled: false
+        flavor: kubernetes
+      nodeSelector: {}
+      podAnnotations: {}
+      podDisruptionBudget:
+        minAvailable: 1
+      podSecurityPolicy:
+        additionalVolumes: []
+        annotations: {}
+        enabled: false
+      prometheus:
+        monitor:
+          additionalLabels: {}
+          annotations: {}
+          bearerTokenFile: ""
+          bearerTokenSecret: {}
+          enabled: false
+          honorLabels: false
+          interval: ""
+          jobLabel: ""
+          labelLimit: 0
+          labelNameLengthLimit: 0
+          labelValueLengthLimit: 0
+          metricRelabelings: []
+          namespace: ""
+          namespaceSelector: []
+          podTargetLabels: []
+          proxyUrl: ""
+          relabelings: []
+          sampleLimit: 0
+          scheme: ""
+          scrapeTimeout: ""
+          selectorOverride: {}
+          targetLabels: []
+          targetLimit: 0
+          tlsConfig: {}
+      prometheusScrape: false
+      rbac:
+        create: true
+        extraRules: []
+        useClusterRole: true
+      releaseLabel: false
+      releaseNamespace: false
+      replicas: 1
+      resources: {}
+      revisionHistoryLimit: 10
+      securityContext:
+        enabled: true
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      selectorOverride: {}
+      selfMonitor:
+        enabled: false
+      service:
+        annotations: {}
+        clusterIP: ""
+        loadBalancerIP: ""
+        loadBalancerSourceRanges: []
+        nodePort: 0
+        port: 8080
+        type: ClusterIP
+      serviceAccount:
+        annotations: {}
+        create: true
+        imagePullSecrets: []
+      tolerations: []
+      topologySpreadConstraints: []
+      verticalPodAutoscaler:
+        controlledResources: []
+        enabled: false
+        maxAllowed: {}
+        minAllowed: {}
+      volumeMounts: []
+      volumes: []
+    prometheusConfig:
+      configMapAnnotations: {}
+      configMapNameOverride: ""
+      configOverride: ""
+      globalScrapeInterval: 60s
+      scrapeJobs:
+        additionalScrapeJobs: []
+        aggregator:
+          enabled: true
+          scrapeInterval: 120s
+        cadvisor:
+          enabled: true
+          scrapeInterval: 60s
+        kubeStateMetrics:
+          enabled: true
+          scrapeInterval: 60s
+        prometheus:
+          enabled: true
+          scrapeInterval: 120s
+    rbac:
+      create: true
+    region: us-east-1
+    secretAnnotations: {}
+    server:
+      affinity: {}
+      agentMode: true
+      args:
+      - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
+      - --web.enable-lifecycle
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      deploymentAnnotations: {}
+      emptyDir:
+        sizeLimit: 8Gi
+      image:
+        digest: null
+        pullPolicy: null
+        repository: null
+        tag: null
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 15
+        successThreshold: 1
+        timeoutSeconds: 10
+      name: server
+      nodeSelector: {}
+      persistentVolume:
+        accessModes:
+        - ReadWriteOnce
+        annotations: {}
+        enabled: false
+        existingClaim: ""
+        mountPath: /data
+        size: 8Gi
+        storageClass: ""
+        subPath: ""
+      podAnnotations: {}
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 4
+      resources:
+        limits:
+          memory: 1024Mi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      terminationGracePeriodSeconds: 300
+      tolerations: []
+      topologySpreadConstraints: []
+    serverConfig:
+      containerSecretFileName: value
+      containerSecretFilePath: /etc/config/secrets/
+    serviceAccount:
+      annotations: {}
+      create: true
+      name: ""
+    validator:
+      image:
+        digest: null
+        pullPolicy: null
+        pullSecrets: null
+        repository: null
+        tag: null
+      name: env-validator
+      serviceEndpoints:
+        kubeStateMetrics: null
+---
 # Source: cloudzero-agent/templates/validator-cm.yaml
 apiVersion: v1
 kind: ConfigMap
