@@ -270,23 +270,28 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 
 			waiter := parallel.NewWaiter()
 			for _, file := range chunk {
-				fn := func() error {
-					// Upload the file
-					if err := m.UploadFile(ctx, file, urlMap[GetRemoteFileID(file)]); err != nil {
-						metricFileUploadErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-						return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
-					}
+				// check we got a url for this file
+				if item, exists := urlMap[GetRemoteFileID(file)]; exists {
+					fn := func() error {
+						// Upload the file
+						if err := m.UploadFile(ctx, file, item); err != nil {
+							metricFileUploadErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+							return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
+						}
 
-					// mark the file as uploaded
-					if err := m.MarkFileUploaded(ctx, file); err != nil {
-						metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-						return fmt.Errorf("failed to mark the file as uploaded: %w", err)
-					}
+						// mark the file as uploaded
+						if err := m.MarkFileUploaded(ctx, file); err != nil {
+							metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+							return fmt.Errorf("failed to mark the file as uploaded: %w", err)
+						}
 
-					atomic.AddUint64(&m.shippedFiles, 1)
-					return nil
+						atomic.AddUint64(&m.shippedFiles, 1)
+						return nil
+					}
+					pm.Run(fn, waiter)
+				} else {
+					logger.Debug().Str("file", file.UniqueID()).Msg("skipping file, url not allocated")
 				}
-				pm.Run(fn, waiter)
 			}
 			waiter.Wait()
 
