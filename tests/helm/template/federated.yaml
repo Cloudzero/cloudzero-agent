@@ -2092,16 +2092,6 @@ spec:
         - name: cloudzero-api-key
           secret:
             secretName: cz-agent-api-key
-      
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
 ---
 # Source: cloudzero-agent/templates/init-cert-job.yaml
 apiVersion: batch/v1
@@ -2131,15 +2121,7 @@ spec:
         checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
     spec:
       
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
+      
       
       serviceAccountName: cz-agent-cloudzero-agent-webhook-server-init-cert
       restartPolicy: Never
@@ -2315,16 +2297,6 @@ spec:
             secretName: cz-agent-api-key
         - name: aggregator-persistent-storage
           emptyDir: {}
-      
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
 ---
 # Source: cloudzero-agent/templates/webhook-validating-config.yaml
 apiVersion: admissionregistration.k8s.io/v1
