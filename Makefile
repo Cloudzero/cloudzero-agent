@@ -377,3 +377,7 @@ generate: ## (Re)generate generated code
 generate: app/types/status/cluster_status.pb.go
 app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/status/cluster_status.proto
+
+generate: app/types/config/cluster_config.pb.go
+app/types/config/cluster_config.pb.go: app/types/config/cluster_config.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/config/cluster_config.proto
