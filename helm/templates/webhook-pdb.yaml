@@ -1,7 +1,8 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
-    "component" .Values.components.webhookServer
+    "component" $values.components.webhookServer
     "name" (include "cloudzero-agent.insightsController.deploymentName" .)
     "matchLabels" (include "cloudzero-agent.insightsController.server.matchLabels" .)
-    "replicas" (.Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas)
+    "replicas" ($values.insightsController.server.replicaCount | default $values.components.webhookServer.replicas)
     "root" .
   ) }}

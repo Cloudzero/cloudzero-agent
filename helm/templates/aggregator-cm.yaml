@@ -1,10 +1,11 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" .Values.commonMetaLabels) | nindent 2 }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" $values.commonMetaLabels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 2 }}
 data:
   config.yml: |-
 {{- include "cloudzero-agent.aggregator.configuration" . | nindent 4 -}}

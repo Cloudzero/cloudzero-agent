@@ -1,10 +1,12 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- $internalDefaults := include "cloudzero-agent.internalDefaults" . | fromYaml -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "cloudzero-agent.validatorJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
-    checksum/values: {{ (.Values.jobConfigID | default (. | toYaml | sha256sum)) | default (.Values | toYaml | sha256sum) }}
+  {{- $annotations := merge $values.defaults.annotations (dict "checksum/values" (($values.jobConfigID | default (. | toYaml | sha256sum)) | default ($values | toYaml | sha256sum))) -}}
+  {{- include "cloudzero-agent.generateAnnotations" $annotations | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
@@ -14,15 +16,15 @@ spec:
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
-      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure
-      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
-      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" $values.defaults.priorityClassName | nindent 6 }}
       containers:
         - name: run-validator
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.agent.image "compat" $values.validator.image) | nindent 10 }}
           env:
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
@@ -34,9 +36,9 @@ spec:
             - --config-webhook
             - {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml
             - --config-aggregator
-            - {{ .Values.aggregator.mountRoot }}/config/config.yml
+            - {{ $values.aggregator.mountRoot }}/config/config.yml
           resources:
-            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+            {{- toYaml $values.insightsController.resources | nindent 12 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
@@ -45,16 +47,16 @@ spec:
             - name: config-webhook
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }} # server-config.yaml
             - name: config-aggregator
-              mountPath: {{ .Values.aggregator.mountRoot }}/config # config.yaml
+              mountPath: {{ $values.aggregator.mountRoot }}/config # config.yaml
             - name: aggregator-persistent-storage
-              mountPath: {{ .Values.aggregator.mountRoot }}/data
-          {{- if or .Values.existingSecretName .Values.apiKey }}
+              mountPath: {{ $values.aggregator.mountRoot }}/data
+          {{- if or $values.existingSecretName $values.apiKey }}
             - name: cloudzero-api-key
-              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+              mountPath: {{ $values.serverConfig.containerSecretFilePath }}
               subPath: ""
               readOnly: true
           {{- end }}
-            {{- with .Values.insightsController.volumeMounts }}
+            {{- with $values.insightsController.volumeMounts }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
@@ -70,16 +72,16 @@ spec:
         - name: config-aggregator
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
+        {{- if or $values.existingSecretName $values.apiKey }}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
-        {{- with .Values.insightsController.volumes }}
+        {{- with $values.insightsController.volumes }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
         - name: aggregator-persistent-storage
           emptyDir: {}
-      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" (.Values.initBackfillJob.nodeSelector | default .Values.insightsController.server.nodeSelector)) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
-      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initBackfillJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" $values.defaults.nodeSelector "nodeSelector" ($values.initBackfillJob.nodeSelector | default $values.insightsController.server.nodeSelector)) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" $values.defaults.affinity "affinity" $values.insightsController.server.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat $values.defaults.tolerations $values.initBackfillJob.tolerations $values.insightsController.server.tolerations) | nindent 6 }}

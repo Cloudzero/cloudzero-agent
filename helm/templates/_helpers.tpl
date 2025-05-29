@@ -1,8 +1,10 @@
+{{- include "cloudzero-agent.values" . -}}
 {{/*
 Expand the name of the chart.
 */}}
 {{- define "cloudzero-agent.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- default .Chart.Name $values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -14,21 +16,24 @@ Create chart name and version as used by the chart label.
 
 {{/* Define the secret name which holds the CloudZero API key */}}
 {{ define "cloudzero-agent.secretName" -}}
-{{ .Values.existingSecretName | default (printf "%s-api-key" .Release.Name) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{ $values.existingSecretName | default (printf "%s-api-key" .Release.Name) }}
 {{- end}}
 
 {{/* Define the path and filename on the container filesystem which holds the CloudZero API key */}}
 {{ define "cloudzero-agent.secretFileFullPath" -}}
-{{ printf "%s%s" .Values.serverConfig.containerSecretFilePath .Values.serverConfig.containerSecretFileName }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{ printf "%s%s" $values.serverConfig.containerSecretFilePath $values.serverConfig.containerSecretFileName }}
 {{- end}}
 
 {{/*
 imagePullSecrets for the agent server
 */}}
 {{- define "cloudzero-agent.server.imagePullSecrets" -}}
-{{- if .Values.imagePullSecrets -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 2 -}}
+{{ toYaml $values.imagePullSecrets | indent 2 -}}
 {{- end }}
 {{- end }}
 
@@ -40,7 +45,8 @@ Name for the validating webhook
 {{- end }}
 
 {{ define "cloudzero-agent.configMapName" -}}
-{{ .Values.configMapNameOverride | default (printf "%s-configuration" .Release.Name) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{ $values.configMapNameOverride | default (printf "%s-configuration" .Release.Name) }}
 {{- end}}
 
 {{ define "cloudzero-agent.validatorConfigMapName" -}}
@@ -48,7 +54,8 @@ Name for the validating webhook
 {{- end}}
 
 {{ define "cloudzero-agent.validatorJobName" -}}
-{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "validator" "Version" .Chart.Version "Values" .Values) -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "validator" "Version" .Chart.Version "Values" $values) -}}
 {{- end}}
 
 {{ define "cloudzero-agent.validatorEnv" -}}
@@ -79,7 +86,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "cloudzero-agent.server.matchLabels" -}}
-app.kubernetes.io/component: {{ .Values.server.name }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+app.kubernetes.io/component: {{ $values.server.name }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -87,16 +95,18 @@ app.kubernetes.io/component: {{ .Values.server.name }}
 Create unified labels for prometheus components
 */}}
 {{- define "cloudzero-agent.common.metaLabels" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- $labels := dict
     "app.kubernetes.io/version" .Chart.AppVersion
     "helm.sh/chart" (include "cloudzero-agent.chart" .)
     "app.kubernetes.io/managed-by" .Release.Service
     "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .)
 -}}
-{{- (merge $labels .Values.defaults.labels .Values.commonMetaLabels) | toYaml -}}
+{{- (merge $labels $values.defaults.labels $values.commonMetaLabels) | toYaml -}}
 {{- end -}}
 
 {{- define "cloudzero-agent.server.labels" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{ include "cloudzero-agent.server.matchLabels" . }}
 {{ include "cloudzero-agent.common.metaLabels" . }}
 {{- end -}}
@@ -105,17 +115,19 @@ Create unified labels for prometheus components
 Define the cloudzero-agent.namespace template if set with forceNamespace or .Release.Namespace is set
 */}}
 {{- define "cloudzero-agent.namespace" -}}
-  {{- default .Release.Namespace .Values.forceNamespace -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+  {{- default .Release.Namespace $values.forceNamespace -}}
 {{- end }}
 
 {{/*
 Create the name of the service account to use for the server component
 */}}
 {{- define "cloudzero-agent.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-    {{ default (include "cloudzero-agent.server.fullname" .) .Values.serviceAccount.name }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.serviceAccount.create -}}
+    {{ default (include "cloudzero-agent.server.fullname" .) $values.serviceAccount.name }}
 {{- else -}}
-    {{ default "default" .Values.server.serviceAccount.name }}
+    {{ default "default" $values.server.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 
@@ -123,33 +135,37 @@ Create the name of the service account to use for the server component
 Create the name of the service account to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.serviceAccountName" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
-{{ .Values.initCertJob.rbac.serviceAccountName | default $defaultName }}
+{{ $values.initCertJob.rbac.serviceAccountName | default $defaultName }}
 {{- end -}}
 
 {{/*
 Create the name of the ClusterRole to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.clusterRoleName" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
-{{ .Values.initCertJob.rbac.clusterRoleName | default $defaultName }}
+{{ $values.initCertJob.rbac.clusterRoleName | default $defaultName }}
 {{- end -}}
 
 {{/*
 Create the name of the ClusterRoleBinding to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.clusterRoleBindingName" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
-{{ .Values.initCertJob.rbac.clusterRoleBinding | default $defaultName }}
+{{ $values.initCertJob.rbac.clusterRoleBinding | default $defaultName }}
 {{- end -}}
 
 {{/*
 init-cert Job annotations
 */}}
 {{- define "cloudzero-agent.initCertJob.annotations" -}}
-{{- if .Values.initCertJob.annotations -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.initCertJob.annotations -}}
 annotations:
-  {{- toYaml .Values.initCertJob.annotations | nindent 2 -}}
+  {{- toYaml $values.initCertJob.annotations | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 
@@ -159,12 +175,13 @@ Create a fully qualified Prometheus server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.server.fullname" -}}
-{{- if .Values.server.fullnameOverride -}}
-{{- .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.server.fullnameOverride -}}
+{{- $values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default .Chart.Name $values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s" .Release.Name .Values.server.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" .Release.Name $values.server.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%s-%s-%s" .Release.Name $name "server" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
@@ -187,8 +204,9 @@ Create a fully qualified ClusterRole name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.clusterRoleName" -}}
-{{- if .Values.server.clusterRoleNameOverride -}}
-{{ .Values.server.clusterRoleNameOverride | trunc 63 | trimSuffix "-" }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.server.clusterRoleNameOverride -}}
+{{ $values.server.clusterRoleNameOverride | trunc 63 | trimSuffix "-" }}
 {{- else -}}
 {{ include "cloudzero-agent.server.fullname" . }}
 {{- end -}}
@@ -198,7 +216,8 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Combine metric lists
 */}}
 {{- define "cloudzero-agent.combineMetrics" -}}
-{{- $total := concat (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics (include "cloudzero-agent.defaults" . | fromYaml).containerMetrics (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics -}}
+{{- $internalValues := include "cloudzero-agent.internalDefaults" . | fromYaml -}}
+{{- $total := concat $internalValues.kubeMetrics $internalValues.containerMetrics $internalValues.insightsMetrics $internalValues.prometheusMetrics -}}
 {{- $result := join "|" $total -}}
 {{- $result -}}
 {{- end -}}
@@ -247,22 +266,24 @@ Internal helper function for generating a metric filter regex
 {{- end -}}
 
 {{- define "cloudzero-agent.generateMetricNameFilterRegex" -}}
+{{- $internalValues := include "cloudzero-agent.internalDefaults" . | fromYaml -}}
 {{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
-  "exact"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.exact    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.exact   ))
-  "prefix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.prefix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.prefix  ))
-  "suffix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.suffix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.suffix  ))
-  "contains" (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.contains (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.contains))
-  "regex"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name.regex    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name.regex   ))
+  "exact"    (uniq (concat (default (list) $internalValues.metricFilters.cost.name.exact)    (default (list) $internalValues.metricFilters.observability.name.exact)   ))
+  "prefix"   (uniq (concat (default (list) $internalValues.metricFilters.cost.name.prefix)   (default (list) $internalValues.metricFilters.observability.name.prefix)  ))
+  "suffix"   (uniq (concat (default (list) $internalValues.metricFilters.cost.name.suffix)   (default (list) $internalValues.metricFilters.observability.name.suffix)  ))
+  "contains" (uniq (concat (default (list) $internalValues.metricFilters.cost.name.contains) (default (list) $internalValues.metricFilters.observability.name.contains)))
+  "regex"    (uniq (concat (default (list) $internalValues.metricFilters.cost.name.regex)    (default (list) $internalValues.metricFilters.observability.name.regex)   ))
 ) -}}
 {{- end -}}
 
 {{- define "cloudzero-agent.generateMetricLabelFilterRegex" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- include "cloudzero-agent.generateMetricFilterRegexInternal" (dict
-  "exact"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.exact    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.exact   ))
-  "prefix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.prefix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.prefix  ))
-  "suffix"   (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.suffix   (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.suffix  ))
-  "contains" (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.contains (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.contains))
-  "regex"    (uniq (concat (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels.regex    (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels.regex   ))
+  "exact"    (uniq (concat $values.metricFilters.cost.labels.exact    $values.metricFilters.observability.labels.exact   ))
+  "prefix"   (uniq (concat $values.metricFilters.cost.labels.prefix   $values.metricFilters.observability.labels.prefix  ))
+  "suffix"   (uniq (concat $values.metricFilters.cost.labels.suffix   $values.metricFilters.observability.labels.suffix  ))
+  "contains" (uniq (concat $values.metricFilters.cost.labels.contains $values.metricFilters.observability.labels.contains))
+  "regex"    (uniq (concat $values.metricFilters.cost.labels.regex    $values.metricFilters.observability.labels.regex   ))
 ) -}}
 {{- end -}}
 
@@ -310,26 +331,27 @@ Required metric labels
 The name of the KSM service target that will be used in the scrape config and validator
 */}}
 {{- define "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- $name := "" -}}
 {{/* If the user specifies an override for the service name, use it. */}}
-{{- if .Values.kubeStateMetrics.targetOverride -}}
-{{ .Values.kubeStateMetrics.targetOverride }}
+{{- if $values.kubeStateMetrics.targetOverride -}}
+{{ $values.kubeStateMetrics.targetOverride }}
 {{/* After the first override option is not used, try to mirror what the KSM chart does internally. */}}
-{{- else if .Values.kubeStateMetrics.fullnameOverride -}}
-{{- $svcName := .Values.kubeStateMetrics.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
+{{- else if $values.kubeStateMetrics.fullnameOverride -}}
+{{- $svcName := $values.kubeStateMetrics.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int $values.kubeStateMetrics.service.port) | trim }}
 {{/* If KSM is not enabled, and they haven't set a targetOverride, fail the installation */}}
-{{- else if not .Values.kubeStateMetrics.enabled -}}
-{{- required "You must set a targetOverride for kubeStateMetrics" .Values.kubeStateMetrics.targetOverride -}}
+{{- else if not $values.kubeStateMetrics.enabled -}}
+{{- required "You must set a targetOverride for kubeStateMetrics" $values.kubeStateMetrics.targetOverride -}}
 {{/* This is the case where the user has not tried to change the name and are still using the internal KSM */}}
-{{- else if .Values.kubeStateMetrics.enabled -}}
-{{- $name = default .Chart.Name .Values.kubeStateMetrics.nameOverride -}}
+{{- else if $values.kubeStateMetrics.enabled -}}
+{{- $name = default .Chart.Name $values.kubeStateMetrics.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- $svcName := .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
+{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int $values.kubeStateMetrics.service.port) | trim }}
 {{- else -}}
 {{- $svcName := printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
+{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int $values.kubeStateMetrics.service.port) | trim }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -347,7 +369,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "cloudzero-agent.insightsController.server.matchLabels" -}}
-app.kubernetes.io/component: {{ .Values.insightsController.server.name }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+app.kubernetes.io/component: {{ $values.insightsController.server.name }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -379,12 +402,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 imagePullSecrets for the insights controller webhook server
 */}}
 {{- define "cloudzero-agent.insightsController.server.imagePullSecrets" -}}
-{{- if .Values.insightsController.server.imagePullSecrets -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.insightsController.server.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.insightsController.server.imagePullSecrets | indent 2 }}
-{{- else if .Values.imagePullSecrets }}
+{{ toYaml $values.insightsController.server.imagePullSecrets | indent 2 }}
+{{- else if $values.imagePullSecrets }}
 imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 2 }}
+{{ toYaml $values.imagePullSecrets | indent 2 }}
 {{- end }}
 {{- end }}
 
@@ -393,16 +417,17 @@ imagePullSecrets for the insights controller init scrape job.
 Defaults to given value, then the insightsController value, then the top level value
 */}}
 {{- define "cloudzero-agent.initBackfillJob.imagePullSecrets" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{ $backFillValues := (include "cloudzero-agent.backFill" . | fromYaml) }}
 {{- if $backFillValues.imagePullSecrets -}}
 imagePullSecrets:
 {{ toYaml $backFillValues.imagePullSecrets | indent 2 }}
-{{- else if .Values.insightsController.server.imagePullSecrets -}}
+{{- else if $values.insightsController.server.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.insightsController.server.imagePullSecrets | indent 2 }}
-{{- else if .Values.imagePullSecrets }}
+{{ toYaml $values.insightsController.server.imagePullSecrets | indent 2 }}
+{{- else if $values.imagePullSecrets }}
 imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 2 }}
+{{ toYaml $values.imagePullSecrets | indent 2 }}
 {{- end }}
 {{- end }}
 
@@ -411,15 +436,16 @@ imagePullSecrets for the insights controller init cert job.
 Defaults to given value, then the insightsController value, then the top level value
 */}}
 {{- define "cloudzero-agent.initCertJob.imagePullSecrets" -}}
-{{- if .Values.initCertJob.imagePullSecrets -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.initCertJob.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.initCertJob.imagePullSecrets | indent 2 }}
-{{- else if .Values.insightsController.server.imagePullSecrets -}}
+{{ toYaml $values.initCertJob.imagePullSecrets | indent 2 }}
+{{- else if $values.insightsController.server.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.insightsController.server.imagePullSecrets | indent 2 }}
-{{- else if .Values.imagePullSecrets -}}
+{{ toYaml $values.insightsController.server.imagePullSecrets | indent 2 }}
+{{- else if $values.imagePullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 2 }}
+{{ toYaml $values.imagePullSecrets | indent 2 }}
 {{- end }}
 {{- end }}
 
@@ -451,14 +477,15 @@ Create a fully qualified webhook server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.insightsController.server.webhookFullname" -}}
-{{- if .Values.server.fullnameOverride -}}
-{{- printf "%s-webhook" .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.server.fullnameOverride -}}
+{{- printf "%s-webhook" $values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default .Chart.Name $values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s" .Release.Name .Values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" .Release.Name $values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s" .Release.Name $name .Values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s" .Release.Name $name $values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -486,18 +513,21 @@ Name for the validating webhook configuration resource
 
 
 {{ define "cloudzero-agent.webhookConfigMapName" -}}
-{{ .Values.insightsController.ConfigMapNameOverride | default (printf "%s-webhook-configuration" .Release.Name) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{ $values.insightsController.ConfigMapNameOverride | default (printf "%s-webhook-configuration" .Release.Name) }}
 {{- end}}
 
 {{ define "cloudzero-agent.aggregator.name" -}}
-{{ .Values.aggregator.name | default (printf "%s-aggregator" .Release.Name) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{ $values.aggregator.name | default (printf "%s-aggregator" .Release.Name) }}
 {{- end}}
 
 {{/*
 Mount path for the insights server configuration file
 */}}
 {{- define "cloudzero-agent.insightsController.configurationMountPath" -}}
-{{- default .Values.insightsController.configurationMountPath (printf "/etc/%s-insights" .Chart.Name)  }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- default $values.insightsController.configurationMountPath (printf "/etc/%s-insights" .Chart.Name)  }}
 {{- end }}
 
 {{/*
@@ -511,30 +541,34 @@ Name for the issuer resource
 Map for initBackfillJob values; this allows us to preferably use initBackfillJob, but if users are still using the deprecated initScrapeJob, we will accept those as well
 */}}
 {{- define "cloudzero-agent.backFill" -}}
-{{- merge .Values.initBackfillJob (.Values.initScrapeJob | default (dict)) | toYaml }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- merge $values.initBackfillJob ($values.initScrapeJob | default (dict)) | toYaml }}
 {{- end }}
 
 {{/*
 Name for a job resource
 */}}
 {{- define "cloudzero-agent.jobName" -}}
-{{- printf "%s-%s-%s" .Release .Name (.Values.jobConfigID | default (. | toYaml | sha256sum)) | trunc 61 -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- printf "%s-%s-%s" .Release .Name ($values.jobConfigID | default (. | toYaml | sha256sum)) | trunc 61 -}}
 {{- end }}
 
 {{/*
 Name for the backfill job resource
 */}}
 {{- define "cloudzero-agent.initBackfillJobName" -}}
-{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "backfill" "Version" .Chart.Version "Values" .Values) -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "backfill" "Version" .Chart.Version "Values" $values) -}}
 {{- end }}
 
 {{/*
 initBackfillJob Job annotations
 */}}
 {{- define "cloudzero-agent.initBackfillJob.annotations" -}}
-{{- if .Values.initBackfillJob.annotations -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.initBackfillJob.annotations -}}
 annotations:
-  {{- toYaml .Values.initBackfillJob.annotations | nindent 2 -}}
+  {{- toYaml $values.initBackfillJob.annotations | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 
@@ -542,20 +576,22 @@ annotations:
 Name for the certificate init job resource. Should be a new name each installation/upgrade.
 */}}
 {{- define "cloudzero-agent.initCertJobName" -}}
-{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "init-cert" "Version" .Chart.Version "Values" .Values) -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "init-cert" "Version" .Chart.Version "Values" $values) -}}
 {{- end }}
 
 {{/*
 Annotations for the webhooks
 */}}
 {{- define "cloudzero-agent.webhooks.annotations" -}}
-{{- if or .Values.insightsController.tls.useCertManager .Values.insightsController.webhooks.annotations }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if or $values.insightsController.tls.useCertManager $values.insightsController.webhooks.annotations }}
 annotations:
-{{- if .Values.insightsController.webhooks.annotations }}
-{{ toYaml .Values.insightsController.webhook.annotations | nindent 2}}
+{{- if $values.insightsController.webhooks.annotations }}
+{{ toYaml $values.insightsController.webhook.annotations | nindent 2}}
 {{- end }}
-{{- if .Values.insightsController.tls.useCertManager }}
-  cert-manager.io/inject-ca-from: {{ .Values.insightsController.webhooks.caInjection | default (printf "%s/%s" .Release.Namespace (include "cloudzero-agent.certificateName" .)) }}
+{{- if $values.insightsController.tls.useCertManager }}
+  cert-manager.io/inject-ca-from: {{ $values.insightsController.webhooks.caInjection | default (printf "%s/%s" .Release.Namespace (include "cloudzero-agent.certificateName" .)) }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -571,16 +607,18 @@ Name for the certificate resource
 Name for the secret holding TLS certificates
 */}}
 {{- define "cloudzero-agent.tlsSecretName" -}}
-{{- .Values.insightsController.tls.secret.name | default (printf "%s-tls" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- $values.insightsController.tls.secret.name | default (printf "%s-tls" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) }}
 {{- end }}
 
 {{/*
 Volume mount for the API key
 */}}
 {{- define "cloudzero-agent.apiKeyVolumeMount" -}}
-{{- if or .Values.existingSecretName .Values.apiKey -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if or $values.existingSecretName $values.apiKey -}}
 - name: cloudzero-api-key
-  mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
+  mountPath: {{ $values.serverConfig.containerSecretFilePath }}
   subPath: ""
   readOnly: true
 {{- end }}
@@ -658,6 +696,7 @@ dnsConfig:
 Generate labels for a component
 */}}
 {{- define "cloudzero-agent.generateLabels" -}}
+{{- $values := include "cloudzero-agent.values" .globals | fromYaml -}}
 {{- $labels := dict
     "app.kubernetes.io/version" .globals.Chart.AppVersion
     "helm.sh/chart" (include "cloudzero-agent.chart" .globals)
@@ -669,7 +708,7 @@ Generate labels for a component
 {{- end -}}
 {{- if len $labels -}}
 labels:
-{{- (merge $labels (.labels | default (dict)) .globals.Values.defaults.labels .globals.Values.commonMetaLabels) | toYaml | nindent 2 -}}
+{{- (merge $labels (.labels | default (dict)) $values.defaults.labels $values.commonMetaLabels) | toYaml | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 
@@ -719,8 +758,9 @@ Generate nodeSelector sections
 Generate a pod disruption budget
 */}}
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
+{{- $values := include "cloudzero-agent.values" .root | fromYaml -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
-{{- $pdb := merge .component.podDisruptionBudget .root.Values.defaults.podDisruptionBudget -}}
+{{- $pdb := merge .component.podDisruptionBudget $values.defaults.podDisruptionBudget -}}
 {{- if ($pdb.minAvailable | default $pdb.maxUnavailable) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -749,12 +789,13 @@ Accepts a dictionary with "root" (the top-level chart context) and "image" (the 
 Example usage:
 {{- include "cloudzero-agent.generateImagePullSecrets" (dict
       "root" .
-      "image" .Values.components.foo.image
+      "image" $values.components.foo.image
     ) | nindent 6 }}
 */}}
 {{- define "cloudzero-agent.generateImagePullSecrets" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{- include "cloudzero-agent.maybeGenerateSection" (dict
       "name" "imagePullSecrets"
-      "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets)
+      "value" (.image.pullSecrets | default $values.defaults.image.pullSecrets)
     ) -}}
 {{- end -}}

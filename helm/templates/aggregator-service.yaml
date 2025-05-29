@@ -1,3 +1,4 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,5 +12,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: {{ .Values.aggregator.collector.port }}
+      targetPort: {{ $values.aggregator.collector.port }}
   type: ClusterIP

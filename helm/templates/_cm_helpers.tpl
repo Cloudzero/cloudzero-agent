@@ -2,16 +2,17 @@
 Configuration for the webhook-server Deployment. Configuration is defined in this tpl so that we can roll Deployment pods based on a checksum of these values
 */}}
 {{ define "cloudzero-agent.insightsController.configuration" -}}
-cloud_account_id: {{ .Values.cloudAccountId }}
-region: {{ .Values.region }}
-cluster_name: {{ .Values.clusterName }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+cloud_account_id: {{ $values.cloudAccountId }}
+region: {{ $values.region }}
+cluster_name: {{ $values.clusterName }}
 destination: {{ include "cloudzero-agent.metricsDestination" . }}
 logging:
-  level: {{ .Values.insightsController.server.logging.level }}
+  level: {{ $values.insightsController.server.logging.level }}
 remote_write:
-  send_interval: {{ .Values.insightsController.server.send_interval }}
+  send_interval: {{ $values.insightsController.server.send_interval }}
   max_bytes_per_send: 500000
-  send_timeout: {{ .Values.insightsController.server.send_timeout }}
+  send_timeout: {{ $values.insightsController.server.send_timeout }}
   max_retries: 3
 k8s_client:
   timeout: 30s
@@ -21,7 +22,7 @@ database:
   batch_update_size: 500
 api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
 {{- $namespace := .Release.Namespace }}
-{{- with .Values.insightsController }}
+{{- with $values.insightsController }}
 certificate:
   key: {{ .tls.mountPath }}/tls.key
   cert: {{ .tls.mountPath }}/tls.crt
@@ -35,9 +36,9 @@ server:
 {{- end }}
 filters:
   labels:
-  {{- .Values.insightsController.labels | toYaml | nindent 4 }}
+  {{- $values.insightsController.labels | toYaml | nindent 4 }}
   annotations:
-  {{- .Values.insightsController.annotations | toYaml | nindent 4 }}
+  {{- $values.insightsController.annotations | toYaml | nindent 4 }}
 {{- end}}
 
 
@@ -45,40 +46,42 @@ filters:
 Configuration for the aggregator Deployment. Configuration is defined in this tpl so that we can roll Deployment pods based on a checksum of these values
 */}}
 {{ define "cloudzero-agent.aggregator.configuration" -}}
-cloud_account_id: {{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}
-cluster_name: {{ include "cloudzero-agent.cleanString" .Values.clusterName }}
-region: {{ include "cloudzero-agent.cleanString" .Values.region }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- $internalValues := include "cloudzero-agent.internalDefaults" . | fromYaml -}}
+cloud_account_id: {{ include "cloudzero-agent.cleanString" $values.cloudAccountId }}
+cluster_name: {{ include "cloudzero-agent.cleanString" $values.clusterName }}
+region: {{ include "cloudzero-agent.cleanString" $values.region }}
 
 metrics:
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 2 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 2 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 2 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 $internalValues.metricFilters.cost.name) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          $internalValues.metricFilters.cost.labels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        $internalValues.metricFilters.observability.name) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" $internalValues.metricFilters.observability.labels) | nindent 2 }}
 server:
   mode: http
-  port: {{ .Values.aggregator.collector.port }}
-  profiling: {{ .Values.aggregator.profiling }}
+  port: {{ $values.aggregator.collector.port }}
+  profiling: {{ $values.aggregator.profiling }}
 logging:
-  level: "{{ .Values.aggregator.logging.level }}"
+  level: "{{ $values.aggregator.logging.level }}"
 database:
-  storage_path: {{ .Values.aggregator.mountRoot }}/data
-  max_records: {{ .Values.aggregator.database.maxRecords }}
-  cost_max_interval: {{ .Values.aggregator.database.costMaxInterval }}
-  observability_max_interval: {{ .Values.aggregator.database.observabilityMaxInterval }}
-  compression_level: {{ .Values.aggregator.database.compressionLevel }}
+  storage_path: {{ $values.aggregator.mountRoot }}/data
+  max_records: {{ $values.aggregator.database.maxRecords }}
+  cost_max_interval: {{ $values.aggregator.database.costMaxInterval }}
+  observability_max_interval: {{ $values.aggregator.database.observabilityMaxInterval }}
+  compression_level: {{ $values.aggregator.database.compressionLevel }}
   purge_rules:
-    metrics_older_than: {{ .Values.aggregator.database.purgeRules.metricsOlderThan }}
-    lazy: {{ .Values.aggregator.database.purgeRules.lazy }}
-    percent: {{ .Values.aggregator.database.purgeRules.percent }}
-  {{- if .Values.aggregator.database.emptyDir.enabled }}
-  available_storage: {{ .Values.aggregator.database.emptyDir.sizeLimit }}
+    metrics_older_than: {{ $values.aggregator.database.purgeRules.metricsOlderThan }}
+    lazy: {{ $values.aggregator.database.purgeRules.lazy }}
+    percent: {{ $values.aggregator.database.purgeRules.percent }}
+  {{- if $values.aggregator.database.emptyDir.enabled }}
+  available_storage: {{ $values.aggregator.database.emptyDir.sizeLimit }}
   {{- end}}
 cloudzero:
   api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
-  send_interval: {{ .Values.aggregator.cloudzero.sendInterval }}
-  send_timeout: {{ .Values.aggregator.cloudzero.sendTimeout }}
-  rotate_interval: {{ .Values.aggregator.cloudzero.rotateInterval }}
-  host: {{ .Values.host }}
+  send_interval: {{ $values.aggregator.cloudzero.sendInterval }}
+  send_timeout: {{ $values.aggregator.cloudzero.sendTimeout }}
+  rotate_interval: {{ $values.aggregator.cloudzero.rotateInterval }}
+  host: {{ $values.host }}
 {{- end}}
 
 {{/* Define remote_write configuration for Prometheus */}}
@@ -97,21 +100,23 @@ remote_write:
 
 {{/* Define static-prometheus scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapePrometheus" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 - job_name: static-prometheus
-  scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
+  scrape_interval: {{ $values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
   static_configs:
     - targets:
         - localhost:9090
   metric_relabel_configs:
     - source_labels: [__name__]
-      regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
+      regex: "^({{ join "|" (include "cloudzero-agent.internalDefaults" . | fromYaml).prometheusMetrics }})$"
       action: keep
 {{- end -}}
 
 {{/* Define cloudzero-aggregator-job scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeAggregator" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 - job_name: cloudzero-aggregator-job
-  scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
+  scrape_interval: {{ $values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
   kubernetes_sd_configs:
     - role: endpoints
       kubeconfig_file: ""
@@ -127,12 +132,13 @@ remote_write:
       regex: port-(shipper|collector)
   metric_relabel_configs:
     - source_labels: [__name__]
-      regex: "{{ include "cloudzero-agent.generateMetricNameFilterRegex" .Values }}"
+      regex: "{{ include "cloudzero-agent.generateMetricNameFilterRegex" $values }}"
       action: keep
 {{- end -}}
 
 {{/* Define static-kube-state-metrics scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeKubeStateMetrics" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 # Kube State Metrics Scrape Job
 # static-kube-state-metrics
 #
@@ -140,7 +146,7 @@ remote_write:
 # regarding the configuration and state of various Kubernetes objects
 # (nodes, pods, etc.), including where they are located in the cluster.
 - job_name: static-kube-state-metrics
-  scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
+  scrape_interval: {{ $values.prometheusConfig.scrapeJobs.kubeStateMetrics.scrapeInterval }}
 
   # Given a Kubernetes resource with a structure like:
   #
@@ -188,7 +194,7 @@ remote_write:
 
     # Metric names to keep.
     - source_labels: [__name__]
-      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics) }}
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.internalDefaults" . | fromYaml).kubeMetrics) }}
       action: keep
 
     # Metric labels to keep.
@@ -202,6 +208,7 @@ remote_write:
 
 {{/* Define cloudzero-webhook-job scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeWebhookJob" -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 - job_name: cloudzero-webhook-job
   scheme: https
   tls_config:
@@ -220,12 +227,13 @@ remote_write:
   metric_relabel_configs:
     # Metrics to keep.
     - source_labels: [__name__]
-      regex: "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).insightsMetrics }})$"
+      regex: "^({{ join "|" (include "cloudzero-agent.internalDefaults" . | fromYaml).insightsMetrics }})$"
       action: keep
 {{- end -}}
 
 {{/* Define cloudzero-nodes-cAdvisor scrape job configuration */}}
 {{- define "cloudzero-agent.prometheus.scrapeCAdvisor" -}}
+{{- $values := include "cloudzero-agent.values" .root | fromYaml -}}
 {{- $scrapeLocal := .scrapeLocalNodeOnly | default false -}}
 # cAdvisor Scrape Job cloudzero-nodes-cadvisor
 #
@@ -233,7 +241,7 @@ remote_write:
 # network, etc.).
 - job_name: cloudzero-nodes-cadvisor
 
-  scrape_interval: {{ .root.Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
+  scrape_interval: {{ $values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}
   scheme: https
 
   # cAdvisor endpoints are protected. In order to access them we need the
@@ -304,7 +312,7 @@ remote_write:
 
     # Metrics to keep.
     - source_labels: [__name__]
-      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.defaults" .root | fromYaml).containerMetrics) }}
+      regex: {{ printf "^(%s)$" (join "|" (include "cloudzero-agent.internalDefaults" .root | fromYaml).containerMetrics) }}
       action: keep
 
   kubernetes_sd_configs:

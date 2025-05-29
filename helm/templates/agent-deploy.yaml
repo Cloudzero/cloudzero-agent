@@ -1,10 +1,11 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  {{- include "cloudzero-agent.generateAnnotations" .Values.server.deploymentAnnotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.server.deploymentAnnotations | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 2 }}
   name: {{ template "cloudzero-agent.server.fullname" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
 spec:
@@ -14,18 +15,18 @@ spec:
   replicas: 1
   template:
     metadata:
-      {{- include "cloudzero-agent.generateAnnotations" .Values.server.podAnnotations | nindent 8 }}
+      {{- include "cloudzero-agent.generateAnnotations" $values.server.podAnnotations | nindent 8 }}
       labels:
         {{- include "cloudzero-agent.server.labels" . | nindent 8 }}
-        {{- if .Values.server.podLabels}}
-        {{ toYaml .Values.server.podLabels | nindent 8 }}
+        {{- if $values.server.podLabels}}
+        {{ toYaml $values.server.podLabels | nindent 8 }}
         {{- end}}
     spec:
-      {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" ($values.defaults.priorityClassName | default $values.server.priorityClassName) | nindent 6 }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
-        - name: {{ .Values.validator.name }}-copy
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
+        - name: {{ $values.validator.name }}-copy
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.agent.image "compat" $values.validator.image) | nindent 10 }}
           env:
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
@@ -33,7 +34,7 @@ spec:
             - install
             - --destination
             - /checks/bin/cloudzero-agent-validator
-          {{- with .Values.validator.resources }}
+          {{- with $values.validator.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -43,8 +44,8 @@ spec:
               mountPath: /checks/bin/
             - name: validator-config-volume
               mountPath: /checks/config/
-        - name: {{ .Values.validator.name }}-run
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
+        - name: {{ $values.validator.name }}-run
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.agent.image "compat" $values.validator.image) | nindent 10 }}
           env:
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
@@ -53,7 +54,7 @@ spec:
             - pre-start
             - -f
             - /checks/config/validator.yml
-          {{- with .Values.validator.resources }}
+          {{- with $values.validator.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -64,13 +65,13 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
       containers:
-        {{- if .Values.configmapReload.prometheus.enabled }}
-        - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+        {{- if $values.configmapReload.prometheus.enabled }}
+        - name: {{ template "cloudzero-agent.name" . }}-{{ $values.server.name }}-configmap-reload
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.prometheusReloader.image "compat" $values.configmapReload.prometheus.image) | nindent 10 }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
-          {{- with .Values.configmapReload.prometheus.resources }}
+          {{- with $values.configmapReload.prometheus.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -81,10 +82,10 @@ spec:
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
           {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
-          {{- if .Values.server.env }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.prometheus.image "compat" (dict "repository" $values.server.image.repository "tag" ($values.server.image.tag | default $values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" $values.server.image.digest "pullPolicy" $values.server.image.pullPolicy)) | nindent 10 }}
+          {{- if $values.server.env }}
           env:
-{{ toYaml .Values.server.env | indent 12}}
+{{ toYaml $values.server.env | indent 12}}
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           {{- end }}
           lifecycle:
@@ -105,8 +106,8 @@ spec:
                   - -f
                   - /checks/app/config/validator.yml
           args:
-            {{ toYaml .Values.server.args | nindent 12}}
-            {{- if .Values.server.agentMode }}
+            {{ toYaml $values.server.args | nindent 12}}
+            {{- if $values.server.agentMode }}
             - --enable-feature=agent
             {{- end }}
           ports:
@@ -116,22 +117,22 @@ spec:
               path: /-/ready
               port: 9090
               scheme: HTTP
-            initialDelaySeconds: {{ default 30 .Values.server.readinessProbeInitialDelay }}
-            periodSeconds: {{ default 5 .Values.server.readinessProbePeriodSeconds }}
-            timeoutSeconds: {{ default 4 .Values.server.readinessProbeTimeout }}
-            failureThreshold: {{ default 3 .Values.server.readinessProbeFailureThreshold }}
-            successThreshold: {{ default 1 .Values.server.readinessProbeSuccessThreshold }}
+            initialDelaySeconds: {{ default 30 $values.server.readinessProbeInitialDelay }}
+            periodSeconds: {{ default 5 $values.server.readinessProbePeriodSeconds }}
+            timeoutSeconds: {{ default 4 $values.server.readinessProbeTimeout }}
+            failureThreshold: {{ default 3 $values.server.readinessProbeFailureThreshold }}
+            successThreshold: {{ default 1 $values.server.readinessProbeSuccessThreshold }}
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 9090
               scheme: HTTP
-            initialDelaySeconds: {{ default 30 .Values.server.livenessProbeInitialDelay }}
-            periodSeconds: {{ default 15 .Values.server.livenessProbePeriodSeconds }}
-            timeoutSeconds: {{ default 10 .Values.server.livenessProbeTimeout }}
-            failureThreshold: {{ default 3 .Values.server.livenessProbeFailureThreshold }}
-            successThreshold: {{ default 1 .Values.server.livenessProbeSuccessThreshold }}
-          {{- with .Values.server.resources }}
+            initialDelaySeconds: {{ default 30 $values.server.livenessProbeInitialDelay }}
+            periodSeconds: {{ default 15 $values.server.livenessProbePeriodSeconds }}
+            timeoutSeconds: {{ default 10 $values.server.livenessProbeTimeout }}
+            failureThreshold: {{ default 3 $values.server.livenessProbeFailureThreshold }}
+            successThreshold: {{ default 1 $values.server.livenessProbeSuccessThreshold }}
+          {{- with $values.server.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -139,8 +140,8 @@ spec:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
             - name: cloudzero-agent-storage-volume
-              mountPath: {{ .Values.server.persistentVolume.mountPath }}
-              subPath: "{{ .Values.server.persistentVolume.subPath }}"
+              mountPath: {{ $values.server.persistentVolume.mountPath }}
+              subPath: "{{ $values.server.persistentVolume.subPath }}"
             - name: lifecycle-volume
               mountPath: /checks/
             - name: validator-config-volume
@@ -151,16 +152,16 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
-      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}
-      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.server.tolerations) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}
-    {{- with .Values.server.topologySpreadConstraints }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" $values.defaults.nodeSelector "nodeSelector" $values.server.nodeSelector) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat $values.defaults.tolerations $values.server.tolerations) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" $values.defaults.affinity "affinity" $values.server.affinity) | nindent 6 }}
+    {{- with $values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      terminationGracePeriodSeconds: {{ default 300 .Values.server.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ default 300 $values.server.terminationGracePeriodSeconds }}
       volumes:
         - name: config-volume
           configMap:
@@ -170,19 +171,19 @@ spec:
             name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
         - name: lifecycle-volume
           emptyDir: {}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
+        {{- if or $values.existingSecretName $values.apiKey }}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
         - name: cloudzero-agent-storage-volume
-        {{- if .Values.server.persistentVolume.enabled }}
+        {{- if $values.server.persistentVolume.enabled }}
           persistentVolumeClaim:
-            claimName: {{ if .Values.server.persistentVolume.existingClaim }}{{ .Values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
+            claimName: {{ if $values.server.persistentVolume.existingClaim }}{{ $values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
         {{- else }}
           emptyDir:
-          {{- if .Values.server.emptyDir.sizeLimit }}
-            sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
+          {{- if $values.server.emptyDir.sizeLimit }}
+            sizeLimit: {{ $values.server.emptyDir.sizeLimit }}
           {{- else }}
             {}
           {{- end }}

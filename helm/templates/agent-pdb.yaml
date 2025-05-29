@@ -1,5 +1,6 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 {{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
-    "component" .Values.components.agent
+    "component" $values.components.agent
     "name" (include "cloudzero-agent.server.fullname" .)
     "matchLabels" (include "cloudzero-agent.server.matchLabels" .)
     "root" .

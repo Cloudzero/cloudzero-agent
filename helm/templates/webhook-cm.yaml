@@ -1,5 +1,6 @@
-{{- if .Values.insightsController.enabled }}
-{{- with .Values.insightsController }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.insightsController.enabled }}
+{{- with $values.insightsController }}
 {{- if and .labels.enabled (not .labels.patterns) }}
 {{- $msg := "\n\nThe required field(s) 'insightsController.labels.enabled' and/or 'insightsController.labels.patterns' is not set! See the README.md for more information." }}
 {{- $enabledMsg:=""}}
@@ -20,7 +21,7 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations $values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   server-config.yaml: |-
 {{- include "cloudzero-agent.insightsController.configuration" . | nindent 4 -}}

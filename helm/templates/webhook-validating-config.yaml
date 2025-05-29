@@ -1,6 +1,7 @@
-{{- if .Values.insightsController.enabled }}
-{{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
-{{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.insightsController.enabled }}
+{{ $labelsEnabled := $values.insightsController.labels.enabled }}
+{{ $annotationEnabled := $values.insightsController.annotations.enabled }}
 {{- if or $labelsEnabled $annotationEnabled }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -10,13 +11,13 @@ metadata:
   labels:
     {{- include "cloudzero-agent.insightsController.labels" $ | nindent 4 }}
   {{- $certManagerAnnotations := dict -}}
-  {{- if $.Values.insightsController.tls.useCertManager -}}
-  {{- $certManagerAnnotations = dict "cert-manager.io/inject-ca-from" ($.Values.insightsController.webhooks.caInjection | default (printf "%s/%s" $.Release.Namespace (include "cloudzero-agent.certificateName" $))) -}}
+  {{- if $values.insightsController.tls.useCertManager -}}
+  {{- $certManagerAnnotations = dict "cert-manager.io/inject-ca-from" ($values.insightsController.webhooks.caInjection | default (printf "%s/%s" $.Release.Namespace (include "cloudzero-agent.certificateName" $))) -}}
   {{- end -}}
-  {{- include "cloudzero-agent.generateAnnotations" (merge $.Values.defaults.annotations $certManagerAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations $certManagerAnnotations) | nindent 2 }}
 webhooks:
   - name: {{ include "cloudzero-agent.validatingWebhookName" $ }}
-    namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector | nindent 6 }}
+    namespaceSelector: {{ toYaml $values.insightsController.webhooks.namespaceSelector | nindent 6 }}
     failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE", "DELETE" ]
@@ -28,11 +29,11 @@ webhooks:
       service:
         namespace: {{ $.Release.Namespace }}
         name: {{ include "cloudzero-agent.serviceName" $ }}
-        path: {{ $.Values.insightsController.webhooks.path }}
-        port: {{ $.Values.insightsController.service.port }}
-      {{- if (gt (len $.Values.insightsController.tls.caBundle) 1 ) }}
-      caBundle: {{ $.Values.insightsController.tls.caBundle | quote }}
-      {{- else if $.Values.insightsController.tls.useCertManager }}
+        path: {{ $values.insightsController.webhooks.path }}
+        port: {{ $values.insightsController.service.port }}
+      {{- if (gt (len $values.insightsController.tls.caBundle) 1 ) }}
+      caBundle: {{ $values.insightsController.tls.caBundle | quote }}
+      {{- else if $values.insightsController.tls.useCertManager }}
       caBundle: ''
       {{- end }}
     admissionReviewVersions: ["v1"]

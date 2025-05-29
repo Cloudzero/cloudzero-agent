@@ -1,11 +1,12 @@
-{{- if .Values.defaults.federation.enabled -}}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.defaults.federation.enabled -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  {{- include "cloudzero-agent.generateAnnotations" .Values.server.deploymentAnnotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.server.deploymentAnnotations | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 2 }}
   name: {{ .Release.Name }}-daemonset
   namespace: {{ include "cloudzero-agent.namespace" . }}
 spec:
@@ -14,14 +15,14 @@ spec:
       {{- include "cloudzero-agent.server.matchLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- include "cloudzero-agent.generateAnnotations" .Values.server.podAnnotations | nindent 8 }}
+      {{- include "cloudzero-agent.generateAnnotations" $values.server.podAnnotations | nindent 8 }}
       labels:
         {{- include "cloudzero-agent.server.labels" . | nindent 8 }}
-        {{- if .Values.server.podLabels}}
-        {{ toYaml .Values.server.podLabels | nindent 8 }}
+        {{- if $values.server.podLabels}}
+        {{ toYaml $values.server.podLabels | nindent 8 }}
         {{- end}}
     spec:
-      {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" ($values.defaults.priorityClassName | default $values.server.priorityClassName) | nindent 6 }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
         # Prometheus doesn't support environment variables where we need them in
@@ -29,7 +30,7 @@ spec:
         # in the prometheus.yml.in file with the actual node name, then use that
         # processed file in the container.
         - name: config-subst
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.prometheusReloader.image "compat" $values.configmapReload.prometheus.image) | nindent 10 }}
           command:
             - /bin/sh
             - -c
@@ -45,13 +46,13 @@ spec:
             - name: processed-config-volume
               mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
-        {{- if .Values.configmapReload.prometheus.enabled }}
-        - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+        {{- if $values.configmapReload.prometheus.enabled }}
+        - name: {{ template "cloudzero-agent.name" . }}-{{ $values.server.name }}-configmap-reload
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.prometheusReloader.image "compat" $values.configmapReload.prometheus.image) | nindent 10 }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
-          {{- with .Values.configmapReload.prometheus.resources }}
+          {{- with $values.configmapReload.prometheus.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -62,14 +63,14 @@ spec:
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
           {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.prometheus.image "compat" (dict "repository" $values.server.image.repository "tag" ($values.server.image.tag | default $values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" $values.server.image.digest "pullPolicy" $values.server.image.pullPolicy)) | nindent 10 }}
           env:
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            {{- if .Values.server.env }}
-            {{- toYaml .Values.server.env | indent 12}}
+            {{- if $values.server.env }}
+            {{- toYaml $values.server.env | indent 12}}
             {{- end }}
           args:
             - --config.file=/etc/config/prometheus.yml
@@ -99,7 +100,7 @@ spec:
             timeoutSeconds: 10
             failureThreshold: 3
             successThreshold: 1
-          {{- with .Values.server.resources }}
+          {{- with $values.server.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -117,12 +118,12 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
-      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}
-      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.server.tolerations) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}
-      {{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "topologySpreadConstraints" "value" .Values.server.topologySpreadConstraints) | nindent 6 }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" $values.defaults.nodeSelector "nodeSelector" $values.server.nodeSelector) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat $values.defaults.tolerations $values.server.tolerations) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" $values.defaults.affinity "affinity" $values.server.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "topologySpreadConstraints" "value" $values.server.topologySpreadConstraints) | nindent 6 }}
       terminationGracePeriodSeconds: 300
       volumes:
         - name: unprocessed-config-volume
@@ -130,16 +131,16 @@ spec:
             name: {{ .Release.Name }}-daemonset-cm
         - name: processed-config-volume
           emptyDir: {}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
+        {{- if or $values.existingSecretName $values.apiKey }}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
         - name: cloudzero-agent-storage-volume
           emptyDir:
-          {{- if .Values.server.emptyDir.sizeLimit }}
-            sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
+          {{- if $values.server.emptyDir.sizeLimit }}
+            sizeLimit: {{ $values.server.emptyDir.sizeLimit }}
           {{- else }}
             {}
           {{- end }}
-{{- end }}{{/* End if .Values.defaults.federation.enabled */}}
+{{- end }}{{/* End if $values.defaults.federation.enabled */}}

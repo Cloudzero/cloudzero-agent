@@ -1,113 +1,114 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "globals" .
-      "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
+      "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) $values.commonMetaLabels)
       "component" "aggregator"
     ) | nindent 2 }}
 spec:
   selector:
     matchLabels:
       {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 6 }}
-  replicas: {{ .Values.components.aggregator.replicas }}
+  replicas: {{ $values.components.aggregator.replicas }}
   template:
     metadata:
-      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations (dict "checksum/config" (include "cloudzero-agent.aggregator.configuration" . | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations (dict "checksum/config" (include "cloudzero-agent.aggregator.configuration" . | sha256sum))) | nindent 6 }}
       {{- include "cloudzero-agent.generateLabels" (dict
           "globals" .
-          "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
+          "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) $values.commonMetaLabels)
           "component" "aggregator"
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
-      {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" ($values.defaults.priorityClassName | default $values.server.priorityClassName) | nindent 6 }}
       containers:
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.agent.image "compat" $values.aggregator.image) | nindent 10 }}
           ports:
             - name: port-collector
-              containerPort: {{ .Values.aggregator.collector.port }}
-          command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
+              containerPort: {{ $values.aggregator.collector.port }}
+          command: ["/app/cloudzero-collector", "-config", "{{ $values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
-              value: "{{ .Values.aggregator.collector.port }}"
+              value: "{{ $values.aggregator.collector.port }}"
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume
-              mountPath: {{ .Values.aggregator.mountRoot }}/config
+              mountPath: {{ $values.aggregator.mountRoot }}/config
               readOnly: true
             - name: aggregator-persistent-storage
-              mountPath: {{ .Values.aggregator.mountRoot }}/data
+              mountPath: {{ $values.aggregator.mountRoot }}/data
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ $values.aggregator.collector.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ $values.aggregator.collector.port }}
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.aggregator.collector.resources | nindent 12 }}
+            {{- toYaml $values.aggregator.collector.resources | nindent 12 }}
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.agent.image "compat" $values.aggregator.image) | nindent 10 }}
           ports:
             - name: port-shipper
-              containerPort: {{ .Values.aggregator.shipper.port }}
-          command: ["/app/cloudzero-shipper", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
+              containerPort: {{ $values.aggregator.shipper.port }}
+          command: ["/app/cloudzero-shipper", "-config", "{{ $values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
-              value: "{{ .Values.aggregator.shipper.port }}"
+              value: "{{ $values.aggregator.shipper.port }}"
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume
-              mountPath: {{ .Values.aggregator.mountRoot }}/config
+              mountPath: {{ $values.aggregator.mountRoot }}/config
               readOnly: true
             - name: aggregator-persistent-storage
-              mountPath: {{ .Values.aggregator.mountRoot }}/data
+              mountPath: {{ $values.aggregator.mountRoot }}/data
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ $values.aggregator.collector.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ $values.aggregator.collector.port }}
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.aggregator.shipper.resources | nindent 12 }}
+            {{- toYaml $values.aggregator.shipper.resources | nindent 12 }}
 
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
-      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
-      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.aggregator.nodeSelector) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
-      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations) | nindent 6 }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" $values.defaults.nodeSelector "nodeSelector" $values.aggregator.nodeSelector) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" $values.defaults.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat $values.defaults.tolerations) | nindent 6 }}
 
-    {{- with .Values.server.topologySpreadConstraints }}
+    {{- with $values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      terminationGracePeriodSeconds: {{ default 300 .Values.server.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ default 300 $values.server.terminationGracePeriodSeconds }}
       volumes:
         - name: config-volume
           configMap:
@@ -117,19 +118,19 @@ spec:
             name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
         - name: lifecycle-volume
           emptyDir: {}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
+        {{- if or $values.existingSecretName $values.apiKey }}
         - name: cloudzero-api-key
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
         - name: cloudzero-agent-storage-volume
-        {{- if .Values.server.persistentVolume.enabled }}
+        {{- if $values.server.persistentVolume.enabled }}
           persistentVolumeClaim:
-            claimName: {{ if .Values.server.persistentVolume.existingClaim }}{{ .Values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
+            claimName: {{ if $values.server.persistentVolume.existingClaim }}{{ $values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
         {{- else }}
           emptyDir:
-          {{- if .Values.server.emptyDir.sizeLimit }}
-            sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
+          {{- if $values.server.emptyDir.sizeLimit }}
+            sizeLimit: {{ $values.server.emptyDir.sizeLimit }}
           {{- else }}
             {}
           {{- end }}
@@ -138,10 +139,10 @@ spec:
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
         - name: aggregator-persistent-storage
-        {{- if .Values.aggregator.database.emptyDir.enabled }}
+        {{- if $values.aggregator.database.emptyDir.enabled }}
           emptyDir:
-          {{- if .Values.aggregator.database.emptyDir.sizeLimit }}
-            sizeLimit: {{ .Values.aggregator.database.emptyDir.sizeLimit }}
+          {{- if $values.aggregator.database.emptyDir.sizeLimit }}
+            sizeLimit: {{ $values.aggregator.database.emptyDir.sizeLimit }}
           {{- else}}
             {}
         {{- end }}

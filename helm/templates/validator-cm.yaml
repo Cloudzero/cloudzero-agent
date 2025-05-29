@@ -1,3 +1,4 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,24 +6,24 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.validatorConfigMapName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations $values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   validator.yml: |-
     versions:
       chart_version: {{ .Chart.Version }}
-      agent_version: {{ .Values.server.image.tag }}
+      agent_version: {{ $values.server.image.tag }}
 
     logging:
       level: info
       location: ./cloudzero-agent-validator.log
 
     deployment:
-      account_id: {{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}
-      cluster_name: {{ include "cloudzero-agent.cleanString" .Values.clusterName }}
-      region: {{ include "cloudzero-agent.cleanString" .Values.region }}
+      account_id: {{ include "cloudzero-agent.cleanString" $values.cloudAccountId }}
+      cluster_name: {{ include "cloudzero-agent.cleanString" $values.clusterName }}
+      region: {{ include "cloudzero-agent.cleanString" $values.region }}
 
     cloudzero:
-      host:  https://{{ include "cloudzero-agent.cleanString" .Values.host }}
+      host:  https://{{ include "cloudzero-agent.cleanString" $values.host }}
       credentials_file: {{ include "cloudzero-agent.secretFileFullPath" . }}
       disable_telemetry: false
 
@@ -32,14 +33,14 @@ data:
       collector_service: {{ include "cloudzero-agent.aggregator.name" . }}
 
     prometheus:
-      {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
-      kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
+      {{- if $values.validator.serviceEndpoints.kubeStateMetrics }}
+      kube_state_metrics_service_endpoint: http://{{ $values.validator.serviceEndpoints.kubeStateMetrics }}/
       {{- else }}
       kube_state_metrics_service_endpoint: http://{{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
       {{- end }}
       executable: /bin/prometheus
       kube_metrics:
-        {{- (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics | toYaml | nindent 8 }}
+        {{- (include "cloudzero-agent.internalDefaults" . | fromYaml).kubeMetrics | toYaml | nindent 8 }}
       configurations:
         - /etc/prometheus/prometheus.yml
         - /etc/config/prometheus/configmaps/prometheus.yml

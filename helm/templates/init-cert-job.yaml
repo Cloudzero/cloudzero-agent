@@ -1,11 +1,12 @@
-{{- if .Values.insightsController.enabled }}
-{{- if and .Values.insightsController.tls.secret.create (not .Values.insightsController.tls.useCertManager) .Values.initCertJob.enabled (not .Values.insightsController.tls.crt) (not .Values.insightsController.tls.key) }}
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
+{{- if $values.insightsController.enabled }}
+{{- if and $values.insightsController.tls.secret.create (not $values.insightsController.tls.useCertManager) $values.initCertJob.enabled (not $values.insightsController.tls.crt) (not $values.insightsController.tls.key) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "cloudzero-agent.initCertJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.initCertJob.annotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations $values.initCertJob.annotations) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
@@ -14,19 +15,19 @@ spec:
       name: {{ include "cloudzero-agent.initCertJobName" . }}
       labels:
         {{- include "cloudzero-agent.insightsController.initCertJob.matchLabels" . | nindent 8 }}
-      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" $values.defaults.annotations | nindent 6 }}
     spec:
-      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" (.Values.initCertJob.nodeSelector | default .Values.insightsController.server.nodeSelector)) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}
-      {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initCertJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" $values.defaults.nodeSelector "nodeSelector" ($values.initCertJob.nodeSelector | default $values.insightsController.server.nodeSelector)) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" $values.defaults.affinity "affinity" $values.insightsController.server.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" (concat $values.defaults.tolerations $values.initCertJob.tolerations $values.insightsController.server.tolerations) | nindent 6 }}
       serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
-      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $values.defaults.dns) | nindent 6 }}
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
-      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" $values.defaults.priorityClassName | nindent 6 }}
       containers:
         - name: init-cert
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" $values.defaults.image "image" $values.components.kubectl.image "compat" $values.initCertJob.image) | nindent 10 }}
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
           args:
@@ -34,14 +35,14 @@ spec:
               #!/bin/bash
               set -e
 
-              {{- if not .Values.insightsController.tls.useCertManager }}
+              {{- if not $values.insightsController.tls.useCertManager }}
               GENERATE_CERTIFICATE=false
 
               # Check if the caBundle in the ValidatingWebhookConfiguration is the same for all webhooks
               caBundles=()
               {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
-              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
-              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
+              {{ $labelsEnabled := $values.insightsController.labels.enabled }}
+              {{ $annotationEnabled := $values.insightsController.annotations.enabled }}
               {{- if or $labelsEnabled $annotationEnabled }}
               wh_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
               caBundles+=("${wh_caBundle:-missing }")
@@ -100,8 +101,8 @@ spec:
                   -p '{"data": {"ca.crt": "'"$TLS_CRT"'", "tls.crt": "'"$TLS_CRT"'", "tls.key": "'"$TLS_KEY"'"}}'
 
               {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
-              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
-              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
+              {{ $labelsEnabled := $values.insightsController.labels.enabled }}
+              {{ $annotationEnabled := $values.insightsController.annotations.enabled }}
               {{- if or $labelsEnabled $annotationEnabled }}
               # Patch the ValidatingWebhookConfiguration {{ $webhookName }} with the caBundle
               kubectl patch validatingwebhookconfiguration  {{ $webhookName }} \

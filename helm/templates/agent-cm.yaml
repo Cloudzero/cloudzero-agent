@@ -1,3 +1,4 @@
+{{- $values := include "cloudzero-agent.values" . | fromYaml -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,38 +6,38 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ include "cloudzero-agent.configMapName" . }}
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge $values.defaults.annotations $values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   prometheus.yml: |-
-    {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
-    {{ .Values.prometheusConfig.configOverride | nindent 4 }}
+    {{- if and (not $values.defaults.federation.enabled) $values.prometheusConfig.configOverride }}
+    {{ $values.prometheusConfig.configOverride | nindent 4 }}
     {{- else }}
     global:
-      scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
+      scrape_interval: {{ $values.prometheusConfig.globalScrapeInterval }}
 
     scrape_configs:
-      {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
+      {{- if $values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeKubeStateMetrics" . | nindent 6 }}
       {{- end }}{{/* End kubeStateMetrics scrape job */}}
 
-      {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+      {{- if and (not $values.defaults.federation.enabled) $values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" false) | nindent 6 }}
       {{- end }}{{/* End cadvisor scrape job */}}
 
-      {{- if .Values.insightsController.enabled }}
+      {{- if $values.insightsController.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeWebhookJob" . | nindent 6 }}
       {{- end }}{{/* End webhook (insightsController) scrape job */}}
 
-      {{- if .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
+      {{- if $values.prometheusConfig.scrapeJobs.aggregator.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeAggregator" . | nindent 6 }}
       {{- end }}{{/* End aggregator scrape job */}}
 
-      {{- if .Values.prometheusConfig.scrapeJobs.prometheus.enabled }}
+      {{- if $values.prometheusConfig.scrapeJobs.prometheus.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapePrometheus" . | nindent 6 }}
       {{- end }}
 
-      {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
-      {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
+      {{- if $values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
+      {{ toYaml $values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
       {{- end }}{{/* End additional scrape jobs */}}
     {{- end}}
 

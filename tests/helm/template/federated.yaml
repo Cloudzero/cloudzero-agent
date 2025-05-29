@@ -88,8 +88,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-cloudzero-agent-server
   namespace: cz-agent
 ---
@@ -120,8 +119,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-api-key
   namespace: cz-agent
 data:
@@ -158,8 +156,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-configuration
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   prometheus.yml: |-
     global:
@@ -304,8 +301,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-daemonset-cm
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   prometheus.yml.in: |-
     global:
@@ -409,8 +405,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   config.yml: |-
     cloud_account_id: 1234567890
@@ -748,8 +743,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   values.yaml: |-
     aggregator:
@@ -845,8 +839,7 @@ data:
         resources: {}
     defaults:
       affinity: {}
-      annotations:
-        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+      annotations: {}
       dns:
         config: {}
         policy: null
@@ -857,6 +850,9 @@ data:
         pullSecrets: null
       labels: {}
       nodeSelector: {}
+      podDisruptionBudget:
+        maxUnavailable: null
+        minAvailable: 1
       priorityClassName: null
       tolerations: []
     host: api.cloudzero.com
@@ -918,15 +914,7 @@ data:
       podLabels: {}
       resources: {}
       server:
-        affinity:
-          podAntiAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app: webhook-server
-                topologyKey: kubernetes.io/hostname
-              weight: 100
+        affinity: {}
         deploymentAnnotations: {}
         healthCheck:
           enabled: true
@@ -1062,7 +1050,8 @@ data:
         flavor: kubernetes
       nodeSelector: {}
       podAnnotations: {}
-      podDisruptionBudget: {}
+      podDisruptionBudget:
+        minAvailable: 1
       podSecurityPolicy:
         additionalVolumes: []
         annotations: {}
@@ -1240,8 +1229,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-validator-configuration
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   validator.yml: |-
     versions:
@@ -1324,8 +1312,7 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-webhook-configuration
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
 data:
   server-config.yaml: |-
     cloud_account_id: 1234567890
@@ -1543,8 +1530,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   labels:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: cloudzero-agent
@@ -1640,8 +1626,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
   namespace: cz-agent
 rules:
@@ -1709,8 +1694,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-cloudzero-agent-server
 subjects:
   - kind: ServiceAccount
@@ -1733,8 +1717,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
 subjects:
   - kind: ServiceAccount
@@ -1838,8 +1821,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-daemonset
   namespace: cz-agent
 spec:
@@ -2062,8 +2044,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   name: cz-agent-cloudzero-agent-server
   namespace: cz-agent
 spec:
@@ -2255,8 +2236,7 @@ kind: Deployment
 metadata:
   name: cz-agent-aggregator
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   labels:
     app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
@@ -2275,7 +2255,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+        checksum/config: 5769d5237d88dd30ecda58359d814485f7da56ed436a56bb6630b620fd0eebc8
       labels:
         app.kubernetes.io/component: aggregator
         app.kubernetes.io/instance: cz-agent
@@ -2524,8 +2504,7 @@ kind: Job
 metadata:
   name: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -2543,8 +2522,7 @@ spec:
         app.kubernetes.io/component: cz-agent-backfill-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
-      annotations:
-        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+      
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
@@ -2588,8 +2566,7 @@ kind: Job
 metadata:
   name: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   namespace: cz-agent
-  annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+  
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -2606,8 +2583,7 @@ spec:
         app.kubernetes.io/component: cz-agent-init-cert-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
-      annotations:
-        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+      
     spec:
       
       
@@ -2703,7 +2679,6 @@ metadata:
   name: cz-agent-validator-3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   namespace: cz-agent
   annotations:
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
     checksum/values: 3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   labels:
     app.kubernetes.io/component: webhook-server
@@ -2723,7 +2698,7 @@ spec:
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
       annotations:
-        checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
+        checksum/values: 3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
