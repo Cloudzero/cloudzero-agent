@@ -1,4 +1,66 @@
 ---
+# Source: cloudzero-agent/charts/kubeStateMetrics/templates/pdb.yaml
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: cz-agent-cloudzero-state-metrics
+  namespace: cz-agent
+  labels:    
+    helm.sh/chart: kubeStateMetrics-5.15.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: cloudzero-state-metrics
+    app.kubernetes.io/name: cloudzero-state-metrics
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/version: "2.10.1"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudzero-state-metrics
+  minAvailable: 1
+---
+# Source: cloudzero-agent/templates/agent-pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cz-agent-cloudzero-agent-server
+  namespace: cz-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: server
+      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/instance: cz-agent
+---
+# Source: cloudzero-agent/templates/aggregator-pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cz-agent-aggregator
+  namespace: cz-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: aggregator
+      app.kubernetes.io/name: cz-agent-aggregator
+      app.kubernetes.io/instance: cz-agent
+---
+# Source: cloudzero-agent/templates/webhook-pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cz-agent-cloudzero-agent-webhook-server
+  namespace: cz-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: webhook-server
+      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/instance: cz-agent
+---
 # Source: cloudzero-agent/charts/kubeStateMetrics/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -2030,16 +2092,6 @@ spec:
         - name: cloudzero-api-key
           secret:
             secretName: cz-agent-api-key
-      
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
 ---
 # Source: cloudzero-agent/templates/init-cert-job.yaml
 apiVersion: batch/v1
@@ -2069,15 +2121,7 @@ spec:
         checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
     spec:
       
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
+      
       
       serviceAccountName: cz-agent-cloudzero-agent-webhook-server-init-cert
       restartPolicy: Never
@@ -2171,7 +2215,7 @@ metadata:
   namespace: cz-agent
   annotations:
     checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
-    checksum/values: 403b4fbd27dd65e88beb3b4ae230a40bb3e98976ab8ba7cbfff31ad1752f829a
+    checksum/values: 3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
@@ -2253,16 +2297,6 @@ spec:
             secretName: cz-agent-api-key
         - name: aggregator-persistent-storage
           emptyDir: {}
-      
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: webhook-server
-              topologyKey: kubernetes.io/hostname
-            weight: 100
 ---
 # Source: cloudzero-agent/templates/webhook-validating-config.yaml
 apiVersion: admissionregistration.k8s.io/v1
