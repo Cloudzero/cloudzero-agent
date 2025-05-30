@@ -218,7 +218,7 @@ Additional Notes:
 #### Use of ValidatingWebhookConfiguration
 Unless the labels/annotations feature is intentionally disabled, the chart deploys a single `ValidatingWebhookConfiguration`. This is done to record changes as labels/annotations are created, updated, or deleted.
 
-Some important notes about `ValidatingWebhookConfiguration`:
+Some important notes about the `ValidatingWebhookConfiguration`:
 - While the purpose of the `ValidatingWebhookConfiguration` resource is to validate if resources should be allowed be added to the cluster, **the `webhook-server` component that handles the `AdmissionRequest` requests will only ever return `true`**. Because the purpose of the configuration is only to gather information, no `AdmissionRequest` will ever be denied.
 - In the case where the `webhook-server` becomes unresponsive, the API server will ignore the timeout and allow the `AdmissionRequest`. See the [Kubernetes documentation for details](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) on the `failurePolicy: Ignore` setting.
 - Because the `ValidatingWebhookConfiguration` sends a request from the Kubernetes API server to the `webhook-server` Service, **it is advisable to ensure no `NetworkPolicy` resources are restricting this traffic.**
