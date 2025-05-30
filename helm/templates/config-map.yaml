@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config-values
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" .Values.commonMetaLabels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+data:
+  values.yaml: |-
+{{- merge (dict "apiKey" (ternary "***" nil (not (empty .Values.apiKey)))) .Values | toYaml | nindent 4 -}}
