@@ -19,6 +19,7 @@ For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-ch
   - `container-metrics_v1:upload`
   - `insights:read_insights`
 - Each Kubernetes cluster must have a route to the internet and a rule that allows egress from the agent to the CloudZero collector endpoint at https://api.cloudzero.com on port 443
+- Each Kubernetes cluster must allow traffic from the Kubernetes API server to Services in the `cloudzero-agent` namespace.
 
 ### Recommended Knowledge
 
@@ -211,6 +212,14 @@ Additional Notes:
 - To disambiguate labels/annotations between resources, a prefix representing the resource type is prepended to the label key in the [CloudZero Explorer](https://app.cloudzero.com/explorer). For example, a `foo=bar` node label would be presented as `node:foo: bar`. The exception is pod labels which do not have resource prefixes for backward compatibility with previous versions.
 - Annotations are not exported by default; see the `insightsController.annotations.enabled` setting to enable. To disambiguate annotations from labels, an `annotation` prefix is prepended to the annotation key; i.e., an `foo: bar` annotation on a namespace would be represented in the Explorer as `node:annotation:foo: bar`
 - For both labels and annotations, the `patterns` array applies across all resource types; i.e., setting `['^foo']` for `insightsController.labels.patterns` will match label keys that start with `foo` for all resource types set to `true` in `insightsController.labels.resources`.
+
+#### Use of ValidatingWebhookConfiguration
+Unless the labels/annotations feature is intentionally disabled, the chart deploys a single `ValidatingWebhookConfiguration`. This is done to record changes as labels/annotations are created, updated, or deleted.
+
+Some important notes about `ValidatingWebhookConfiguration`:
+- While the purpose of the `ValidatingWebhookConfiguration` resource is to validate if resources can be added to the cluster, the **`webhook-server` that handles the `AdmissionRequest` requests will only ever return `true`**. Because the purpose of the configuration is only to gather information, no `AdmissionRequest` will ever be denied.
+- In the case where the `webhook-server` becomes unresponsive, the API server will ignore the timeout and allow the `AdmissionRequest`. See the [Kubernetes documentation for details](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) on the `failurePolicy: Ignore` setting.
+- Because the `ValidatingWebhookConfiguration` sends a request from the Kubernetes API server to the `webhook-server` Service, **it is advisable to ensure no `NetworkPolicy` resources are restricting this traffic.**
 
 ### Secret Management
 
