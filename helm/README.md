@@ -216,10 +216,11 @@ Additional Notes:
 - For both labels and annotations, the `patterns` array applies across all resource types; i.e., setting `['^foo']` for `insightsController.labels.patterns` will match label keys that start with `foo` for all resource types set to `true` in `insightsController.labels.resources`.
 
 #### Use of ValidatingWebhookConfiguration
-Unless the labels/annotations feature is intentionally disabled, the chart deploys a single `ValidatingWebhookConfiguration`. This is done to record changes as labels/annotations are created, updated, or deleted.
+The chart deploys a single ValidatingWebhookConfiguration in order to capture important information on the state of the cluster, including details about labels/annotations as they are created, updated, or deleted. While this functionality can technically be disabled, this is strongly discouraged and can create issues with data quality and comprehensiveness.
 
+It's important to note that CloudZero has taken great care to ensure that the server does not, and cannot, cause problems for your cluster. Specifically:
 Some important notes about the `ValidatingWebhookConfiguration`:
-- While the purpose of the `ValidatingWebhookConfiguration` resource is to validate if resources should be allowed be added to the cluster, **the `webhook-server` component that handles the `AdmissionRequest` requests will only ever return `true`**. Because the purpose of the configuration is only to gather information, no `AdmissionRequest` will ever be denied.
+- The server component only ever returns true, and no request will ever be denied.
 - In the case where the `webhook-server` becomes unresponsive, the API server will ignore the timeout and allow the `AdmissionRequest`. See the [Kubernetes documentation for details](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) on the `failurePolicy: Ignore` setting.
 - Because the `ValidatingWebhookConfiguration` sends a request from the Kubernetes API server to the `webhook-server` Service, **it is advisable to ensure no `NetworkPolicy` resources are restricting this traffic.**
 
