@@ -4,7 +4,7 @@ metadata:
   name: {{ include "cloudzero-agent.validatorJobName" . }}
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
-    checksum/values: {{ .Values | toYaml | sha256sum }}
+    checksum/values: {{ (.Values.jobConfigID | default (. | toYaml | sha256sum)) | default (.Values | toYaml | sha256sum) }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:
