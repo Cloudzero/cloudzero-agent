@@ -3,8 +3,10 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.validatorJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
-    checksum/values: {{ (.Values.jobConfigID | default (. | toYaml | sha256sum)) | default (.Values | toYaml | sha256sum) }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (deepCopy .Values.defaults.annotations)
+      (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
+    ) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:

@@ -1,6 +1,7 @@
 cloudAccountId: "1234567890"
 clusterName: "my-cluster"
 region: "us-east-1"
-apiKey: "049a3c8b-7259-4ad3-931a-73596c647cf8"
+apiKey: "not-a-real-api-key"
 
-jobConfigID: "3e4c0c56-e932-4c5a-88f7-0dcaa0ff6b12"
+# For testing only, you should never use this property in production.
+jobConfigID: "DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E"

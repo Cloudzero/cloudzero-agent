@@ -19,7 +19,11 @@ spec:
         {{- with .Values.insightsController.server.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.insightsController.server.podAnnotations (dict "checksum/config" (include "cloudzero-agent.insightsController.configuration" . | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge
+          (deepCopy .Values.defaults.annotations)
+          .Values.insightsController.server.podAnnotations
+          (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+        ) | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
