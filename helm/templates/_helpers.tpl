@@ -518,8 +518,20 @@ Map for initBackfillJob values; this allows us to preferably use initBackfillJob
 Name for a job resource
 */}}
 {{- define "cloudzero-agent.jobName" -}}
-{{- printf "%s-%s-%s" .Release .Name (.Values.jobConfigID | default (. | toYaml | sha256sum)) | trunc 61 -}}
+{{- printf "%s-%s-%s" .Release .Name (include "cloudzero-agent.configurationChecksum" .) | trunc 61 -}}
 {{- end }}
+
+{{/*
+Return a hash of the configuration, unless overridden.
+
+Note that jobConfigID *only* exists so we can avoid lots of commit noise when
+regenerating the manifests in tests/helm/template. It should never be set in
+production, as it will break important functionality to automatically reload
+things when a ConfigMap changes.
+*/}}
+{{- define "cloudzero-agent.configurationChecksum" -}}
+{{ .Values.jobConfigID | default (. | toYaml | sha256sum) }}
+{{- end -}}
 
 {{/*
 Name for the backfill job resource
