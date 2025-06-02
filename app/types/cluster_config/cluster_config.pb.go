@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: cluster_config.proto
 
-package config
+package cluster_config
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -31,11 +31,12 @@ type ClusterConfig struct {
 	K8SVersion                string                 `protobuf:"bytes,6,opt,name=k8s_version,json=k8sVersion,proto3" json:"k8s_version,omitempty"`
 	DeploymentName            string                 `protobuf:"bytes,7,opt,name=deployment_name,json=deploymentName,proto3" json:"deployment_name,omitempty"`
 	ChartVersion              string                 `protobuf:"bytes,8,opt,name=chart_version,json=chartVersion,proto3" json:"chart_version,omitempty"`
+	AgentVersion              string                 `protobuf:"bytes,9,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
 	ConfigValuesBase64        string                 `protobuf:"bytes,30,opt,name=config_values_base64,json=configValuesBase64,proto3" json:"config_values_base64,omitempty"`
-	ConfigScrapeBase64        string                 `protobuf:"bytes,31,opt,name=config_scrape_base64,json=configScrapeBase64,proto3" json:"config_scrape_base64,omitempty"`
-	ConfigValidatorBase64     string                 `protobuf:"bytes,32,opt,name=config_validator_base64,json=configValidatorBase64,proto3" json:"config_validator_base64,omitempty"`
-	ConfigWebhookServerBase64 string                 `protobuf:"bytes,33,opt,name=config_webhook_server_base64,json=configWebhookServerBase64,proto3" json:"config_webhook_server_base64,omitempty"`
-	ConfigAggregatorBase64    string                 `protobuf:"bytes,34,opt,name=config_aggregator_base64,json=configAggregatorBase64,proto3" json:"config_aggregator_base64,omitempty"`
+	ConfigValidatorBase64     string                 `protobuf:"bytes,31,opt,name=config_validator_base64,json=configValidatorBase64,proto3" json:"config_validator_base64,omitempty"`
+	ConfigWebhookServerBase64 string                 `protobuf:"bytes,32,opt,name=config_webhook_server_base64,json=configWebhookServerBase64,proto3" json:"config_webhook_server_base64,omitempty"`
+	ConfigAggregatorBase64    string                 `protobuf:"bytes,33,opt,name=config_aggregator_base64,json=configAggregatorBase64,proto3" json:"config_aggregator_base64,omitempty"`
+	Errors                    []string               `protobuf:"bytes,40,rep,name=errors,proto3" json:"errors,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -126,16 +127,16 @@ func (x *ClusterConfig) GetChartVersion() string {
 	return ""
 }
 
-func (x *ClusterConfig) GetConfigValuesBase64() string {
+func (x *ClusterConfig) GetAgentVersion() string {
 	if x != nil {
-		return x.ConfigValuesBase64
+		return x.AgentVersion
 	}
 	return ""
 }
 
-func (x *ClusterConfig) GetConfigScrapeBase64() string {
+func (x *ClusterConfig) GetConfigValuesBase64() string {
 	if x != nil {
-		return x.ConfigScrapeBase64
+		return x.ConfigValuesBase64
 	}
 	return ""
 }
@@ -161,11 +162,18 @@ func (x *ClusterConfig) GetConfigAggregatorBase64() string {
 	return ""
 }
 
+func (x *ClusterConfig) GetErrors() []string {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 var File_cluster_config_proto protoreflect.FileDescriptor
 
 const file_cluster_config_proto_rawDesc = "" +
 	"\n" +
-	"\x14cluster_config.proto\x12\x06status\"\xa9\x04\n" +
+	"\x14cluster_config.proto\x12\x06status\"\xb4\x04\n" +
 	"\rClusterConfig\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x1c\n" +
@@ -176,12 +184,13 @@ const file_cluster_config_proto_rawDesc = "" +
 	"\vk8s_version\x18\x06 \x01(\tR\n" +
 	"k8sVersion\x12'\n" +
 	"\x0fdeployment_name\x18\a \x01(\tR\x0edeploymentName\x12#\n" +
-	"\rchart_version\x18\b \x01(\tR\fchartVersion\x120\n" +
-	"\x14config_values_base64\x18\x1e \x01(\tR\x12configValuesBase64\x120\n" +
-	"\x14config_scrape_base64\x18\x1f \x01(\tR\x12configScrapeBase64\x126\n" +
-	"\x17config_validator_base64\x18  \x01(\tR\x15configValidatorBase64\x12?\n" +
-	"\x1cconfig_webhook_server_base64\x18! \x01(\tR\x19configWebhookServerBase64\x128\n" +
-	"\x18config_aggregator_base64\x18\" \x01(\tR\x16configAggregatorBase64B\vZ\t../configb\x06proto3"
+	"\rchart_version\x18\b \x01(\tR\fchartVersion\x12#\n" +
+	"\ragent_version\x18\t \x01(\tR\fagentVersion\x120\n" +
+	"\x14config_values_base64\x18\x1e \x01(\tR\x12configValuesBase64\x126\n" +
+	"\x17config_validator_base64\x18\x1f \x01(\tR\x15configValidatorBase64\x12?\n" +
+	"\x1cconfig_webhook_server_base64\x18  \x01(\tR\x19configWebhookServerBase64\x128\n" +
+	"\x18config_aggregator_base64\x18! \x01(\tR\x16configAggregatorBase64\x12\x16\n" +
+	"\x06errors\x18( \x03(\tR\x06errorsB\x13Z\x11../cluster_configb\x06proto3"
 
 var (
 	file_cluster_config_proto_rawDescOnce sync.Once

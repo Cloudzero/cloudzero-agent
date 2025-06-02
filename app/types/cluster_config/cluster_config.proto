@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package status;
-option go_package  = "../config";
+option go_package  = "../cluster_config";
 
 message ClusterConfig {
     string account = 1;
@@ -12,10 +12,12 @@ message ClusterConfig {
     string k8s_version = 6;
     string deployment_name = 7;
     string chart_version = 8;
+    string agent_version = 9;
 
     string config_values_base64 = 30;
-    string config_scrape_base64 = 31;
-    string config_validator_base64 = 32;
-    string config_webhook_server_base64 = 33;
-    string config_aggregator_base64 = 34;
+    string config_validator_base64 = 31;
+    string config_webhook_server_base64 = 32;
+    string config_aggregator_base64 = 33;
+
+    repeated string errors = 40;
 }
