@@ -24,19 +24,19 @@ type AbandonAPIPayloadFile struct {
 
 // AbandonFiles sends an abandon request for a list of files with a given
 // reason.
-func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string, reason string) error {
+func (m *MetricShipper) AbandonFiles(ctx context.Context, payload []*AbandonAPIPayloadFile) error {
 	return m.metrics.SpanCtx(ctx, "shipper_AbandonFiles", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id,
 			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Int("numFiles", len(referenceIDs))
+				return ctx.Int("numFiles", len(payload))
 			},
 		)
 		logger.Debug().
-			Interface("fileIDs", referenceIDs).
 			Msg("Abandoning files ...")
 
-		if len(referenceIDs) == 0 {
-			return errors.New("cannot send in an empty slice")
+		// ignore empty requests
+		if len(payload) == 0 {
+			return nil
 		}
 
 		// get the shipper id
@@ -45,17 +45,8 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 			return errors.Join(ErrInvalidShipperID, fmt.Errorf("failed to get the shipper id: %w", err))
 		}
 
-		// create the body
-		body := make([]*AbandonAPIPayloadFile, len(referenceIDs))
-		for i, item := range referenceIDs {
-			body[i] = &AbandonAPIPayloadFile{
-				ReferenceID: item,
-				Reason:      reason,
-			}
-		}
-
 		// serialize the body
-		enc, err := json.Marshal(body)
+		enc, err := json.Marshal(payload)
 		if err != nil {
 			return errors.Join(ErrEncodeBody, fmt.Errorf("failed to encode the body: %w", err))
 		}
@@ -84,7 +75,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, referenceIDs []string,
 
 			// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
 			q := req.URL.Query()
-			q.Add("count", strconv.Itoa(len(referenceIDs)))
+			q.Add("count", strconv.Itoa(len(payload)))
 			q.Add("cluster_name", m.setting.ClusterName)
 			q.Add("cloud_account_id", m.setting.CloudAccountID)
 			q.Add("region", m.setting.Region)

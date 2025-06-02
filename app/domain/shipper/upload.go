@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
@@ -19,11 +20,17 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// UploadFileRequest wraps a file and it's allocated presigned URL
+type UploadFileRequest struct {
+	File         types.File
+	PresignedURL string
+}
+
 // UploadFile uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presignedURL string) error {
+func (m *MetricShipper) UploadFile(ctx context.Context, req *UploadFileRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_UploadFile", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
-			return ctx.Str("fileId", GetRemoteFileID(file))
+			return ctx.Str("fileId", GetRemoteFileID(req.File))
 		})
 		logger.Debug().Msg("Uploading file")
 
@@ -31,25 +38,32 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 		ctx, cancel := context.WithTimeout(ctx, m.setting.Cloudzero.SendTimeout)
 		defer cancel()
 
-		data, err := io.ReadAll(file)
-		if err != nil {
-			return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
-		}
-
-		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", func() (*http.Request, error) {
-			// Create a new HTTP PUT request with the file as the body
-			req, ierr := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
-			if ierr != nil {
-				return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
+		{
+			data, err := io.ReadAll(req.File)
+			if err != nil {
+				return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
 			}
-			return req, nil
-		})
-		if err != nil {
-			return err
+
+			// Send the request
+			resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", func() (*http.Request, error) {
+				// Create a new HTTP PUT request with the file as the body
+				req, ierr := http.NewRequestWithContext(ctx, "PUT", req.PresignedURL, bytes.NewBuffer(data))
+				if ierr != nil {
+					return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
+				}
+				return req, nil
+			})
+			if err != nil {
+				return err
+			}
+			resp.Body.Close()
+
+			// force nil of the memory
+			data = nil
 		}
 
-		defer resp.Body.Close()
+		// force gc to clear this file mem
+		runtime.GC()
 
 		return nil
 	})

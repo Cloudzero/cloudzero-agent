@@ -251,7 +251,7 @@ func createTestFiles(t *testing.T, dir string, n int) []types.File {
 		now := time.Now().UTC()
 
 		// create a file location
-		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%05d.json.br", now.UnixMilli(), i))
+		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%010d.json.br", now.UnixMilli(), i))
 		file, err := os.Create(path)
 		require.NoError(t, err, "failed to create file: %s", err)
 

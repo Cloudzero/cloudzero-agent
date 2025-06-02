@@ -228,9 +228,9 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int, paths ...st
 		// create a file location
 		var filename string
 		if i%2 == 0 {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.CostContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%010d.json.br", disk.CostContentIdentifier, now.UnixMilli(), i)
 		} else {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.ObservabilityContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%010d.json.br", disk.ObservabilityContentIdentifier, now.UnixMilli(), i)
 		}
 
 		// parse the filepath and create the location

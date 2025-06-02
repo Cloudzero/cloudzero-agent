@@ -5,16 +5,12 @@ package smoke
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/tests/utils"
-	"github.com/go-obvious/timestamp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,13 +157,6 @@ func TestSmoke_Shipper_ReplayRequest_OK(t *testing.T) {
 		})
 		require.NoError(t, err, "failed to find log message")
 
-		// ensure that a replay request cycle ran
-		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
-			Container: shipper,
-			Log:       "Successfully handled replay request",
-		})
-		require.NoError(t, err, "a replay cycle did not run")
-
 		// ensure that the minio client has the correct files
 		response := t.QueryMinio()
 		require.NotEmpty(t, response.Objects)
@@ -232,60 +221,6 @@ func TestSmoke_Shipper_ReplayRequest_Invalid_Payload(t *testing.T) {
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
-		settings.Cloudzero.UseHTTP = true
-	}))
-}
-
-// When a replay request error occurs, the shipper should not exit out of the loop
-// The correct behavior is to loop infinitely
-func TestSmoke_Shipper_ReplayRequest_Error(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	runTest(t, func(t *testContext) {
-		// write files to the data directory
-		numMetricFiles := 1
-		filenames := t.WriteTestMetrics(numMetricFiles, 100, "uploaded") // write file to the uploaded directory
-		fmt.Println(filenames)
-
-		// write a replay request to disk
-		location := filepath.Join(t.dataLocation, "replay")
-		filename := fmt.Sprintf("replay-%d.json", timestamp.Milli())
-		payload := map[string]any{
-			"filepath":     filepath.Join(location, filename),
-			"referenceIds": []string{strings.SplitN(filepath.Base(filenames[0]), ".", 2)[0]}, // write a root id
-		}
-		enc, err := json.Marshal(payload)
-		require.NoError(t, err, "failed to encode the replay request")
-
-		err = os.MkdirAll(location, 0o777)
-		require.NoError(t, err, "failed to create the replay request location")
-		err = os.WriteFile(filepath.Join(location, filename), enc, 0o777)
-		require.NoError(t, err, "failed to write the replay request file")
-
-		// start the mock remote write
-		t.errorOnUpload = "true"
-		remotewrite := t.StartMockRemoteWrite()
-		require.NotNil(t, remotewrite, "remotewrite is null")
-
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
-
-		// wait for the log message
-		// with a timeout of 120 seconds and an interval of 30, we should see at least 3 instances of this message
-		// 3 instances of this message means that the shipper loop successfully stays active
-		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
-			Container:  shipper,
-			Log:        "failed to process the replay requests",
-			Timeout:    time.Second * 120,
-			AllowError: true,
-			N:          3,
-		})
-		require.NoError(t, err, "failed to find log message")
-	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 30
 		settings.Cloudzero.UseHTTP = true
 	}))
 }

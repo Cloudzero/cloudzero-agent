@@ -57,8 +57,8 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	require.NoError(t, err)
 
 	// validate the pre-signed urls exist
-	require.Equal(t, len(files), len(urlResponse))
-	for key, val := range urlResponse {
+	require.Equal(t, len(files), len(urlResponse.Allocation))
+	for key, val := range urlResponse.Allocation {
 		require.NotEmpty(t, key)
 		require.NotEmpty(t, val)
 	}
@@ -88,7 +88,10 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 
 	// upload to s3
 	for _, file := range files {
-		err = metricShipper.UploadFile(context.Background(), file, urlResponse[shipper.GetRemoteFileID(file)])
+		err = metricShipper.UploadFile(context.Background(), &shipper.UploadFileRequest{
+			File:         file,
+			PresignedURL: urlResponse.Allocation[shipper.GetRemoteFileID(file)],
+		})
 		require.NoError(t, err)
 	}
 }
@@ -117,7 +120,7 @@ func TestShipper_Integration_ProcessNewFiles(t *testing.T) {
 	createTestFiles(t, tmpDir, 5)
 
 	// process the new files
-	err = metricShipper.ProcessNewFiles(t.Context())
+	err = metricShipper.ProcessFiles(t.Context())
 	require.NoError(t, err, "failed to process new files")
 }
 
@@ -154,6 +157,13 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	}
 
 	// abandon these files
-	err = metricShipper.AbandonFiles(context.Background(), refIDs, "integration-test-abandon")
+	req := make([]*shipper.AbandonAPIPayloadFile, 0)
+	for _, item := range refIDs {
+		req = append(req, &shipper.AbandonAPIPayloadFile{
+			ReferenceID: item,
+			Reason:      "integration-test-abandon",
+		})
+	}
+	err = metricShipper.AbandonFiles(context.Background(), req)
 	require.NoError(t, err)
 }

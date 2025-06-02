@@ -710,12 +710,12 @@ aggregator:
     #
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
-    sendInterval: 1m
+    sendInterval: 10m
     # Max time the aggregator will spend attempting to ship metrics to the remote endpoint.
     #
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
-    sendTimeout: 30s
+    sendTimeout: 120s
     # Interval at which the aggregator will rotate its internal data structures.
     #
     # This is formatted as a Go duration string; see

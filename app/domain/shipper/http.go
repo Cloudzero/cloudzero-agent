@@ -107,8 +107,11 @@ func SendHTTPRequest(
 			logger.Err(err).Int("attempt", attempt+1).Msg("HTTPClient.Do error")
 			if resp != nil {
 				// consume the body
-				if _, ierr := io.Copy(io.Discard, resp.Body); ierr != nil {
-					logger.Warn().Msg("failed to discard the response body")
+				body, ierr := io.ReadAll(resp.Body)
+				if ierr != nil {
+					logger.Warn().Msg("failed to read the response body")
+				} else {
+					logger.Warn().Str("responseBody", string(body)).Msg("Response Body")
 				}
 				resp.Body.Close()
 			}
@@ -163,8 +166,11 @@ func SendHTTPRequest(
 
 		if isRetryableStatus && attempt < HTTPmaxRetries-1 {
 			// consume the body and retry
-			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-				logger.Warn().Msg("failed to discard the response body")
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				logger.Warn().Msg("failed to read the response body")
+			} else {
+				logger.Warn().Str("responseBody", string(body)).Msg("Response body")
 			}
 			resp.Body.Close()
 			lastErr = fmt.Errorf("http status %d on attempt %d", resp.StatusCode, attempt+1)
