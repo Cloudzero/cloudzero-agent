@@ -42,8 +42,19 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	// create a store for log files
+	logStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier("logs"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create the log disk store")
+	}
+
 	logger, err := logging.NewLogger(
 		logging.WithLevel(settings.Logging.Level),
+		logging.WithHook(logging.StoreHook(logStore, &logging.StoreHookOpts{
+			ClusterName:    settings.ClusterName,
+			CloudAccountID: settings.CloudAccountID,
+		})),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create the logger")

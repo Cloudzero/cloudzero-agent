@@ -110,17 +110,12 @@ func (m *MetricShipper) Run() error {
 		select {
 		case <-m.ctx.Done():
 			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
+			m.Flush()
 			return nil
 
 		case sig := <-sigChan:
 			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
-
-			// flush
-			if err := m.ProcessFiles(m.ctx); err != nil {
-				metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-				log.Ctx(m.ctx).Err(err).Msg("Failed to flush the new metric files")
-			}
-
+			m.Flush()
 			err := m.Shutdown()
 			if err != nil {
 				log.Ctx(m.ctx).Err(err).Msg("Failed to shutdown shipper service")
@@ -366,6 +361,15 @@ func (m *MetricShipper) Shutdown() error {
 	m.cancel()
 	metricShutdownTotal.WithLabelValues().Inc()
 	return nil
+}
+
+// Flush will attempt to process all files
+// and push them to the remote
+func (m *MetricShipper) Flush() {
+	if err := m.ProcessFiles(m.ctx); err != nil {
+		metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+		log.Ctx(m.ctx).Err(err).Msg("Failed to flush the new metric files")
+	}
 }
 
 // GetShipperID will return a unique id for this shipper. This id is stored on the filesystem,

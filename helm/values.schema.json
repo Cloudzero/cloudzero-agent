@@ -20636,6 +20636,12 @@
             },
             "sendTimeout": {
               "$ref": "#/$defs/com.cloudzero.agent.duration"
+            },
+            "http_max_retries": {
+              "type": "integer"
+            },
+            "http_max_wait": {
+              "$ref": "#/$defs/com.cloudzero.agent.duration"
             }
           },
           "type": "object"
@@ -20689,6 +20695,9 @@
             }
           },
           "type": "object"
+        },
+        "debug_container": {
+          "type": "boolean"
         },
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",

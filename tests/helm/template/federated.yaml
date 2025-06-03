@@ -750,8 +750,8 @@ data:
       affinity: {}
       cloudzero:
         rotateInterval: 30m
-        sendInterval: 1m
-        sendTimeout: 30s
+        sendInterval: 10m
+        sendTimeout: 120s
       collector:
         port: 8080
         resources:
@@ -773,6 +773,7 @@ data:
           lazy: true
           metricsOlderThan: 2160h
           percent: 20
+      debug_container: false
       image:
         digest: null
         pullPolicy: null
@@ -2353,7 +2354,6 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
-
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
@@ -2679,12 +2679,7 @@ metadata:
   name: cz-agent-validator-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   namespace: cz-agent
   annotations:
-<<<<<<< HEAD
-    checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
-    checksum/values: 57b3778f116e9fba9e4dfed1e751edd3d74c61075d0b9028d4e3d5ebe13e0c5c
-=======
     checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
->>>>>>> develop
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent

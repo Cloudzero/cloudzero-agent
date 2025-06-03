@@ -347,6 +347,8 @@ properties:
         type: string
       profiling:
         type: boolean
+      debug_container:
+        type: boolean
       image:
         deprecated: true
         $ref: "#/$defs/com.cloudzero.agent.image"
@@ -362,6 +364,12 @@ properties:
             $ref: "#/$defs/com.cloudzero.agent.duration"
           # The interval at which to rotate data
           rotateInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          http_max_retries:
+            type: integer
+            minimum: 0
+            maximum: 10
+          http_max_wait:
             $ref: "#/$defs/com.cloudzero.agent.duration"
       database:
         type: object

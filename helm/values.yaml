@@ -708,6 +708,9 @@ aggregator:
   # Whether to enable the profiling endpoint (/debug/pprof/). This should
   # generally be disabled in production.
   profiling: false
+  # Wether to enable rolling a debug container inside the aggregator pod.
+  # This should be disabled in production.
+  debug_container: false
   # Container image configuration for the aggregator components.
   #
   # Deprecated. Please use components.aggregator.image instead.
@@ -732,6 +735,12 @@ aggregator:
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
     rotateInterval: 30m
+    # The number of http retry attempts to use before failing.
+    # This is not a recommended option to change.
+    http_max_retries: 10
+    # The max wait time between http request retry attempts.
+    # This is not a recommended option to change.
+    http_max_wait: 30s
   # Configuration for the aggregator's database and storage behavior.
   database:
     # Max number of records per file. Use this to adjust file sizes uploaded to
