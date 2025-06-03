@@ -282,11 +282,6 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 						File:         file,
 						PresignedURL: purl,
 					})
-				} else {
-					abandonRequests = append(abandonRequests, &AbandonAPIPayloadFile{
-						ReferenceID: GetRemoteFileID(file),
-						Reason:      "failed to find a valid url for this file",
-					})
 				}
 			}
 
@@ -316,10 +311,6 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 							})
 						} else {
 							logger.Err(err).Str("path", path).Msg("failed to create a file from the given path")
-							abandonRequests = append(abandonRequests, &AbandonAPIPayloadFile{
-								ReferenceID: remoteFileID,
-								Reason:      "failed to create a file object from this path",
-							})
 						}
 					}
 				}
@@ -327,6 +318,20 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 				return nil
 			}); err != nil {
 				logger.Err(err).Msg("failed to walk the data directory")
+			}
+
+			// process which files we did not find
+			requestSet := types.NewSet[string]()
+			for _, item := range requests {
+				requestSet.Add(GetRemoteFileID(item.File))
+			}
+			for _, item := range urlResponse.Replay {
+				if !requestSet.Contains(item) {
+					abandonRequests = append(abandonRequests, &AbandonAPIPayloadFile{
+						ReferenceID: item,
+						Reason:      "failed to find this file locally",
+					})
+				}
 			}
 
 			// run all upload requests in parallel
