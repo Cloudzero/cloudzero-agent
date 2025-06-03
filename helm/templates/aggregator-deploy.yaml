@@ -16,7 +16,10 @@ spec:
   replicas: {{ .Values.components.aggregator.replicas }}
   template:
     metadata:
-      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations (dict "checksum/config" (include "cloudzero-agent.aggregator.configuration" . | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge
+          (deepCopy .Values.defaults.annotations)
+          (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+        ) | nindent 6 }}
       {{- include "cloudzero-agent.generateLabels" (dict
           "globals" .
           "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)

@@ -19,7 +19,11 @@ spec:
         {{- with .Values.insightsController.server.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.insightsController.server.podAnnotations (dict "checksum/config" (include "cloudzero-agent.insightsController.configuration" . | sha256sum))) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge
+          (deepCopy .Values.defaults.annotations)
+          .Values.insightsController.server.podAnnotations
+          (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+        ) | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
@@ -29,7 +33,8 @@ spec:
         runAsGroup: 65534
         fsGroup: 65534
       {{ $podAntiAffinity := dict "podAntiAffinity" (dict "preferredDuringSchedulingIgnoredDuringExecution" (list (dict "weight" 100 "podAffinityTerm" (dict "labelSelector" (dict "matchLabels" (dict "app" "webhook-server")) "topologyKey" "kubernetes.io/hostname")))) }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" (merge .Values.insightsController.server.affinity $podAntiAffinity)) | nindent 6 }}
+      {{- $userAffinity := deepCopy .Values.insightsController.server.affinity }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" (merge $userAffinity $podAntiAffinity)) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.insightsController.server.nodeSelector) | nindent 6 }}

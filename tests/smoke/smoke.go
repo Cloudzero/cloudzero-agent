@@ -217,14 +217,15 @@ func (t *testContext) Clean() {
 // writes valid metric files to the shared data path `t.dataLocation`
 func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 	for i := range numFiles {
-		now := time.Now().UTC()
+		startFrom := time.Now().UTC().Add(-time.Second * 10)
+		startThru := time.Now().UTC()
 
 		// create a file location
 		var filename string
 		if i%2 == 0 {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.CostContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%d.json.br", disk.CostContentIdentifier, startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i))
 		} else {
-			filename = fmt.Sprintf("%s_%d_%05d.json.br", disk.ObservabilityContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%d.json.br", disk.ObservabilityContentIdentifier, startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i))
 		}
 		file, err := os.Create(filepath.Join(t.dataLocation, filename))
 		require.NoError(t, err, "failed to create file: %s", err)
@@ -237,9 +238,9 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 				CloudAccountID: t.cfg.CloudAccountID,
 				MetricName:     fmt.Sprintf("test-metric-%d", j),
 				NodeName:       "test-node",
-				CreatedAt:      now,
+				CreatedAt:      startThru,
 				Value:          "I'm a value!",
-				TimeStamp:      now,
+				TimeStamp:      startThru,
 				Labels: map[string]string{
 					"foo": "bar",
 				},
