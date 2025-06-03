@@ -223,14 +223,15 @@ func (t *testContext) Clean() {
 func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int, paths ...string) []string {
 	names := make([]string, 0)
 	for i := range numFiles {
-		now := time.Now().UTC()
+		startFrom := time.Now().UTC().Add(-time.Second * 10)
+		startThru := time.Now().UTC()
 
 		// create a file location
 		var filename string
 		if i%2 == 0 {
-			filename = fmt.Sprintf("%s_%d_%010d.json.br", disk.CostContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%d.json.br", disk.CostContentIdentifier, startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i))
 		} else {
-			filename = fmt.Sprintf("%s_%d_%010d.json.br", disk.ObservabilityContentIdentifier, now.UnixMilli(), i)
+			filename = fmt.Sprintf("%s_%d_%d.json.br", disk.ObservabilityContentIdentifier, startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i))
 		}
 
 		// parse the filepath and create the location
@@ -251,9 +252,9 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int, paths ...st
 				CloudAccountID: t.cfg.CloudAccountID,
 				MetricName:     fmt.Sprintf("test-metric-%d", j),
 				NodeName:       "test-node",
-				CreatedAt:      now,
+				CreatedAt:      startThru,
 				Value:          "I'm a value!",
-				TimeStamp:      now,
+				TimeStamp:      startThru,
 				Labels: map[string]string{
 					"foo": "bar",
 				},

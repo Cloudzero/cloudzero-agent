@@ -518,8 +518,20 @@ Map for initBackfillJob values; this allows us to preferably use initBackfillJob
 Name for a job resource
 */}}
 {{- define "cloudzero-agent.jobName" -}}
-{{- printf "%s-%s-%s" .Release .Name (.Values.jobConfigID | default (. | toYaml | sha256sum)) | trunc 61 -}}
+{{- printf "%s-%s-%s" .Release .Name (include "cloudzero-agent.configurationChecksum" .) | trunc 61 -}}
 {{- end }}
+
+{{/*
+Return a hash of the configuration, unless overridden.
+
+Note that jobConfigID *only* exists so we can avoid lots of commit noise when
+regenerating the manifests in tests/helm/template. It should never be set in
+production, as it will break important functionality to automatically reload
+things when a ConfigMap changes.
+*/}}
+{{- define "cloudzero-agent.configurationChecksum" -}}
+{{ .Values.jobConfigID | default (. | toYaml | sha256sum) }}
+{{- end -}}
 
 {{/*
 Name for the backfill job resource
@@ -720,21 +732,22 @@ Generate a pod disruption budget
 */}}
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
-{{- if (.component.podDisruptionBudget.minAvailable | default .component.podDisruptionBudget.maxUnavailable) }}
+{{- $pdb := merge .component.podDisruptionBudget .root.Values.defaults.podDisruptionBudget -}}
+{{- if ($pdb.minAvailable | default $pdb.maxUnavailable) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
   namespace: {{ .root.Release.Namespace }}
 spec:
-  {{- if .component.podDisruptionBudget.minAvailable }}
-  {{- if le $replicas (int .component.podDisruptionBudget.minAvailable) -}}
-  {{- fail (printf "Insufficient replicas in %s (%d) for pod disruption budget minAvailable (%v)" .name $replicas .component.podDisruptionBudget.minAvailable) -}}
+  {{- if $pdb.minAvailable }}
+  {{- if lt $replicas (int $pdb.minAvailable) -}}
+  {{- fail (printf "Insufficient replicas in %s (%d) for pod disruption budget minAvailable (%v)" .name $replicas $pdb.minAvailable) -}}
   {{- end }}
-  minAvailable: {{ .component.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ $pdb.minAvailable }}
   {{- end }}
-  {{- if .component.podDisruptionBudget.maxUnavailable }}
-  maxUnavailable: {{ .component.podDisruptionBudget.maxUnavailable }}
+  {{- if $pdb.maxUnavailable }}
+  maxUnavailable: {{ $pdb.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:

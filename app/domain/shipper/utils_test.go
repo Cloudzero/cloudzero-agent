@@ -274,11 +274,13 @@ var testMetrics = []types.Metric{
 
 func createTestFiles(t *testing.T, dir string, n int) []types.File {
 	files := make([]types.File, 0)
-	for i := range n {
-		now := time.Now().UTC()
 
+	startFrom := time.Now().UTC().Add(-time.Second * 10)
+	startThru := time.Now().UTC()
+
+	for i := range n {
 		// create a file location
-		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%010d.json.br", now.UnixMilli(), i))
+		path := filepath.Join(dir, fmt.Sprintf("metrics_%d_%d.json.br", startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i)))
 		file, err := os.Create(path)
 		require.NoError(t, err, "failed to create file: %s", err)
 

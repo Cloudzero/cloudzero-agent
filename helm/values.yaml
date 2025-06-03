@@ -128,6 +128,16 @@ defaults:
   # Note that if you set this, you'll likely also want to set
   # kubeStateMetrics.nodeSelector.
   nodeSelector: {}
+  # Pod Disruption Budget to be added to all resources.
+  #
+  # For information about PDBs, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+  #
+  # Note that if you set this, you'll likely also want to set
+  # kubeStateMetrics.podDisruptionBudget.
+  podDisruptionBudget:
+    minAvailable: 1
+    maxUnavailable:
   # If set, this priority class name will be used for all deployments and jobs.
   #
   # Note that, if used, you will need to create the PriorityClass resource
@@ -216,7 +226,8 @@ kubeStateMetrics:
   annotations: {}
   podAnnotations: {}
   nodeSelector: {}
-  podDisruptionBudget: {}
+  podDisruptionBudget:
+    minAvailable: 1
   image:
     registry: registry.k8s.io
     repository: kube-state-metrics/kube-state-metrics
