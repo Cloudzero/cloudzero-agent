@@ -170,6 +170,10 @@ func (tl *TestFileLister) Walk(subDir string, walkFn filepath.WalkFunc) error {
 	})
 }
 
+func (tl *TestFileLister) Find(ctx context.Context, filterName string, filterExtension string) ([]string, error) {
+	return []string{}, nil
+}
+
 func TestShipper_Integration_Disk_PurgeMetricsBefore(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
