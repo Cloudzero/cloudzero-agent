@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,6 +24,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/utils/lock"
 	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -37,7 +37,7 @@ type MetricShipper struct {
 	// Internal fields
 	ctx          context.Context
 	cancel       context.CancelFunc
-	HTTPClient   *http.Client
+	HTTPClient   *retryablehttp.Client
 	shippedFiles uint64 // Counter for shipped files
 	metrics      *instr.PrometheusMetrics
 	shipperID    string // unique id for the shipper
@@ -48,9 +48,7 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, store types.Reada
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
-	httpClient := &http.Client{
-		Timeout: s.Cloudzero.SendTimeout,
-	}
+	httpClient := NewHTTPClient(ctx, s)
 
 	// create the metrics listener
 	metrics, err := InitMetrics()
@@ -285,39 +283,18 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 				}
 			}
 
-			// process replay requests by searching the local file store
-			if err := m.store.Walk("", func(path string, info fs.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				// ignore dirs
-				if info.IsDir() {
-					return nil
-				}
-
-				// only look at metric files
-				if strings.HasSuffix(path, ".json.br") {
-					// simulate the remote file id
-					remoteFileID := GetRootFileID(path) + remoteFileExtension
-
-					// check if a replay item matches this
-					if purl, exists := urlResponse.Replay[remoteFileID]; exists {
-						// create a file
+			// search the file tree for the replay request files
+			for k, v := range urlResponse.Replay {
+				if paths, err := m.store.Find(ctx, GetRootFileID(k), ".json.br"); err != nil {
+					for _, path := range paths {
 						if file, err := disk.NewMetricFile(path); err == nil {
 							requests = append(requests, &UploadFileRequest{
 								File:         file,
-								PresignedURL: purl,
+								PresignedURL: v,
 							})
-						} else {
-							logger.Err(err).Str("path", path).Msg("failed to create a file from the given path")
 						}
 					}
 				}
-
-				return nil
-			}); err != nil {
-				logger.Err(err).Msg("failed to walk the data directory")
 			}
 
 			// process which files we did not find

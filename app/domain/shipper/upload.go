@@ -17,6 +17,7 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 )
 
@@ -44,19 +45,33 @@ func (m *MetricShipper) UploadFile(ctx context.Context, req *UploadFileRequest) 
 				return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
 			}
 
-			// Send the request
-			resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", func() (*http.Request, error) {
-				// Create a new HTTP PUT request with the file as the body
-				req, ierr := http.NewRequestWithContext(ctx, "PUT", req.PresignedURL, bytes.NewBuffer(data))
-				if ierr != nil {
-					return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
-				}
-				return req, nil
-			})
+			// create the request
+			req, ierr := retryablehttp.NewRequestWithContext(ctx, "PUT", req.PresignedURL, bytes.NewBuffer(data))
+			if ierr != nil {
+				return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
+			}
+
+			resp, err := m.HTTPClient.Do(req)
 			if err != nil {
 				return err
 			}
-			resp.Body.Close()
+
+			// check for invalid urls
+			if resp != nil && resp.StatusCode == http.StatusForbidden {
+				// check the message
+				if raw, err := io.ReadAll(resp.Body); err != nil {
+					// search in the xml response
+					if strings.Contains(string(raw), "Request has expired") {
+						resp.Body.Close()
+						return ErrExpiredURL
+					}
+				}
+			}
+
+			// inspect
+			if err := InspectHTTPResponse(ctx, resp); err != nil {
+				return err
+			}
 
 			// force nil of the memory
 			data = nil

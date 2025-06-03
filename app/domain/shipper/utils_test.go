@@ -133,8 +133,10 @@ func getMockSettings(mockURL, dir string) *config.Settings {
 			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
-			Host:        mockURL,
-			SendTimeout: time.Millisecond * 1000,
+			Host:           mockURL,
+			SendTimeout:    time.Millisecond * 1000,
+			HTTPMaxRetries: 2,
+			HTTPMaxWait:    time.Second,
 		},
 		Database: config.Database{
 			StoragePath: dir,

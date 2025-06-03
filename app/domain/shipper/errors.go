@@ -65,6 +65,7 @@ var (
 	ErrHTTPRequestFailed = NewShipperError("err-http-request-failed", "the http request failed")
 	ErrHTTPUnknown       = NewShipperError("err-http-unknown", "there was an unknown issue with the http request")
 	ErrInvalidBody       = NewShipperError("err-invalid-body", "decoding a response/object failed")
+	ErrExpiredURL        = NewShipperError("err-expired-url", "the requested url has expired")
 
 	ErrCreateDirectory = NewShipperError("err-dir-create", "failed to create the requested directory")
 	ErrCreateLock      = NewShipperError("err-lock-create", "failed to create or acquire the lock")

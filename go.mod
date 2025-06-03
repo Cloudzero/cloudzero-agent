@@ -82,6 +82,7 @@ require (
 	github.com/go-obvious/server v0.1.15
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
 	github.com/minio/minio-go/v7 v7.0.92
 	github.com/parquet-go/parquet-go v0.25.0
@@ -169,6 +170,7 @@ require (
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect

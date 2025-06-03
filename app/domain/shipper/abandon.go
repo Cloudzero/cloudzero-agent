@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 )
 
@@ -58,33 +58,37 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, payload []*AbandonAPIP
 		}
 		abandonEndpoint.Path += abandonAPIPath
 
+		// create the request
+		req, err := retryablehttp.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
+		if err != nil {
+			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
+		}
+
+		// Set necessary headers
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", m.setting.GetAPIKey())
+		req.Header.Set(ShipperIDRequestHeader, shipperID)
+		req.Header.Set(AppVersionRequestHeader, build.GetVersion())
+
+		// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
+		q := req.URL.Query()
+		q.Add("count", strconv.Itoa(len(payload)))
+		q.Add("cluster_name", m.setting.ClusterName)
+		q.Add("cloud_account_id", m.setting.CloudAccountID)
+		q.Add("region", m.setting.Region)
+		q.Add("shipper_id", shipperID)
+		req.URL.RawQuery = q.Encode()
+
 		logger.Debug().Msg("Abandoning files")
 
 		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_AbandonFiles_httpRequest", func() (*http.Request, error) {
-			req, ierr := http.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
-			if err != nil {
-				return nil, errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", ierr))
-			}
-
-			// Set necessary headers
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", m.setting.GetAPIKey())
-			req.Header.Set(ShipperIDRequestHeader, shipperID)
-			req.Header.Set(AppVersionRequestHeader, build.GetVersion())
-
-			// Make sure we set the query parameters for count, cloud_account_id, region, cluster_name
-			q := req.URL.Query()
-			q.Add("count", strconv.Itoa(len(payload)))
-			q.Add("cluster_name", m.setting.ClusterName)
-			q.Add("cloud_account_id", m.setting.CloudAccountID)
-			q.Add("region", m.setting.Region)
-			q.Add("shipper_id", shipperID)
-			req.URL.RawQuery = q.Encode()
-
-			return req, nil
-		})
+		resp, err := m.HTTPClient.Do(req)
 		if err != nil {
+			return err
+		}
+
+		// inspect
+		if err := InspectHTTPResponse(ctx, resp); err != nil {
 			return err
 		}
 
