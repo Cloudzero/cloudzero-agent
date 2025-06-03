@@ -332,5 +332,4 @@ func TestDiskStore_Find(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, files, rowLimit) // only files matching the name and extension filter in sub-dir 2
 	require.Equal(t, rowLimit, len(files))
-
 }

@@ -434,7 +434,6 @@ func (d *DiskStore) Find(ctx context.Context, filterName string, filterExtension
 		foundFiles = append(foundFiles, path)
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to find files: %w", err)
 	}

@@ -616,8 +616,8 @@ data:
       available_storage: 
     cloudzero:
       api_key_path: /etc/config/secrets/value
-      send_interval: 1m
-      send_timeout: 30s
+      send_interval: 10m
+      send_timeout: 120s
       rotate_interval: 30m
       host: api.cloudzero.com
 ---
@@ -1964,7 +1964,7 @@ metadata:
   namespace: cz-agent
   annotations:
     checksum/config: 28bf2e5c1e7aeb797e9370f5e86cc970f9cfffbe5d86a6be37c0c08ffbf934ca
-    checksum/values: b4af2bc08ab5a0e471b0cde16dfb74f6829da65d602d81a9f81a95a2f08da8a2
+    checksum/values: 5f17288dcea9da40f8400ab2dca3d32fdb4bbec632c0271b0db4d1b05ff8bf1e
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
