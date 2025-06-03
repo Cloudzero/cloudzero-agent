@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -9,11 +12,14 @@ import (
 	"time"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
-	"github.com/cloudzero/cloudzero-agent/app/functions/cluster_config/loader"
+	"github.com/cloudzero/cloudzero-agent/app/functions/cluster-config/loader"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	FLAG_LOG_LEVEL = "log-level" //nolint:stylecheck // const value
 )
 
 func main() {
@@ -29,14 +35,18 @@ func main() {
 		Copyright:            build.Copyright,
 		Usage:                "a tool for loading and validating cloudzero config files",
 		EnableBashCompletion: true,
-		Before: func(_ *cli.Context) (err error) {
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: FLAG_LOG_LEVEL, Usage: "the log level", Required: false, Value: "debug"},
+		},
+		Before: func(c *cli.Context) (err error) {
 			// setu the logger
-			logger, err := logging.NewLogger()
+			logger, err := logging.NewLogger(logging.WithVersion(c.String(FLAG_LOG_LEVEL)))
 			if err != nil {
 				return fmt.Errorf("failed to create the logger: %w", err)
 			}
-			zerolog.DefaultContextLogger = logger
+
 			ctx = logger.WithContext(ctx)
+
 			return nil
 		},
 	}

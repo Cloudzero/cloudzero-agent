@@ -9,7 +9,7 @@ import (
 )
 
 // Kubernetes pod name the application is running inside
-const ENV_K8S_POD_NAME = "K8S_POD_NAME"
+const ENV_K8S_POD_NAME = "K8S_POD_NAME" //nolint:stylecheck // const value
 
 // GetPodName gets the current kubernetes pod name this app is running in
 //

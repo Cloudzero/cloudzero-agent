@@ -26,10 +26,23 @@ spec:
           env:
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
-            - /app/cloudzero-agent-validator
-            - diagnose
-            - config-load 
-            - -f
+            - /app/cloudzero-cluster-config
+            - load
+            - --account
+            - {{ .Values.cloudAccountId }}
+            - --region
+            - {{ .Values.region }}
+            - --cluster-name
+            - {{ .Values.clusterName }}
+            - --deploy-name
+            - TODO
+            - --chart-version
+            - {{ .Chart.Version }}
+            - --agent-version
+            - {{ .Values.components.agent.image.tag }}
+            - --values-b64
+            - {{ .Values | toYaml | b64enc }}
+            - --config-validator
             - /cloudzero/config/validator/validator.yml
             - --config-webhook
             - {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml
@@ -38,6 +51,7 @@ spec:
           resources:
             {{- toYaml .Values.insightsController.resources | nindent 12 }}
           volumeMounts:
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
             - name: config-validator
@@ -48,12 +62,6 @@ spec:
               mountPath: {{ .Values.aggregator.mountRoot }}/config # config.yaml
             - name: aggregator-persistent-storage
               mountPath: {{ .Values.aggregator.mountRoot }}/data
-          {{- if or .Values.existingSecretName .Values.apiKey }}
-            - name: cloudzero-api-key
-              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
-              subPath: ""
-              readOnly: true
-          {{- end }}
             {{- with .Values.insightsController.volumeMounts }}
               {{- toYaml . | nindent 12 }}
             {{- end }}

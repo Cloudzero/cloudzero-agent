@@ -71,6 +71,7 @@ COPY --from=builder /go/bin/cloudzero-agent-validator /app/cloudzero-agent-valid
 COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
 COPY --from=builder /go/bin/cloudzero-webhook /app/cloudzero-webhook
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
+COPY --from=builder /go/bin/cloudzero-cluster-config /app/cloudzero-cluster-config
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

@@ -9,7 +9,7 @@ import (
 )
 
 // Kubernetes namespace that the application is running inside
-const ENV_K8S_NAMESPACE = "K8S_NAMESPACE"
+const ENV_K8S_NAMESPACE = "K8S_NAMESPACE" //nolint:stylecheck // const value
 
 // GetNamespace gets the current kubernetes namespace if running in a pod.
 //

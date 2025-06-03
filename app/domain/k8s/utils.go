@@ -16,7 +16,7 @@ import (
 )
 
 // Location of a valid kube config
-const ENV_KUBE_CONFIG_LOCATION = "KUBE_CONFIG_LOCATION"
+const ENV_KUBE_CONFIG_LOCATION = "KUBE_CONFIG_LOCATION" //nolint:stylecheck // const value
 
 // GetConfig returns a k8s config based on the environment
 // detecting if we are on the prometheus pod or running

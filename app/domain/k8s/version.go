@@ -5,13 +5,18 @@ package k8s
 
 import (
 	"fmt"
+	"os"
 
 	"k8s.io/client-go/discovery"
 )
 
 // GetVersion returns the current kuberentes version when running inside
-// of a pod.
+// of a pod. This can be overriden by the env variable `K8S_VERSION`
 func GetVersion() (string, error) {
+	if v, exists := os.LookupEnv("K8S_VERSION"); exists {
+		return v, nil
+	}
+
 	cfg, err := GetConfig()
 	if err != nil {
 		return "", fmt.Errorf("failed to get the config: %w", err)

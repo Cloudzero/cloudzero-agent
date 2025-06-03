@@ -52,9 +52,9 @@ Name for the validating webhook
 {{- end}}
 
 {{ define "cloudzero-agent.validatorEnv" -}}
-- name: NAMESPACE
+- name: K8S_NAMESPACE
   value: {{ .Release.Namespace }}
-- name: POD_NAME
+- name: K8S_POD_NAME
   valueFrom:
     fieldRef:
       fieldPath: metadata.name
