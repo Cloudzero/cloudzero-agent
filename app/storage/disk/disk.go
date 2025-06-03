@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -190,19 +191,21 @@ func (d *DiskStore) Flush() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	ctx := context.Background()
 	if d.rowCount == 0 {
-		log.Ctx(context.TODO()).Debug().Msg("no metrics to flush")
+		log.Ctx(ctx).Debug().Msg("no metrics to flush")
 		return nil
 	} else {
-		log.Ctx(context.TODO()).Debug().Int("count", d.rowCount).Msg("flushing metrics")
+		log.Ctx(ctx).Debug().Int("count", d.rowCount).Msg("flushing metrics")
 	}
 
 	if err := d.flushUnlocked(); err != nil {
-		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to flush writer")
+		log.Ctx(ctx).Error().Err(err).Msg("failed to flush writer")
 		return err
 	}
+
 	if err := d.newFileWriter(); err != nil {
-		log.Ctx(context.TODO()).Error().Err(err).Msg("failed to create new file writer")
+		log.Ctx(ctx).Error().Err(err).Msg("failed to create new file writer")
 		return err
 	}
 
@@ -396,6 +399,47 @@ func (d *DiskStore) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, 
 	}
 
 	return usage, nil
+}
+
+// Find searches for files recursively starting from a given directory with optional filename and extension filters.
+func (d *DiskStore) Find(ctx context.Context, filterName string, filterExtension string) ([]string, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// Store the found files
+	var foundFiles []string
+
+	// Walk through the directory recursively
+	err := filepath.Walk(d.dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk path %s: %w", path, err)
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// Apply the filename filter
+		if filterName != "" && !strings.Contains(info.Name(), filterName) {
+			return nil
+		}
+
+		// Apply the file extension filter
+		if filterExtension != "" && !strings.HasSuffix(info.Name(), filterExtension) {
+			return nil
+		}
+
+		// Add the file to the found files list
+		foundFiles = append(foundFiles, path)
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find files: %w", err)
+	}
+
+	return foundFiles, nil
 }
 
 func (d *DiskStore) MaxInterval() time.Duration {
