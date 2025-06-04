@@ -773,15 +773,16 @@ aggregator:
       # the storage required by the collector/shipper architecture on your
       # nodes.
       #
-      # `2160h` is 90 days, and is a reasonable default. This can reasonably be
-      # any value, as the application will force remove files if space is
-      # constrained.
+      # Note that, regardless of this option, if disk pressure is detected,
+      # files will be deleted (oldest first) to free space.
+      #
+      # `168h` is 7 days, and is a reasonable default for most clusters.
       #
       # `0s` is also a valid option and can signify that you do not want to keep
       # uploaded files at all. Though do note that this could possibly result in
       # data loss if there are transient upload failures during the lifecycle of
       # the application.
-      metricsOlderThan: 2160h
+      metricsOlderThan: 168h
       # If set to true (default), then files older than `metricsOlderThan` will
       # not be deleted unless there is detected storage pressure. For example,
       # if there are files older than `metricsOlderThan` but only 30% of storage
