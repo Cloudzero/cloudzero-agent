@@ -3,7 +3,10 @@ kind: Deployment
 metadata:
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (deepCopy .Values.defaults.annotations)
+      .Values.components.aggregator.annotations
+    ) | nindent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "globals" .
       "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
