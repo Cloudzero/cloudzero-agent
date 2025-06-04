@@ -669,7 +669,7 @@ data:
       observability_max_interval: 30m
       compression_level: 8
       purge_rules:
-        metrics_older_than: 2160h
+        metrics_older_than: 168h
         lazy: true
         percent: 20
       available_storage: 
@@ -719,7 +719,7 @@ data:
         observabilityMaxInterval: 30m
         purgeRules:
           lazy: true
-          metricsOlderThan: 2160h
+          metricsOlderThan: 168h
           percent: 20
       image:
         digest: null
