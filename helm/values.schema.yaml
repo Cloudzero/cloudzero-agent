@@ -239,6 +239,10 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          annotations:
+            description: |
+              Annotations to be added to the aggregator deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           podDisruptionBudget:
             description: |
               Pod disruption budget configuration for the aggregator.

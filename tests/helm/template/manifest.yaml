@@ -755,6 +755,7 @@ data:
           maxUnavailable: null
           minAvailable: null
       aggregator:
+        annotations: {}
         podDisruptionBudget:
           maxUnavailable: null
           minAvailable: null
