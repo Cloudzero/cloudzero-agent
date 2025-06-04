@@ -117,6 +117,10 @@ func main() {
 		handlers.NewShipperAPI("/", domain),
 	}
 
+	if settings.Server.Profiling {
+		apis = append(apis, handlers.NewProfilingAPI("/debug/pprof/"))
+	}
+
 	logger.Info().Msg("Starting service")
 	server.New(build.Version()).
 		WithAddress(fmt.Sprintf(":%d", settings.Server.Port)).
