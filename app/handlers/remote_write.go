@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"io"
+	"math/rand"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -83,6 +84,18 @@ func (a *RemoteWriteAPI) PostMetrics(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Err(err).Msg("failed to put metrics")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// If we're using HTTP/1.x, we want to periodically close the connection to
+	// help distribute the load across the various collector replicas.
+	//
+	// Unfortunately this won't work for HTTP/2, but currently all traffic we're
+	// seeing from Prometheus is HTTP/1.1.
+	if r.ProtoMajor == 1 {
+		rf := a.metrics.Settings().Server.ReconnectFrequency
+		if rf > 0 && rand.Intn(rf) == 0 { //nolint:gosec // a weak PRNG is fine here
+			w.Header().Set("Connection", "close")
+		}
 	}
 
 	if stats != nil {

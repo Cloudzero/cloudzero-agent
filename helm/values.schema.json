@@ -20713,6 +20713,11 @@
         "profiling": {
           "type": "boolean"
         },
+        "reconnectFrequency": {
+          "description": "How frequently to close HTTP connections from clients, to help\ndistribute the load across the various collector replicas. 0=never,\notherwise 1/N probability.\n",
+          "minimum": 0,
+          "type": "integer"
+        },
         "shipper": {
           "additionalProperties": false,
           "properties": {
