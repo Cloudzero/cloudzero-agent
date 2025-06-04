@@ -20794,6 +20794,10 @@
           "additionalProperties": false,
           "description": "The CloudZero Aggregator (\"Gator\"). The Aggregator provides a service\nwhich accepts metrics (e.g., from the Agent and the Webhook Server),\naggregates them, caches them, and sends them to CloudZero for\nprocessing.\n",
           "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
+              "description": "Annotations to be added to the aggregator deployment.\n"
+            },
             "podDisruptionBudget": {
               "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget",
               "description": "Pod disruption budget configuration for the aggregator.\n\nSee the Kubernetes documentation for details:\nhttps://kubernetes.io/docs/concepts/workloads/pods/disruptions/\n"

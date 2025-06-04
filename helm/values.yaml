@@ -200,6 +200,7 @@ components:
       minAvailable:
       maxUnavailable:
     tolerations: []
+    annotations: {}
 
   # Settings for the webhook server.
   webhookServer:
