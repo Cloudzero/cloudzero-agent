@@ -77,6 +77,10 @@ type MetricCollector struct {
 	cancelFunc         context.CancelFunc
 }
 
+func (d *MetricCollector) Settings() *config.Settings {
+	return d.settings
+}
+
 // NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
 func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
 	filter, err := NewMetricFilter(&s.Metrics)

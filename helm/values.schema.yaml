@@ -347,6 +347,13 @@ properties:
         type: string
       profiling:
         type: boolean
+      reconnectFrequency:
+        type: integer
+        minimum: 0
+        description: |
+          How frequently to close HTTP connections from clients, to help
+          distribute the load across the various collector replicas. 0=never,
+          otherwise 1/N probability.
       image:
         deprecated: true
         $ref: "#/$defs/com.cloudzero.agent.image"

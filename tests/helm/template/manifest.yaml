@@ -659,6 +659,7 @@ data:
       mode: http
       port: 8080
       profiling: false
+      reconnect_frequency: 16
     logging:
       level: "info"
     database:
@@ -730,6 +731,7 @@ data:
       mountRoot: /cloudzero
       nodeSelector: {}
       profiling: false
+      reconnectFrequency: 16
       shipper:
         port: 8081
         resources:
