@@ -21635,6 +21635,19 @@
           },
           "type": "object"
         },
+        "logging": {
+          "additionalProperties": false,
+          "description": "Logging configuration settings for the Prometheus server.\n",
+          "properties": {
+            "level": {
+              "default": "info",
+              "description": "The log level to use for the server.\n",
+              "enum": ["debug", "info", "warn", "error", null],
+              "type": ["string", "null"]
+            }
+          },
+          "type": "object"
+        },
         "name": {
           "default": "server",
           "description": "Name of the server component.\n",

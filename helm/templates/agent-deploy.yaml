@@ -109,6 +109,7 @@ spec:
             {{- if .Values.server.agentMode }}
             - --enable-feature=agent
             {{- end }}
+            - --log.level={{ .Values.server.logging.level | default "info" }}
           ports:
             - containerPort: 9090
           readinessProbe:
