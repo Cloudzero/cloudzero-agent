@@ -58,6 +58,7 @@ server:
   mode: http
   port: {{ .Values.aggregator.collector.port }}
   profiling: {{ .Values.aggregator.profiling }}
+  reconnect_frequency: {{ .Values.aggregator.reconnectFrequency }}
 logging:
   level: "{{ .Values.aggregator.logging.level }}"
 database:

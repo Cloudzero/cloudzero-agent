@@ -708,6 +708,10 @@ aggregator:
   # Whether to enable the profiling endpoint (/debug/pprof/). This should
   # generally be disabled in production.
   profiling: false
+  # Frequency to close HTTP connections from clients, to help distribute the
+  # load across the various collector replicas. 0=never, otherwise 1/N
+  # probability.
+  reconnectFrequency: 16
   # Container image configuration for the aggregator components.
   #
   # Deprecated. Please use components.aggregator.image instead.
