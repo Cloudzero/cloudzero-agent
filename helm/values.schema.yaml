@@ -1129,6 +1129,23 @@ properties:
           Whether the server is running in agent mode.
         type: boolean
         default: true
+      logging:
+        description: |
+          Logging configuration settings for the Prometheus server.
+        type: object
+        additionalProperties: false
+        properties:
+          level:
+            description: |
+              The log level to use for the server.
+            type: [string, "null"]
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+              - null
+            default: info
       args:
         description: |
           Command-line arguments to pass to the server.
