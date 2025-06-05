@@ -232,7 +232,7 @@ kubeStateMetrics:
   image:
     registry: registry.k8s.io
     repository: kube-state-metrics/kube-state-metrics
-    tag: "v2.10.1"
+    tag: "v2.15.0"
     sha:
     pullPolicy: IfNotPresent
   imagePullSecrets: []
