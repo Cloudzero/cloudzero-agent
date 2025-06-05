@@ -239,6 +239,10 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          annotations:
+            description: |
+              Annotations to be added to the aggregator deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           podDisruptionBudget:
             description: |
               Pod disruption budget configuration for the aggregator.
@@ -350,9 +354,15 @@ properties:
         type: string
       profiling:
         type: boolean
-
       debugContainer:
         type: boolean
+      reconnectFrequency:
+        type: integer
+        minimum: 0
+        description: |
+          How frequently to close HTTP connections from clients, to help
+          distribute the load across the various collector replicas. 0=never,
+          otherwise 1/N probability.
       image:
         deprecated: true
         $ref: "#/$defs/com.cloudzero.agent.image"
@@ -1134,6 +1144,23 @@ properties:
           Whether the server is running in agent mode.
         type: boolean
         default: true
+      logging:
+        description: |
+          Logging configuration settings for the Prometheus server.
+        type: object
+        additionalProperties: false
+        properties:
+          level:
+            description: |
+              The log level to use for the server.
+            type: [string, "null"]
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+              - null
+            default: info
       args:
         description: |
           Command-line arguments to pass to the server.

@@ -712,6 +712,7 @@ data:
       mode: http
       port: 8080
       profiling: false
+      reconnect_frequency: 16
     logging:
       level: "info"
       capture: true
@@ -722,7 +723,7 @@ data:
       observability_max_interval: 30m
       compression_level: 8
       purge_rules:
-        metrics_older_than: 2160h
+        metrics_older_than: 168h
         lazy: true
         percent: 20
       available_storage: 
@@ -776,7 +777,7 @@ data:
         observabilityMaxInterval: 30m
         purgeRules:
           lazy: true
-          metricsOlderThan: 2160h
+          metricsOlderThan: 168h
           percent: 20
       debugContainer: false
       image:
@@ -790,6 +791,7 @@ data:
       mountRoot: /cloudzero
       nodeSelector: {}
       profiling: false
+      reconnectFrequency: 16
       shipper:
         port: 8081
         resources:
@@ -813,6 +815,7 @@ data:
           maxUnavailable: null
           minAvailable: null
       aggregator:
+        annotations: {}
         podDisruptionBudget:
           maxUnavailable: null
           minAvailable: null
@@ -1176,6 +1179,8 @@ data:
         periodSeconds: 15
         successThreshold: 1
         timeoutSeconds: 10
+      logging:
+        level: null
       name: server
       nodeSelector: {}
       persistentVolume:
@@ -2168,6 +2173,7 @@ spec:
             - --web.console.libraries=/etc/prometheus/console_libraries
             - --web.console.templates=/etc/prometheus/consoles
             - --enable-feature=agent
+            - --log.level=info
           ports:
             - containerPort: 9090
           readinessProbe:
