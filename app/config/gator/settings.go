@@ -80,9 +80,10 @@ type PurgeRules struct {
 }
 
 type Server struct {
-	Mode      string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
-	Port      uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
-	Profiling bool   `yaml:"profiling" default:"false" env:"SERVER_PROFILING" env-description:"enable profiling"`
+	Mode               string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
+	Port               uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
+	Profiling          bool   `yaml:"profiling" default:"false" env:"SERVER_PROFILING" env-description:"enable profiling"`
+	ReconnectFrequency int    `yaml:"reconnect_frequency" default:"16" env:"SERVER_RECONNECT_FREQUENCY" env-description:"how frequently to close HTTP connections from clients, to distribute the load. 0=never, otherwise 1/N probability."`
 }
 
 type Cloudzero struct {
