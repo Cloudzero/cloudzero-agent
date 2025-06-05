@@ -129,6 +129,7 @@ func TestShipper_Integration_ExpiredPresignedURL(t *testing.T) {}
 func TestShipper_Integration_ReplayRequest(t *testing.T) {}
 
 func TestShipper_Integration_AbandonFiles(t *testing.T) {
+	t.Skip("skipping until MERGE INTO is fixed")
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}

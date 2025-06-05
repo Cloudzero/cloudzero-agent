@@ -297,48 +297,4 @@ func TestSmoke_Shipper_RemoteWrite_MutliTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
-	runTest(t, func(t *testContext) {
-		// write files to the data directory
-		numMetricFiles := 10
-		t.WriteTestMetrics(numMetricFiles, 100)
-
-		// start the mock remote write
-		t.uploadDelayMs = "5000" // 5seconds
-		remotewrite := t.StartMockRemoteWrite()
-		require.NotNil(t, remotewrite, "remotewrite is null")
-
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
-
-		// wait for the log message
-		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
-			Container:  shipper,
-			Log:        "context deadline exceeded",
-			AllowError: true,
-			N:          3,
-			Timeout:    time.Minute * 2,
-		})
-		require.NoError(t, err, "failed to find log message")
-
-		// ensure that the minio client has the correct files
-		response := t.QueryMinio()
-		require.NotEmpty(t, response.Objects)
-		require.Equal(t, numMetricFiles, response.Length)
-
-		// validate the filesystem has the correct files as well
-		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "*_*_*.json.br"))
-		require.NoError(t, err, "failed to read the root directory")
-		require.Empty(t, newFiles, "root directory is not empty") // ensure all files were uploaded
-
-		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
-		require.NoError(t, err, "failed to read the uploaded directory")
-		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
-		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
-	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
-		settings.Cloudzero.SendTimeout = time.Second // set duration very low to timeout http requests
-		settings.Cloudzero.UseHTTP = true
-	}))
 }

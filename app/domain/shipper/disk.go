@@ -22,9 +22,9 @@ import (
 
 // Linux filesystem type constants
 const (
-	TMPFS_MAGIC = 0x01021994
-	EXT4_MAGIC  = 0xEF53
-	XFS_MAGIC   = 0x58465342
+	TmpfsMagic = 0x01021994
+	Ext4Magic  = 0xEF53
+	XfsMagic   = 0x58465342
 )
 
 // DiskManager handles disk usage monitoring and cleanup
@@ -87,7 +87,7 @@ func (dm *DiskManager) ManageDiskUsage(ctx context.Context, metricCutoff time.Ti
 		}
 
 		pressure := dm.CalculatePressureLevel(usage)
-		logger.Info().
+		logger.Debug().
 			Float64("percentUsed", usage.PercentUsed).
 			Any("pressureLevel", pressure).
 			Msg("Current disk pressure")
@@ -103,7 +103,7 @@ func (dm *DiskManager) ManageDiskUsage(ctx context.Context, metricCutoff time.Ti
 			return fmt.Errorf("cleanup failed: %w", err)
 		}
 
-		logger.Info().
+		logger.Debug().
 			Int("filesRemoved", result.FilesRemoved).
 			Uint64("bytesFreed", result.BytesFreed).
 			Any("pressureBefore", result.PressureBefore).
@@ -181,17 +181,17 @@ func (dm *DiskManager) GetCleanupPercentage(pressure PressureLevel) int {
 	switch pressure {
 	case PressureCritical:
 		if isMemory {
-			return 70 // Very aggressive for memory
+			return 70 //nolint:revive // keep magic number
 		}
-		return 50
+		return 50 //nolint:revive // keep magic number
 	case PressureHigh:
 		if isMemory {
-			return 50 // Aggressive for memory
+			return 50 //nolint:revive // keep magic number
 		}
-		return 25
+		return 25 //nolint:revive // keep magic number
 	default:
 		if isMemory {
-			return 30 // More aggressive even at medium/low pressure
+			return 30 //nolint:revive // keep magic number
 		}
 		return 10
 	}
@@ -227,7 +227,6 @@ func (dm *DiskManager) PurgeFilesBefore(ctx context.Context, before time.Time) (
 
 			return nil
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed to walk directory: %w", err)
 		}
@@ -290,7 +289,6 @@ func (dm *DiskManager) PurgeOldestPercentage(ctx context.Context, percent int) (
 
 			return nil
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed to walk directory: %w", err)
 		}
@@ -353,19 +351,19 @@ func (dm *DiskManager) getThresholds() PressureThresholds {
 	if dm.IsMemoryBacked() {
 		// Memory-backed storage: much more aggressive
 		return PressureThresholds{
-			Critical: 80, // Start critical cleanup at 80%
-			High:     60, // High pressure at 60%
-			Medium:   40, // Medium pressure at 40%
-			Low:      20, // Low pressure at 20%
+			Critical: 80, //nolint:revive // keep magic number
+			High:     60, //nolint:revive // keep magic number
+			Medium:   40, //nolint:revive // keep magic number
+			Low:      20, //nolint:revive // keep magic number
 		}
 	}
 
 	// Disk-backed storage: more conservative
 	return PressureThresholds{
-		Critical: 95,
-		High:     85,
-		Medium:   70,
-		Low:      50,
+		Critical: 95, //nolint:revive // keep magic number
+		High:     85, //nolint:revive // keep magic number
+		Medium:   70, //nolint:revive // keep magic number
+		Low:      50, //nolint:revive // keep magic number
 	}
 }
 
@@ -394,7 +392,7 @@ func (dm *DiskManager) checkFilesystemType() (bool, error) {
 
 	// Check if filesystem type is tmpfs
 	fsType := stat.Type
-	return fsType == TMPFS_MAGIC, nil
+	return fsType == TmpfsMagic, nil
 }
 
 func (dm *DiskManager) checkProcMounts() (bool, error) {

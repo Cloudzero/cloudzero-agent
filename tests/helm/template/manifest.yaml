@@ -661,7 +661,7 @@ data:
       profiling: false
     logging:
       level: "info"
-      capture: "true"
+      capture: true
     database:
       storage_path: /cloudzero/data
       max_records: 1.5e+06

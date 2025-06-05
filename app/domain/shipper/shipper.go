@@ -176,6 +176,10 @@ func (m *MetricShipper) ProcessFiles(ctx context.Context) error {
 			lock.WithMaxRetry(lockMaxRetry), // 15 second wait
 		)
 		if err := l.Acquire(); err != nil {
+			// do not throw an error when failed because of context
+			if errors.Is(err, lock.ErrLockContextCancelled) {
+				return nil
+			}
 			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire the lock file: %w", err))
 		}
 		defer func() {

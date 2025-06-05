@@ -20713,6 +20713,8 @@
               "type": "string"
             },
             "capture": {
+              "default": true,
+              "description": "Whether to persist logs to disk.\n",
               "type": "boolean"
             }
           },

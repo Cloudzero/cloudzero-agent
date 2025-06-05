@@ -5,6 +5,7 @@ package smoke
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,6 +69,7 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		assert.NoError(t, err, "failed to read the root directory")
 		assert.Empty(t, newFiles, "found new files")
 
+		// ensure there are uploaded files
 		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		assert.NoError(t, err, "failed to read the uploaded directory")
 		assert.NotEmpty(t, uploaded, "there were no uploaded files")
@@ -75,7 +77,16 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		// ensure the number of files in the minio client are equal
 		response := t.QueryMinio()
 		assert.NotEmpty(t, response.Objects)
-		assert.Equal(t, len(uploaded), len(response.Objects))
+
+		// number of s3 files that are not logs
+		countUploaded := 0
+		for _, item := range response.Objects {
+			if !strings.HasPrefix(item.Key, "logs") {
+				countUploaded++
+			}
+		}
+
+		assert.Equal(t, len(uploaded), countUploaded)
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true

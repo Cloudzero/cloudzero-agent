@@ -154,7 +154,7 @@ func NewTestHelper(t *testing.T) *TestHelper {
 
 	// Create subdirectories
 	uploadedDir := filepath.Join(tempDir, shipper.UploadedSubDirectory)
-	require.NoError(t, os.MkdirAll(uploadedDir, 0755))
+	require.NoError(t, os.MkdirAll(uploadedDir, 0o755))
 
 	mockStore := NewMockStore(tempDir)
 	metrics, err := shipper.InitMetrics()
@@ -182,7 +182,7 @@ func (th *TestHelper) CreateTestFiles(count int, baseTime time.Time) error {
 
 		// Create file with some content
 		content := fmt.Sprintf(`{"test": "data", "file": %d}`, i)
-		if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath, []byte(content), 0o644); err != nil {
 			return err
 		}
 

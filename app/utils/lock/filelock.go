@@ -22,16 +22,17 @@ const (
 )
 
 var (
-	ErrLockExists          = errors.New("lock already exists")
-	ErrLockStale           = errors.New("stale lock detected")
-	ErrLockLost            = errors.New("lock lost")
-	ErrLockAcquire         = errors.New("failed to acquire lock")
-	ErrLockCorrup          = errors.New("corrupt lock file")
-	ErrMaxRetryExceeded    = errors.New("failed to acquire lock, max retries exceeded")
-	DefaultStaleTimeout    = time.Millisecond * 500
-	DefaultRefreshInterval = time.Millisecond * 200
-	DefaultRetryInterval   = 1 * time.Second
-	DefaultMaxRetry        = 5
+	ErrLockExists           = errors.New("lock already exists")
+	ErrLockStale            = errors.New("stale lock detected")
+	ErrLockLost             = errors.New("lock lost")
+	ErrLockAcquire          = errors.New("failed to acquire lock")
+	ErrLockContextCancelled = errors.New("context was cancelled while obtaining the lock")
+	ErrLockCorrup           = errors.New("corrupt lock file")
+	ErrMaxRetryExceeded     = errors.New("failed to acquire lock, max retries exceeded")
+	DefaultStaleTimeout     = time.Millisecond * 500
+	DefaultRefreshInterval  = time.Millisecond * 200
+	DefaultRetryInterval    = 1 * time.Second
+	DefaultMaxRetry         = 5
 )
 
 type FileLock struct {
@@ -126,7 +127,7 @@ func (fl *FileLock) Acquire() error {
 	for {
 		select {
 		case <-fl.ctx.Done():
-			return fmt.Errorf("%w: context cancelled", ErrLockAcquire)
+			return fmt.Errorf("%w: context cancelled", ErrLockContextCancelled)
 		default:
 			// break if max retry is met
 			if retry > fl.maxRetry {

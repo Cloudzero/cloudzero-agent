@@ -171,9 +171,11 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
-			Host:        apiHost,
-			SendTimeout: time.Second * 30,
-			APIKeyPath:  filePath,
+			Host:           apiHost,
+			SendTimeout:    time.Second * 30,
+			APIKeyPath:     filePath,
+			HTTPMaxRetries: 5,
+			HTTPMaxWait:    time.Second * 30,
 		},
 		Database: config.Database{
 			StoragePath: dir,

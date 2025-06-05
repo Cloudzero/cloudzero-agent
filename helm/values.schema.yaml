@@ -343,11 +343,14 @@ properties:
               - info
               - warn
               - error
+          capture:
+            type: boolean
+            default: true
       mountRoot:
         type: string
       profiling:
         type: boolean
-      
+
       debugContainer:
         type: boolean
       image:
@@ -917,11 +920,6 @@ properties:
                 type: string
                 enum: [debug, info, warn, error]
                 default: "info"
-              capture:
-                description: |
-                  Whether to persist logs to disk.
-                type: boolean
-                default: true
           healthCheck:
             description: |
               Configuration for the health check endpoint.
