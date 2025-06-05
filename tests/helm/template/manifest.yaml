@@ -764,7 +764,7 @@ data:
       kubectl:
         image:
           repository: docker.io/bitnami/kubectl
-          tag: 1.32.0
+          tag: 1.33.1
       prometheus:
         image:
           repository: quay.io/prometheus/prometheus
@@ -2396,7 +2396,7 @@ spec:
       
       containers:
         - name: init-cert
-          image: "docker.io/bitnami/kubectl:1.32.0"
+          image: "docker.io/bitnami/kubectl:1.33.1"
           imagePullPolicy: "IfNotPresent"
           
           command: ["/bin/bash", "-c"]
