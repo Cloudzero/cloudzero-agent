@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package k8s gives a unified interface for k8s information to be retrieved.
 package k8s
 
 import (
@@ -8,8 +9,8 @@ import (
 	"os"
 )
 
-// Kubernetes namespace that the application is running inside
-const ENV_K8S_NAMESPACE = "K8S_NAMESPACE" //nolint:stylecheck // const value
+// EnvK8sNamespace Kubernetes namespace that the application is running inside
+const EnvK8sNamespace = "K8S_NAMESPACE"
 
 // GetNamespace gets the current kubernetes namespace if running in a pod.
 //
@@ -18,12 +19,12 @@ const ENV_K8S_NAMESPACE = "K8S_NAMESPACE" //nolint:stylecheck // const value
 // This will return an error if the environment variable is not set or the
 // value is empty.
 func GetNamespace() (string, error) {
-	ns, exists := os.LookupEnv(ENV_K8S_NAMESPACE)
+	ns, exists := os.LookupEnv(EnvK8sNamespace)
 	if !exists {
-		return "", fmt.Errorf("the env variable `%s` was not set", ENV_K8S_NAMESPACE)
+		return "", fmt.Errorf("the env variable `%s` was not set", EnvK8sNamespace)
 	}
 	if ns == "" {
-		return "", fmt.Errorf("the environment variable `%s` was empty", ENV_K8S_NAMESPACE)
+		return "", fmt.Errorf("the environment variable `%s` was empty", EnvK8sNamespace)
 	}
 
 	return ns, nil

@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: cluster_config.proto
+// source: clusterconfig.proto
 
-package cluster_config
+package clusterconfig
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -43,7 +43,7 @@ type ClusterConfig struct {
 
 func (x *ClusterConfig) Reset() {
 	*x = ClusterConfig{}
-	mi := &file_cluster_config_proto_msgTypes[0]
+	mi := &file_clusterconfig_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -55,7 +55,7 @@ func (x *ClusterConfig) String() string {
 func (*ClusterConfig) ProtoMessage() {}
 
 func (x *ClusterConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_config_proto_msgTypes[0]
+	mi := &file_clusterconfig_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -68,7 +68,7 @@ func (x *ClusterConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterConfig.ProtoReflect.Descriptor instead.
 func (*ClusterConfig) Descriptor() ([]byte, []int) {
-	return file_cluster_config_proto_rawDescGZIP(), []int{0}
+	return file_clusterconfig_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ClusterConfig) GetAccount() string {
@@ -169,11 +169,11 @@ func (x *ClusterConfig) GetErrors() []string {
 	return nil
 }
 
-var File_cluster_config_proto protoreflect.FileDescriptor
+var File_clusterconfig_proto protoreflect.FileDescriptor
 
-const file_cluster_config_proto_rawDesc = "" +
+const file_clusterconfig_proto_rawDesc = "" +
 	"\n" +
-	"\x14cluster_config.proto\x12\x06status\"\xb4\x04\n" +
+	"\x13clusterconfig.proto\x12\x06status\"\xb4\x04\n" +
 	"\rClusterConfig\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x1c\n" +
@@ -190,25 +190,25 @@ const file_cluster_config_proto_rawDesc = "" +
 	"\x17config_validator_base64\x18\x1f \x01(\tR\x15configValidatorBase64\x12?\n" +
 	"\x1cconfig_webhook_server_base64\x18  \x01(\tR\x19configWebhookServerBase64\x128\n" +
 	"\x18config_aggregator_base64\x18! \x01(\tR\x16configAggregatorBase64\x12\x16\n" +
-	"\x06errors\x18( \x03(\tR\x06errorsB\x13Z\x11../cluster_configb\x06proto3"
+	"\x06errors\x18( \x03(\tR\x06errorsB\x12Z\x10../clusterconfigb\x06proto3"
 
 var (
-	file_cluster_config_proto_rawDescOnce sync.Once
-	file_cluster_config_proto_rawDescData []byte
+	file_clusterconfig_proto_rawDescOnce sync.Once
+	file_clusterconfig_proto_rawDescData []byte
 )
 
-func file_cluster_config_proto_rawDescGZIP() []byte {
-	file_cluster_config_proto_rawDescOnce.Do(func() {
-		file_cluster_config_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_cluster_config_proto_rawDesc), len(file_cluster_config_proto_rawDesc)))
+func file_clusterconfig_proto_rawDescGZIP() []byte {
+	file_clusterconfig_proto_rawDescOnce.Do(func() {
+		file_clusterconfig_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_clusterconfig_proto_rawDesc), len(file_clusterconfig_proto_rawDesc)))
 	})
-	return file_cluster_config_proto_rawDescData
+	return file_clusterconfig_proto_rawDescData
 }
 
-var file_cluster_config_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_cluster_config_proto_goTypes = []any{
+var file_clusterconfig_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_clusterconfig_proto_goTypes = []any{
 	(*ClusterConfig)(nil), // 0: status.ClusterConfig
 }
-var file_cluster_config_proto_depIdxs = []int32{
+var file_clusterconfig_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -216,26 +216,26 @@ var file_cluster_config_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_cluster_config_proto_init() }
-func file_cluster_config_proto_init() {
-	if File_cluster_config_proto != nil {
+func init() { file_clusterconfig_proto_init() }
+func file_clusterconfig_proto_init() {
+	if File_clusterconfig_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cluster_config_proto_rawDesc), len(file_cluster_config_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_clusterconfig_proto_rawDesc), len(file_clusterconfig_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_cluster_config_proto_goTypes,
-		DependencyIndexes: file_cluster_config_proto_depIdxs,
-		MessageInfos:      file_cluster_config_proto_msgTypes,
+		GoTypes:           file_clusterconfig_proto_goTypes,
+		DependencyIndexes: file_clusterconfig_proto_depIdxs,
+		MessageInfos:      file_clusterconfig_proto_msgTypes,
 	}.Build()
-	File_cluster_config_proto = out.File
-	file_cluster_config_proto_goTypes = nil
-	file_cluster_config_proto_depIdxs = nil
+	File_clusterconfig_proto = out.File
+	file_clusterconfig_proto_goTypes = nil
+	file_clusterconfig_proto_depIdxs = nil
 }

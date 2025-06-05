@@ -378,6 +378,6 @@ generate: app/types/status/cluster_status.pb.go
 app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/status/cluster_status.proto
 
-generate: app/types/cluster_config/cluster_config.pb.go
-app/types/cluster_config/cluster_config.pb.go: app/types/cluster_config/cluster_config.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/cluster_config/cluster_config.proto
+generate: app/types/clusterconfig/clusterconfig.pb.go
+app/types/clusterconfig/clusterconfig.pb.go: app/types/clusterconfig/clusterconfig.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/clusterconfig/clusterconfig.proto

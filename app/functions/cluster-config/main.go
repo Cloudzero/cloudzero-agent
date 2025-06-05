@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	FLAG_LOG_LEVEL = "log-level" //nolint:stylecheck // const value
+	FlagLogLevel = "log-level"
 )
 
 func main() {
@@ -36,11 +36,11 @@ func main() {
 		Usage:                "a tool for loading and validating cloudzero config files",
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: FLAG_LOG_LEVEL, Usage: "the log level", Required: false, Value: "debug"},
+			&cli.StringFlag{Name: FlagLogLevel, Usage: "the log level", Required: false, Value: "debug"},
 		},
 		Before: func(c *cli.Context) (err error) {
 			// setu the logger
-			logger, err := logging.NewLogger(logging.WithVersion(c.String(FLAG_LOG_LEVEL)))
+			logger, err := logging.NewLogger(logging.WithVersion(c.String(FlagLogLevel)))
 			if err != nil {
 				return fmt.Errorf("failed to create the logger: %w", err)
 			}

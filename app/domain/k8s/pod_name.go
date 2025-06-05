@@ -8,8 +8,8 @@ import (
 	"os"
 )
 
-// Kubernetes pod name the application is running inside
-const ENV_K8S_POD_NAME = "K8S_POD_NAME" //nolint:stylecheck // const value
+// EnvK8sPodName Kubernetes pod name the application is running inside
+const EnvK8sPodName = "K8S_POD_NAME"
 
 // GetPodName gets the current kubernetes pod name this app is running in
 //
@@ -18,12 +18,12 @@ const ENV_K8S_POD_NAME = "K8S_POD_NAME" //nolint:stylecheck // const value
 // This will return an error if the environment variable is not set or the
 // value is empty.
 func GetPodName() (string, error) {
-	podName, exists := os.LookupEnv(ENV_K8S_POD_NAME)
+	podName, exists := os.LookupEnv(EnvK8sPodName)
 	if !exists {
-		return "", fmt.Errorf("the env variable `%s` was not set", ENV_K8S_POD_NAME)
+		return "", fmt.Errorf("the env variable `%s` was not set", EnvK8sPodName)
 	}
 	if podName == "" {
-		return "", fmt.Errorf("the environment variable `%s` was empty", ENV_K8S_POD_NAME)
+		return "", fmt.Errorf("the environment variable `%s` was empty", EnvK8sPodName)
 	}
 
 	return podName, nil

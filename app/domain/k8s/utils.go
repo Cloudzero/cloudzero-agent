@@ -15,8 +15,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// Location of a valid kube config
-const ENV_KUBE_CONFIG_LOCATION = "KUBE_CONFIG_LOCATION" //nolint:stylecheck // const value
+// EnvKubeConfigLocation Location of a valid kube config
+const EnvKubeConfigLocation = "KUBE_CONFIG_LOCATION"
 
 // GetConfig returns a k8s config based on the environment
 // detecting if we are on the prometheus pod or running
@@ -35,7 +35,7 @@ func GetConfig() (*rest.Config, error) {
 	configLoc := filepath.Join(homedir.HomeDir(), ".kube", "config")
 
 	// if an env variable was passed explicitely for the k8s config location, use that
-	if loc, exists := os.LookupEnv(ENV_KUBE_CONFIG_LOCATION); exists {
+	if loc, exists := os.LookupEnv(EnvKubeConfigLocation); exists {
 		configLoc = loc
 	}
 
