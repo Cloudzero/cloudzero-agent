@@ -4,281 +4,433 @@
 package shipper
 
 import (
+	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) error {
-	return m.metrics.SpanCtx(ctx, "shipper_HandleDisk", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id,
-			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Time("metricCutoff", metricCutoff)
-			},
-		)
-		logger.Debug().Msg("Handling the disk usage ...")
+// Linux filesystem type constants
+const (
+	TMPFS_MAGIC = 0x01021994
+	EXT4_MAGIC  = 0xEF53
+	XFS_MAGIC   = 0x58465342
+)
 
-		// get the size limit from the config
-		sizeLimitBytes, err := m.setting.GetAvailableSizeBytes()
-		if err != nil {
-			return fmt.Errorf("failed to get the size_limit from the config: %w", err)
-		}
-
-		// get the disk usage
-		usage, err := m.GetDiskUsage(ctx, sizeLimitBytes)
-		if err != nil {
-			return err
-		}
-
-		// get the storage warning level
-		logger.Debug().Msg("Getting the storage warning")
-		warn := usage.GetStorageWarning()
-
-		// log the storage warning
-		logger.Debug().
-			Uint64("used", usage.Used).
-			Float64("percentUsed", usage.PercentUsed).
-			Uint64("total", usage.Total).
-			Any("warningLevel", warn).
-			Msg("Current storage usage")
-
-		switch warn {
-		case types.StoreWarningNone:
-			fallthrough
-		case types.StoreWarningLow:
-			fallthrough
-		case types.StoreWarningMed:
-			// purge old metrics if not in lazy mode
-			if !m.setting.Database.PurgeRules.Lazy {
-				if err = m.PurgeMetricsBefore(ctx, metricCutoff); err != nil {
-					metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
-					return ErrStorageCleanup
-				}
-			}
-		case types.StoreWarningHigh:
-			if err = m.handleStorageWarningHigh(ctx, metricCutoff); err != nil {
-				// note the error in prom
-				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
-				return ErrStorageCleanup
-			}
-
-			// note the success in prom
-			metricDiskCleanupSuccessTotal.WithLabelValues(strconv.Itoa(int(warn))).Inc()
-
-		case types.StoreWarningCrit:
-			if err = m.handleStorageWarningCritical(ctx); err != nil {
-				// note the error in prom
-				metricDiskCleanupFailureTotal.WithLabelValues(strconv.Itoa(int(warn)), GetErrStatusCode(err)).Inc()
-				return ErrStorageCleanup
-			}
-
-			// note the success in prom
-			metricDiskCleanupSuccessTotal.WithLabelValues(strconv.Itoa(int(warn))).Inc()
-
-		default:
-			return fmt.Errorf("unknown storage warning level: %d", warn)
-		}
-
-		// fetch the usage again
-		usage2, err := m.GetDiskUsage(ctx, sizeLimitBytes)
-		if err != nil {
-			return ErrGetDiskUsage
-		}
-
-		// log how much storage was purged
-		changed := usage.PercentUsed - usage2.PercentUsed
-		if changed != 0 {
-			metricDiskCleanupPercentage.Observe(usage2.PercentUsed)
-		}
-
-		return nil
-	})
+// DiskManager handles disk usage monitoring and cleanup
+type DiskManager struct {
+	Store              types.ReadableStore
+	Metrics            *instr.PrometheusMetrics
+	StoragePath        string
+	AvailableSizeBytes uint64
 }
 
-// GetDiskUsage gets the storage usage of the attached volume, and also reports
-// the usage to prometheus.
-func (m *MetricShipper) GetDiskUsage(ctx context.Context, limit uint64) (*types.StoreUsage, error) {
-	var usage *types.StoreUsage
+// PressureThresholds defines cleanup trigger points
+type PressureThresholds struct {
+	Critical float64
+	High     float64
+	Medium   float64
+	Low      float64
+}
 
-	err := m.metrics.SpanCtx(ctx, "shipper_GetDiskUsage", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id)
-		logger.Debug().Msg("Fetching disk info")
-		var err error
+// PressureLevel defines how aggressive cleanup should be
+type PressureLevel int
 
-		// get the disk usage
-		usage, err = m.store.GetUsage(limit)
-		if err != nil {
-			return ErrGetDiskUsage
-		}
+const (
+	PressureNone PressureLevel = iota
+	PressureLow
+	PressureMedium
+	PressureHigh
+	PressureCritical
+)
 
-		// report all of the metrics
-		metricDiskTotalSizeBytes.WithLabelValues().Set(float64(usage.Total))
-		metricCurrentDiskUsageBytes.WithLabelValues().Set(float64(usage.Used))
-		metricCurrentDiskUsagePercentage.WithLabelValues().Set(usage.PercentUsed)
+// CleanupResult tracks what was cleaned up
+type CleanupResult struct {
+	FilesRemoved   int
+	BytesFreed     uint64
+	PressureBefore PressureLevel
+	PressureAfter  PressureLevel
+}
 
-		// read file counts
-		unsent, err := m.store.GetFiles()
-		if err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the unsent files: %w", err))
-		}
-		sent, err := m.store.GetFiles(UploadedSubDirectory)
-		if err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the uploaded files: %w", err))
-		}
-		rr, err := m.store.GetFiles(ReplaySubDirectory)
-		if err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to get the replay request files: %w", err))
-		}
-
-		// set the file metrics
-		metricCurrentDiskUnsentFile.WithLabelValues().Set(float64(len(unsent)))
-		metricCurrentDiskSentFile.WithLabelValues().Set(float64(len(sent)))
-		metricCurrentDiskReplayRequest.WithLabelValues().Set(float64(len(rr)))
-
-		logger.Debug().Msg("Successfully fetched disk usage")
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
+// HandleDiskPressure is the main entry point for disk management
+func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) error {
+	size, _ := m.setting.GetAvailableSizeBytes()
+	dm := &DiskManager{
+		Store:              m.store,
+		Metrics:            m.metrics,
+		StoragePath:        m.setting.Database.StoragePath,
+		AvailableSizeBytes: size,
 	}
 
-	return usage, nil
+	return dm.ManageDiskUsage(ctx, metricCutoff)
 }
 
-func (m *MetricShipper) handleStorageWarningHigh(ctx context.Context, before time.Time) error {
-	return m.PurgeMetricsBefore(ctx, before)
-}
-
-func (m *MetricShipper) handleStorageWarningCritical(ctx context.Context) error {
-	return m.PurgeOldestNPercentage(ctx, m.setting.Database.PurgeRules.Percent)
-}
-
-// PurgeMetricsBefore deletes all uploaded metric files older than `before`
-func (m *MetricShipper) PurgeMetricsBefore(ctx context.Context, before time.Time) error {
-	return m.metrics.SpanCtx(ctx, "shipper_PurgeMetricsBefore", func(ctx context.Context, id string) error {
+// ManageDiskUsage handles the complete disk management cycle
+func (dm *DiskManager) ManageDiskUsage(ctx context.Context, metricCutoff time.Time) error {
+	return dm.Metrics.SpanCtx(ctx, "shipper_disk_manager_ManageDiskUsage", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id)
-		logger.Debug().Msg("Purging old metrics")
 
-		oldFiles := make([]string, 0)
-		if err := m.store.Walk(UploadedSubDirectory, func(path string, info fs.FileInfo, err error) error {
+		// Get current usage and pressure level
+		usage, err := dm.getCurrentUsage(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get disk usage: %w", err)
+		}
+
+		pressure := dm.CalculatePressureLevel(usage)
+		logger.Info().
+			Float64("percentUsed", usage.PercentUsed).
+			Any("pressureLevel", pressure).
+			Msg("Current disk pressure")
+
+		// No cleanup needed
+		if pressure == PressureNone || pressure == PressureLow {
+			return nil
+		}
+
+		// Execute cleanup strategy based on pressure
+		result, err := dm.executeCleanupStrategy(ctx, pressure, metricCutoff)
+		if err != nil {
+			return fmt.Errorf("cleanup failed: %w", err)
+		}
+
+		logger.Info().
+			Int("filesRemoved", result.FilesRemoved).
+			Uint64("bytesFreed", result.BytesFreed).
+			Any("pressureBefore", result.PressureBefore).
+			Any("pressureAfter", result.PressureAfter).
+			Msg("Cleanup completed")
+
+		return nil
+	})
+}
+
+// executeCleanupStrategy runs cleanup with escalating aggression
+func (dm *DiskManager) executeCleanupStrategy(ctx context.Context, initialPressure PressureLevel, cutoff time.Time) (*CleanupResult, error) {
+	result := &CleanupResult{PressureBefore: initialPressure}
+
+	// Strategy 1: Remove files older than cutoff
+	if initialPressure >= PressureMedium {
+		removed, err := dm.PurgeFilesBefore(ctx, cutoff)
+		if err != nil {
+			return nil, fmt.Errorf("time-based purge failed: %w", err)
+		}
+		result.FilesRemoved += removed
+	}
+
+	// Check if we still have pressure after time-based cleanup
+	usage, err := dm.getCurrentUsage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get usage after cleanup: %w", err)
+	}
+
+	currentPressure := dm.CalculatePressureLevel(usage)
+
+	// Strategy 2: If still under pressure, remove oldest percentage
+	if currentPressure >= PressureHigh {
+		percent := dm.GetCleanupPercentage(currentPressure)
+		removed, err := dm.PurgeOldestPercentage(ctx, percent)
+		if err != nil {
+			return nil, fmt.Errorf("percentage-based purge failed: %w", err)
+		}
+		result.FilesRemoved += removed
+
+		// Final pressure check
+		usage, err = dm.getCurrentUsage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get final usage: %w", err)
+		}
+		currentPressure = dm.CalculatePressureLevel(usage)
+	}
+
+	result.PressureAfter = currentPressure
+	return result, nil
+}
+
+// CalculatePressureLevel determines cleanup aggression needed
+func (dm *DiskManager) CalculatePressureLevel(usage *types.StoreUsage) PressureLevel {
+	thresholds := dm.getThresholds()
+
+	switch {
+	case usage.PercentUsed >= thresholds.Critical:
+		return PressureCritical
+	case usage.PercentUsed >= thresholds.High:
+		return PressureHigh
+	case usage.PercentUsed >= thresholds.Medium:
+		return PressureMedium
+	case usage.PercentUsed >= thresholds.Low:
+		return PressureLow
+	default:
+		return PressureNone
+	}
+}
+
+// GetCleanupPercentage returns how much to clean based on pressure
+func (dm *DiskManager) GetCleanupPercentage(pressure PressureLevel) int {
+	isMemory := dm.IsMemoryBacked()
+
+	switch pressure {
+	case PressureCritical:
+		if isMemory {
+			return 70 // Very aggressive for memory
+		}
+		return 50
+	case PressureHigh:
+		if isMemory {
+			return 50 // Aggressive for memory
+		}
+		return 25
+	default:
+		if isMemory {
+			return 30 // More aggressive even at medium/low pressure
+		}
+		return 10
+	}
+}
+
+// PurgeFilesBefore removes files older than the cutoff time
+func (dm *DiskManager) PurgeFilesBefore(ctx context.Context, before time.Time) (int, error) {
+	var res int
+	err := dm.Metrics.SpanCtx(ctx, "shipper_disk_manager_purgeFilesBefore", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
+
+		var filesToRemove []string
+
+		// Walk the uploaded directory to find old files
+		uploadDir := filepath.Join(dm.StoragePath, UploadedSubDirectory)
+		err := filepath.WalkDir(uploadDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return fmt.Errorf("unknown error walking directory: %w", err)
+				return err
 			}
 
-			// ignore dirs (i.e. not recurrsive)
-			if info.IsDir() {
+			if d.IsDir() {
 				return nil
 			}
 
-			// compare the file
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+
 			if info.ModTime().Before(before) {
-				oldFiles = append(oldFiles, path)
+				filesToRemove = append(filesToRemove, path)
 			}
+
 			return nil
-		}); err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to walk the uploaded filestore: %w", err))
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to walk directory: %w", err)
 		}
 
-		if len(oldFiles) == 0 {
-			logger.Debug().Msg("No files to purge found")
-			return nil
-		}
-
-		// delete all files
-		for _, file := range oldFiles {
+		// Remove files
+		removed := 0
+		for _, file := range filesToRemove {
 			if err := os.Remove(file); err != nil {
-				return errors.Join(ErrFileRemove, fmt.Errorf("failed to delete a file during disk cleanup: file=%s, err=%w", file, err))
+				logger.Warn().Err(err).Str("file", file).Msg("Failed to remove file")
+				continue
 			}
+			removed++
 		}
 
-		logger.Debug().Int("numFiles", len(oldFiles)).Msg("Successfully purged old files")
-
+		logger.Debug().Int("removed", removed).Msg("Time-based cleanup completed")
+		res = removed
 		return nil
 	})
+
+	return res, err
 }
 
-// PurgeOldestNPercentage removes the oldest `percent` of files
-func (m *MetricShipper) PurgeOldestNPercentage(ctx context.Context, percent int) error {
-	return m.metrics.SpanCtx(ctx, "shipper_PurgeOldestNPercentage", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id,
-			func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Int("percentage", percent)
-			},
-		)
-		logger.Debug().Msg("Purging oldest percentage of files")
+// PurgeOldestPercentage removes the oldest percentage of files
+func (dm *DiskManager) PurgeOldestPercentage(ctx context.Context, percent int) (int, error) {
+	if percent < 0 || percent > 100 {
+		return 0, fmt.Errorf("invalid percentage: %d (must be 0-100)", percent)
+	}
 
-		if percent <= 0 || percent > 100 {
-			return fmt.Errorf("invalid percentage: %d (must be between 1-100)", percent)
-		}
+	var res int
+	err := dm.Metrics.SpanCtx(ctx, "shipper_disk_manager_purgeOldestPercentage", func(ctx context.Context, id string) error {
+		logger := instr.SpanLogger(ctx, id)
 
-		entries, err := m.store.ListFiles(UploadedSubDirectory)
-		if err != nil {
-			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the uploaded files: %w", err))
-		}
-
-		type fileData struct {
+		// Collect file info in a memory-efficient way
+		type fileInfo struct {
 			path    string
 			modTime time.Time
 		}
-		files := make([]fileData, 0)
 
-		// parse with path and modified time
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			info, err := entry.Info()
+		var files []fileInfo
+
+		uploadDir := filepath.Join(dm.StoragePath, UploadedSubDirectory)
+		err := filepath.WalkDir(uploadDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				continue
+				return err
 			}
-			files = append(files, fileData{path: filepath.Join(m.setting.Database.StoragePath, UploadedSubDirectory, entry.Name()), modTime: info.ModTime()})
+
+			if d.IsDir() {
+				return nil
+			}
+
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+
+			files = append(files, fileInfo{
+				path:    path,
+				modTime: info.ModTime(),
+			})
+
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to walk directory: %w", err)
 		}
 
 		if len(files) == 0 {
-			logger.Debug().Msg("No files to purge found")
 			return nil
 		}
 
-		// sort by the mod time
+		// Sort by modification time (oldest first)
 		sort.Slice(files, func(i, j int) bool {
 			return files[i].modTime.Before(files[j].modTime)
 		})
 
-		// calculate how many files to remove
-		n := (len(files) * percent) / 100
-		if n == 0 && percent > 0 && len(files) > 0 {
-			n = 1 // remove one file if percentage is positive
+		// Calculate how many files to remove
+		numToRemove := (len(files) * percent) / 100
+		if numToRemove == 0 && percent > 0 {
+			numToRemove = 1 // Always remove at least one file if percentage > 0
 		}
 
-		// create the list of paths to remove
-		toRemove := make([]string, n)
-		for i := range n {
-			toRemove[i] = files[i].path
-		}
-
-		// remove all these files
-		for _, item := range toRemove {
-			if err := os.Remove(item); err != nil {
-				return errors.Join(ErrFileRemove, fmt.Errorf("failed to remove the file during a file purge: file=%s, err=%w", item, err))
+		// Remove the oldest files
+		removed := 0
+		for i := 0; i < numToRemove && i < len(files); i++ {
+			if err := os.Remove(files[i].path); err != nil {
+				logger.Warn().Err(err).Str("file", files[i].path).Msg("Failed to remove file")
+				continue
 			}
+			removed++
 		}
 
 		logger.Debug().
-			Int("numFiles", n).
-			Int("totalFiles", len(files)).
-			Msg("Successfully purged oldest percentage of files")
+			Int("removed", removed).
+			Int("total", len(files)).
+			Int("percent", percent).
+			Msg("Percentage-based cleanup completed")
 
+		res = removed
 		return nil
 	})
+
+	return res, err
+}
+
+// getCurrentUsage gets current disk usage with metrics reporting
+func (dm *DiskManager) getCurrentUsage(_ context.Context) (*types.StoreUsage, error) {
+	usage, err := dm.Store.GetUsage(dm.AvailableSizeBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get disk usage: %w", err)
+	}
+
+	// Report metrics
+	metricDiskTotalSizeBytes.WithLabelValues().Set(float64(usage.Total))
+	metricCurrentDiskUsageBytes.WithLabelValues().Set(float64(usage.Used))
+	metricCurrentDiskUsagePercentage.WithLabelValues().Set(usage.PercentUsed)
+
+	return usage, nil
+}
+
+// getThresholds returns appropriate thresholds based on storage backend
+func (dm *DiskManager) getThresholds() PressureThresholds {
+	if dm.IsMemoryBacked() {
+		// Memory-backed storage: much more aggressive
+		return PressureThresholds{
+			Critical: 80, // Start critical cleanup at 80%
+			High:     60, // High pressure at 60%
+			Medium:   40, // Medium pressure at 40%
+			Low:      20, // Low pressure at 20%
+		}
+	}
+
+	// Disk-backed storage: more conservative
+	return PressureThresholds{
+		Critical: 95,
+		High:     85,
+		Medium:   70,
+		Low:      50,
+	}
+}
+
+// IsMemoryBacked detects if the storage path is backed by memory (tmpfs)
+func (dm *DiskManager) IsMemoryBacked() bool {
+	// Primary method: Check filesystem type via statfs
+	if isMemory, err := dm.checkFilesystemType(); err == nil {
+		return isMemory
+	}
+
+	// Fallback method: Parse /proc/mounts
+	if isMemory, err := dm.checkProcMounts(); err == nil {
+		return isMemory
+	}
+
+	log.Warn().Str("path", dm.StoragePath).Msg("Failed to detect storage backend, assuming disk-backed")
+	return false
+}
+
+// checkFilesystemType uses statfs syscall to determine filesystem type
+func (dm *DiskManager) checkFilesystemType() (bool, error) {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(dm.StoragePath, &stat); err != nil {
+		return false, fmt.Errorf("statfs failed: %w", err)
+	}
+
+	// Check if filesystem type is tmpfs
+	fsType := stat.Type
+	return fsType == TMPFS_MAGIC, nil
+}
+
+func (dm *DiskManager) checkProcMounts() (bool, error) {
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return false, fmt.Errorf("failed to open /proc/mounts: %w", err)
+	}
+	defer file.Close()
+
+	// Get absolute path for comparison
+	absPath, err := filepath.Abs(dm.StoragePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+
+		if len(fields) < 3 {
+			continue
+		}
+
+		mountPoint := fields[1]
+		fsType := fields[2]
+
+		// Check if our path is under this mount point and it's tmpfs
+		if strings.HasPrefix(absPath, mountPoint) && fsType == "tmpfs" {
+			return true, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return false, fmt.Errorf("error reading /proc/mounts: %w", err)
+	}
+
+	return false, nil
 }

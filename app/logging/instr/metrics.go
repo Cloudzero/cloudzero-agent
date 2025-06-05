@@ -119,6 +119,9 @@ func (p *PrometheusMetrics) Handler() http.Handler {
 // Internal only. This registers the metrics WITHOUT BEING SAFE
 // this can cause panics if not used correctly.
 func (p *PrometheusMetrics) register() error {
+	if p.metrics == nil {
+		return nil
+	}
 	for _, item := range *p.metrics {
 		if err := p.registry.Register(item); err != nil {
 			return fmt.Errorf("failed to register a metric: %w", err)
