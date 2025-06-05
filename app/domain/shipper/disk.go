@@ -62,7 +62,7 @@ type CleanupResult struct {
 	PressureAfter  PressureLevel
 }
 
-// HandleDiskPressure is the main entry point for disk management
+// HandleDisk is the main entry point for disk management
 func (m *MetricShipper) HandleDisk(ctx context.Context, metricCutoff time.Time) error {
 	size, _ := m.setting.GetAvailableSizeBytes()
 	dm := &DiskManager{

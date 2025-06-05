@@ -20708,14 +20708,13 @@
         "logging": {
           "additionalProperties": false,
           "properties": {
+            "capture": {
+              "default": true,
+              "type": "boolean"
+            },
             "level": {
               "enum": ["debug", "info", "warn", "error"],
               "type": "string"
-            },
-            "capture": {
-              "default": true,
-              "description": "Whether to persist logs to disk.\n",
-              "type": "boolean"
             }
           },
           "type": "object"
