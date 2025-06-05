@@ -18,7 +18,7 @@ const (
 	shipperWorkerCount  = 3
 	expirationTime      = 3600
 	filePermissions     = 0o755
-	lockMaxRetry        = 60
+	lockMaxRetry        = 3
 	replayFileFormat    = "replay-%d.json"
 	filesChunkSize      = 200
 	remoteFileExtension = ".parquet"

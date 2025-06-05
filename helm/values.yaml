@@ -696,6 +696,8 @@ aggregator:
     # Logging level that will be posted to stdout.
     # Valid values are: 'debug', 'info', 'warn', 'error'
     level: info
+    # Whether to persist logs to disk.
+    capture: true
   # Top-level directory containing CloudZero data. There will be subdirectories
   # for configuration (the mounted ConfigMap) and the API key (typically a
   # mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
@@ -710,7 +712,7 @@ aggregator:
   profiling: false
   # Wether to enable rolling a debug container inside the aggregator pod.
   # This should be disabled in production.
-  debug_container: false
+  debugContainer: false
   # Container image configuration for the aggregator components.
   #
   # Deprecated. Please use components.aggregator.image instead.
@@ -737,10 +739,10 @@ aggregator:
     rotateInterval: 30m
     # The number of http retry attempts to use before failing.
     # This is not a recommended option to change.
-    http_max_retries: 10
+    httpMaxRetries: 10
     # The max wait time between http request retry attempts.
     # This is not a recommended option to change.
-    http_max_wait: 30s
+    httpMaxWait: 30s
   # Configuration for the aggregator's database and storage behavior.
   database:
     # Max number of records per file. Use this to adjust file sizes uploaded to

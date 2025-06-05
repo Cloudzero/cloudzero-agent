@@ -112,7 +112,6 @@ func (m *MetricShipper) Run() error {
 			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
 			m.Flush()
 			return nil
-
 		case sig := <-sigChan:
 			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
 			m.Flush()
@@ -172,9 +171,9 @@ func (m *MetricShipper) ProcessFiles(ctx context.Context) error {
 		logger.Debug().Msg("Aquiring file lock")
 		l := lock.NewFileLock(
 			m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
-			lock.WithStaleTimeout(time.Second*30), // detects stale timeout
+			lock.WithStaleTimeout(time.Minute*5), // detects stale timeout
 			lock.WithRefreshInterval(time.Second*5),
-			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
+			lock.WithMaxRetry(lockMaxRetry), // 15 second wait
 		)
 		if err := l.Acquire(); err != nil {
 			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire the lock file: %w", err))
@@ -188,7 +187,6 @@ func (m *MetricShipper) ProcessFiles(ctx context.Context) error {
 		logger.Debug().Msg("Successfully acquired lock file")
 		logger.Debug().Msg("Fetching the files from the disk store")
 
-		// Process new files in parallel
 		paths, err := m.store.GetFiles()
 		if err != nil {
 			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the new files: %w", err))
@@ -317,11 +315,18 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 						return err
 					}
 
-					// mark the file as uploaded
-					if err := m.MarkFileUploaded(ctx, req.File); err != nil {
-						metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-						logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to mark file as uploaded")
-						return err
+					// if log file, remove it. we do not need to store these after upload
+					if strings.HasPrefix(req.File.UniqueID(), disk.LogsContentIdentifider) {
+						if err := os.Remove(req.File.Location()); err != nil {
+							logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to remove log file")
+						}
+					} else {
+						// mark the file as uploaded
+						if err := m.MarkFileUploaded(ctx, req.File); err != nil {
+							metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+							logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to mark file as uploaded")
+							return err
+						}
 					}
 
 					atomic.AddUint64(&m.shippedFiles, 1)

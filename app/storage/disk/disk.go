@@ -19,7 +19,6 @@ import (
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
-	"github.com/rs/zerolog/log"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -36,6 +35,7 @@ const (
 const (
 	CostContentIdentifier          = "metrics"
 	ObservabilityContentIdentifier = "observability"
+	LogsContentIdentifider         = "logs"
 )
 
 type DiskStoreOpt = func(d *DiskStore) error
@@ -175,11 +175,9 @@ func (d *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
 	// If row count exceeds the limit, flush and create a new active file
 	if d.rowCount >= d.rowLimit {
 		if err := d.flushUnlocked(); err != nil {
-			log.Ctx(ctx).Error().Err(err).Msg("failed to flush writer")
 			return err
 		}
 		if err := d.newFileWriter(); err != nil {
-			log.Ctx(ctx).Error().Err(err).Msg("failed to create new file writer")
 			return err
 		}
 	}
@@ -191,21 +189,15 @@ func (d *DiskStore) Flush() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	ctx := context.Background()
 	if d.rowCount == 0 {
-		log.Ctx(ctx).Debug().Msg("no metrics to flush")
 		return nil
-	} else {
-		log.Ctx(ctx).Debug().Int("count", d.rowCount).Msg("flushing metrics")
 	}
 
 	if err := d.flushUnlocked(); err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("failed to flush writer")
 		return err
 	}
 
 	if err := d.newFileWriter(); err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("failed to create new file writer")
 		return err
 	}
 

@@ -116,7 +116,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		CloudAccountID: "test-account-id",
 		Region:         "us-east-1",
 		ClusterName:    "smoke-test-cluster",
-		Logging:        config.Logging{Level: "debug"},
+		Logging:        config.Logging{Level: "debug", Capture: true},
 		Database: config.Database{
 			StoragePath: dataLocation,
 			PurgeRules: config.PurgeRules{
@@ -130,7 +130,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 			APIKeyPath:   apiKeyFile,
 			Host:         remoteWriteEndpoint,
 			SendTimeout:  time.Second * 30,
-			SendInterval: time.Duration(10) * time.Minute,
+			SendInterval: time.Duration(20) * time.Second,
 		},
 	}
 

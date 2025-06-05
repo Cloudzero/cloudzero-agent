@@ -59,7 +59,8 @@ type Metrics struct {
 }
 
 type Logging struct {
-	Level string `yaml:"level" default:"info" env:"LOG_LEVEL" env-description:"logging level such as debug, info, error"`
+	Level   string `yaml:"level" default:"info" env:"LOG_LEVEL" env-description:"logging level such as debug, info, error"`
+	Capture bool   `yaml:"capture" default:"true" env:"LOG_CAPTURE" env-description:"whether to persist logs to disk or not"`
 }
 
 type Database struct {

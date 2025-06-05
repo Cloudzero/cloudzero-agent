@@ -20628,6 +20628,14 @@
         "cloudzero": {
           "additionalProperties": false,
           "properties": {
+            "httpMaxRetries": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "httpMaxWait": {
+              "$ref": "#/$defs/com.cloudzero.agent.duration"
+            },
             "rotateInterval": {
               "$ref": "#/$defs/com.cloudzero.agent.duration"
             },
@@ -20635,12 +20643,6 @@
               "$ref": "#/$defs/com.cloudzero.agent.duration"
             },
             "sendTimeout": {
-              "$ref": "#/$defs/com.cloudzero.agent.duration"
-            },
-            "http_max_retries": {
-              "type": "integer"
-            },
-            "http_max_wait": {
               "$ref": "#/$defs/com.cloudzero.agent.duration"
             }
           },
@@ -20696,7 +20698,7 @@
           },
           "type": "object"
         },
-        "debug_container": {
+        "debugContainer": {
           "type": "boolean"
         },
         "image": {
@@ -20709,6 +20711,9 @@
             "level": {
               "enum": ["debug", "info", "warn", "error"],
               "type": "string"
+            },
+            "capture": {
+              "type": "boolean"
             }
           },
           "type": "object"

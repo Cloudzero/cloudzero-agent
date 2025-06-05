@@ -94,7 +94,7 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.aggregator.shipper.resources | nindent 12 }}
-        {{- if .Values.aggregator.debug_container }}
+        {{- if .Values.aggregator.debugContainer }}
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-debug
           image: busybox:stable
           command: ["sleep", "infinity"]

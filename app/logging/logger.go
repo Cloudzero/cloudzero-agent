@@ -10,8 +10,6 @@ import (
 	"os"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
-	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
 
@@ -139,43 +137,4 @@ func NewLogger(opts ...LoggerOpt) (*zerolog.Logger, error) {
 	zerolog.DefaultContextLogger = &zlogger
 
 	return &zlogger, nil
-}
-
-type storeHook struct {
-	store types.Store
-
-	clusterName    string
-	cloudAccountID string
-	metricName     string
-	nodeName       string
-}
-
-// StoreHookOpts options for the store sink
-type StoreHookOpts struct {
-	ClusterName    string
-	CloudAccountID string
-}
-
-func (s *storeHook) Run(e *zerolog.Event, level zerolog.Level, message string) {
-	_ = s.store.Put(e.GetCtx(), types.Metric{
-		ID:             uuid.New(),
-		ClusterName:    s.clusterName,
-		CloudAccountID: s.cloudAccountID,
-		MetricName:     "log",
-		Labels: map[string]string{
-			"level": level.String(),
-		},
-		Value: message,
-	})
-}
-
-func StoreHook(
-	store types.Store,
-	opts *StoreHookOpts,
-) zerolog.Hook {
-	return &storeHook{
-		store:          store,
-		clusterName:    opts.ClusterName,
-		cloudAccountID: opts.CloudAccountID,
-	}
 }

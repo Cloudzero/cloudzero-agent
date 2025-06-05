@@ -661,6 +661,7 @@ data:
       profiling: false
     logging:
       level: "info"
+      capture: "true"
     database:
       storage_path: /cloudzero/data
       max_records: 1.5e+06
@@ -678,6 +679,8 @@ data:
       send_timeout: 120s
       rotate_interval: 30m
       host: api.cloudzero.com
+      http_max_retries: 10
+      http_max_wait: 30s
 ---
 # Source: cloudzero-agent/templates/config-map.yaml
 apiVersion: v1
@@ -696,6 +699,8 @@ data:
     aggregator:
       affinity: {}
       cloudzero:
+        httpMaxRetries: 10
+        httpMaxWait: 30s
         rotateInterval: 30m
         sendInterval: 10m
         sendTimeout: 120s
@@ -720,13 +725,14 @@ data:
           lazy: true
           metricsOlderThan: 2160h
           percent: 20
-      debug_container: false
+      debugContainer: false
       image:
         digest: null
         pullPolicy: null
         repository: null
         tag: null
       logging:
+        capture: true
         level: info
       mountRoot: /cloudzero
       nodeSelector: {}

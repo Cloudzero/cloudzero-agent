@@ -99,10 +99,7 @@ func (m *MetricShipper) MarkFileUploaded(ctx context.Context, file types.File) e
 
 		// if the filepath already contains the uploaded location,
 		// then ignore this entry
-		location, err := file.Location()
-		if err != nil {
-			return fmt.Errorf("failed to get the file location: %w", err)
-		}
+		location := file.Location()
 		if strings.Contains(location, UploadedSubDirectory) {
 			return nil
 		}

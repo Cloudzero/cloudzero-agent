@@ -61,8 +61,8 @@ func (f *MetricFile) UniqueID() string {
 	return base
 }
 
-func (f *MetricFile) Location() (string, error) {
-	return f.location, nil
+func (f *MetricFile) Location() string {
+	return f.location
 }
 
 func (f *MetricFile) Rename(new string) error {

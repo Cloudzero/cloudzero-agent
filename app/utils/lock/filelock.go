@@ -28,7 +28,7 @@ var (
 	ErrLockAcquire         = errors.New("failed to acquire lock")
 	ErrLockCorrup          = errors.New("corrupt lock file")
 	ErrMaxRetryExceeded    = errors.New("failed to acquire lock, max retries exceeded")
-	DefautlStaleTimeout    = time.Millisecond * 500
+	DefaultStaleTimeout    = time.Millisecond * 500
 	DefaultRefreshInterval = time.Millisecond * 200
 	DefaultRetryInterval   = 1 * time.Second
 	DefaultMaxRetry        = 5
@@ -93,7 +93,7 @@ func NewFileLock(ctx context.Context, filepath string, opts ...FileLockOption) *
 	// create with defaults
 	fl := &FileLock{
 		filepath:        filepath,
-		staleTimeout:    DefautlStaleTimeout,
+		staleTimeout:    DefaultStaleTimeout,
 		refreshInterval: DefaultRefreshInterval,
 		retryInterval:   DefaultRetryInterval,
 		maxRetry:        DefaultMaxRetry,

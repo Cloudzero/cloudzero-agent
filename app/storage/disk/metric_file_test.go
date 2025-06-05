@@ -40,8 +40,7 @@ func TestUnit_Storage_Disk_MetricFile_ReadAll(t *testing.T) {
 	require.NotEmpty(t, file.UniqueID(), "failed to get the unique id")
 
 	// get the location
-	_, err = file.Location()
-	require.NoError(t, err, "failed to get the location")
+	_ = file.Location()
 
 	// get the filesize
 	s, err := file.Size()

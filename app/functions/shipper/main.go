@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -43,33 +42,33 @@ func main() {
 
 	ctx := context.Background()
 
-	// create a store for log files
-	logStore, err := disk.NewDiskStore(settings.Database, disk.WithContentIdentifier("logs"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create the log disk store")
+	// create logging opts
+	loggingOpts := make([]logging.LoggerOpt, 0)
+	loggingOpts = append(loggingOpts,
+		logging.WithLevel(settings.Logging.Level),
+		logging.WithSink(logging.NewFieldFilterWriter(os.Stdout, []string{"spanId", "parentSpanId"})),
+	)
+
+	// if log capture is set, then create a new sink
+	if settings.Logging.Capture {
+		logStore, ierr := disk.NewDiskStore(
+			settings.Database,
+			disk.WithContentIdentifier(disk.LogsContentIdentifider),
+			disk.WithMaxInterval(settings.Database.ObservabilityMaxInterval), // use same interval as observability
+		)
+		if ierr != nil {
+			log.Fatal().Err(ierr).Msg("failed to create the log disk store")
+		}
+
+		loggingOpts = append(loggingOpts, logging.WithSink(logging.StoreWriter(ctx, logStore, settings.ClusterName, settings.CloudAccountID)))
 	}
 
-	logger, err := logging.NewLogger(
-		logging.WithLevel(settings.Logging.Level),
-		logging.WithHook(logging.StoreHook(logStore, &logging.StoreHookOpts{
-			ClusterName:    settings.ClusterName,
-			CloudAccountID: settings.CloudAccountID,
-		})),
-	)
+	logger, err := logging.NewLogger(loggingOpts...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create the logger")
 	}
 	zerolog.DefaultContextLogger = logger
 	ctx = logger.WithContext(ctx)
-
-	// print settings on debug
-	if logger.GetLevel() <= zerolog.DebugLevel {
-		enc, err := json.MarshalIndent(settings, "", "  ") //nolint:govet // I actively and vehemently disagree with `shadowing` of `err` in golang
-		if err != nil {
-			logger.Fatal().Err(err).Msg("failed to encode the config")
-		}
-		fmt.Println(string(enc))
-	}
 
 	store, err := disk.NewDiskStore(settings.Database)
 	if err != nil {

@@ -347,7 +347,8 @@ properties:
         type: string
       profiling:
         type: boolean
-      debug_container:
+      
+      debugContainer:
         type: boolean
       image:
         deprecated: true
@@ -365,11 +366,11 @@ properties:
           # The interval at which to rotate data
           rotateInterval:
             $ref: "#/$defs/com.cloudzero.agent.duration"
-          http_max_retries:
+          httpMaxRetries:
             type: integer
             minimum: 0
             maximum: 10
-          http_max_wait:
+          httpMaxWait:
             $ref: "#/$defs/com.cloudzero.agent.duration"
       database:
         type: object
@@ -916,6 +917,11 @@ properties:
                 type: string
                 enum: [debug, info, warn, error]
                 default: "info"
+              capture:
+                description: |
+                  Whether to persist logs to disk.
+                type: boolean
+                default: true
           healthCheck:
             description: |
               Configuration for the health check endpoint.
