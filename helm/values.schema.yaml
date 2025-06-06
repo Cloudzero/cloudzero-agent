@@ -457,6 +457,11 @@ properties:
         description: |
           Global scrape interval for all jobs.
         $ref: "#/$defs/com.cloudzero.agent.duration"
+      outOfOrderTimeWindow:
+        description: |
+          Out of order time window for cadvisor scrape job.
+        type: [string, "null"]
+        pattern: "^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$"
       scrapeJobs:
         description: |
           Scrape job configurations.
@@ -494,6 +499,7 @@ properties:
                 description: |
                   Scrape interval for nodesCadvisor job.
                 $ref: "#/$defs/com.cloudzero.agent.duration"
+
           prometheus:
             description: |
               prometheus scrape job configuration.
