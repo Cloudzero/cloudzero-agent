@@ -172,7 +172,7 @@ func TestShipper_Unit_AllocatePresignedURL_Success(t *testing.T) {
 
 	// Execute
 	require.NoError(t, err)
-	urlResponse, err := metricShipper.AllocatePresignedURLs(testFiles)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), testFiles)
 	require.NoError(t, err)
 
 	// Verify
@@ -212,7 +212,7 @@ func TestShipper_Unit_AllocatePresignedURL_ReplayRequestHeader(t *testing.T) {
 
 	// Execute
 	require.NoError(t, err)
-	urlResponse, err := metricShipper.AllocatePresignedURLs(testFiles)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), testFiles)
 	require.NoError(t, err)
 
 	// Verify
@@ -239,7 +239,7 @@ func TestShipper_Unit_AllocatePresignedURL_NoFiles(t *testing.T) {
 	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	_, err = metricShipper.AllocatePresignedURLs([]types.File{})
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), []types.File{})
 	require.NoError(t, err)
 }
 
@@ -265,7 +265,7 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -297,7 +297,7 @@ func TestShiper_Unit_AllocatePresignedURL_Unauthorized(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -327,7 +327,7 @@ func TestShipper_Unit_AllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	_, err = metricShipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify. Recieving no urls should not give an error
 	assert.NoError(t, err)
@@ -347,7 +347,7 @@ func TestShipper_Unit_AllocatePresignedURL_RequestCreationError(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -374,7 +374,7 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPClientError(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)

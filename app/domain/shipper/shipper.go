@@ -106,21 +106,20 @@ func (m *MetricShipper) Run() error {
 		metricShipperRunFailTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 	}
 
+	// TODO -- sleep between random value between 0 and m.setting.Cloudzero.SendInterval (for multi-shipper-coordination)
+
 	for {
 		select {
 		case <-m.ctx.Done():
-			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
-			m.Flush()
+			// create a new ctx to shut the application down with
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			log.Ctx(ctx).Info().Msg("Shipper service stopping")
+			m.Flush(ctx)
 			return nil
 		case sig := <-sigChan:
 			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
-			m.Flush()
-			err := m.Shutdown()
-			if err != nil {
-				log.Ctx(m.ctx).Err(err).Msg("Failed to shutdown shipper service")
-			}
-			return nil
-
+			return m.Shutdown()
 		case <-ticker.C:
 			if err := m.runShipper(m.ctx); err != nil {
 				log.Ctx(m.ctx).Err(err).Msg("Failed to run shipper")
@@ -170,7 +169,7 @@ func (m *MetricShipper) ProcessFiles(ctx context.Context) error {
 		// lock the base dir for the duration of the new file handling
 		logger.Debug().Msg("Aquiring file lock")
 		l := lock.NewFileLock(
-			m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
+			ctx, filepath.Join(m.GetBaseDir(), ".lock"),
 			lock.WithStaleTimeout(time.Minute*5), // detects stale timeout
 			lock.WithRefreshInterval(time.Second*5),
 			lock.WithMaxRetry(lockMaxRetry), // 15 second wait
@@ -252,7 +251,7 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			defer pm.Close()
 
 			// Assign pre-signed urls to each of the file references
-			urlResponse, err := m.AllocatePresignedURLs(chunk)
+			urlResponse, err := m.AllocatePresignedURLs(ctx, chunk)
 			if err != nil {
 				metricPresignedURLErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 				return fmt.Errorf("failed to allocate presigned URLs: %w", err)
@@ -374,10 +373,10 @@ func (m *MetricShipper) Shutdown() error {
 
 // Flush will attempt to process all files
 // and push them to the remote
-func (m *MetricShipper) Flush() {
-	if err := m.ProcessFiles(m.ctx); err != nil {
+func (m *MetricShipper) Flush(ctx context.Context) {
+	if err := m.ProcessFiles(ctx); err != nil {
 		metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-		log.Ctx(m.ctx).Err(err).Msg("Failed to flush the new metric files")
+		log.Ctx(ctx).Err(err).Msg("Failed to flush the new metric files")
 	}
 }
 

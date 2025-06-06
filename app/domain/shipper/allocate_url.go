@@ -45,14 +45,14 @@ type replayRequestHeaderValue struct {
 
 // AllocatePresignedURLs allocates a set of pre-signed urls for the passed file
 // objects.
-func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (*AllocatePresignedURLsResponse, error) {
+func (m *MetricShipper) AllocatePresignedURLs(ctx context.Context, files []types.File) (*AllocatePresignedURLsResponse, error) {
 	// create the root request object
 	response := &AllocatePresignedURLsResponse{
 		Allocation: make(PresignedURLPayload),
 		Replay:     make(PresignedURLPayload),
 	}
 
-	err := m.metrics.SpanCtx(m.ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
+	err := m.metrics.SpanCtx(ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
 			return ctx.Int("numFiles", len(files))
 		})
@@ -137,7 +137,7 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (*AllocatePres
 		// check for a replay request
 		rrh := resp.Header.Get(ReplayRequestHeader)
 		if rrh != "" {
-			log.Ctx(m.ctx).Debug().Msg("Recieved replay request")
+			log.Ctx(ctx).Debug().Msg("Recieved replay request")
 
 			var rr []replayRequestHeaderValue
 			if err := json.Unmarshal([]byte(rrh), &rr); err == nil {

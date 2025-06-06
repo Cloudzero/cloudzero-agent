@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
@@ -76,9 +75,6 @@ func (m *MetricShipper) UploadFile(ctx context.Context, req *UploadFileRequest) 
 			// force nil of the memory
 			data = nil
 		}
-
-		// force gc to clear this file mem
-		runtime.GC()
 
 		return nil
 	})

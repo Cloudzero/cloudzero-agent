@@ -59,7 +59,7 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, payload []*AbandonAPIP
 		abandonEndpoint.Path += abandonAPIPath
 
 		// create the request
-		req, err := retryablehttp.NewRequestWithContext(m.ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
+		req, err := retryablehttp.NewRequestWithContext(ctx, "POST", abandonEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
 			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
 		}

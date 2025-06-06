@@ -29,7 +29,7 @@ func TestShipper_Integration_InvalidApiKey(t *testing.T) {
 	// create test files
 	files := createTestFiles(t, tmpDir, 5)
 
-	_, err = metricShipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), files)
 	require.Error(t, err)
 	require.Equal(t, shipper.ErrUnauthorized.Code(), shipper.GetErrStatusCode(err))
 }
@@ -53,7 +53,7 @@ func TestShipper_Integration_AllocatePresignedURL(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	urlResponse, err := metricShipper.AllocatePresignedURLs(files)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 	require.NoError(t, err)
 
 	// validate the pre-signed urls exist
@@ -83,7 +83,7 @@ func TestShipper_Integration_UploadToS3(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 2)
 
 	// get the presigned URLs
-	urlResponse, err := metricShipper.AllocatePresignedURLs(files)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 	require.NoError(t, err)
 
 	// upload to s3
@@ -148,7 +148,7 @@ func TestShipper_Integration_AbandonFiles(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 5)
 
 	// get the presigned URLs
-	_, err = metricShipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), files)
 	require.NoError(t, err)
 
 	// get the ref ids

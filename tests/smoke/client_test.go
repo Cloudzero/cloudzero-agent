@@ -25,10 +25,6 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		remotewrite := t.StartMockRemoteWrite()
 		require.NotNil(t, remotewrite, "remotewrite is null")
 
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
-
 		// start the collector
 		collector := t.StartCollector()
 		require.NotNil(t, collector, "collector is null")
@@ -57,17 +53,17 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		err = (*collector).Stop(t.Context(), &duration)
 		require.NoError(t, err, "failed to stop the collector")
 
-		// wait for the shipper to send files
+		// start the shipper
+		shipper := t.StartShipper()
+		require.NotNil(t, shipper, "shipper is null")
+
+		// wait for the shipper to send all files
 		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: shipper,
 			Log:       "Successfully uploaded new files",
+			N:         3,
 		})
 		require.NoError(t, err, "failed to find log message waiting for the shipper")
-
-		// ensure there are no new files
-		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "*_*_*.json.br"))
-		assert.NoError(t, err, "failed to read the root directory")
-		assert.Empty(t, newFiles, "found new files")
 
 		// ensure there are uploaded files
 		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))

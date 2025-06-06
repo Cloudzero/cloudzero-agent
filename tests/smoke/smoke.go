@@ -118,7 +118,9 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		ClusterName:    "smoke-test-cluster",
 		Logging:        config.Logging{Level: "debug", Capture: true},
 		Database: config.Database{
-			StoragePath: dataLocation,
+			StoragePath:              dataLocation,
+			CostMaxInterval:          time.Minute,
+			ObservabilityMaxInterval: time.Minute,
 			PurgeRules: config.PurgeRules{
 				MetricsOlderThan: time.Hour * 24 * 90,
 				Lazy:             true,
@@ -130,7 +132,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 			APIKeyPath:   apiKeyFile,
 			Host:         remoteWriteEndpoint,
 			SendTimeout:  time.Second * 30,
-			SendInterval: time.Duration(20) * time.Second,
+			SendInterval: time.Second * 20,
 		},
 	}
 
