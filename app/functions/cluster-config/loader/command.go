@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	net "net/http"
 	"os"
 
@@ -41,6 +42,7 @@ const (
 
 	ConfigPayloadHeaderKey   = "X-Cloudzero-Config-Status"
 	ConfigPayloadHeaderValue = "configLoad"
+	ConfigPayloadURLParam    = "type"
 	URLPath                  = "/v1/container-metrics/status"
 )
 
@@ -175,7 +177,7 @@ func run(c *cli.Context) error {
 	}
 
 	// ship to the remote
-	if err := post(c.Context, settingsValidator, &cfg); err != nil {
+	if err := post(c.Context, settingsAggregator, &cfg); err != nil {
 		log.Ctx(c.Context).Err(err).Msg("failed to ship the config to the remote")
 	}
 
@@ -186,7 +188,7 @@ func run(c *cli.Context) error {
 // post TODO -- refactor this into a shared interface with other similar code
 func post(
 	ctx context.Context,
-	cfg *cfg_validator.Settings,
+	cfg *cfg_gator.Settings,
 	cc *clusterconfig.ClusterConfig,
 ) error {
 	if ctx == nil {
@@ -201,13 +203,8 @@ func post(
 		return errors.New("missing cloudzero host")
 	}
 
-	if cfg.Cloudzero.Credential == "" {
+	if cfg.GetAPIKey() == "" {
 		return errors.New("missing cloudzero api key")
-	}
-
-	// quietly exit
-	if cfg.Cloudzero.DisableTelemetry {
-		return nil
 	}
 
 	// create an http client
@@ -231,21 +228,46 @@ func post(
 
 	log.Info().Int("len", buf.Len()).Msg("compressed size")
 
-	endpoint := fmt.Sprintf("%s%s?configStatus=%s", cfg.Cloudzero.Host, URLPath, ConfigPayloadHeaderValue)
-	_, err = http.Do(ctx, client.StandardClient(), net.MethodPost,
-		map[string]string{
-			http.HeaderAuthorization: "Bearer " + cfg.Cloudzero.Credential,
-			http.HeaderContentType:   http.ContentTypeProtobuf,
-			ConfigPayloadHeaderKey:   ConfigPayloadHeaderValue,
-		},
-		map[string]string{
-			http.QueryParamAccountID:   cfg.Deployment.AccountID,
-			http.QueryParamRegion:      cfg.Deployment.Region,
-			http.QueryParamClusterName: cfg.Deployment.ClusterName,
-		},
-		endpoint,
-		&buf,
-	)
+	// compose the endpoint
+	endpoint, err := cfg.GetRemoteAPIBase()
+	if err != nil {
+		return fmt.Errorf("failed to get the remote base: %w", err)
+	}
+	endpoint.Path = URLPath
 
-	return err
+	// create the request
+	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", endpoint.String(), &buf)
+	if err != nil {
+		return fmt.Errorf("failed to create the request: %w", err)
+	}
+
+	// add headers
+	req.Header.Set(http.HeaderAuthorization, cfg.GetAPIKey())
+	req.Header.Set(http.HeaderContentType, http.ContentTypeProtobuf)
+	req.Header.Set(ConfigPayloadHeaderKey, ConfigPayloadHeaderValue)
+
+	// create url params
+	q := req.URL.Query()
+	q.Add(http.QueryParamAccountID, cfg.CloudAccountID)
+	q.Add(http.QueryParamRegion, cfg.Region)
+	q.Add(http.QueryParamClusterName, cfg.ClusterName)
+	q.Add(ConfigPayloadURLParam, ConfigPayloadHeaderValue)
+	req.URL.RawQuery = q.Encode()
+
+	// send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send the request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= net.StatusOK+100 {
+		// read the body
+		if raw, err := io.ReadAll(resp.Body); err == nil {
+			log.Ctx(ctx).Error().Int("statusCode", resp.StatusCode).Str("body", string(raw)).Msg("Request failed")
+		}
+		return fmt.Errorf("invalid status code: %d", resp.StatusCode)
+	}
+
+	return nil
 }
