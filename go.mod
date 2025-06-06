@@ -84,7 +84,7 @@ require (
 	github.com/golang/snappy v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
 	github.com/minio/minio-go/v7 v7.0.92
-	github.com/parquet-go/parquet-go v0.25.0
+	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/prometheus v0.304.0
 	github.com/shirou/gopsutil/v4 v4.25.4
@@ -201,7 +201,6 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/onsi/ginkgo/v2 v2.22.0 // indirect
 	github.com/onsi/gomega v1.36.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics v0.124.1 // indirect
