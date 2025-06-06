@@ -162,6 +162,10 @@ data:
   prometheus.yml: |-
     global:
       scrape_interval: 60s
+    
+    storage:
+      tsdb:
+        out_of_order_time_window: 5m
 
     scrape_configs:
       # Kube State Metrics Scrape Job
@@ -1162,6 +1166,7 @@ data:
       configMapNameOverride: ""
       configOverride: ""
       globalScrapeInterval: 60s
+      outOfOrderTimeWindow: 5m
       scrapeJobs:
         additionalScrapeJobs: []
         aggregator:
