@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,6 +32,12 @@ type Services struct {
 
 func NewSettings(configFiles ...string) (*Settings, error) {
 	var cfg Settings
+
+	// do not allow empty arrays
+	if configFiles == nil {
+		return nil, errors.New("the config files slice cannot be nil")
+	}
+
 	for _, cfgFile := range configFiles {
 		if cfgFile == "" {
 			continue

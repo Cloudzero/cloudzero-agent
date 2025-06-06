@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package status;
+option go_package  = "../clusterconfig";
+
+message ClusterConfig {
+    string account = 1;
+    string region = 2;
+    string namespace = 3;
+    string provider_id = 4;
+    string cluster_name = 5;
+    string k8s_version = 6;
+    string release_name = 7;
+    string chart_version = 8;
+    string agent_version = 9;
+
+    string config_values_base64 = 30;
+    string config_validator_base64 = 31;
+    string config_webhook_server_base64 = 32;
+    string config_aggregator_base64 = 33;
+
+    repeated string errors = 40;
+}

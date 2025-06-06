@@ -17,7 +17,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/kms"
 	promcfg "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/config"
 	promver "github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/prom/version"
-	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/settings"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/stage"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
@@ -63,28 +62,12 @@ func createRegistry(ctx context.Context, c *config.Settings) *registry {
 	r.add(config.DiagnosticInternalInitFailed, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_INIT_FAILED))
 	r.add(config.DiagnosticInternalPodStart, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_POD_STARTED))
 	r.add(config.DiagnosticInternalPodStop, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_POD_STOPPING))
-	r.add(config.DiagnosticInternalConfigLoad, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_CONFIG_LOAD))
 
 	return r
 }
 
 func NewCatalog(ctx context.Context, c *config.Settings) Registry {
 	return createRegistry(ctx, c)
-}
-
-func NewConfigCatalog(
-	ctx context.Context,
-	c *config.Settings,
-	configsValidator []string,
-	congigsWebhook []string,
-	configsAggregator []string,
-) Registry {
-	r := createRegistry(ctx, c)
-
-	// add the config check
-	r.add(config.DiagnosticAgentSettings, false, settings.NewProvider(ctx, configsValidator, congigsWebhook, configsAggregator))
-
-	return r
 }
 
 func (r *registry) Get(ids ...string) []diagnostic.Provider {
