@@ -16,14 +16,21 @@ import (
 
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 )
 
+// UploadFileRequest wraps a file and it's allocated presigned URL
+type UploadFileRequest struct {
+	File         types.File
+	PresignedURL string
+}
+
 // UploadFile uploads the specified file to S3 using the provided presigned URL.
-func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presignedURL string) error {
+func (m *MetricShipper) UploadFile(ctx context.Context, req *UploadFileRequest) error {
 	return m.metrics.SpanCtx(ctx, "shipper_UploadFile", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
-			return ctx.Str("fileId", GetRemoteFileID(file))
+			return ctx.Str("fileId", GetRemoteFileID(req.File))
 		})
 		logger.Debug().Msg("Uploading file")
 
@@ -31,29 +38,42 @@ func (m *MetricShipper) UploadFile(ctx context.Context, file types.File, presign
 		ctx, cancel := context.WithTimeout(ctx, m.setting.Cloudzero.SendTimeout)
 		defer cancel()
 
-		data, err := io.ReadAll(file)
-		if err != nil {
-			return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
-		}
+		{
+			data, err := io.ReadAll(req.File)
+			if err != nil {
+				return errors.Join(ErrFileRead, fmt.Errorf("failed to read the file: %w", err))
+			}
 
-		// Create a new HTTP PUT request with the file as the body
-		req, err := http.NewRequestWithContext(ctx, "PUT", presignedURL, bytes.NewBuffer(data))
-		if err != nil {
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", err))
-		}
+			// create the request
+			req, ierr := retryablehttp.NewRequestWithContext(ctx, "PUT", req.PresignedURL, bytes.NewBuffer(data))
+			if ierr != nil {
+				return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create upload HTTP request: %w", ierr))
+			}
 
-		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_UploadFile_httpRequest", req)
-		if err != nil {
-			return err
-		}
+			resp, err := m.HTTPClient.Do(req)
+			if err != nil {
+				return err
+			}
 
-		defer resp.Body.Close()
+			// check for invalid urls
+			if resp != nil && resp.StatusCode == http.StatusForbidden {
+				// check the message
+				if raw, err := io.ReadAll(resp.Body); err != nil {
+					// search in the xml response
+					if strings.Contains(string(raw), "Request has expired") {
+						resp.Body.Close()
+						return ErrExpiredURL
+					}
+				}
+			}
 
-		// Check for successful upload
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected upload status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
+			// inspect
+			if err := InspectHTTPResponse(ctx, resp); err != nil {
+				return err
+			}
+
+			// force nil of the memory
+			data = nil
 		}
 
 		return nil
@@ -75,10 +95,7 @@ func (m *MetricShipper) MarkFileUploaded(ctx context.Context, file types.File) e
 
 		// if the filepath already contains the uploaded location,
 		// then ignore this entry
-		location, err := file.Location()
-		if err != nil {
-			return fmt.Errorf("failed to get the file location: %w", err)
-		}
+		location := file.Location()
 		if strings.Contains(location, UploadedSubDirectory) {
 			return nil
 		}

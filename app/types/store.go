@@ -46,6 +46,9 @@ type ReadableStore interface {
 
 	// Walk runs a `proccess` on the file loc of the implementation store
 	Walk(loc string, process filepath.WalkFunc) error
+
+	// Find searches for files recursively starting from a given directory with optional filename and extension filters.
+	Find(ctx context.Context, filterName string, filterExtension string) ([]string, error)
 }
 
 // Store represents a storage interface that provides methods to interact with metrics.

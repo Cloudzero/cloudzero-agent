@@ -20628,6 +20628,14 @@
         "cloudzero": {
           "additionalProperties": false,
           "properties": {
+            "httpMaxRetries": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "httpMaxWait": {
+              "$ref": "#/$defs/com.cloudzero.agent.duration"
+            },
             "rotateInterval": {
               "$ref": "#/$defs/com.cloudzero.agent.duration"
             },
@@ -20690,6 +20698,9 @@
           },
           "type": "object"
         },
+        "debugContainer": {
+          "type": "boolean"
+        },
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",
           "deprecated": true
@@ -20697,6 +20708,10 @@
         "logging": {
           "additionalProperties": false,
           "properties": {
+            "capture": {
+              "default": true,
+              "type": "boolean"
+            },
             "level": {
               "enum": ["debug", "info", "warn", "error"],
               "type": "string"

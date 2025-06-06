@@ -35,6 +35,12 @@ type RemoteWrite struct {
 
 	// network delays
 	uploadDelay time.Duration
+
+	// an optional payload that will be sent over the replay request header
+	// every time a file is uploaded
+	replayRequestPayload string
+
+	errorOnUpload bool
 }
 
 type file struct {
@@ -44,11 +50,13 @@ type file struct {
 }
 
 type NewRemoteWriteOpts struct {
-	APIKey       string
-	S3Endpoint   string
-	S3AccessKey  string
-	S3PrivateKey string
-	UploadDelay  time.Duration
+	APIKey               string
+	S3Endpoint           string
+	S3AccessKey          string
+	S3PrivateKey         string
+	UploadDelay          time.Duration
+	ReplayRequestPayload string
+	ErrorOnUpload        bool
 }
 
 func NewRemoteWrite(
@@ -77,13 +85,15 @@ func NewRemoteWrite(
 	}
 
 	return &RemoteWrite{
-		files:        make(map[string]*file),
-		apiKey:       opts.APIKey,
-		s3Endpoint:   opts.S3Endpoint,
-		s3AccessKey:  opts.S3AccessKey,
-		s3PrivateKey: opts.S3PrivateKey,
-		uploadDelay:  opts.UploadDelay,
-		minioClient:  minioClient,
+		files:                make(map[string]*file),
+		apiKey:               opts.APIKey,
+		s3Endpoint:           opts.S3Endpoint,
+		s3AccessKey:          opts.S3AccessKey,
+		s3PrivateKey:         opts.S3PrivateKey,
+		uploadDelay:          opts.UploadDelay,
+		minioClient:          minioClient,
+		replayRequestPayload: opts.ReplayRequestPayload,
+		errorOnUpload:        opts.ErrorOnUpload,
 	}, nil
 }
 

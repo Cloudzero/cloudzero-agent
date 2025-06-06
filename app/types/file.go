@@ -12,7 +12,7 @@ type File interface {
 	UniqueID() string
 
 	// location of the file
-	Location() (string, error)
+	Location() string
 
 	// change the name / location of the file in the environment
 	Rename(new string) error

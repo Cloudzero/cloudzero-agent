@@ -347,9 +347,14 @@ properties:
               - info
               - warn
               - error
+          capture:
+            type: boolean
+            default: true
       mountRoot:
         type: string
       profiling:
+        type: boolean
+      debugContainer:
         type: boolean
       reconnectFrequency:
         type: integer
@@ -373,6 +378,12 @@ properties:
             $ref: "#/$defs/com.cloudzero.agent.duration"
           # The interval at which to rotate data
           rotateInterval:
+            $ref: "#/$defs/com.cloudzero.agent.duration"
+          httpMaxRetries:
+            type: integer
+            minimum: 0
+            maximum: 10
+          httpMaxWait:
             $ref: "#/$defs/com.cloudzero.agent.duration"
       database:
         type: object
