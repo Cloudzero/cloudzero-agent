@@ -58,6 +58,21 @@ func (mr *MockStoreMockRecorder) All(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "All", reflect.TypeOf((*MockStore)(nil).All), arg0, arg1)
 }
 
+// Find mocks base method.
+func (m *MockStore) Find(ctx context.Context, filterName, filterExtension string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Find", ctx, filterName, filterExtension)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Find indicates an expected call of Find.
+func (mr *MockStoreMockRecorder) Find(ctx, filterName, filterExtension any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockStore)(nil).Find), ctx, filterName, filterExtension)
+}
+
 // Flush mocks base method.
 func (m *MockStore) Flush() error {
 	m.ctrl.T.Helper()

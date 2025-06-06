@@ -77,6 +77,10 @@ func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 
 				// mock delays
 				"UPLOAD_DELAY_MS": t.uploadDelayMs,
+
+				// replay request payload
+				"REPLAY_REQUEST_PAYLOAD": t.replayRequestPayload,
+				"ERROR_ON_UPLOAD":        t.errorOnUpload,
 			},
 			LogConsumerCfg: &testcontainers.LogConsumerConfig{
 				Consumers: []testcontainers.LogConsumer{&stdoutLogConsumer{}},

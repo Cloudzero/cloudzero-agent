@@ -700,6 +700,8 @@ aggregator:
     # Logging level that will be posted to stdout.
     # Valid values are: 'debug', 'info', 'warn', 'error'
     level: info
+    # Whether to persist logs to disk.
+    capture: true
   # Top-level directory containing CloudZero data. There will be subdirectories
   # for configuration (the mounted ConfigMap) and the API key (typically a
   # mounted Secret), and data to be uploaded to CloudZero, specifically metrics.
@@ -712,6 +714,9 @@ aggregator:
   # Whether to enable the profiling endpoint (/debug/pprof/). This should
   # generally be disabled in production.
   profiling: false
+  # Wether to enable rolling a debug container inside the aggregator pod.
+  # This should be disabled in production.
+  debugContainer: false
   # Frequency to close HTTP connections from clients, to help distribute the
   # load across the various collector replicas. 0=never, otherwise 1/N
   # probability.
@@ -729,17 +734,23 @@ aggregator:
     #
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
-    sendInterval: 1m
+    sendInterval: 10m
     # Max time the aggregator will spend attempting to ship metrics to the remote endpoint.
     #
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
-    sendTimeout: 30s
+    sendTimeout: 120s
     # Interval at which the aggregator will rotate its internal data structures.
     #
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
     rotateInterval: 30m
+    # The number of http retry attempts to use before failing.
+    # This is not a recommended option to change.
+    httpMaxRetries: 10
+    # The max wait time between http request retry attempts.
+    # This is not a recommended option to change.
+    httpMaxWait: 30s
   # Configuration for the aggregator's database and storage behavior.
   database:
     # Max number of records per file. Use this to adjust file sizes uploaded to

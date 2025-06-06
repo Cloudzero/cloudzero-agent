@@ -54,11 +54,13 @@ func main() {
 
 	// create the client
 	rw, err := remotewrite.NewRemoteWrite(context.Background(), &remotewrite.NewRemoteWriteOpts{
-		APIKey:       apiKey,
-		S3Endpoint:   s3Endpoint,
-		S3AccessKey:  s3AccessKey,
-		S3PrivateKey: s3PrivateKey,
-		UploadDelay:  uploadDelay,
+		APIKey:               apiKey,
+		S3Endpoint:           s3Endpoint,
+		S3AccessKey:          s3AccessKey,
+		S3PrivateKey:         s3PrivateKey,
+		UploadDelay:          uploadDelay,
+		ReplayRequestPayload: os.Getenv("REPLAY_REQUEST_PAYLOAD"),
+		ErrorOnUpload:        os.Getenv("ERROR_ON_UPLOAD") == "true",
 	})
 	if err != nil {
 		log.Fatalf("failed to create the remotewrite client: %s", err.Error())

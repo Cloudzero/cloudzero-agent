@@ -4,7 +4,12 @@
 // Package shipper provides domain logic for for the shipper.
 package shipper
 
-import "github.com/cloudzero/cloudzero-agent/app/types"
+import (
+	"path/filepath"
+	"strings"
+
+	"github.com/cloudzero/cloudzero-agent/app/types"
+)
 
 // Chunk splits a list into a matrix of elements with a size of `n`
 func Chunk[T any](list []T, n int) [][]T {
@@ -21,6 +26,16 @@ func Chunk[T any](list []T, n int) [][]T {
 	return chunks
 }
 
+// GetRemoteFileID creates the remote file id for the transposed file
 func GetRemoteFileID(file types.File) string {
 	return file.UniqueID() + remoteFileExtension
+}
+
+// GetRootFileID returns the file id with no file extensions or path information
+func GetRootFileID(file string) string {
+	parts := strings.SplitN(filepath.Base(file), ".", 2)
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[0]
 }
