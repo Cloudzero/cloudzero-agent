@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -22,6 +23,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils/lock"
 	"github.com/cloudzero/cloudzero-agent/app/utils/parallel"
+	"github.com/google/uuid"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +37,7 @@ type MetricShipper struct {
 	// Internal fields
 	ctx          context.Context
 	cancel       context.CancelFunc
-	HTTPClient   *http.Client
+	HTTPClient   *retryablehttp.Client
 	shippedFiles uint64 // Counter for shipped files
 	metrics      *instr.PrometheusMetrics
 	shipperID    string // unique id for the shipper
@@ -45,9 +48,7 @@ func NewMetricShipper(ctx context.Context, s *config.Settings, store types.Reada
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Initialize an HTTP client with the specified timeout
-	httpClient := &http.Client{
-		Timeout: s.Cloudzero.SendTimeout,
-	}
+	httpClient := NewHTTPClient(ctx, s)
 
 	// create the metrics listener
 	metrics, err := InitMetrics()
@@ -86,9 +87,6 @@ func (m *MetricShipper) Run() error {
 	if err := os.MkdirAll(m.GetUploadedDir(), filePermissions); err != nil {
 		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the uploaded directory: %w", err))
 	}
-	if err := os.MkdirAll(m.GetReplayRequestDir(), filePermissions); err != nil {
-		return errors.Join(ErrCreateDirectory, fmt.Errorf("failed to create the replay request directory: %w", err))
-	}
 
 	// Set up channel to listen for OS signals
 	sigChan := make(chan os.Signal, 1)
@@ -108,27 +106,20 @@ func (m *MetricShipper) Run() error {
 		metricShipperRunFailTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 	}
 
+	// TODO -- sleep between random value between 0 and m.setting.Cloudzero.SendInterval (for multi-shipper-coordination)
+
 	for {
 		select {
 		case <-m.ctx.Done():
-			log.Ctx(m.ctx).Info().Msg("Shipper service stopping")
+			// create a new ctx to shut the application down with
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			log.Ctx(ctx).Info().Msg("Shipper service stopping")
+			m.Flush(ctx)
 			return nil
-
 		case sig := <-sigChan:
 			log.Ctx(m.ctx).Info().Str("signal", sig.String()).Msg("Received signal. Initiating shutdown.")
-
-			// flush
-			if err := m.ProcessNewFiles(m.ctx); err != nil {
-				metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-				log.Ctx(m.ctx).Err(err).Msg("Failed to flush the new metric files")
-			}
-
-			err := m.Shutdown()
-			if err != nil {
-				log.Ctx(m.ctx).Err(err).Msg("Failed to shutdown shipper service")
-			}
-			return nil
-
+			return m.Shutdown()
 		case <-ticker.C:
 			if err := m.runShipper(m.ctx); err != nil {
 				log.Ctx(m.ctx).Err(err).Msg("Failed to run shipper")
@@ -151,15 +142,9 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 		logger.Debug().Msg("Running shipper cycle ...")
 
 		// run the base request
-		if err = m.ProcessNewFiles(ctx); err != nil {
+		if err = m.ProcessFiles(ctx); err != nil {
 			metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-			return fmt.Errorf("failed to ship the metrics: %w", err)
-		}
-
-		// run the replay request
-		if err = m.ProcessReplayRequests(ctx); err != nil {
-			metricReplayRequestErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-			return fmt.Errorf("failed to process the replay requests: %w", err)
+			return fmt.Errorf("failed to ship the metrics: %w", err) // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 		}
 
 		// check the disk usage
@@ -170,13 +155,13 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 
 		// used as a marker in tests to signify that the shipper was complete.
 		// if you change this string, then change in the smoke tests as well.
-		logger.Debug().Msg("Successfully ran the shipper cycle")
+		logger.Debug().Msg("Successfully ran the shipper cycle") // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 
 		return err
 	})
 }
 
-func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
+func (m *MetricShipper) ProcessFiles(ctx context.Context) error {
 	return m.metrics.SpanCtx(ctx, "shipper_ProcessNewFiles", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id)
 		logger.Debug().Msg("Processing new files ...")
@@ -184,12 +169,16 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 		// lock the base dir for the duration of the new file handling
 		logger.Debug().Msg("Aquiring file lock")
 		l := lock.NewFileLock(
-			m.ctx, filepath.Join(m.GetBaseDir(), ".lock"),
-			lock.WithStaleTimeout(time.Second*30), // detects stale timeout
+			ctx, filepath.Join(m.GetBaseDir(), ".lock"),
+			lock.WithStaleTimeout(time.Minute*5), // detects stale timeout
 			lock.WithRefreshInterval(time.Second*5),
-			lock.WithMaxRetry(lockMaxRetry), // 5 min wait
+			lock.WithMaxRetry(lockMaxRetry), // 15 second wait
 		)
 		if err := l.Acquire(); err != nil {
+			// do not throw an error when failed because of context
+			if errors.Is(err, lock.ErrLockContextCancelled) {
+				return nil
+			}
 			return errors.Join(ErrCreateLock, fmt.Errorf("failed to acquire the lock file: %w", err))
 		}
 		defer func() {
@@ -201,7 +190,6 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 		logger.Debug().Msg("Successfully acquired lock file")
 		logger.Debug().Msg("Fetching the files from the disk store")
 
-		// Process new files in parallel
 		paths, err := m.store.GetFiles()
 		if err != nil {
 			return errors.Join(ErrFilesList, fmt.Errorf("failed to list the new files: %w", err))
@@ -240,6 +228,7 @@ func (m *MetricShipper) ProcessNewFiles(ctx context.Context) error {
 // HandleRequest takes in a list of files and runs them through the following:
 //
 // - Generate presigned URL
+// - handles replay requests
 // - Upload to the remote API
 // - Rename the file to indicate upload
 func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) error {
@@ -262,40 +251,102 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			defer pm.Close()
 
 			// Assign pre-signed urls to each of the file references
-			urlMap, err := m.AllocatePresignedURLs(chunk)
+			urlResponse, err := m.AllocatePresignedURLs(ctx, chunk)
 			if err != nil {
 				metricPresignedURLErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
 				return fmt.Errorf("failed to allocate presigned URLs: %w", err)
 			}
 
-			waiter := parallel.NewWaiter()
+			// check if there were any objects returned
+			if len(urlResponse.Allocation) == 0 && len(urlResponse.Replay) == 0 {
+				logger.Debug().Msg("No files returned from the url allocation request, skipping")
+				return nil
+			}
+
+			// hold references to files -> purls
+			requests := make([]*UploadFileRequest, 0)
+
+			// anytime there are issues parsing, we should send abandon requests
+			abandonRequests := make([]*AbandonAPIPayloadFile, 0) // fileID: reason
+
+			// parse the new files with their presigned urls
 			for _, file := range chunk {
+				if purl, exists := urlResponse.Allocation[GetRemoteFileID(file)]; exists {
+					requests = append(requests, &UploadFileRequest{
+						File:         file,
+						PresignedURL: purl,
+					})
+				}
+			}
+
+			// search the file tree for the replay request files
+			for k, v := range urlResponse.Replay {
+				if paths, err := m.store.Find(ctx, GetRootFileID(k), ".json.br"); err != nil {
+					for _, path := range paths {
+						if file, err := disk.NewMetricFile(path); err == nil {
+							requests = append(requests, &UploadFileRequest{
+								File:         file,
+								PresignedURL: v,
+							})
+						}
+					}
+				}
+			}
+
+			// process which files we did not find
+			requestSet := types.NewSet[string]()
+			for _, item := range requests {
+				requestSet.Add(GetRemoteFileID(item.File))
+			}
+			for _, item := range urlResponse.Replay {
+				if !requestSet.Contains(item) {
+					abandonRequests = append(abandonRequests, &AbandonAPIPayloadFile{
+						ReferenceID: item,
+						Reason:      "failed to find this file locally",
+					})
+				}
+			}
+
+			// run all upload requests in parallel
+			waiter := parallel.NewWaiter()
+			for _, req := range requests {
 				fn := func() error {
-					// Upload the file
-					if err := m.UploadFile(ctx, file, urlMap[GetRemoteFileID(file)]); err != nil {
+					// send the upload request
+					if err := m.UploadFile(ctx, req); err != nil {
 						metricFileUploadErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-						return fmt.Errorf("failed to upload %s: %w", file.UniqueID(), err)
+						logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to upload the file")
+						return err
 					}
 
-					// mark the file as uploaded
-					if err := m.MarkFileUploaded(ctx, file); err != nil {
-						metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-						return fmt.Errorf("failed to mark the file as uploaded: %w", err)
+					// if log file, remove it. we do not need to store these after upload
+					if strings.HasPrefix(req.File.UniqueID(), disk.LogsContentIdentifider) {
+						if err := os.Remove(req.File.Location()); err != nil {
+							logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to remove log file")
+						}
+					} else {
+						// mark the file as uploaded
+						if err := m.MarkFileUploaded(ctx, req.File); err != nil {
+							metricMarkFileUploadedErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+							logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to mark file as uploaded")
+							return err
+						}
 					}
 
 					atomic.AddUint64(&m.shippedFiles, 1)
 					return nil
 				}
+
+				// add to queue
 				pm.Run(fn, waiter)
 			}
 			waiter.Wait()
 
-			// check for errors in the waiter
-			for err := range waiter.Err() {
-				if err != nil {
-					return fmt.Errorf("failed to upload files: %w", err)
-				}
+			// send abandon requests
+			if err := m.AbandonFiles(ctx, abandonRequests); err != nil {
+				logger.Err(err).Msg("failed to abandon files")
 			}
+
+			// TODO -- ignore errors in the waiter
 		}
 
 		logger.Debug().Msg("Successfully processed all of the files")
@@ -309,10 +360,6 @@ func (m *MetricShipper) GetBaseDir() string {
 	return m.setting.Database.StoragePath
 }
 
-func (m *MetricShipper) GetReplayRequestDir() string {
-	return filepath.Join(m.GetBaseDir(), ReplaySubDirectory)
-}
-
 func (m *MetricShipper) GetUploadedDir() string {
 	return filepath.Join(m.GetBaseDir(), UploadedSubDirectory)
 }
@@ -322,4 +369,58 @@ func (m *MetricShipper) Shutdown() error {
 	m.cancel()
 	metricShutdownTotal.WithLabelValues().Inc()
 	return nil
+}
+
+// Flush will attempt to process all files
+// and push them to the remote
+func (m *MetricShipper) Flush(ctx context.Context) {
+	if err := m.ProcessFiles(ctx); err != nil {
+		metricNewFilesErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
+		log.Ctx(ctx).Err(err).Msg("Failed to flush the new metric files")
+	}
+}
+
+// GetShipperID will return a unique id for this shipper. This id is stored on the filesystem,
+// and is meant to represent a relation between an uploaded file and which shipper this file came from.
+// The id is not an id this instance of the shipper, but more an id of the filesystem in which the
+// file came from
+func (m *MetricShipper) GetShipperID() (string, error) {
+	if m.shipperID == "" {
+		// where the shipper id lives
+		loc := filepath.Join(m.GetBaseDir(), ".shipperid")
+
+		data, err := os.ReadFile(loc)
+		if err == nil { //nolint:gocritic // impossible to do if/else statement here
+			// file was read successfully
+			m.shipperID = strings.TrimSpace(string(data))
+		} else if os.IsNotExist(err) {
+			// create the file
+			file, err := os.Create(loc) //nolint:govet // err was in-fact read for what was needed
+			if err != nil {
+				return "", fmt.Errorf("failed to create the shipper id file: %w", err)
+			}
+			defer file.Close()
+
+			podID, exists := os.LookupEnv("HOSTNAME")
+			var id string
+			if exists {
+				// use hostname
+				id = podID
+			} else {
+				// use uuid
+				id = uuid.NewString()
+			}
+
+			// write an id to the file
+			if _, err := file.WriteString(id); err != nil {
+				return "", fmt.Errorf("failed to write an id to the id file: %w", err)
+			}
+
+			m.shipperID = id
+		} else {
+			return "", fmt.Errorf("unknown error getting the shipper id: %w", err)
+		}
+	}
+
+	return m.shipperID, nil
 }

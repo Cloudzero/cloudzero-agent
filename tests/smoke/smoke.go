@@ -81,7 +81,9 @@ type testContext struct {
 	controller  *testcontainers.Container
 
 	// mock paramters
-	uploadDelayMs string
+	uploadDelayMs        string
+	replayRequestPayload string
+	errorOnUpload        string
 }
 
 func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
@@ -114,9 +116,11 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		CloudAccountID: "test-account-id",
 		Region:         "us-east-1",
 		ClusterName:    "smoke-test-cluster",
-		Logging:        config.Logging{Level: "debug"},
+		Logging:        config.Logging{Level: "debug", Capture: true},
 		Database: config.Database{
-			StoragePath: dataLocation,
+			StoragePath:              dataLocation,
+			CostMaxInterval:          time.Minute,
+			ObservabilityMaxInterval: time.Minute,
 			PurgeRules: config.PurgeRules{
 				MetricsOlderThan: time.Hour * 24 * 90,
 				Lazy:             true,
@@ -128,7 +132,7 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 			APIKeyPath:   apiKeyFile,
 			Host:         remoteWriteEndpoint,
 			SendTimeout:  time.Second * 30,
-			SendInterval: time.Duration(10) * time.Minute,
+			SendInterval: time.Second * 20,
 		},
 	}
 
@@ -215,7 +219,11 @@ func (t *testContext) Clean() {
 }
 
 // writes valid metric files to the shared data path `t.dataLocation`
-func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
+// returns a list of file names
+// In addition, you can pass an optional list of `paths` that will place the
+// file in a location constructed as `filepath.Join(root, paths..., filename)`
+func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int, paths ...string) []string {
+	names := make([]string, 0)
 	for i := range numFiles {
 		startFrom := time.Now().UTC().Add(-time.Second * 10)
 		startThru := time.Now().UTC()
@@ -227,7 +235,15 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 		} else {
 			filename = fmt.Sprintf("%s_%d_%d.json.br", disk.ObservabilityContentIdentifier, startFrom.UnixMilli()+int64(i), startThru.UnixMilli()+int64(i))
 		}
-		file, err := os.Create(filepath.Join(t.dataLocation, filename))
+
+		// parse the filepath and create the location
+		fp := filepath.Join(paths...)
+		fp = filepath.Join(t.dataLocation, fp)
+		err := os.MkdirAll(fp, 0o777)
+		require.NoError(t, err, "failed to create the location")
+
+		// create the file
+		file, err := os.Create(filepath.Join(fp, filename))
 		require.NoError(t, err, "failed to create file: %s", err)
 
 		// create the metrics array
@@ -263,7 +279,10 @@ func (t *testContext) WriteTestMetrics(numFiles int, numMetrics int) {
 		// write the data to the file
 		_, err = file.Write(compressedData.Bytes())
 		require.NoError(t, err, "failed to write the metrics to the file")
+		names = append(names, filename)
 	}
+
+	return names
 }
 
 func (t *testContext) CreateNetwork() *testcontainers.DockerNetwork {

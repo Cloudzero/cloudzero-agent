@@ -9,13 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"strconv"
 
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/cloudzero/cloudzero-agent/app/logging/instr"
 	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -31,15 +30,29 @@ type PresignedURLAPIPayloadFile struct {
 	Size        int64  `json:"size,omitempty"`
 }
 
-// PresignedURLAPIResponse is the format of the response from the remote API.
-// The format of the response is: `{reference_id: presigned_url}`.
-type PresignedURLAPIResponse = map[string]string
+// PresignedURLPayload maps a reference id to a presigned url
+type PresignedURLPayload = map[string]string
+
+type AllocatePresignedURLsResponse struct {
+	Allocation PresignedURLPayload
+	Replay     PresignedURLPayload
+}
+
+type replayRequestHeaderValue struct {
+	RefID string `json:"ref_id"` //nolint:tagliatelle // upstream uses cammel case
+	URL   string `json:"url"`
+}
 
 // AllocatePresignedURLs allocates a set of pre-signed urls for the passed file
 // objects.
-func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLAPIResponse, error) {
-	var response PresignedURLAPIResponse
-	err := m.metrics.SpanCtx(m.ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
+func (m *MetricShipper) AllocatePresignedURLs(ctx context.Context, files []types.File) (*AllocatePresignedURLsResponse, error) {
+	// create the root request object
+	response := &AllocatePresignedURLsResponse{
+		Allocation: make(PresignedURLPayload),
+		Replay:     make(PresignedURLPayload),
+	}
+
+	err := m.metrics.SpanCtx(ctx, "shipper_AllocatePresignedURLs", func(ctx context.Context, id string) error {
 		logger := instr.SpanLogger(ctx, id, func(ctx zerolog.Context) zerolog.Context {
 			return ctx.Int("numFiles", len(files))
 		})
@@ -78,7 +91,9 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 			return ErrGetRemoteBase
 		}
 		uploadEndpoint.Path += uploadAPIPath
-		req, err := http.NewRequestWithContext(m.ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
+
+		// create the request
+		req, err := retryablehttp.NewRequestWithContext(ctx, "POST", uploadEndpoint.String(), bytes.NewBuffer(enc))
 		if err != nil {
 			return errors.Join(ErrHTTPUnknown, fmt.Errorf("failed to create the HTTP request: %w", err))
 		}
@@ -102,56 +117,35 @@ func (m *MetricShipper) AllocatePresignedURLs(files []types.File) (PresignedURLA
 		logger.Debug().Int("numFiles", len(files)).Msg("Requesting presigned URLs")
 
 		// Send the request
-		resp, err := m.SendHTTPRequest(ctx, "shipper_AllocatePresignedURLs_httpRequest", req)
+		resp, err := m.HTTPClient.Do(req)
 		if err != nil {
+			return err
+		}
+
+		// inspect
+		if err := InspectHTTPResponse(ctx, resp); err != nil {
 			return err
 		}
 
 		defer resp.Body.Close()
 
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			return ErrUnauthorized
-		}
-
-		// Check for HTTP errors
-		if resp.StatusCode != http.StatusOK {
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			return errors.Join(ErrHTTPUnknown, fmt.Errorf("unexpected status code: statusCode=%d, body=%s", resp.StatusCode, string(bodyBytes)))
-		}
-
 		// Parse the response
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&response.Allocation); err != nil {
 			return errors.Join(ErrInvalidBody, fmt.Errorf("failed to decode the response: %w", err))
-		}
-
-		// validation
-		if len(response) == 0 {
-			logger.Warn().Msg(ErrNoURLs.Error())
-			return ErrNoURLs
 		}
 
 		// check for a replay request
 		rrh := resp.Header.Get(ReplayRequestHeader)
 		if rrh != "" {
-			log.Ctx(m.ctx).Debug().Msg("Saving replay request to disk ...")
+			log.Ctx(ctx).Debug().Msg("Recieved replay request")
 
-			// parse the replay request
-			rr, err := NewReplayRequestFromHeader(rrh)
-			if err == nil {
-				// save the replay request to disk
-				if err = m.SaveReplayRequest(ctx, rr); err != nil {
-					// do not fail here
-					metricReplayRequestSaveErrorTotal.WithLabelValues(GetErrStatusCode(err)).Inc()
-					logger.Err(err).Msg("failed to save the replay request to disk")
+			var rr []replayRequestHeaderValue
+			if err := json.Unmarshal([]byte(rrh), &rr); err == nil {
+				for _, item := range rr {
+					response.Replay[item.RefID] = item.URL
 				}
-
-				// observe the presence of the replay request
-				metricReplayRequestTotal.WithLabelValues().Inc()
-				metricReplayRequestCurrent.WithLabelValues().Inc()
-				log.Ctx(m.ctx).Debug().Msg("Successfully saved replay request")
 			} else {
-				// do not fail the operation here
-				logger.Err(err).Msg("failed to parse the replay request header")
+				logger.Err(err).Msg("Failed to parse the replay request into an object")
 			}
 		}
 

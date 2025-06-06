@@ -5,6 +5,7 @@ package shipper_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,6 +50,30 @@ func (m *MockAppendableFiles) Walk(loc string, process filepath.WalkFunc) error 
 	}
 
 	return args.Error(0)
+}
+
+func (m *MockAppendableFiles) Find(ctx context.Context, filterName string, filterExtension string) ([]string, error) {
+	args := m.Called(ctx, filterName, filterExtension)
+	// create a slice to hold the found files
+	foundFiles := make([]string, 0)
+	// walk the base directory and find files that match the filter
+	err := filepath.Walk(m.baseDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk the store: %w", err)
+		}
+		if info.IsDir() {
+			return nil // skip directories
+		}
+		if (filterName == "" || filepath.Base(path) == filterName) &&
+			(filterExtension == "" || filepath.Ext(path) == filterExtension) {
+			foundFiles = append(foundFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find files in the store: %w", err)
+	}
+	return foundFiles, args.Error(0)
 }
 
 func (m *MockAppendableFiles) GetUsage(limit uint64, paths ...string) (*types.StoreUsage, error) {
@@ -108,8 +133,10 @@ func getMockSettings(mockURL, dir string) *config.Settings {
 			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
-			Host:        mockURL,
-			SendTimeout: time.Millisecond * 1000,
+			Host:           mockURL,
+			SendTimeout:    time.Millisecond * 1000,
+			HTTPMaxRetries: 2,
+			HTTPMaxWait:    time.Second,
 		},
 		Database: config.Database{
 			StoragePath: dir,
@@ -144,9 +171,11 @@ func getMockSettingsIntegration(t *testing.T, dir, apiKey string) *config.Settin
 			Level: "trace",
 		},
 		Cloudzero: config.Cloudzero{
-			Host:        apiHost,
-			SendTimeout: time.Second * 30,
-			APIKeyPath:  filePath,
+			Host:           apiHost,
+			SendTimeout:    time.Second * 30,
+			APIKeyPath:     filePath,
+			HTTPMaxRetries: 5,
+			HTTPMaxWait:    time.Second * 30,
 		},
 		Database: config.Database{
 			StoragePath: dir,

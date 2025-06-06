@@ -13,6 +13,11 @@ data:
     {{- else }}
     global:
       scrape_interval: {{ .Values.prometheusConfig.globalScrapeInterval }}
+    {{ if .Values.prometheusConfig.outOfOrderTimeWindow }}
+    storage:
+      tsdb:
+        out_of_order_time_window: {{ .Values.prometheusConfig.outOfOrderTimeWindow }}
+    {{- end }}
 
     scrape_configs:
       {{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}

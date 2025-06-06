@@ -221,7 +221,7 @@ api-tests-check-env:
 
 .PHONY: test
 test: ## Run the unit tests
-	$(GO) test -test.short -timeout 60s ./... -race -cover
+	$(GO) test -test.short -timeout 120s ./... -race -cover
 
 .PHONY: test-integration
 test-integration: api-tests-check-env

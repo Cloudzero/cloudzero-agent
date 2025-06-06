@@ -61,6 +61,7 @@ server:
   reconnect_frequency: {{ .Values.aggregator.reconnectFrequency }}
 logging:
   level: "{{ .Values.aggregator.logging.level }}"
+  capture: {{ .Values.aggregator.logging.capture }}
 database:
   storage_path: {{ .Values.aggregator.mountRoot }}/data
   max_records: {{ .Values.aggregator.database.maxRecords }}
@@ -80,6 +81,8 @@ cloudzero:
   send_timeout: {{ .Values.aggregator.cloudzero.sendTimeout }}
   rotate_interval: {{ .Values.aggregator.cloudzero.rotateInterval }}
   host: {{ .Values.host }}
+  http_max_retries: {{ .Values.aggregator.cloudzero.httpMaxRetries }}
+  http_max_wait: {{ .Values.aggregator.cloudzero.httpMaxWait }}
 {{- end}}
 
 {{/* Define remote_write configuration for Prometheus */}}
