@@ -75,6 +75,7 @@ type MetricCollector struct {
 	filter             *MetricFilter
 	clock              types.TimeProvider
 	cancelFunc         context.CancelFunc
+	initialFlush       bool
 }
 
 func (d *MetricCollector) Settings() *config.Settings {
@@ -166,6 +167,18 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	if costMetrics != nil && d.costStore != nil {
 		if err := d.costStore.Put(ctx, costMetrics...); err != nil {
 			return stats, err
+		}
+
+		// In order to reduce the amount of time until the server starts seeing
+		// data, we perform a first flush 🍵 of the cost metrics immediately
+		// upon receipt.
+		if !d.initialFlush && len(costMetrics) > 0 {
+			d.initialFlush = true
+
+			log.Ctx(ctx).Info().Int("count", len(costMetrics)).Msg("first flush of cost metrics")
+			if err := d.costStore.Flush(); err != nil {
+				return stats, err
+			}
 		}
 	}
 	if observabilityMetrics != nil && d.observabilityStore != nil {
