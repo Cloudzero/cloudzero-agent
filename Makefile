@@ -42,7 +42,7 @@ REGENERATE     ?= auto
 
 # Default Helm configuration
 CLOUDZERO_HOST        ?= dev-api.cloudzero.com
-CLOUD_ACCOUNT_ID      ?= "ID12345"
+CLOUD_ACCOUNT_ID      ?= "123456789012"
 CSP_REGION            ?= "us-east-1"
 CLUSTER_NAME          ?= "insights-controller-integration-test"
 # This is intentional empty (without quotes, etc.)
@@ -400,11 +400,7 @@ tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/v
 		echo "$(INFO_COLOR)✓ $$file (Helm validation)$(NO_COLOR)"; \
 	else \
 		echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
-		if [ "$$expected_result" = "pass" ]; then \
-			echo "Helm command output:"; \
-			echo ""; \
-			echo "$$output"; \
-		fi; \
+		echo "$$output" | grep -E "(Error:|execution error)" | head -5 || echo "$$output" | tail -10; \
 		exit 1; \
 	fi
 

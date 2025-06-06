@@ -1,0 +1,2 @@
+# Test that empty strings pass validation (for auto-detection)
+cloudAccountId: ""

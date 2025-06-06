@@ -9,9 +9,10 @@ host: api.cloudzero.com
 # detected value, leave this property set to null.
 #
 # Note also that this must be a string value, even where the account ID may be
-# numeric (e.g., an AWS account ID). i.e., `"123456789012"` not `123456789012`.
-# If you are passing this as a parameter to the Helm CLI, you should generally
-# use --set-string (e.g., "cloudAccountId=123456789012").
+# numeric (e.g., an AWS account ID or Google Cloud project number). i.e.,
+# `"123456789012"` not `123456789012`. If you are passing this as a parameter to
+# the Helm CLI, you should generally use --set-string (e.g.,
+# `--set-string "cloudAccountId=123456789012"`).
 cloudAccountId: null
 
 # Name of the Kubernetes cluster.
