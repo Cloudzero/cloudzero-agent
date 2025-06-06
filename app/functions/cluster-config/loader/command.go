@@ -30,7 +30,7 @@ const (
 	FlagAccount          = "account"
 	FlagRegion           = "region"
 	FlagClusterName      = "cluster-name"
-	FlagDeployName       = "deploy-name"
+	FlagReleaseName      = "release-name"
 	FlagChartVersion     = "chart-version"
 	FlagAgentVersion     = "agent-version"
 	FlagValuesB64        = "values-b64"
@@ -38,8 +38,9 @@ const (
 	FlagconfigWebhook    = "config-webhook"
 	FlagConfigAggregator = "config-aggregator"
 
-	ConfigPayloadHeader = "X-Cloudzero-Config-Status"
-	URLPath             = "/v1/container-metrics/status"
+	ConfigPayloadHeaderKey   = "X-Cloudzero-Config-Status"
+	ConfigPayloadHeaderValue = "configLoad"
+	URLPath                  = "/v1/container-metrics/status"
 )
 
 func NewCommand() *cli.Command {
@@ -51,7 +52,7 @@ func NewCommand() *cli.Command {
 			&cli.StringFlag{Name: FlagAccount, Usage: "account name", Required: true},
 			&cli.StringFlag{Name: FlagRegion, Usage: "region", Required: true},
 			&cli.StringFlag{Name: FlagClusterName, Usage: "cluster name", Required: true},
-			&cli.StringFlag{Name: FlagDeployName, Usage: "deploy name", Required: true},
+			&cli.StringFlag{Name: FlagReleaseName, Usage: "release name", Required: true},
 			&cli.StringFlag{Name: FlagChartVersion, Usage: "current chart version", Required: true},
 			&cli.StringFlag{Name: FlagAgentVersion, Usage: "current agent version", Required: true},
 			&cli.StringFlag{Name: FlagValuesB64, Usage: "rendered values file encoded into base64", Required: true},
@@ -144,7 +145,7 @@ func run(c *cli.Context) error {
 		ProviderId:                providerID,
 		ClusterName:               c.String(FlagClusterName),
 		K8SVersion:                k8sVersion,
-		DeploymentName:            c.String(FlagDeployName),
+		DeploymentName:            c.String(FlagReleaseName),
 		ChartVersion:              c.String(FlagChartVersion),
 		AgentVersion:              c.String(FlagAgentVersion),
 		ConfigValuesBase64:        c.String(FlagValuesB64),
@@ -170,6 +171,7 @@ func run(c *cli.Context) error {
 	return nil
 }
 
+// post TODO -- refactor this into a shared interface with other similar code
 func post(
 	ctx context.Context,
 	cfg *cfg_validator.Settings,
@@ -217,12 +219,12 @@ func post(
 
 	log.Info().Int("len", buf.Len()).Msg("compressed size")
 
-	endpoint := fmt.Sprintf("%s%s", cfg.Cloudzero.Host, URLPath)
+	endpoint := fmt.Sprintf("%s%s?configStatus=%s", cfg.Cloudzero.Host, URLPath, ConfigPayloadHeaderValue)
 	_, err = http.Do(ctx, client.StandardClient(), net.MethodPost,
 		map[string]string{
 			http.HeaderAuthorization: "Bearer " + cfg.Cloudzero.Credential,
 			http.HeaderContentType:   http.ContentTypeProtobuf,
-			ConfigPayloadHeader:      "true",
+			ConfigPayloadHeaderKey:   ConfigPayloadHeaderValue,
 		},
 		map[string]string{
 			http.QueryParamAccountID:   cfg.Deployment.AccountID,

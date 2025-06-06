@@ -2361,6 +2361,108 @@ spec:
           secret:
             secretName: cz-agent-api-key
 ---
+# Source: cloudzero-agent/templates/config-loader-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+  namespace: cz-agent
+  annotations:
+    checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  template:
+    metadata:
+      name: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+      namespace: cz-agent
+      labels:
+        app.kubernetes.io/component: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/instance: cz-agent
+      
+    spec:
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      restartPolicy: OnFailure
+      
+      
+      containers:
+        - name: run-validator
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
+          imagePullPolicy: "IfNotPresent"
+          
+          env:
+            - name: K8S_NAMESPACE
+              value: cz-agent
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          command:
+            - /app/cloudzero-cluster-config
+            - load
+            - --account
+            - 1234567890
+            - --region
+            - us-east-1
+            - --cluster-name
+            - my-cluster
+            - --release-name
+            - cz-agent
+            - --chart-version
+            - 1.1.0-dev
+            - --agent-version
+            - 1.1.2
+            - --values-b64
+            - YWdncmVnYXRvcjoKICBhZmZpbml0eToge30KICBjbG91ZHplcm86CiAgICByb3RhdGVJbnRlcnZhbDogMzBtCiAgICBzZW5kSW50ZXJ2YWw6IDFtCiAgICBzZW5kVGltZW91dDogMzBzCiAgY29sbGVjdG9yOgogICAgcG9ydDogODA4MAogICAgcmVzb3VyY2VzOgogICAgICBsaW1pdHM6CiAgICAgICAgY3B1OiAyMDAwbQogICAgICAgIG1lbW9yeTogMTAyNE1pCiAgICAgIHJlcXVlc3RzOgogICAgICAgIGNwdTogMTAwbQogICAgICAgIG1lbW9yeTogNjRNaQogIGRhdGFiYXNlOgogICAgY29tcHJlc3Npb25MZXZlbDogOAogICAgY29zdE1heEludGVydmFsOiAxMG0KICAgIGVtcHR5RGlyOgogICAgICBlbmFibGVkOiB0cnVlCiAgICAgIHNpemVMaW1pdDogIiIKICAgIG1heFJlY29yZHM6IDE1MDAwMDAKICAgIG9ic2VydmFiaWxpdHlNYXhJbnRlcnZhbDogMzBtCiAgICBwdXJnZVJ1bGVzOgogICAgICBsYXp5OiB0cnVlCiAgICAgIG1ldHJpY3NPbGRlclRoYW46IDIxNjBoCiAgICAgIHBlcmNlbnQ6IDIwCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIGxvZ2dpbmc6CiAgICBsZXZlbDogaW5mbwogIG1vdW50Um9vdDogL2Nsb3VkemVybwogIG5vZGVTZWxlY3Rvcjoge30KICBwcm9maWxpbmc6IGZhbHNlCiAgc2hpcHBlcjoKICAgIHBvcnQ6IDgwODEKICAgIHJlc291cmNlczoKICAgICAgbGltaXRzOgogICAgICAgIGNwdTogMjAwMG0KICAgICAgICBtZW1vcnk6IDEwMjRNaQogICAgICByZXF1ZXN0czoKICAgICAgICBjcHU6IDEwMG0KICAgICAgICBtZW1vcnk6IDY0TWkKICB0b2xlcmF0aW9uczogW10KYXBpS2V5OiBub3QtYS1yZWFsLWFwaS1rZXkKY2xvdWRBY2NvdW50SWQ6ICIxMjM0NTY3ODkwIgpjbHVzdGVyTmFtZTogbXktY2x1c3Rlcgpjb21tb25NZXRhTGFiZWxzOiB7fQpjb21wb25lbnRzOgogIGFnZW50OgogICAgaW1hZ2U6CiAgICAgIHJlcG9zaXRvcnk6IGdoY3IuaW8vY2xvdWR6ZXJvL2Nsb3VkemVyby1hZ2VudC9jbG91ZHplcm8tYWdlbnQKICAgICAgdGFnOiAxLjEuMgogICAgcG9kRGlzcnVwdGlvbkJ1ZGdldDoKICAgICAgbWF4VW5hdmFpbGFibGU6IG51bGwKICAgICAgbWluQXZhaWxhYmxlOiBudWxsCiAgYWdncmVnYXRvcjoKICAgIHBvZERpc3J1cHRpb25CdWRnZXQ6CiAgICAgIG1heFVuYXZhaWxhYmxlOiBudWxsCiAgICAgIG1pbkF2YWlsYWJsZTogbnVsbAogICAgcmVwbGljYXM6IDMKICAgIHRvbGVyYXRpb25zOiBbXQogIGt1YmVjdGw6CiAgICBpbWFnZToKICAgICAgcmVwb3NpdG9yeTogZG9ja2VyLmlvL2JpdG5hbWkva3ViZWN0bAogICAgICB0YWc6IDEuMzIuMAogIHByb21ldGhldXM6CiAgICBpbWFnZToKICAgICAgcmVwb3NpdG9yeTogcXVheS5pby9wcm9tZXRoZXVzL3Byb21ldGhldXMKICAgICAgdGFnOiBudWxsCiAgcHJvbWV0aGV1c1JlbG9hZGVyOgogICAgaW1hZ2U6CiAgICAgIHJlcG9zaXRvcnk6IHF1YXkuaW8vcHJvbWV0aGV1cy1vcGVyYXRvci9wcm9tZXRoZXVzLWNvbmZpZy1yZWxvYWRlcgogICAgICB0YWc6IHYwLjgyLjAKICB3ZWJob29rU2VydmVyOgogICAgcG9kRGlzcnVwdGlvbkJ1ZGdldDoKICAgICAgbWF4VW5hdmFpbGFibGU6IG51bGwKICAgICAgbWluQXZhaWxhYmxlOiAxCiAgICByZXBsaWNhczogMwpjb25maWdtYXBSZWxvYWQ6CiAgcHJvbWV0aGV1czoKICAgIGVuYWJsZWQ6IHRydWUKICAgIGltYWdlOgogICAgICBkaWdlc3Q6IG51bGwKICAgICAgcHVsbFBvbGljeTogbnVsbAogICAgICByZXBvc2l0b3J5OiBudWxsCiAgICAgIHRhZzogbnVsbAogICAgcmVzb3VyY2VzOiB7fQpkZWZhdWx0czoKICBhZmZpbml0eToge30KICBhbm5vdGF0aW9uczoge30KICBkbnM6CiAgICBjb25maWc6IHt9CiAgICBwb2xpY3k6IG51bGwKICBmZWRlcmF0aW9uOgogICAgZW5hYmxlZDogZmFsc2UKICBpbWFnZToKICAgIHB1bGxQb2xpY3k6IElmTm90UHJlc2VudAogICAgcHVsbFNlY3JldHM6IG51bGwKICBsYWJlbHM6IHt9CiAgbm9kZVNlbGVjdG9yOiB7fQogIHBvZERpc3J1cHRpb25CdWRnZXQ6CiAgICBtYXhVbmF2YWlsYWJsZTogbnVsbAogICAgbWluQXZhaWxhYmxlOiAxCiAgcHJpb3JpdHlDbGFzc05hbWU6IG51bGwKICB0b2xlcmF0aW9uczogW10KZXhpc3RpbmdTZWNyZXROYW1lOiBudWxsCmhvc3Q6IGFwaS5jbG91ZHplcm8uY29tCmltYWdlUHVsbFNlY3JldHM6IFtdCmluaXRCYWNrZmlsbEpvYjoKICBhbm5vdGF0aW9uczoge30KICBlbmFibGVkOiB0cnVlCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIHRvbGVyYXRpb25zOiBbXQppbml0Q2VydEpvYjoKICBhbm5vdGF0aW9uczoge30KICBlbmFibGVkOiB0cnVlCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIHJiYWM6CiAgICBjbHVzdGVyUm9sZUJpbmRpbmdOYW1lOiAiIgogICAgY2x1c3RlclJvbGVOYW1lOiAiIgogICAgY3JlYXRlOiB0cnVlCiAgICBzZXJ2aWNlQWNjb3VudE5hbWU6ICIiCiAgdG9sZXJhdGlvbnM6IFtdCmluc2lnaHRzQ29udHJvbGxlcjoKICBDb25maWdNYXBOYW1lT3ZlcnJpZGU6IG51bGwKICBhbm5vdGF0aW9uczoKICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBwYXR0ZXJuczoKICAgIC0gLioKICAgIHJlc291cmNlczoKICAgICAgY3JvbmpvYnM6IGZhbHNlCiAgICAgIGRhZW1vbnNldHM6IGZhbHNlCiAgICAgIGRlcGxveW1lbnRzOiBmYWxzZQogICAgICBqb2JzOiBmYWxzZQogICAgICBuYW1lc3BhY2VzOiB0cnVlCiAgICAgIG5vZGVzOiBmYWxzZQogICAgICBwb2RzOiB0cnVlCiAgICAgIHN0YXRlZnVsc2V0czogZmFsc2UKICBjb25maWd1cmF0aW9uTW91bnRQYXRoOiBudWxsCiAgZW5hYmxlZDogdHJ1ZQogIGxhYmVsczoKICAgIGVuYWJsZWQ6IHRydWUKICAgIHBhdHRlcm5zOgogICAgLSBhcHAua3ViZXJuZXRlcy5pby9jb21wb25lbnQKICAgIHJlc291cmNlczoKICAgICAgY3JvbmpvYnM6IGZhbHNlCiAgICAgIGRhZW1vbnNldHM6IGZhbHNlCiAgICAgIGRlcGxveW1lbnRzOiBmYWxzZQogICAgICBqb2JzOiBmYWxzZQogICAgICBuYW1lc3BhY2VzOiB0cnVlCiAgICAgIG5vZGVzOiBmYWxzZQogICAgICBwb2RzOiB0cnVlCiAgICAgIHN0YXRlZnVsc2V0czogZmFsc2UKICBwb2RBbm5vdGF0aW9uczoge30KICBwb2RMYWJlbHM6IHt9CiAgcmVzb3VyY2VzOiB7fQogIHNlcnZlcjoKICAgIGFmZmluaXR5OiB7fQogICAgZGVwbG95bWVudEFubm90YXRpb25zOiB7fQogICAgaGVhbHRoQ2hlY2s6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgZmFpbHVyZVRocmVzaG9sZDogNQogICAgICBpbml0aWFsRGVsYXlTZWNvbmRzOiAxNQogICAgICBwYXRoOiAvaGVhbHRoegogICAgICBwZXJpb2RTZWNvbmRzOiAyMAogICAgICBwb3J0OiA4NDQzCiAgICAgIHN1Y2Nlc3NUaHJlc2hvbGQ6IDEKICAgICAgdGltZW91dFNlY29uZHM6IDMKICAgIGlkbGVfdGltZW91dDogMTIwcwogICAgaW1hZ2U6CiAgICAgIHB1bGxQb2xpY3k6IG51bGwKICAgICAgcmVwb3NpdG9yeTogbnVsbAogICAgICB0YWc6IG51bGwKICAgIGxvZ2dpbmc6CiAgICAgIGxldmVsOiBpbmZvCiAgICBuYW1lOiB3ZWJob29rLXNlcnZlcgogICAgbm9kZVNlbGVjdG9yOiB7fQogICAgcG9kQW5ub3RhdGlvbnM6IHt9CiAgICBwb3J0OiA4NDQzCiAgICByZWFkX3RpbWVvdXQ6IDEwcwogICAgcmVwbGljYUNvdW50OiBudWxsCiAgICBzZW5kX2ludGVydmFsOiAxbQogICAgc2VuZF90aW1lb3V0OiAxbQogICAgdG9sZXJhdGlvbnM6IFtdCiAgICB3cml0ZV90aW1lb3V0OiAxMHMKICBzZXJ2aWNlOgogICAgcG9ydDogNDQzCiAgdGxzOgogICAgY2FCdW5kbGU6ICIiCiAgICBjcnQ6ICIiCiAgICBlbmFibGVkOiB0cnVlCiAgICBrZXk6ICIiCiAgICBtb3VudFBhdGg6IC9ldGMvY2VydHMKICAgIHNlY3JldDoKICAgICAgY3JlYXRlOiB0cnVlCiAgICAgIG5hbWU6ICIiCiAgICB1c2VDZXJ0TWFuYWdlcjogZmFsc2UKICB2b2x1bWVNb3VudHM6IFtdCiAgdm9sdW1lczogW10KICB3ZWJob29rczoKICAgIGFubm90YXRpb25zOiB7fQogICAgY2FJbmplY3Rpb246IG51bGwKICAgIG5hbWVzcGFjZVNlbGVjdG9yOiB7fQogICAgcGF0aDogL3ZhbGlkYXRlCmpvYkNvbmZpZ0lEOiBERUFEQkVFRi1GRUVELUZBQ0UtQ0FGRS1GRUUxMEQxNUVBNUUKa3ViZVN0YXRlTWV0cmljczoKICBhZmZpbml0eToge30KICBhbm5vdGF0aW9uczoge30KICBhdXRvc2hhcmRpbmc6CiAgICBlbmFibGVkOiBmYWxzZQogIGNvbGxlY3RvcnM6CiAgLSBjZXJ0aWZpY2F0ZXNpZ25pbmdyZXF1ZXN0cwogIC0gY29uZmlnbWFwcwogIC0gY3JvbmpvYnMKICAtIGRhZW1vbnNldHMKICAtIGRlcGxveW1lbnRzCiAgLSBlbmRwb2ludHMKICAtIGhvcml6b250YWxwb2RhdXRvc2NhbGVycwogIC0gaW5ncmVzc2VzCiAgLSBqb2JzCiAgLSBsZWFzZXMKICAtIGxpbWl0cmFuZ2VzCiAgLSBtdXRhdGluZ3dlYmhvb2tjb25maWd1cmF0aW9ucwogIC0gbmFtZXNwYWNlcwogIC0gbmV0d29ya3BvbGljaWVzCiAgLSBub2RlcwogIC0gcGVyc2lzdGVudHZvbHVtZWNsYWltcwogIC0gcGVyc2lzdGVudHZvbHVtZXMKICAtIHBvZGRpc3J1cHRpb25idWRnZXRzCiAgLSBwb2RzCiAgLSByZXBsaWNhc2V0cwogIC0gcmVwbGljYXRpb25jb250cm9sbGVycwogIC0gcmVzb3VyY2VxdW90YXMKICAtIHNlY3JldHMKICAtIHNlcnZpY2VzCiAgLSBzdGF0ZWZ1bHNldHMKICAtIHN0b3JhZ2VjbGFzc2VzCiAgLSB2YWxpZGF0aW5nd2ViaG9va2NvbmZpZ3VyYXRpb25zCiAgLSB2b2x1bWVhdHRhY2htZW50cwogIGNvbnRhaW5lclNlY3VyaXR5Q29udGV4dDoKICAgIGFsbG93UHJpdmlsZWdlRXNjYWxhdGlvbjogZmFsc2UKICAgIGNhcGFiaWxpdGllczoKICAgICAgZHJvcDoKICAgICAgLSBBTEwKICBjb250YWluZXJzOiBbXQogIGN1c3RvbUxhYmVsczoge30KICBjdXN0b21SZXNvdXJjZVN0YXRlOgogICAgY29uZmlnOiB7fQogICAgZW5hYmxlZDogZmFsc2UKICBkbnNDb25maWc6IHt9CiAgZG5zUG9saWN5OiBDbHVzdGVyRmlyc3QKICBlbmFibGVkOiB0cnVlCiAgZXh0cmFBcmdzOiBbXQogIGV4dHJhTWFuaWZlc3RzOiBbXQogIGdsb2JhbDoKICAgIGltYWdlUHVsbFNlY3JldHM6IFtdCiAgICBpbWFnZVJlZ2lzdHJ5OiAiIgogIGhvc3ROZXR3b3JrOiBmYWxzZQogIGltYWdlOgogICAgcHVsbFBvbGljeTogSWZOb3RQcmVzZW50CiAgICByZWdpc3RyeTogcmVnaXN0cnkuazhzLmlvCiAgICByZXBvc2l0b3J5OiBrdWJlLXN0YXRlLW1ldHJpY3Mva3ViZS1zdGF0ZS1tZXRyaWNzCiAgICB0YWc6IHYyLjEwLjEKICBpbWFnZVB1bGxTZWNyZXRzOiBbXQogIGluaXRDb250YWluZXJzOiBbXQogIGt1YmVSQkFDUHJveHk6CiAgICBjb250YWluZXJTZWN1cml0eUNvbnRleHQ6IHt9CiAgICBlbmFibGVkOiBmYWxzZQogICAgZXh0cmFBcmdzOiBbXQogICAgaW1hZ2U6CiAgICAgIHB1bGxQb2xpY3k6IElmTm90UHJlc2VudAogICAgICByZWdpc3RyeTogcXVheS5pbwogICAgICByZXBvc2l0b3J5OiBicmFuY3ova3ViZS1yYmFjLXByb3h5CiAgICAgIHNoYTogIiIKICAgICAgdGFnOiB2MC4xNC4wCiAgICByZXNvdXJjZXM6IHt9CiAgICB2b2x1bWVNb3VudHM6IFtdCiAga3ViZVRhcmdldFZlcnNpb25PdmVycmlkZTogIiIKICBrdWJlY29uZmlnOgogICAgZW5hYmxlZDogZmFsc2UKICBtZXRyaWNBbGxvd2xpc3Q6IFtdCiAgbWV0cmljQW5ub3RhdGlvbnNBbGxvd0xpc3Q6IFtdCiAgbWV0cmljRGVueWxpc3Q6IFtdCiAgbWV0cmljTGFiZWxzQWxsb3dsaXN0OiBbXQogIG5hbWVPdmVycmlkZTogY2xvdWR6ZXJvLXN0YXRlLW1ldHJpY3MKICBuYW1lc3BhY2VPdmVycmlkZTogIiIKICBuYW1lc3BhY2VzOiAiIgogIG5hbWVzcGFjZXNEZW55bGlzdDogIiIKICBuZXR3b3JrUG9saWN5OgogICAgZW5hYmxlZDogZmFsc2UKICAgIGZsYXZvcjoga3ViZXJuZXRlcwogIG5vZGVTZWxlY3Rvcjoge30KICBwb2RBbm5vdGF0aW9uczoge30KICBwb2REaXNydXB0aW9uQnVkZ2V0OgogICAgbWluQXZhaWxhYmxlOiAxCiAgcG9kU2VjdXJpdHlQb2xpY3k6CiAgICBhZGRpdGlvbmFsVm9sdW1lczogW10KICAgIGFubm90YXRpb25zOiB7fQogICAgZW5hYmxlZDogZmFsc2UKICBwcm9tZXRoZXVzOgogICAgbW9uaXRvcjoKICAgICAgYWRkaXRpb25hbExhYmVsczoge30KICAgICAgYW5ub3RhdGlvbnM6IHt9CiAgICAgIGJlYXJlclRva2VuRmlsZTogIiIKICAgICAgYmVhcmVyVG9rZW5TZWNyZXQ6IHt9CiAgICAgIGVuYWJsZWQ6IGZhbHNlCiAgICAgIGhvbm9yTGFiZWxzOiBmYWxzZQogICAgICBpbnRlcnZhbDogIiIKICAgICAgam9iTGFiZWw6ICIiCiAgICAgIGxhYmVsTGltaXQ6IDAKICAgICAgbGFiZWxOYW1lTGVuZ3RoTGltaXQ6IDAKICAgICAgbGFiZWxWYWx1ZUxlbmd0aExpbWl0OiAwCiAgICAgIG1ldHJpY1JlbGFiZWxpbmdzOiBbXQogICAgICBuYW1lc3BhY2U6ICIiCiAgICAgIG5hbWVzcGFjZVNlbGVjdG9yOiBbXQogICAgICBwb2RUYXJnZXRMYWJlbHM6IFtdCiAgICAgIHByb3h5VXJsOiAiIgogICAgICByZWxhYmVsaW5nczogW10KICAgICAgc2FtcGxlTGltaXQ6IDAKICAgICAgc2NoZW1lOiAiIgogICAgICBzY3JhcGVUaW1lb3V0OiAiIgogICAgICBzZWxlY3Rvck92ZXJyaWRlOiB7fQogICAgICB0YXJnZXRMYWJlbHM6IFtdCiAgICAgIHRhcmdldExpbWl0OiAwCiAgICAgIHRsc0NvbmZpZzoge30KICBwcm9tZXRoZXVzU2NyYXBlOiBmYWxzZQogIHJiYWM6CiAgICBjcmVhdGU6IHRydWUKICAgIGV4dHJhUnVsZXM6IFtdCiAgICB1c2VDbHVzdGVyUm9sZTogdHJ1ZQogIHJlbGVhc2VMYWJlbDogZmFsc2UKICByZWxlYXNlTmFtZXNwYWNlOiBmYWxzZQogIHJlcGxpY2FzOiAxCiAgcmVzb3VyY2VzOiB7fQogIHJldmlzaW9uSGlzdG9yeUxpbWl0OiAxMAogIHNlY3VyaXR5Q29udGV4dDoKICAgIGVuYWJsZWQ6IHRydWUKICAgIGZzR3JvdXA6IDY1NTM0CiAgICBydW5Bc0dyb3VwOiA2NTUzNAogICAgcnVuQXNOb25Sb290OiB0cnVlCiAgICBydW5Bc1VzZXI6IDY1NTM0CiAgICBzZWNjb21wUHJvZmlsZToKICAgICAgdHlwZTogUnVudGltZURlZmF1bHQKICBzZWxlY3Rvck92ZXJyaWRlOiB7fQogIHNlbGZNb25pdG9yOgogICAgZW5hYmxlZDogZmFsc2UKICBzZXJ2aWNlOgogICAgYW5ub3RhdGlvbnM6IHt9CiAgICBjbHVzdGVySVA6ICIiCiAgICBsb2FkQmFsYW5jZXJJUDogIiIKICAgIGxvYWRCYWxhbmNlclNvdXJjZVJhbmdlczogW10KICAgIG5vZGVQb3J0OiAwCiAgICBwb3J0OiA4MDgwCiAgICB0eXBlOiBDbHVzdGVySVAKICBzZXJ2aWNlQWNjb3VudDoKICAgIGFubm90YXRpb25zOiB7fQogICAgY3JlYXRlOiB0cnVlCiAgICBpbWFnZVB1bGxTZWNyZXRzOiBbXQogIHRvbGVyYXRpb25zOiBbXQogIHRvcG9sb2d5U3ByZWFkQ29uc3RyYWludHM6IFtdCiAgdmVydGljYWxQb2RBdXRvc2NhbGVyOgogICAgY29udHJvbGxlZFJlc291cmNlczogW10KICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBtYXhBbGxvd2VkOiB7fQogICAgbWluQWxsb3dlZDoge30KICB2b2x1bWVNb3VudHM6IFtdCiAgdm9sdW1lczogW10KcHJvbWV0aGV1c0NvbmZpZzoKICBjb25maWdNYXBBbm5vdGF0aW9uczoge30KICBjb25maWdNYXBOYW1lT3ZlcnJpZGU6ICIiCiAgY29uZmlnT3ZlcnJpZGU6ICIiCiAgZ2xvYmFsU2NyYXBlSW50ZXJ2YWw6IDYwcwogIHNjcmFwZUpvYnM6CiAgICBhZGRpdGlvbmFsU2NyYXBlSm9iczogW10KICAgIGFnZ3JlZ2F0b3I6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgc2NyYXBlSW50ZXJ2YWw6IDEyMHMKICAgIGNhZHZpc29yOgogICAgICBlbmFibGVkOiB0cnVlCiAgICAgIHNjcmFwZUludGVydmFsOiA2MHMKICAgIGt1YmVTdGF0ZU1ldHJpY3M6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgc2NyYXBlSW50ZXJ2YWw6IDYwcwogICAgcHJvbWV0aGV1czoKICAgICAgZW5hYmxlZDogdHJ1ZQogICAgICBzY3JhcGVJbnRlcnZhbDogMTIwcwpyYmFjOgogIGNyZWF0ZTogdHJ1ZQpyZWdpb246IHVzLWVhc3QtMQpzZWNyZXRBbm5vdGF0aW9uczoge30Kc2VydmVyOgogIGFmZmluaXR5OiB7fQogIGFnZW50TW9kZTogdHJ1ZQogIGFyZ3M6CiAgLSAtLWNvbmZpZy5maWxlPS9ldGMvY29uZmlnL3Byb21ldGhldXMvY29uZmlnbWFwcy9wcm9tZXRoZXVzLnltbAogIC0gLS13ZWIuZW5hYmxlLWxpZmVjeWNsZQogIC0gLS13ZWIuY29uc29sZS5saWJyYXJpZXM9L2V0Yy9wcm9tZXRoZXVzL2NvbnNvbGVfbGlicmFyaWVzCiAgLSAtLXdlYi5jb25zb2xlLnRlbXBsYXRlcz0vZXRjL3Byb21ldGhldXMvY29uc29sZXMKICBkZXBsb3ltZW50QW5ub3RhdGlvbnM6IHt9CiAgZW1wdHlEaXI6CiAgICBzaXplTGltaXQ6IDhHaQogIGltYWdlOgogICAgZGlnZXN0OiBudWxsCiAgICBwdWxsUG9saWN5OiBudWxsCiAgICByZXBvc2l0b3J5OiBudWxsCiAgICB0YWc6IG51bGwKICBsaXZlbmVzc1Byb2JlOgogICAgZmFpbHVyZVRocmVzaG9sZDogMwogICAgaW5pdGlhbERlbGF5U2Vjb25kczogMzAKICAgIHBlcmlvZFNlY29uZHM6IDE1CiAgICBzdWNjZXNzVGhyZXNob2xkOiAxCiAgICB0aW1lb3V0U2Vjb25kczogMTAKICBuYW1lOiBzZXJ2ZXIKICBub2RlU2VsZWN0b3I6IHt9CiAgcGVyc2lzdGVudFZvbHVtZToKICAgIGFjY2Vzc01vZGVzOgogICAgLSBSZWFkV3JpdGVPbmNlCiAgICBhbm5vdGF0aW9uczoge30KICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBleGlzdGluZ0NsYWltOiAiIgogICAgbW91bnRQYXRoOiAvZGF0YQogICAgc2l6ZTogOEdpCiAgICBzdG9yYWdlQ2xhc3M6ICIiCiAgICBzdWJQYXRoOiAiIgogIHBvZEFubm90YXRpb25zOiB7fQogIHJlYWRpbmVzc1Byb2JlOgogICAgZmFpbHVyZVRocmVzaG9sZDogMwogICAgaW5pdGlhbERlbGF5U2Vjb25kczogMzAKICAgIHBlcmlvZFNlY29uZHM6IDUKICAgIHN1Y2Nlc3NUaHJlc2hvbGQ6IDEKICAgIHRpbWVvdXRTZWNvbmRzOiA0CiAgcmVzb3VyY2VzOgogICAgbGltaXRzOgogICAgICBtZW1vcnk6IDEwMjRNaQogICAgcmVxdWVzdHM6CiAgICAgIGNwdTogMjUwbQogICAgICBtZW1vcnk6IDUxMk1pCiAgdGVybWluYXRpb25HcmFjZVBlcmlvZFNlY29uZHM6IDMwMAogIHRvbGVyYXRpb25zOiBbXQogIHRvcG9sb2d5U3ByZWFkQ29uc3RyYWludHM6IFtdCnNlcnZlckNvbmZpZzoKICBjb250YWluZXJTZWNyZXRGaWxlTmFtZTogdmFsdWUKICBjb250YWluZXJTZWNyZXRGaWxlUGF0aDogL2V0Yy9jb25maWcvc2VjcmV0cy8Kc2VydmljZUFjY291bnQ6CiAgYW5ub3RhdGlvbnM6IHt9CiAgY3JlYXRlOiB0cnVlCiAgbmFtZTogIiIKdmFsaWRhdG9yOgogIGltYWdlOgogICAgZGlnZXN0OiBudWxsCiAgICBwdWxsUG9saWN5OiBudWxsCiAgICBwdWxsU2VjcmV0czogbnVsbAogICAgcmVwb3NpdG9yeTogbnVsbAogICAgdGFnOiBudWxsCiAgbmFtZTogZW52LXZhbGlkYXRvcgogIHNlcnZpY2VFbmRwb2ludHM6CiAgICBrdWJlU3RhdGVNZXRyaWNzOiBudWxs
+            - --config-validator
+            - /cloudzero/config/validator/validator.yml
+            - --config-webhook
+            - /etc/cloudzero-agent-insights/server-config.yaml
+            - --config-aggregator
+            - /cloudzero/config/config.yml
+          resources:
+            {}
+          volumeMounts:
+            - name: cloudzero-api-key
+              mountPath: /etc/config/secrets/
+              subPath: ""
+              readOnly: true
+            - name: config-volume
+              mountPath: /etc/config/prometheus/configmaps/
+            - name: config-validator
+              mountPath: /cloudzero/config/validator # validator.yml
+            - name: config-webhook
+              mountPath: /etc/cloudzero-agent-insights # server-config.yaml
+            - name: config-aggregator
+              mountPath: /cloudzero/config # config.yaml
+            - name: aggregator-persistent-storage
+              mountPath: /cloudzero/data
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cz-agent-configuration
+        - name: config-validator
+          configMap:
+            name: cz-agent-validator-configuration
+        - name: config-webhook
+          configMap:
+            name: cz-agent-webhook-configuration
+        - name: config-aggregator
+          configMap:
+            name: cz-agent-aggregator
+        - name: cloudzero-api-key
+          secret:
+            secretName: cz-agent-api-key
+        - name: aggregator-persistent-storage
+          emptyDir: {}
+---
 # Source: cloudzero-agent/templates/init-cert-job.yaml
 apiVersion: batch/v1
 kind: Job
@@ -2472,108 +2574,6 @@ spec:
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
               exit 0
----
-# Source: cloudzero-agent/templates/validator-job.yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: cz-agent-validator-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-  namespace: cz-agent
-  annotations:
-    checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-  labels:
-    app.kubernetes.io/component: webhook-server
-    app.kubernetes.io/name: cloudzero-agent
-    app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
-    helm.sh/chart: cloudzero-agent-1.1.0-dev
-spec:
-  template:
-    metadata:
-      name: cz-agent-validator-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-      namespace: cz-agent
-      labels:
-        app.kubernetes.io/component: cz-agent-validator-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-        app.kubernetes.io/name: cloudzero-agent
-        app.kubernetes.io/instance: cz-agent
-      
-    spec:
-      serviceAccountName: cz-agent-cloudzero-agent-server
-      restartPolicy: OnFailure
-      
-      
-      containers:
-        - name: run-validator
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.1.2"
-          imagePullPolicy: "IfNotPresent"
-          
-          env:
-            - name: K8S_NAMESPACE
-              value: cz-agent
-            - name: K8S_POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-          command:
-            - /app/cloudzero-cluster-config
-            - load
-            - --account
-            - 1234567890
-            - --region
-            - us-east-1
-            - --cluster-name
-            - my-cluster
-            - --deploy-name
-            - TODO
-            - --chart-version
-            - 1.1.0-dev
-            - --agent-version
-            - 1.1.2
-            - --values-b64
-            - YWdncmVnYXRvcjoKICBhZmZpbml0eToge30KICBjbG91ZHplcm86CiAgICByb3RhdGVJbnRlcnZhbDogMzBtCiAgICBzZW5kSW50ZXJ2YWw6IDFtCiAgICBzZW5kVGltZW91dDogMzBzCiAgY29sbGVjdG9yOgogICAgcG9ydDogODA4MAogICAgcmVzb3VyY2VzOgogICAgICBsaW1pdHM6CiAgICAgICAgY3B1OiAyMDAwbQogICAgICAgIG1lbW9yeTogMTAyNE1pCiAgICAgIHJlcXVlc3RzOgogICAgICAgIGNwdTogMTAwbQogICAgICAgIG1lbW9yeTogNjRNaQogIGRhdGFiYXNlOgogICAgY29tcHJlc3Npb25MZXZlbDogOAogICAgY29zdE1heEludGVydmFsOiAxMG0KICAgIGVtcHR5RGlyOgogICAgICBlbmFibGVkOiB0cnVlCiAgICAgIHNpemVMaW1pdDogIiIKICAgIG1heFJlY29yZHM6IDE1MDAwMDAKICAgIG9ic2VydmFiaWxpdHlNYXhJbnRlcnZhbDogMzBtCiAgICBwdXJnZVJ1bGVzOgogICAgICBsYXp5OiB0cnVlCiAgICAgIG1ldHJpY3NPbGRlclRoYW46IDIxNjBoCiAgICAgIHBlcmNlbnQ6IDIwCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIGxvZ2dpbmc6CiAgICBsZXZlbDogaW5mbwogIG1vdW50Um9vdDogL2Nsb3VkemVybwogIG5vZGVTZWxlY3Rvcjoge30KICBwcm9maWxpbmc6IGZhbHNlCiAgc2hpcHBlcjoKICAgIHBvcnQ6IDgwODEKICAgIHJlc291cmNlczoKICAgICAgbGltaXRzOgogICAgICAgIGNwdTogMjAwMG0KICAgICAgICBtZW1vcnk6IDEwMjRNaQogICAgICByZXF1ZXN0czoKICAgICAgICBjcHU6IDEwMG0KICAgICAgICBtZW1vcnk6IDY0TWkKICB0b2xlcmF0aW9uczogW10KYXBpS2V5OiBub3QtYS1yZWFsLWFwaS1rZXkKY2xvdWRBY2NvdW50SWQ6ICIxMjM0NTY3ODkwIgpjbHVzdGVyTmFtZTogbXktY2x1c3Rlcgpjb21tb25NZXRhTGFiZWxzOiB7fQpjb21wb25lbnRzOgogIGFnZW50OgogICAgaW1hZ2U6CiAgICAgIHJlcG9zaXRvcnk6IGdoY3IuaW8vY2xvdWR6ZXJvL2Nsb3VkemVyby1hZ2VudC9jbG91ZHplcm8tYWdlbnQKICAgICAgdGFnOiAxLjEuMgogICAgcG9kRGlzcnVwdGlvbkJ1ZGdldDoKICAgICAgbWF4VW5hdmFpbGFibGU6IG51bGwKICAgICAgbWluQXZhaWxhYmxlOiBudWxsCiAgYWdncmVnYXRvcjoKICAgIHBvZERpc3J1cHRpb25CdWRnZXQ6CiAgICAgIG1heFVuYXZhaWxhYmxlOiBudWxsCiAgICAgIG1pbkF2YWlsYWJsZTogbnVsbAogICAgcmVwbGljYXM6IDMKICAgIHRvbGVyYXRpb25zOiBbXQogIGt1YmVjdGw6CiAgICBpbWFnZToKICAgICAgcmVwb3NpdG9yeTogZG9ja2VyLmlvL2JpdG5hbWkva3ViZWN0bAogICAgICB0YWc6IDEuMzIuMAogIHByb21ldGhldXM6CiAgICBpbWFnZToKICAgICAgcmVwb3NpdG9yeTogcXVheS5pby9wcm9tZXRoZXVzL3Byb21ldGhldXMKICAgICAgdGFnOiBudWxsCiAgcHJvbWV0aGV1c1JlbG9hZGVyOgogICAgaW1hZ2U6CiAgICAgIHJlcG9zaXRvcnk6IHF1YXkuaW8vcHJvbWV0aGV1cy1vcGVyYXRvci9wcm9tZXRoZXVzLWNvbmZpZy1yZWxvYWRlcgogICAgICB0YWc6IHYwLjgyLjAKICB3ZWJob29rU2VydmVyOgogICAgcG9kRGlzcnVwdGlvbkJ1ZGdldDoKICAgICAgbWF4VW5hdmFpbGFibGU6IG51bGwKICAgICAgbWluQXZhaWxhYmxlOiAxCiAgICByZXBsaWNhczogMwpjb25maWdtYXBSZWxvYWQ6CiAgcHJvbWV0aGV1czoKICAgIGVuYWJsZWQ6IHRydWUKICAgIGltYWdlOgogICAgICBkaWdlc3Q6IG51bGwKICAgICAgcHVsbFBvbGljeTogbnVsbAogICAgICByZXBvc2l0b3J5OiBudWxsCiAgICAgIHRhZzogbnVsbAogICAgcmVzb3VyY2VzOiB7fQpkZWZhdWx0czoKICBhZmZpbml0eToge30KICBhbm5vdGF0aW9uczoge30KICBkbnM6CiAgICBjb25maWc6IHt9CiAgICBwb2xpY3k6IG51bGwKICBmZWRlcmF0aW9uOgogICAgZW5hYmxlZDogZmFsc2UKICBpbWFnZToKICAgIHB1bGxQb2xpY3k6IElmTm90UHJlc2VudAogICAgcHVsbFNlY3JldHM6IG51bGwKICBsYWJlbHM6IHt9CiAgbm9kZVNlbGVjdG9yOiB7fQogIHBvZERpc3J1cHRpb25CdWRnZXQ6CiAgICBtYXhVbmF2YWlsYWJsZTogbnVsbAogICAgbWluQXZhaWxhYmxlOiAxCiAgcHJpb3JpdHlDbGFzc05hbWU6IG51bGwKICB0b2xlcmF0aW9uczogW10KZXhpc3RpbmdTZWNyZXROYW1lOiBudWxsCmhvc3Q6IGFwaS5jbG91ZHplcm8uY29tCmltYWdlUHVsbFNlY3JldHM6IFtdCmluaXRCYWNrZmlsbEpvYjoKICBhbm5vdGF0aW9uczoge30KICBlbmFibGVkOiB0cnVlCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIHRvbGVyYXRpb25zOiBbXQppbml0Q2VydEpvYjoKICBhbm5vdGF0aW9uczoge30KICBlbmFibGVkOiB0cnVlCiAgaW1hZ2U6CiAgICBkaWdlc3Q6IG51bGwKICAgIHB1bGxQb2xpY3k6IG51bGwKICAgIHJlcG9zaXRvcnk6IG51bGwKICAgIHRhZzogbnVsbAogIHJiYWM6CiAgICBjbHVzdGVyUm9sZUJpbmRpbmdOYW1lOiAiIgogICAgY2x1c3RlclJvbGVOYW1lOiAiIgogICAgY3JlYXRlOiB0cnVlCiAgICBzZXJ2aWNlQWNjb3VudE5hbWU6ICIiCiAgdG9sZXJhdGlvbnM6IFtdCmluc2lnaHRzQ29udHJvbGxlcjoKICBDb25maWdNYXBOYW1lT3ZlcnJpZGU6IG51bGwKICBhbm5vdGF0aW9uczoKICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBwYXR0ZXJuczoKICAgIC0gLioKICAgIHJlc291cmNlczoKICAgICAgY3JvbmpvYnM6IGZhbHNlCiAgICAgIGRhZW1vbnNldHM6IGZhbHNlCiAgICAgIGRlcGxveW1lbnRzOiBmYWxzZQogICAgICBqb2JzOiBmYWxzZQogICAgICBuYW1lc3BhY2VzOiB0cnVlCiAgICAgIG5vZGVzOiBmYWxzZQogICAgICBwb2RzOiB0cnVlCiAgICAgIHN0YXRlZnVsc2V0czogZmFsc2UKICBjb25maWd1cmF0aW9uTW91bnRQYXRoOiBudWxsCiAgZW5hYmxlZDogdHJ1ZQogIGxhYmVsczoKICAgIGVuYWJsZWQ6IHRydWUKICAgIHBhdHRlcm5zOgogICAgLSBhcHAua3ViZXJuZXRlcy5pby9jb21wb25lbnQKICAgIHJlc291cmNlczoKICAgICAgY3JvbmpvYnM6IGZhbHNlCiAgICAgIGRhZW1vbnNldHM6IGZhbHNlCiAgICAgIGRlcGxveW1lbnRzOiBmYWxzZQogICAgICBqb2JzOiBmYWxzZQogICAgICBuYW1lc3BhY2VzOiB0cnVlCiAgICAgIG5vZGVzOiBmYWxzZQogICAgICBwb2RzOiB0cnVlCiAgICAgIHN0YXRlZnVsc2V0czogZmFsc2UKICBwb2RBbm5vdGF0aW9uczoge30KICBwb2RMYWJlbHM6IHt9CiAgcmVzb3VyY2VzOiB7fQogIHNlcnZlcjoKICAgIGFmZmluaXR5OiB7fQogICAgZGVwbG95bWVudEFubm90YXRpb25zOiB7fQogICAgaGVhbHRoQ2hlY2s6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgZmFpbHVyZVRocmVzaG9sZDogNQogICAgICBpbml0aWFsRGVsYXlTZWNvbmRzOiAxNQogICAgICBwYXRoOiAvaGVhbHRoegogICAgICBwZXJpb2RTZWNvbmRzOiAyMAogICAgICBwb3J0OiA4NDQzCiAgICAgIHN1Y2Nlc3NUaHJlc2hvbGQ6IDEKICAgICAgdGltZW91dFNlY29uZHM6IDMKICAgIGlkbGVfdGltZW91dDogMTIwcwogICAgaW1hZ2U6CiAgICAgIHB1bGxQb2xpY3k6IG51bGwKICAgICAgcmVwb3NpdG9yeTogbnVsbAogICAgICB0YWc6IG51bGwKICAgIGxvZ2dpbmc6CiAgICAgIGxldmVsOiBpbmZvCiAgICBuYW1lOiB3ZWJob29rLXNlcnZlcgogICAgbm9kZVNlbGVjdG9yOiB7fQogICAgcG9kQW5ub3RhdGlvbnM6IHt9CiAgICBwb3J0OiA4NDQzCiAgICByZWFkX3RpbWVvdXQ6IDEwcwogICAgcmVwbGljYUNvdW50OiBudWxsCiAgICBzZW5kX2ludGVydmFsOiAxbQogICAgc2VuZF90aW1lb3V0OiAxbQogICAgdG9sZXJhdGlvbnM6IFtdCiAgICB3cml0ZV90aW1lb3V0OiAxMHMKICBzZXJ2aWNlOgogICAgcG9ydDogNDQzCiAgdGxzOgogICAgY2FCdW5kbGU6ICIiCiAgICBjcnQ6ICIiCiAgICBlbmFibGVkOiB0cnVlCiAgICBrZXk6ICIiCiAgICBtb3VudFBhdGg6IC9ldGMvY2VydHMKICAgIHNlY3JldDoKICAgICAgY3JlYXRlOiB0cnVlCiAgICAgIG5hbWU6ICIiCiAgICB1c2VDZXJ0TWFuYWdlcjogZmFsc2UKICB2b2x1bWVNb3VudHM6IFtdCiAgdm9sdW1lczogW10KICB3ZWJob29rczoKICAgIGFubm90YXRpb25zOiB7fQogICAgY2FJbmplY3Rpb246IG51bGwKICAgIG5hbWVzcGFjZVNlbGVjdG9yOiB7fQogICAgcGF0aDogL3ZhbGlkYXRlCmpvYkNvbmZpZ0lEOiBERUFEQkVFRi1GRUVELUZBQ0UtQ0FGRS1GRUUxMEQxNUVBNUUKa3ViZVN0YXRlTWV0cmljczoKICBhZmZpbml0eToge30KICBhbm5vdGF0aW9uczoge30KICBhdXRvc2hhcmRpbmc6CiAgICBlbmFibGVkOiBmYWxzZQogIGNvbGxlY3RvcnM6CiAgLSBjZXJ0aWZpY2F0ZXNpZ25pbmdyZXF1ZXN0cwogIC0gY29uZmlnbWFwcwogIC0gY3JvbmpvYnMKICAtIGRhZW1vbnNldHMKICAtIGRlcGxveW1lbnRzCiAgLSBlbmRwb2ludHMKICAtIGhvcml6b250YWxwb2RhdXRvc2NhbGVycwogIC0gaW5ncmVzc2VzCiAgLSBqb2JzCiAgLSBsZWFzZXMKICAtIGxpbWl0cmFuZ2VzCiAgLSBtdXRhdGluZ3dlYmhvb2tjb25maWd1cmF0aW9ucwogIC0gbmFtZXNwYWNlcwogIC0gbmV0d29ya3BvbGljaWVzCiAgLSBub2RlcwogIC0gcGVyc2lzdGVudHZvbHVtZWNsYWltcwogIC0gcGVyc2lzdGVudHZvbHVtZXMKICAtIHBvZGRpc3J1cHRpb25idWRnZXRzCiAgLSBwb2RzCiAgLSByZXBsaWNhc2V0cwogIC0gcmVwbGljYXRpb25jb250cm9sbGVycwogIC0gcmVzb3VyY2VxdW90YXMKICAtIHNlY3JldHMKICAtIHNlcnZpY2VzCiAgLSBzdGF0ZWZ1bHNldHMKICAtIHN0b3JhZ2VjbGFzc2VzCiAgLSB2YWxpZGF0aW5nd2ViaG9va2NvbmZpZ3VyYXRpb25zCiAgLSB2b2x1bWVhdHRhY2htZW50cwogIGNvbnRhaW5lclNlY3VyaXR5Q29udGV4dDoKICAgIGFsbG93UHJpdmlsZWdlRXNjYWxhdGlvbjogZmFsc2UKICAgIGNhcGFiaWxpdGllczoKICAgICAgZHJvcDoKICAgICAgLSBBTEwKICBjb250YWluZXJzOiBbXQogIGN1c3RvbUxhYmVsczoge30KICBjdXN0b21SZXNvdXJjZVN0YXRlOgogICAgY29uZmlnOiB7fQogICAgZW5hYmxlZDogZmFsc2UKICBkbnNDb25maWc6IHt9CiAgZG5zUG9saWN5OiBDbHVzdGVyRmlyc3QKICBlbmFibGVkOiB0cnVlCiAgZXh0cmFBcmdzOiBbXQogIGV4dHJhTWFuaWZlc3RzOiBbXQogIGdsb2JhbDoKICAgIGltYWdlUHVsbFNlY3JldHM6IFtdCiAgICBpbWFnZVJlZ2lzdHJ5OiAiIgogIGhvc3ROZXR3b3JrOiBmYWxzZQogIGltYWdlOgogICAgcHVsbFBvbGljeTogSWZOb3RQcmVzZW50CiAgICByZWdpc3RyeTogcmVnaXN0cnkuazhzLmlvCiAgICByZXBvc2l0b3J5OiBrdWJlLXN0YXRlLW1ldHJpY3Mva3ViZS1zdGF0ZS1tZXRyaWNzCiAgICB0YWc6IHYyLjEwLjEKICBpbWFnZVB1bGxTZWNyZXRzOiBbXQogIGluaXRDb250YWluZXJzOiBbXQogIGt1YmVSQkFDUHJveHk6CiAgICBjb250YWluZXJTZWN1cml0eUNvbnRleHQ6IHt9CiAgICBlbmFibGVkOiBmYWxzZQogICAgZXh0cmFBcmdzOiBbXQogICAgaW1hZ2U6CiAgICAgIHB1bGxQb2xpY3k6IElmTm90UHJlc2VudAogICAgICByZWdpc3RyeTogcXVheS5pbwogICAgICByZXBvc2l0b3J5OiBicmFuY3ova3ViZS1yYmFjLXByb3h5CiAgICAgIHNoYTogIiIKICAgICAgdGFnOiB2MC4xNC4wCiAgICByZXNvdXJjZXM6IHt9CiAgICB2b2x1bWVNb3VudHM6IFtdCiAga3ViZVRhcmdldFZlcnNpb25PdmVycmlkZTogIiIKICBrdWJlY29uZmlnOgogICAgZW5hYmxlZDogZmFsc2UKICBtZXRyaWNBbGxvd2xpc3Q6IFtdCiAgbWV0cmljQW5ub3RhdGlvbnNBbGxvd0xpc3Q6IFtdCiAgbWV0cmljRGVueWxpc3Q6IFtdCiAgbWV0cmljTGFiZWxzQWxsb3dsaXN0OiBbXQogIG5hbWVPdmVycmlkZTogY2xvdWR6ZXJvLXN0YXRlLW1ldHJpY3MKICBuYW1lc3BhY2VPdmVycmlkZTogIiIKICBuYW1lc3BhY2VzOiAiIgogIG5hbWVzcGFjZXNEZW55bGlzdDogIiIKICBuZXR3b3JrUG9saWN5OgogICAgZW5hYmxlZDogZmFsc2UKICAgIGZsYXZvcjoga3ViZXJuZXRlcwogIG5vZGVTZWxlY3Rvcjoge30KICBwb2RBbm5vdGF0aW9uczoge30KICBwb2REaXNydXB0aW9uQnVkZ2V0OgogICAgbWluQXZhaWxhYmxlOiAxCiAgcG9kU2VjdXJpdHlQb2xpY3k6CiAgICBhZGRpdGlvbmFsVm9sdW1lczogW10KICAgIGFubm90YXRpb25zOiB7fQogICAgZW5hYmxlZDogZmFsc2UKICBwcm9tZXRoZXVzOgogICAgbW9uaXRvcjoKICAgICAgYWRkaXRpb25hbExhYmVsczoge30KICAgICAgYW5ub3RhdGlvbnM6IHt9CiAgICAgIGJlYXJlclRva2VuRmlsZTogIiIKICAgICAgYmVhcmVyVG9rZW5TZWNyZXQ6IHt9CiAgICAgIGVuYWJsZWQ6IGZhbHNlCiAgICAgIGhvbm9yTGFiZWxzOiBmYWxzZQogICAgICBpbnRlcnZhbDogIiIKICAgICAgam9iTGFiZWw6ICIiCiAgICAgIGxhYmVsTGltaXQ6IDAKICAgICAgbGFiZWxOYW1lTGVuZ3RoTGltaXQ6IDAKICAgICAgbGFiZWxWYWx1ZUxlbmd0aExpbWl0OiAwCiAgICAgIG1ldHJpY1JlbGFiZWxpbmdzOiBbXQogICAgICBuYW1lc3BhY2U6ICIiCiAgICAgIG5hbWVzcGFjZVNlbGVjdG9yOiBbXQogICAgICBwb2RUYXJnZXRMYWJlbHM6IFtdCiAgICAgIHByb3h5VXJsOiAiIgogICAgICByZWxhYmVsaW5nczogW10KICAgICAgc2FtcGxlTGltaXQ6IDAKICAgICAgc2NoZW1lOiAiIgogICAgICBzY3JhcGVUaW1lb3V0OiAiIgogICAgICBzZWxlY3Rvck92ZXJyaWRlOiB7fQogICAgICB0YXJnZXRMYWJlbHM6IFtdCiAgICAgIHRhcmdldExpbWl0OiAwCiAgICAgIHRsc0NvbmZpZzoge30KICBwcm9tZXRoZXVzU2NyYXBlOiBmYWxzZQogIHJiYWM6CiAgICBjcmVhdGU6IHRydWUKICAgIGV4dHJhUnVsZXM6IFtdCiAgICB1c2VDbHVzdGVyUm9sZTogdHJ1ZQogIHJlbGVhc2VMYWJlbDogZmFsc2UKICByZWxlYXNlTmFtZXNwYWNlOiBmYWxzZQogIHJlcGxpY2FzOiAxCiAgcmVzb3VyY2VzOiB7fQogIHJldmlzaW9uSGlzdG9yeUxpbWl0OiAxMAogIHNlY3VyaXR5Q29udGV4dDoKICAgIGVuYWJsZWQ6IHRydWUKICAgIGZzR3JvdXA6IDY1NTM0CiAgICBydW5Bc0dyb3VwOiA2NTUzNAogICAgcnVuQXNOb25Sb290OiB0cnVlCiAgICBydW5Bc1VzZXI6IDY1NTM0CiAgICBzZWNjb21wUHJvZmlsZToKICAgICAgdHlwZTogUnVudGltZURlZmF1bHQKICBzZWxlY3Rvck92ZXJyaWRlOiB7fQogIHNlbGZNb25pdG9yOgogICAgZW5hYmxlZDogZmFsc2UKICBzZXJ2aWNlOgogICAgYW5ub3RhdGlvbnM6IHt9CiAgICBjbHVzdGVySVA6ICIiCiAgICBsb2FkQmFsYW5jZXJJUDogIiIKICAgIGxvYWRCYWxhbmNlclNvdXJjZVJhbmdlczogW10KICAgIG5vZGVQb3J0OiAwCiAgICBwb3J0OiA4MDgwCiAgICB0eXBlOiBDbHVzdGVySVAKICBzZXJ2aWNlQWNjb3VudDoKICAgIGFubm90YXRpb25zOiB7fQogICAgY3JlYXRlOiB0cnVlCiAgICBpbWFnZVB1bGxTZWNyZXRzOiBbXQogIHRvbGVyYXRpb25zOiBbXQogIHRvcG9sb2d5U3ByZWFkQ29uc3RyYWludHM6IFtdCiAgdmVydGljYWxQb2RBdXRvc2NhbGVyOgogICAgY29udHJvbGxlZFJlc291cmNlczogW10KICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBtYXhBbGxvd2VkOiB7fQogICAgbWluQWxsb3dlZDoge30KICB2b2x1bWVNb3VudHM6IFtdCiAgdm9sdW1lczogW10KcHJvbWV0aGV1c0NvbmZpZzoKICBjb25maWdNYXBBbm5vdGF0aW9uczoge30KICBjb25maWdNYXBOYW1lT3ZlcnJpZGU6ICIiCiAgY29uZmlnT3ZlcnJpZGU6ICIiCiAgZ2xvYmFsU2NyYXBlSW50ZXJ2YWw6IDYwcwogIHNjcmFwZUpvYnM6CiAgICBhZGRpdGlvbmFsU2NyYXBlSm9iczogW10KICAgIGFnZ3JlZ2F0b3I6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgc2NyYXBlSW50ZXJ2YWw6IDEyMHMKICAgIGNhZHZpc29yOgogICAgICBlbmFibGVkOiB0cnVlCiAgICAgIHNjcmFwZUludGVydmFsOiA2MHMKICAgIGt1YmVTdGF0ZU1ldHJpY3M6CiAgICAgIGVuYWJsZWQ6IHRydWUKICAgICAgc2NyYXBlSW50ZXJ2YWw6IDYwcwogICAgcHJvbWV0aGV1czoKICAgICAgZW5hYmxlZDogdHJ1ZQogICAgICBzY3JhcGVJbnRlcnZhbDogMTIwcwpyYmFjOgogIGNyZWF0ZTogdHJ1ZQpyZWdpb246IHVzLWVhc3QtMQpzZWNyZXRBbm5vdGF0aW9uczoge30Kc2VydmVyOgogIGFmZmluaXR5OiB7fQogIGFnZW50TW9kZTogdHJ1ZQogIGFyZ3M6CiAgLSAtLWNvbmZpZy5maWxlPS9ldGMvY29uZmlnL3Byb21ldGhldXMvY29uZmlnbWFwcy9wcm9tZXRoZXVzLnltbAogIC0gLS13ZWIuZW5hYmxlLWxpZmVjeWNsZQogIC0gLS13ZWIuY29uc29sZS5saWJyYXJpZXM9L2V0Yy9wcm9tZXRoZXVzL2NvbnNvbGVfbGlicmFyaWVzCiAgLSAtLXdlYi5jb25zb2xlLnRlbXBsYXRlcz0vZXRjL3Byb21ldGhldXMvY29uc29sZXMKICBkZXBsb3ltZW50QW5ub3RhdGlvbnM6IHt9CiAgZW1wdHlEaXI6CiAgICBzaXplTGltaXQ6IDhHaQogIGltYWdlOgogICAgZGlnZXN0OiBudWxsCiAgICBwdWxsUG9saWN5OiBudWxsCiAgICByZXBvc2l0b3J5OiBudWxsCiAgICB0YWc6IG51bGwKICBsaXZlbmVzc1Byb2JlOgogICAgZmFpbHVyZVRocmVzaG9sZDogMwogICAgaW5pdGlhbERlbGF5U2Vjb25kczogMzAKICAgIHBlcmlvZFNlY29uZHM6IDE1CiAgICBzdWNjZXNzVGhyZXNob2xkOiAxCiAgICB0aW1lb3V0U2Vjb25kczogMTAKICBuYW1lOiBzZXJ2ZXIKICBub2RlU2VsZWN0b3I6IHt9CiAgcGVyc2lzdGVudFZvbHVtZToKICAgIGFjY2Vzc01vZGVzOgogICAgLSBSZWFkV3JpdGVPbmNlCiAgICBhbm5vdGF0aW9uczoge30KICAgIGVuYWJsZWQ6IGZhbHNlCiAgICBleGlzdGluZ0NsYWltOiAiIgogICAgbW91bnRQYXRoOiAvZGF0YQogICAgc2l6ZTogOEdpCiAgICBzdG9yYWdlQ2xhc3M6ICIiCiAgICBzdWJQYXRoOiAiIgogIHBvZEFubm90YXRpb25zOiB7fQogIHJlYWRpbmVzc1Byb2JlOgogICAgZmFpbHVyZVRocmVzaG9sZDogMwogICAgaW5pdGlhbERlbGF5U2Vjb25kczogMzAKICAgIHBlcmlvZFNlY29uZHM6IDUKICAgIHN1Y2Nlc3NUaHJlc2hvbGQ6IDEKICAgIHRpbWVvdXRTZWNvbmRzOiA0CiAgcmVzb3VyY2VzOgogICAgbGltaXRzOgogICAgICBtZW1vcnk6IDEwMjRNaQogICAgcmVxdWVzdHM6CiAgICAgIGNwdTogMjUwbQogICAgICBtZW1vcnk6IDUxMk1pCiAgdGVybWluYXRpb25HcmFjZVBlcmlvZFNlY29uZHM6IDMwMAogIHRvbGVyYXRpb25zOiBbXQogIHRvcG9sb2d5U3ByZWFkQ29uc3RyYWludHM6IFtdCnNlcnZlckNvbmZpZzoKICBjb250YWluZXJTZWNyZXRGaWxlTmFtZTogdmFsdWUKICBjb250YWluZXJTZWNyZXRGaWxlUGF0aDogL2V0Yy9jb25maWcvc2VjcmV0cy8Kc2VydmljZUFjY291bnQ6CiAgYW5ub3RhdGlvbnM6IHt9CiAgY3JlYXRlOiB0cnVlCiAgbmFtZTogIiIKdmFsaWRhdG9yOgogIGltYWdlOgogICAgZGlnZXN0OiBudWxsCiAgICBwdWxsUG9saWN5OiBudWxsCiAgICBwdWxsU2VjcmV0czogbnVsbAogICAgcmVwb3NpdG9yeTogbnVsbAogICAgdGFnOiBudWxsCiAgbmFtZTogZW52LXZhbGlkYXRvcgogIHNlcnZpY2VFbmRwb2ludHM6CiAgICBrdWJlU3RhdGVNZXRyaWNzOiBudWxs
-            - --config-validator
-            - /cloudzero/config/validator/validator.yml
-            - --config-webhook
-            - /etc/cloudzero-agent-insights/server-config.yaml
-            - --config-aggregator
-            - /cloudzero/config/config.yml
-          resources:
-            {}
-          volumeMounts:
-            - name: cloudzero-api-key
-              mountPath: /etc/config/secrets/
-              subPath: ""
-              readOnly: true
-            - name: config-volume
-              mountPath: /etc/config/prometheus/configmaps/
-            - name: config-validator
-              mountPath: /cloudzero/config/validator # validator.yml
-            - name: config-webhook
-              mountPath: /etc/cloudzero-agent-insights # server-config.yaml
-            - name: config-aggregator
-              mountPath: /cloudzero/config # config.yaml
-            - name: aggregator-persistent-storage
-              mountPath: /cloudzero/data
-      volumes:
-        - name: config-volume
-          configMap:
-            name: cz-agent-configuration
-        - name: config-validator
-          configMap:
-            name: cz-agent-validator-configuration
-        - name: config-webhook
-          configMap:
-            name: cz-agent-webhook-configuration
-        - name: config-aggregator
-          configMap:
-            name: cz-agent-aggregator
-        - name: cloudzero-api-key
-          secret:
-            secretName: cz-agent-api-key
-        - name: aggregator-persistent-storage
-          emptyDir: {}
 ---
 # Source: cloudzero-agent/templates/webhook-validating-config.yaml
 apiVersion: admissionregistration.k8s.io/v1

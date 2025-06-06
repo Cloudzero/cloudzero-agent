@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "cloudzero-agent.validatorJobName" . }}
+  name: {{ include "cloudzero-agent.configLoaderJobName" . }}
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
@@ -12,7 +12,7 @@ metadata:
 spec:
   template:
     metadata:
-      name: {{ include "cloudzero-agent.validatorJobName" . }}
+      name: {{ include "cloudzero-agent.configLoaderJobName" . }}
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
@@ -36,8 +36,8 @@ spec:
             - {{ .Values.region }}
             - --cluster-name
             - {{ .Values.clusterName }}
-            - --deploy-name
-            - TODO
+            - --release-name
+            - {{ .Release.Name }}
             - --chart-version
             - {{ .Chart.Version }}
             - --agent-version
