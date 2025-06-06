@@ -10,7 +10,7 @@ message ClusterConfig {
     string provider_id = 4;
     string cluster_name = 5;
     string k8s_version = 6;
-    string deployment_name = 7;
+    string release_name = 7;
     string chart_version = 8;
     string agent_version = 9;
 

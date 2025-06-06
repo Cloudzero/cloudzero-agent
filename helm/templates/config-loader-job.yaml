@@ -42,8 +42,8 @@ spec:
             - {{ .Chart.Version }}
             - --agent-version
             - {{ .Values.components.agent.image.tag }}
-            - --values-b64
-            - {{ .Values | toYaml | b64enc }}
+            - --values-file
+            - /cloudzero/config/values/values.yaml
             - --config-validator
             - /cloudzero/config/validator/validator.yml
             - --config-webhook
@@ -54,6 +54,8 @@ spec:
             {{- toYaml .Values.insightsController.resources | nindent 12 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+            - name: config-values
+              mountPath: /cloudzero/config/values # values.yaml
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
             - name: config-validator
@@ -68,6 +70,9 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
+        - name: config-values
+          configMap:
+            name: {{ .Release.Name }}-config-values
         - name: config-volume
           configMap:
             name: {{ template "cloudzero-agent.configMapName" . }}

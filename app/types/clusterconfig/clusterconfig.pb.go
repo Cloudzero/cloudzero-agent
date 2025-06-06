@@ -29,7 +29,7 @@ type ClusterConfig struct {
 	ProviderId                string                 `protobuf:"bytes,4,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
 	ClusterName               string                 `protobuf:"bytes,5,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
 	K8SVersion                string                 `protobuf:"bytes,6,opt,name=k8s_version,json=k8sVersion,proto3" json:"k8s_version,omitempty"`
-	DeploymentName            string                 `protobuf:"bytes,7,opt,name=deployment_name,json=deploymentName,proto3" json:"deployment_name,omitempty"`
+	ReleaseName               string                 `protobuf:"bytes,7,opt,name=release_name,json=releaseName,proto3" json:"release_name,omitempty"`
 	ChartVersion              string                 `protobuf:"bytes,8,opt,name=chart_version,json=chartVersion,proto3" json:"chart_version,omitempty"`
 	AgentVersion              string                 `protobuf:"bytes,9,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
 	ConfigValuesBase64        string                 `protobuf:"bytes,30,opt,name=config_values_base64,json=configValuesBase64,proto3" json:"config_values_base64,omitempty"`
@@ -113,9 +113,9 @@ func (x *ClusterConfig) GetK8SVersion() string {
 	return ""
 }
 
-func (x *ClusterConfig) GetDeploymentName() string {
+func (x *ClusterConfig) GetReleaseName() string {
 	if x != nil {
-		return x.DeploymentName
+		return x.ReleaseName
 	}
 	return ""
 }
@@ -173,7 +173,7 @@ var File_clusterconfig_proto protoreflect.FileDescriptor
 
 const file_clusterconfig_proto_rawDesc = "" +
 	"\n" +
-	"\x13clusterconfig.proto\x12\x06status\"\xb4\x04\n" +
+	"\x13clusterconfig.proto\x12\x06status\"\xae\x04\n" +
 	"\rClusterConfig\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x1c\n" +
@@ -182,8 +182,8 @@ const file_clusterconfig_proto_rawDesc = "" +
 	"providerId\x12!\n" +
 	"\fcluster_name\x18\x05 \x01(\tR\vclusterName\x12\x1f\n" +
 	"\vk8s_version\x18\x06 \x01(\tR\n" +
-	"k8sVersion\x12'\n" +
-	"\x0fdeployment_name\x18\a \x01(\tR\x0edeploymentName\x12#\n" +
+	"k8sVersion\x12!\n" +
+	"\frelease_name\x18\a \x01(\tR\vreleaseName\x12#\n" +
 	"\rchart_version\x18\b \x01(\tR\fchartVersion\x12#\n" +
 	"\ragent_version\x18\t \x01(\tR\fagentVersion\x120\n" +
 	"\x14config_values_base64\x18\x1e \x01(\tR\x12configValuesBase64\x126\n" +

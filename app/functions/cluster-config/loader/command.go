@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	net "net/http"
+	"os"
 
 	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	http "github.com/cloudzero/cloudzero-agent/app/http/client"
@@ -33,7 +34,7 @@ const (
 	FlagReleaseName      = "release-name"
 	FlagChartVersion     = "chart-version"
 	FlagAgentVersion     = "agent-version"
-	FlagValuesB64        = "values-b64"
+	FlagValuesFile       = "values-file"
 	FlagConfigValidator  = "config-validator"
 	FlagconfigWebhook    = "config-webhook"
 	FlagConfigAggregator = "config-aggregator"
@@ -55,7 +56,7 @@ func NewCommand() *cli.Command {
 			&cli.StringFlag{Name: FlagReleaseName, Usage: "release name", Required: true},
 			&cli.StringFlag{Name: FlagChartVersion, Usage: "current chart version", Required: true},
 			&cli.StringFlag{Name: FlagAgentVersion, Usage: "current agent version", Required: true},
-			&cli.StringFlag{Name: FlagValuesB64, Usage: "rendered values file encoded into base64", Required: true},
+			&cli.StringFlag{Name: FlagValuesFile, Usage: "b64 values file", Required: true},
 			&cli.StringSliceFlag{Name: FlagConfigValidator, Usage: "list of validator config files", Required: true},
 			&cli.StringSliceFlag{Name: FlagconfigWebhook, Usage: "list of webhook config files", Required: true},
 			&cli.StringSliceFlag{Name: FlagConfigAggregator, Usage: "list of aggregator config files", Required: true},
@@ -86,7 +87,18 @@ func run(c *cli.Context) error {
 	// get the k8s version
 	k8sVersion, err := k8s.GetVersion()
 	if err != nil {
+		log.Ctx(c.Context).Err(err).Msg("failed to gett the k8s version")
 		errs = append(errs, err.Error())
+	}
+
+	// read the values file
+	valuesB64 := ""
+	valuesRaw, err := os.ReadFile(c.String(FlagValuesFile))
+	if err != nil {
+		log.Ctx(c.Context).Err(err).Msg("failed to open the file")
+		errs = append(errs, err.Error())
+	} else {
+		valuesB64 = base64.StdEncoding.EncodeToString(valuesRaw)
 	}
 
 	// parse the validator config
@@ -145,10 +157,10 @@ func run(c *cli.Context) error {
 		ProviderId:                providerID,
 		ClusterName:               c.String(FlagClusterName),
 		K8SVersion:                k8sVersion,
-		DeploymentName:            c.String(FlagReleaseName),
+		ReleaseName:               c.String(FlagReleaseName),
 		ChartVersion:              c.String(FlagChartVersion),
 		AgentVersion:              c.String(FlagAgentVersion),
-		ConfigValuesBase64:        c.String(FlagValuesB64),
+		ConfigValuesBase64:        valuesB64,
 		ConfigValidatorBase64:     settingsValidatorB64,
 		ConfigWebhookServerBase64: settingsWebhookB64,
 		ConfigAggregatorBase64:    settingsAggregatorB64,
