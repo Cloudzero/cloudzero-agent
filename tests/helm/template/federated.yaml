@@ -2722,7 +2722,7 @@ spec:
             - /app/cloudzero-cluster-config
             - load
             - --account
-            - 1234567890
+            - "1234567890"
             - --region
             - us-east-1
             - --cluster-name
@@ -2732,7 +2732,7 @@ spec:
             - --chart-version
             - 1.1.0-dev
             - --agent-version
-            - 1.1.2
+            - "1.1.2"
             - --values-file
             - /cloudzero/config/values/values.yaml
             - --config-validator

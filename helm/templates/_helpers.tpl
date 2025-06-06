@@ -6,6 +6,13 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+The version number of the chart.
+*/}}
+{{- define "cloudzero-agent.versionNumber" -}}
+version: 1.1.2  # <- Software release corresponding to this chart version.
+{{- end -}}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "cloudzero-agent.chart" -}}

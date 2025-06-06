@@ -31,7 +31,7 @@ spec:
             - /app/cloudzero-cluster-config
             - load
             - --account
-            - {{ .Values.cloudAccountId }}
+            - "{{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}"
             - --region
             - {{ .Values.region }}
             - --cluster-name
@@ -41,7 +41,7 @@ spec:
             - --chart-version
             - {{ .Chart.Version }}
             - --agent-version
-            - {{ .Values.components.agent.image.tag }}
+            - "{{ (include "cloudzero-agent.versionNumber" . | fromYaml).version }}"
             - --values-file
             - /cloudzero/config/values/values.yaml
             - --config-validator
