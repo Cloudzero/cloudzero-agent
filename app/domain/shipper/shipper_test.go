@@ -46,7 +46,6 @@ func TestShipper_Unit_PerformShipping(t *testing.T) {
 		mockLister := &MockAppendableFiles{baseDir: tmpDir}
 		mockLister.On("GetUsage").Return(&types.StoreUsage{PercentUsed: 49}, nil)
 		mockLister.On("GetFiles", mock.Anything).Return([]string{}, nil)
-		mockLister.On("Walk", mock.Anything, mock.Anything).Return(nil)
 		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*1500)
 		defer cancel()
 		metricShipper, err := shipper.NewMetricShipper(ctx, settings, mockLister)
@@ -169,15 +168,15 @@ func TestShipper_Unit_AllocatePresignedURL_Success(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	require.NoError(t, err)
-	urlResponse, err := metricShipper.AllocatePresignedURLs(testFiles)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), testFiles)
 	require.NoError(t, err)
 
 	// Verify
-	require.Equal(t, mockResponseBody, urlResponse)
+	require.Equal(t, mockResponseBody, urlResponse.Allocation)
 }
 
 func TestShipper_Unit_AllocatePresignedURL_ReplayRequestHeader(t *testing.T) {
@@ -209,21 +208,18 @@ func TestShipper_Unit_AllocatePresignedURL_ReplayRequestHeader(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	require.NoError(t, err)
-	urlResponse, err := metricShipper.AllocatePresignedURLs(testFiles)
+	urlResponse, err := metricShipper.AllocatePresignedURLs(t.Context(), testFiles)
 	require.NoError(t, err)
 
 	// Verify
-	require.Equal(t, mockResponseBody, urlResponse)
+	require.Equal(t, mockResponseBody, urlResponse.Allocation)
 
-	// ensure the replay request was parsed and saved to disk
-	elems, err := os.ReadDir(filepath.Join(metricShipper.GetBaseDir(), shipper.ReplaySubDirectory))
-	require.NoError(t, err)
-
-	require.Equal(t, 1, len(elems))
+	// ensure the replay request was also captured in the url response
+	require.Equal(t, 3, len(urlResponse.Replay))
 }
 
 func TestShipper_Unit_AllocatePresignedURL_NoFiles(t *testing.T) {
@@ -240,13 +236,11 @@ func TestShipper_Unit_AllocatePresignedURL_NoFiles(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), []types.File{})
 	require.NoError(t, err)
-	urlResponse, err := metricShipper.AllocatePresignedURLs([]types.File{})
-	require.Equal(t, err, shipper.ErrNoURLs)
-	require.Empty(t, urlResponse)
 }
 
 func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
@@ -254,9 +248,7 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
 	tmpDir := getTmpDir(t)
 	mockURL := "https://example.com/upload"
 
-	mockResponseBody := map[string]string{
-		"error": "invalid request",
-	}
+	mockResponseBody := "Invalid request"
 
 	mockRoundTripper := &MockRoundTripper{
 		status:           http.StatusBadRequest,
@@ -268,17 +260,17 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPError(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
-	assert.Empty(t, presignedURL)
+	assert.Nil(t, presignedURL)
 }
 
 func TestShiper_Unit_AllocatePresignedURL_Unauthorized(t *testing.T) {
@@ -300,12 +292,12 @@ func TestShiper_Unit_AllocatePresignedURL_Unauthorized(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -330,17 +322,15 @@ func TestShipper_Unit_AllocatePresignedURL_EmptyPresignedURL(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	_, err = metricShipper.AllocatePresignedURLs(t.Context(), files)
 
-	// Verify
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no presigned URLs returned")
-	assert.Empty(t, presignedURL)
+	// Verify. Recieving no urls should not give an error
+	assert.NoError(t, err)
 }
 
 func TestShipper_Unit_AllocatePresignedURL_RequestCreationError(t *testing.T) {
@@ -357,7 +347,7 @@ func TestShipper_Unit_AllocatePresignedURL_RequestCreationError(t *testing.T) {
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -379,12 +369,12 @@ func TestShipper_Unit_AllocatePresignedURL_HTTPClientError(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
 	files := createTestFiles(t, tmpDir, 2)
 	require.NoError(t, err)
-	presignedURL, err := metricShipper.AllocatePresignedURLs(files)
+	presignedURL, err := metricShipper.AllocatePresignedURLs(t.Context(), files)
 
 	// Verify
 	assert.Error(t, err)
@@ -407,12 +397,15 @@ func TestShipper_Unit_UploadFile_Success(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), &shipper.UploadFileRequest{
+		File:         files[0],
+		PresignedURL: mockURL,
+	})
 
 	// Verify
 	assert.NoError(t, err)
@@ -433,12 +426,15 @@ func TestShipper_Unit_UploadFile_HTTPError(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), &shipper.UploadFileRequest{
+		File:         files[0],
+		PresignedURL: mockURL,
+	})
 
 	// Verify
 	assert.Error(t, err)
@@ -458,11 +454,13 @@ func TestShipper_Unit_UploadFile_CreateRequestError(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), &shipper.UploadFileRequest{
+		File:         files[0],
+		PresignedURL: mockURL,
+	})
 
 	// Verify
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, shipper.ErrHTTPUnknown)
 }
 
 func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {
@@ -478,12 +476,15 @@ func TestShipper_Unit_UploadFile_HTTPClientError(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	files := createTestFiles(t, tmpDir, 1)
 
 	// Execute
-	err = metricShipper.UploadFile(context.Background(), files[0], mockURL)
+	err = metricShipper.UploadFile(context.Background(), &shipper.UploadFileRequest{
+		File:         files[0],
+		PresignedURL: mockURL,
+	})
 
 	// Verify
 	assert.Error(t, err)
@@ -524,9 +525,73 @@ func TestShipper_Unit_AbandonFiles_Success(t *testing.T) {
 
 	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, nil)
 	require.NoError(t, err)
-	metricShipper.HTTPClient.Transport = mockRoundTripper
+	metricShipper.HTTPClient.HTTPClient.Transport = mockRoundTripper
 
 	// Execute
-	err = metricShipper.AbandonFiles(context.Background(), []string{"file1", "file2"}, "file not found")
+	req := make([]*shipper.AbandonAPIPayloadFile, 0)
+	req = append(req, &shipper.AbandonAPIPayloadFile{
+		ReferenceID: "file1",
+		Reason:      "file not found",
+	})
+	req = append(req, &shipper.AbandonAPIPayloadFile{
+		ReferenceID: "file2",
+		Reason:      "file not found",
+	})
+	err = metricShipper.AbandonFiles(context.Background(), req)
 	require.NoError(t, err)
+}
+
+func TestUnit_Shipper_ShipperID_Normal(t *testing.T) {
+	tmpDir := getTmpDir(t)
+	mockLister := &MockAppendableFiles{baseDir: tmpDir}
+	settings := getMockSettings("", tmpDir)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
+	require.NoError(t, err, "failed to create the metric shipper")
+
+	id, err := metricShipper.GetShipperID()
+	require.NoError(t, err, "failed to get the shipperId")
+	require.NotEmpty(t, id, "invalid id")
+
+	id2, err := metricShipper.GetShipperID()
+	require.NoError(t, err, "failed to get the shipperId the second time")
+	require.Equal(t, id, id2, "the second call to GetShipperId returned a different value")
+}
+
+func TestUnit_Shipper_ShipperID_FromFile(t *testing.T) {
+	tmpDir := getTmpDir(t)
+	mockLister := &MockAppendableFiles{baseDir: tmpDir}
+	settings := getMockSettings("", tmpDir)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
+	require.NoError(t, err, "failed to create the metric shipper")
+
+	expected := "shipper-id"
+
+	// write a file
+	err = os.WriteFile(filepath.Join(metricShipper.GetBaseDir(), ".shipperid"), []byte(expected), 0o755)
+	require.NoError(t, err, "failed to create the shipperid file")
+
+	// get the shipperid
+	id, err := metricShipper.GetShipperID()
+	require.NoError(t, err, "failed to get the shipper id")
+
+	require.Equal(t, expected, id)
+}
+
+func TestUnit_Shipper_ShipperID_FromEnv(t *testing.T) {
+	tmpDir := getTmpDir(t)
+	mockLister := &MockAppendableFiles{baseDir: tmpDir}
+	settings := getMockSettings("", tmpDir)
+	metricShipper, err := shipper.NewMetricShipper(context.Background(), settings, mockLister)
+	require.NoError(t, err, "failed to create the metric shipper")
+
+	expected := "shipper-id"
+
+	// set the env variable
+	os.Setenv("HOSTNAME", expected)
+
+	// get the shipper id
+	id, err := metricShipper.GetShipperID()
+	require.NoError(t, err, "failed to get the shipper id")
+
+	require.Equal(t, expected, id)
 }

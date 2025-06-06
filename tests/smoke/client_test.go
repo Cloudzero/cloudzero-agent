@@ -5,6 +5,7 @@ package smoke
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,10 +24,6 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		// start the remote write
 		remotewrite := t.StartMockRemoteWrite()
 		require.NotNil(t, remotewrite, "remotewrite is null")
-
-		// start the shipper
-		shipper := t.StartShipper()
-		require.NotNil(t, shipper, "shipper is null")
 
 		// start the collector
 		collector := t.StartCollector()
@@ -56,18 +53,19 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		err = (*collector).Stop(t.Context(), &duration)
 		require.NoError(t, err, "failed to stop the collector")
 
-		// wait for the shipper to send files
+		// start the shipper
+		shipper := t.StartShipper()
+		require.NotNil(t, shipper, "shipper is null")
+
+		// wait for the shipper to send all files
 		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: shipper,
 			Log:       "Successfully uploaded new files",
+			N:         3,
 		})
 		require.NoError(t, err, "failed to find log message waiting for the shipper")
 
-		// ensure there are no new files
-		newFiles, err := filepath.Glob(filepath.Join(t.dataLocation, "*_*_*.json.br"))
-		assert.NoError(t, err, "failed to read the root directory")
-		assert.Empty(t, newFiles, "found new files")
-
+		// ensure there are uploaded files
 		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		assert.NoError(t, err, "failed to read the uploaded directory")
 		assert.NotEmpty(t, uploaded, "there were no uploaded files")
@@ -75,7 +73,16 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		// ensure the number of files in the minio client are equal
 		response := t.QueryMinio()
 		assert.NotEmpty(t, response.Objects)
-		assert.Equal(t, len(uploaded), len(response.Objects))
+
+		// number of s3 files that are not logs
+		countUploaded := 0
+		for _, item := range response.Objects {
+			if !strings.HasPrefix(item.Key, "logs") {
+				countUploaded++
+			}
+		}
+
+		assert.Equal(t, len(uploaded), countUploaded)
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true

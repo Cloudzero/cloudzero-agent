@@ -84,12 +84,18 @@ func (rw *RemoteWrite) upload(w http.ResponseWriter, r *http.Request) {
 		response[refID] = presignedURL.String()
 	}
 
-	// TODO -- add replay header information
-	// should use a mock request header to see if we should activate this or not
 	// Set the X-CloudZero-Replay header
+	if rw.replayRequestPayload != "" {
+		w.Header().Add("X-CloudZero-Replay", rw.replayRequestPayload)
+	}
 
 	// add the process delay for this api call
 	time.Sleep(rw.uploadDelay)
+
+	if rw.errorOnUpload {
+		writeJSONResponse(w, 500, "Failed")
+		return
+	}
 
 	// Return the response
 	writeJSONResponse(w, http.StatusOK, response)
