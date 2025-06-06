@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain"
 	"github.com/cloudzero/cloudzero-agent/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-agent/app/handlers"
@@ -56,6 +56,7 @@ func TestRemoteWriteMethods(t *testing.T) {
 	handler := handlers.NewRemoteWriteAPI(MountBase, d)
 
 	storage.EXPECT().Put(gomock.Any(), gomock.Any()).Return(nil)
+	storage.EXPECT().Flush().Return(nil)
 
 	payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
 	assert.NoError(t, err)

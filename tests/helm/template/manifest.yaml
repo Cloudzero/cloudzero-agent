@@ -1,18 +1,18 @@
 ---
 # Source: cloudzero-agent/charts/kubeStateMetrics/templates/pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: cz-agent-cloudzero-state-metrics
   namespace: cz-agent
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
 spec:
   selector:
     matchLabels:
@@ -64,15 +64,16 @@ spec:
 # Source: cloudzero-agent/charts/kubeStateMetrics/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: true
 metadata:
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
   name: cz-agent-cloudzero-state-metrics
   namespace: cz-agent
 ---
@@ -764,7 +765,7 @@ data:
       kubectl:
         image:
           repository: docker.io/bitnami/kubectl
-          tag: 1.32.0
+          tag: 1.33.1
       prometheus:
         image:
           repository: quay.io/prometheus/prometheus
@@ -772,7 +773,7 @@ data:
       prometheusReloader:
         image:
           repository: quay.io/prometheus-operator/prometheus-config-reloader
-          tag: v0.82.0
+          tag: v0.83.0
       webhookServer:
         podDisruptionBudget:
           maxUnavailable: null
@@ -915,6 +916,7 @@ data:
     kubeStateMetrics:
       affinity: {}
       annotations: {}
+      automountServiceAccountToken: true
       autosharding:
         enabled: false
       collectors:
@@ -951,14 +953,19 @@ data:
         capabilities:
           drop:
           - ALL
+        readOnlyRootFilesystem: true
       containers: []
       customLabels: {}
       customResourceState:
         config: {}
+        create: true
         enabled: false
+        key: config.yaml
+        name: ""
       dnsConfig: {}
       dnsPolicy: ClusterFirst
       enabled: true
+      env: []
       extraArgs: []
       extraManifests: []
       global:
@@ -969,11 +976,16 @@ data:
         pullPolicy: IfNotPresent
         registry: registry.k8s.io
         repository: kube-state-metrics/kube-state-metrics
-        tag: v2.10.1
+        tag: v2.15.0
       imagePullSecrets: []
       initContainers: []
       kubeRBACProxy:
-        containerSecurityContext: {}
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         enabled: false
         extraArgs: []
         image:
@@ -981,12 +993,22 @@ data:
           registry: quay.io
           repository: brancz/kube-rbac-proxy
           sha: ""
-          tag: v0.14.0
+          tag: v0.19.1
         resources: {}
         volumeMounts: []
       kubeTargetVersionOverride: ""
       kubeconfig:
         enabled: false
+      labels: {}
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          httpHeaders: []
+          scheme: http
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
       metricAllowlist: []
       metricAnnotationsAllowList: []
       metricDenylist: []
@@ -1002,6 +1024,7 @@ data:
       podAnnotations: {}
       podDisruptionBudget:
         minAvailable: 1
+      podLabels: {}
       podSecurityPolicy:
         additionalVolumes: []
         annotations: {}
@@ -1010,26 +1033,60 @@ data:
         monitor:
           additionalLabels: {}
           annotations: {}
-          bearerTokenFile: ""
-          bearerTokenSecret: {}
           enabled: false
-          honorLabels: false
-          interval: ""
+          http:
+            bearerTokenFile: ""
+            bearerTokenSecret: {}
+            enableHttp2: false
+            honorLabels: false
+            interval: ""
+            metricRelabelings: []
+            proxyUrl: ""
+            relabelings: []
+            scheme: ""
+            scrapeTimeout: ""
+            tlsConfig: {}
           jobLabel: ""
           labelLimit: 0
           labelNameLengthLimit: 0
           labelValueLengthLimit: 0
-          metricRelabelings: []
+          metrics:
+            bearerTokenFile: ""
+            bearerTokenSecret: {}
+            enableHttp2: false
+            honorLabels: false
+            interval: ""
+            metricRelabelings: []
+            proxyUrl: ""
+            relabelings: []
+            scheme: ""
+            scrapeTimeout: ""
+            tlsConfig: {}
           namespace: ""
           namespaceSelector: []
           podTargetLabels: []
+          sampleLimit: 0
+          selectorOverride: {}
+          targetLabels: []
+          targetLimit: 0
+        scrapeconfig:
+          additionalLabels: {}
+          annotations: {}
+          enableHttp2: false
+          enabled: false
+          honorLabels: true
+          jobName: kube-state-metrics
+          labelLimit: 0
+          labelNameLengthLimit: 0
+          labelValueLengthLimit: 0
+          metricRelabelings: []
           proxyUrl: ""
           relabelings: []
           sampleLimit: 0
           scheme: ""
+          scrapeInterval: ""
           scrapeTimeout: ""
-          selectorOverride: {}
-          targetLabels: []
+          staticConfigLabels: {}
           targetLimit: 0
           tlsConfig: {}
       prometheusScrape: false
@@ -1037,6 +1094,15 @@ data:
         create: true
         extraRules: []
         useClusterRole: true
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          httpHeaders: []
+          scheme: http
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
       releaseLabel: false
       releaseNamespace: false
       replicas: 1
@@ -1056,6 +1122,12 @@ data:
       service:
         annotations: {}
         clusterIP: ""
+        ipDualStack:
+          enabled: false
+          ipFamilies:
+          - IPv6
+          - IPv4
+          ipFamilyPolicy: PreferDualStack
         loadBalancerIP: ""
         loadBalancerSourceRanges: []
         nodePort: 0
@@ -1063,8 +1135,19 @@ data:
         type: ClusterIP
       serviceAccount:
         annotations: {}
+        automountServiceAccountToken: true
         create: true
         imagePullSecrets: []
+      startupProbe:
+        enabled: false
+        failureThreshold: 3
+        httpGet:
+          httpHeaders: []
+          scheme: http
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
       tolerations: []
       topologySpreadConstraints: []
       verticalPodAutoscaler:
@@ -1328,13 +1411,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
   name: cz-agent-cloudzero-state-metrics
 rules:
 
@@ -1353,12 +1436,12 @@ rules:
   - cronjobs
   verbs: ["list", "watch"]
 
-- apiGroups: ["extensions", "apps"]
+- apiGroups: ["apps"]
   resources:
   - daemonsets
   verbs: ["list", "watch"]
 
-- apiGroups: ["extensions", "apps"]
+- apiGroups: ["apps"]
   resources:
   - deployments
   verbs: ["list", "watch"]
@@ -1373,7 +1456,7 @@ rules:
   - horizontalpodautoscalers
   verbs: ["list", "watch"]
 
-- apiGroups: ["extensions", "networking.k8s.io"]
+- apiGroups: ["networking.k8s.io"]
   resources:
   - ingresses
   verbs: ["list", "watch"]
@@ -1433,7 +1516,7 @@ rules:
   - pods
   verbs: ["list", "watch"]
 
-- apiGroups: ["extensions", "apps"]
+- apiGroups: ["apps"]
   resources:
   - replicasets
   verbs: ["list", "watch"]
@@ -1617,13 +1700,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
   name: cz-agent-cloudzero-state-metrics
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -1687,13 +1770,13 @@ metadata:
   name: cz-agent-cloudzero-state-metrics
   namespace: cz-agent
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
   annotations:
 spec:
   type: "ClusterIP"
@@ -1767,13 +1850,13 @@ metadata:
   name: cz-agent-cloudzero-state-metrics
   namespace: cz-agent
   labels:    
-    helm.sh/chart: kubeStateMetrics-5.15.3
+    helm.sh/chart: kubeStateMetrics-5.36.0
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: cloudzero-state-metrics
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/version: "2.10.1"
+    app.kubernetes.io/version: "2.15.0"
 spec:
   selector:
     matchLabels:      
@@ -1786,14 +1869,15 @@ spec:
   template:
     metadata:
       labels:        
-        helm.sh/chart: kubeStateMetrics-5.15.3
+        helm.sh/chart: kubeStateMetrics-5.36.0
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: cloudzero-state-metrics
         app.kubernetes.io/name: cloudzero-state-metrics
         app.kubernetes.io/instance: cz-agent
-        app.kubernetes.io/version: "2.10.1"
+        app.kubernetes.io/version: "2.15.0"
     spec:
+      automountServiceAccountToken: true
       hostNetwork: false
       serviceAccountName: cz-agent-cloudzero-state-metrics
       securityContext:
@@ -1803,33 +1887,47 @@ spec:
         runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault
+      dnsPolicy: ClusterFirst
       containers:
       - name: cloudzero-state-metrics
         args:
         - --port=8080
         - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
         imagePullPolicy: IfNotPresent
-        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.15.0
         ports:
         - containerPort: 8080
           name: "http"
         livenessProbe:
+          failureThreshold: 3
           httpGet:
-            path: /healthz
+            httpHeaders:
+            path: /livez
             port: 8080
+            scheme: HTTP
           initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
           timeoutSeconds: 5
         readinessProbe:
+          failureThreshold: 3
           httpGet:
-            path: /
-            port: 8080
+            httpHeaders:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
           initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
           timeoutSeconds: 5
+        resources:
+          {}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
 ---
 # Source: cloudzero-agent/templates/agent-deploy.yaml
 apiVersion: apps/v1
@@ -1922,7 +2020,7 @@ spec:
               mountPath: /checks/config/
       containers:
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.83.0"
           imagePullPolicy: "IfNotPresent"
           
           args:
@@ -2503,7 +2601,7 @@ spec:
       
       containers:
         - name: init-cert
-          image: "docker.io/bitnami/kubectl:1.32.0"
+          image: "docker.io/bitnami/kubectl:1.33.1"
           imagePullPolicy: "IfNotPresent"
           
           command: ["/bin/bash", "-c"]

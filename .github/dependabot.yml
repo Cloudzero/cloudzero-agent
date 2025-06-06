@@ -9,6 +9,8 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    commit-message:
+      prefix: "CP-29639: "
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -18,21 +20,29 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    commit-message:
+      prefix: "CP-29639: "
 
   - package-ecosystem: "docker"
     directory: "/docker/"
     schedule:
       interval: "weekly"
       day: "friday"
+    commit-message:
+      prefix: "CP-29639: "
 
   - package-ecosystem: "npm"
     directory: "/.tools/"
     schedule:
       interval: "weekly"
       day: "friday"
+    commit-message:
+      prefix: "CP-29639: "
 
   - package-ecosystem: "helm"
     directory: "/helm/"
     schedule:
       interval: "weekly"
       day: "friday"
+    commit-message:
+      prefix: "CP-29639: "

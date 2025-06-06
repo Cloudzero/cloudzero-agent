@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/cloudzero/cloudzero-agent/app/config/gator"
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/domain"
 	"github.com/cloudzero/cloudzero-agent/app/domain/testdata"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
@@ -39,6 +39,7 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V1 Decode with Compression", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
+		storage.EXPECT().Flush().Return(nil)
 		d, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
 		require.NoError(t, err)
 		defer d.Close()
@@ -53,6 +54,7 @@ func TestPutMetrics(t *testing.T) {
 	t.Run("V2 Decode Path", func(t *testing.T) {
 		storage := mocks.NewMockStore(ctrl)
 		storage.EXPECT().Put(ctx, gomock.Any()).Return(nil)
+		storage.EXPECT().Flush().Return(nil)
 		d, err := domain.NewMetricCollector(&cfg, mockClock, storage, nil)
 		require.NoError(t, err)
 		defer d.Close()
