@@ -94,7 +94,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.30.0
-	helm.sh/helm/v3 v3.18.1
+	helm.sh/helm/v3 v3.18.2
 	sigs.k8s.io/gateway-api v1.3.0
 )
 
