@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "cloudzero-agent.validatorJobName" . }}
+  name: {{ include "cloudzero-agent.configLoaderJobName" . }}
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
@@ -12,7 +12,7 @@ metadata:
 spec:
   template:
     metadata:
-      name: {{ include "cloudzero-agent.validatorJobName" . }}
+      name: {{ include "cloudzero-agent.configLoaderJobName" . }}
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
@@ -28,10 +28,23 @@ spec:
           env:
             {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
           command:
-            - /app/cloudzero-agent-validator
-            - diagnose
-            - config-load 
-            - -f
+            - /app/cloudzero-cluster-config
+            - load
+            - --account
+            - "{{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}"
+            - --region
+            - {{ .Values.region }}
+            - --cluster-name
+            - {{ .Values.clusterName }}
+            - --release-name
+            - {{ .Release.Name }}
+            - --chart-version
+            - {{ .Chart.Version }}
+            - --agent-version
+            - "{{ (include "cloudzero-agent.versionNumber" . | fromYaml).version }}"
+            - --values-file
+            - /cloudzero/config/values/values.yaml
+            - --config-validator
             - /cloudzero/config/validator/validator.yml
             - --config-webhook
             - {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml
@@ -40,6 +53,9 @@ spec:
           resources:
             {{- toYaml .Values.insightsController.resources | nindent 12 }}
           volumeMounts:
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+            - name: config-values
+              mountPath: /cloudzero/config/values # values.yaml
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
             - name: config-validator
@@ -50,16 +66,13 @@ spec:
               mountPath: {{ .Values.aggregator.mountRoot }}/config # config.yaml
             - name: aggregator-persistent-storage
               mountPath: {{ .Values.aggregator.mountRoot }}/data
-          {{- if or .Values.existingSecretName .Values.apiKey }}
-            - name: cloudzero-api-key
-              mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
-              subPath: ""
-              readOnly: true
-          {{- end }}
             {{- with .Values.insightsController.volumeMounts }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
+        - name: config-values
+          configMap:
+            name: {{ .Release.Name }}-config-values
         - name: config-volume
           configMap:
             name: {{ template "cloudzero-agent.configMapName" . }}
