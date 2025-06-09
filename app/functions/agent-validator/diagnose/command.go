@@ -172,20 +172,7 @@ func runDiagnostics(c *cli.Context, stage string) error {
 	}
 
 	// parse registry based on the stage
-	var registry catalog.Registry
-	if stage == config.ContextStateConfigLoad {
-		configsWebhook := c.StringSlice(config.FlagConfigFileWebhook)
-		if len(configsWebhook) == 0 {
-			return errors.New("no webhook configuration files specified")
-		}
-		configsAggregator := c.StringSlice(config.FlagConfigFileAggregator)
-		if len(configsAggregator) == 0 {
-			return errors.New("no aggregator configuration files specified")
-		}
-		registry = catalog.NewConfigCatalog(ctx, cfg, configs, configsWebhook, configsAggregator)
-	} else {
-		registry = catalog.NewCatalog(ctx, cfg)
-	}
+	registry := catalog.NewCatalog(ctx, cfg)
 
 	engine := runner.NewRunner(cfg, registry, stage)
 

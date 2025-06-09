@@ -6,6 +6,13 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+The version number of the chart.
+*/}}
+{{- define "cloudzero-agent.versionNumber" -}}
+version: 1.1.2  # <- Software release corresponding to this chart version.
+{{- end -}}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "cloudzero-agent.chart" -}}
@@ -47,14 +54,14 @@ Name for the validating webhook
 {{- printf "%s-validator-configuration" .Release.Name -}}
 {{- end}}
 
-{{ define "cloudzero-agent.validatorJobName" -}}
-{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "validator" "Version" .Chart.Version "Values" .Values) -}}
+{{ define "cloudzero-agent.configLoaderJobName" -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "confload" "Version" .Chart.Version "Values" .Values) -}}
 {{- end}}
 
 {{ define "cloudzero-agent.validatorEnv" -}}
-- name: NAMESPACE
+- name: K8S_NAMESPACE
   value: {{ .Release.Namespace }}
-- name: POD_NAME
+- name: K8S_POD_NAME
   valueFrom:
     fieldRef:
       fieldPath: metadata.name
@@ -362,7 +369,7 @@ app.kubernetes.io/component: {{ include "cloudzero-agent.initCertJobName" . }}
 {{- end -}}
 
 {{- define "cloudzero-agent.insightsController.validatorJob.matchLabels" -}}
-app.kubernetes.io/component: {{ include "cloudzero-agent.validatorJobName" . }}
+app.kubernetes.io/component: {{ include "cloudzero-agent.configLoaderJobName" . }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
