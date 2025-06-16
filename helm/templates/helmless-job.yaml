@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudzero-agent.helmlessJobName" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 2 }}
+spec:
+  template:
+    metadata:
+      name: {{ include "cloudzero-agent.helmlessJobName" . }}
+      namespace: {{ .Release.Namespace }}
+      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
+      {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      containers:
+        - name: helmless
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image) | nindent 10 }}
+          command:
+            - /app/cloudzero-helmless
+          args:
+            - --configured
+            - /etc/config/values/values.yaml
+            - --output
+            - "-"
+          volumeMounts:
+            - name: helmless-cm
+              mountPath: /etc/config/values
+              readOnly: true
+      volumes:
+        - name: helmless-cm
+          configMap:
+            name: {{ .Release.Name }}-helmless-cm
+      {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
+      {{- include "cloudzero-agent.generateTolerations" .Values.defaults.tolerations | nindent 6 }}

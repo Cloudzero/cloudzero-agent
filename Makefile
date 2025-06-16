@@ -135,13 +135,21 @@ format: format-prettier
 format-prettier:
 	@prettier --write .
 
+.PHONY: lint-go
+lint-go:
+	@golangci-lint run ./...
+
 .PHONY: lint
 lint: ## Run the linter
-	@golangci-lint run
+lint: lint-go
+
+.PHONY: analyze-go
+analyze-go:
+	@staticcheck -checks all ./...
 
 .PHONY: analyze
 analyze: ## Run static analysis
-	@staticcheck -checks all ./...
+analyze: analyze-go
 
 # ----------- COMPILATION ------------
 
@@ -203,6 +211,16 @@ GO_COMMAND_PACKAGE_DIRS = \
 GO_BINARIES = \
 	$(foreach bin,$(GO_COMMAND_PACKAGE_DIRS),$(OUTPUT_BIN_DIR)/cloudzero-$(notdir $(bin))) \
 	$(NULL)
+
+# Generate embedded defaults for helmless
+app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/templates/*.yaml)
+	@mkdir -p app/functions/helmless
+	$(HELM) show values ./helm > $@
+
+MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
+
+# Add the embedded defaults file to dependencies
+$(OUTPUT_BIN_DIR)/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
 $(eval $(foreach target,$(GO_COMMAND_PACKAGE_DIRS),$(call generate-go-command-target,$(target))))
 

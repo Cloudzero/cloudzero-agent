@@ -688,11 +688,11 @@ data:
       http_max_retries: 10
       http_max_wait: 30s
 ---
-# Source: cloudzero-agent/templates/config-map.yaml
+# Source: cloudzero-agent/templates/helmless-cm.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cz-agent-config-values
+  name: cz-agent-helmless-cm
   namespace: cz-agent
   labels:
     app.kubernetes.io/managed-by: Helm
@@ -2576,6 +2576,56 @@ spec:
             secretName: cz-agent-api-key
         - name: aggregator-persistent-storage
           emptyDir: {}
+---
+# Source: cloudzero-agent/templates/helmless-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-helmless-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+  namespace: cz-agent
+  
+  labels:
+    app.kubernetes.io/component: helmless
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  template:
+    metadata:
+      name: cz-agent-helmless-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+      namespace: cz-agent
+      labels:
+        app.kubernetes.io/component: helmless
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.55.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
+      
+    spec:
+      restartPolicy: OnFailure
+      
+      
+      containers:
+        - name: helmless
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.0"
+          imagePullPolicy: "IfNotPresent"
+          
+          command:
+            - /app/cloudzero-helmless
+          args:
+            - --configured
+            - /etc/config/values/values.yaml
+            - --output
+            - "-"
+          volumeMounts:
+            - name: helmless-cm
+              mountPath: /etc/config/values
+              readOnly: true
+      volumes:
+        - name: helmless-cm
+          configMap:
+            name: cz-agent-helmless-cm
 ---
 # Source: cloudzero-agent/templates/init-cert-job.yaml
 apiVersion: batch/v1
