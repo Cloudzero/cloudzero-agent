@@ -1,0 +1,9 @@
+# Test that an empty global object works when the chart is used as a subchart
+global: {}
+
+cloudzero-agent:
+  cloudAccountId: "123456789"
+  clusterName: "test-cluster"
+  region: "us-east-1"
+  host: "api.cloudzero.com"
+  apiKey: "test-key"
