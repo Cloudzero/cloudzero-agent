@@ -1,0 +1,7 @@
+# Ignore generated Helm chart files
+*/chart/Chart.lock
+*/chart/charts/
+
+# Ignore any temporary test files
+*.tmp
+*.temp

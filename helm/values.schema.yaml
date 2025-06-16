@@ -1410,3 +1410,13 @@ properties:
       (see tests/helm/template/), so jobConfig ID provides a way to override
       this behavior and instead generate the same hash every time. It shouldn't
       really be used anywhere else.
+
+  global:
+    type: object
+    additionalProperties: true
+    description: |
+      Global values that can be accessed by all charts and subcharts. When this chart
+      is used as a subchart, Helm automatically creates this property to share values
+      between parent and child charts.
+
+      For more information, see: https://helm.sh/docs/chart_template_guide/subcharts_and_globals/
