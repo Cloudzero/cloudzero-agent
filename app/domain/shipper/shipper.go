@@ -155,7 +155,7 @@ func (m *MetricShipper) runShipper(ctx context.Context) error {
 
 		// used as a marker in tests to signify that the shipper was complete.
 		// if you change this string, then change in the smoke tests as well.
-		logger.Debug().Msg("Successfully ran the shipper cycle") // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
+		logger.Info().Msg("Successfully ran the shipper cycle") // WARNING -- THIS IS USED AS A MARKER STRING IN SMOKE TESTS
 
 		return err
 	})
