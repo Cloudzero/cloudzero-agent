@@ -1,0 +1,6 @@
+# Test that subchart fails validation when required fields are missing
+global: {}
+
+cloudzero-agent:
+  # Missing required fields: cloudAccountId, clusterName, region, host, apiKey
+  invalidField: "this-should-cause-failure"

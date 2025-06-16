@@ -1,0 +1,12 @@
+# Test that global values work when the chart is used as a subchart
+global:
+  environment: "test"
+  region: "us-east-1"
+  team: "platform"
+
+cloudzero-agent:
+  cloudAccountId: "123456789"
+  clusterName: "test-cluster"
+  region: "us-east-1"
+  host: "api.cloudzero.com"
+  apiKey: "test-key"

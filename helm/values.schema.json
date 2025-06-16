@@ -20963,6 +20963,11 @@
       "description": "The name of an existing Kubernetes secret containing the API key.\n",
       "type": ["string", "null"]
     },
+    "global": {
+      "additionalProperties": true,
+      "description": "Global values that can be accessed by all charts and subcharts. When this chart\nis used as a subchart, Helm automatically creates this property to share values\nbetween parent and child charts.\n\nFor more information, see: https://helm.sh/docs/chart_template_guide/subcharts_and_globals/\n",
+      "type": "object"
+    },
     "host": {
       "description": "The CloudZero API host to connect to (e.g. api.cloudzero.com).\n",
       "minLength": 1,

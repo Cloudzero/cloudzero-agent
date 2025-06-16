@@ -290,7 +290,7 @@ HELM                      ?= helm
 
 HELM_ARGS = \
 	--namespace "$(HELM_TARGET_NAMESPACE)" \
-	--set cloudAccountId=$(CLOUD_ACCOUNT_ID) \
+	--set-string cloudAccountId=$(CLOUD_ACCOUNT_ID) \
 	--set clusterName=$(CLUSTER_NAME) \
 	--set region=$(CSP_REGION) \
 	--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
@@ -326,7 +326,7 @@ helm-lint: ## Lint the Helm chart
 helm-test-schema: helm/values.schema.json ## Run the Helm values schema validation tests
 	@for file in tests/helm/schema/*.yaml; do \
 		expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-		output=$$($(HELM) template "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>&1); \
+		output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>&1); \
 		if [ $$? -eq 0 ]; then \
 			result="pass"; \
 		else \
@@ -344,6 +344,45 @@ helm-test-schema: helm/values.schema.json ## Run the Helm values schema validati
 			exit 1; \
 		fi; \
 	done
+
+.PHONY: helm-test-subchart
+helm-test-subchart: helm/values.schema.json ## Run the Helm subchart validation tests
+	@echo "$(INFO_COLOR)Building subchart dependencies...$(NO_COLOR)"
+	@for dir in tests/helm/subchart/*/; do \
+		if [ -d "$$dir/chart" ]; then \
+			echo "$(INFO_COLOR)Building dependencies for $$(basename $$dir)...$(NO_COLOR)"; \
+			cd "$$dir/chart" && $(HELM) dependency build && cd - > /dev/null; \
+		fi; \
+	done
+	@for dir in tests/helm/subchart/*/; do \
+		if [ -d "$$dir/chart" ]; then \
+			for file in $$dir*.yaml; do \
+				if [ -f "$$file" ]; then \
+					expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
+					output=$$(cd "$$dir/chart" && $(HELM) template parent-test . --values ../$$(basename $$file) 2>&1); \
+					if [ $$? -eq 0 ]; then \
+						result="pass"; \
+					else \
+						result="fail"; \
+					fi; \
+					if [ "$$result" = "$$expected_result" ]; then \
+						echo "$(INFO_COLOR)✓ $$file$(NO_COLOR)"; \
+					else \
+						echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
+						if [ "$$expected_result" = "pass" ]; then \
+							echo "Helm command output:"; \
+							echo ""; \
+							echo "$$output"; \
+						fi; \
+						exit 1; \
+					fi; \
+				fi; \
+			done; \
+		fi; \
+	done
+
+.PHONY: helm-test
+helm-test: helm-test-schema helm-test-subchart ## Run all Helm validation tests
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/values.schema.json helm-install-deps FORCE
 	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
