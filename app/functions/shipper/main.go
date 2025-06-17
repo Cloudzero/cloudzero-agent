@@ -49,19 +49,7 @@ func main() {
 		logging.WithSink(logging.NewFieldFilterWriter(os.Stdout, []string{"spanId", "parentSpanId"})),
 	)
 
-	// if log capture is set, then create a new sink
-	if settings.Logging.Capture {
-		logStore, ierr := disk.NewDiskStore(
-			settings.Database,
-			disk.WithContentIdentifier(disk.LogsContentIdentifider),
-			disk.WithMaxInterval(settings.Database.ObservabilityMaxInterval), // use same interval as observability
-		)
-		if ierr != nil {
-			log.Fatal().Err(ierr).Msg("failed to create the log disk store")
-		}
-
-		loggingOpts = append(loggingOpts, logging.WithSink(logging.StoreWriter(ctx, logStore, settings.ClusterName, settings.CloudAccountID)))
-	}
+	// TODO -- add log capture code
 
 	logger, err := logging.NewLogger(loggingOpts...)
 	if err != nil {
