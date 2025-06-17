@@ -84,7 +84,7 @@ require (
 	github.com/golang/snappy v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
-	github.com/minio/minio-go/v7 v7.0.92
+	github.com/minio/minio-go/v7 v7.0.93
 	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/prometheus v0.304.1
