@@ -60,7 +60,7 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		// wait for the shipper to send all files
 		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container: shipper,
-			Log:       "Successfully uploaded new files",
+			Log:       "Successfully ran the shipper cycle",
 			N:         3,
 		})
 		require.NoError(t, err, "failed to find log message waiting for the shipper")
