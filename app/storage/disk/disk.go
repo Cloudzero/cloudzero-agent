@@ -19,10 +19,11 @@ import (
 	"github.com/go-obvious/timestamp"
 	"github.com/google/uuid"
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
+	"github.com/shirou/gopsutil/v4/disk"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 	"github.com/cloudzero/cloudzero-agent/app/types"
-	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -250,6 +251,13 @@ func (d *DiskStore) flushUnlocked() error {
 	if err != nil {
 		return fmt.Errorf("failed to rename active parquet file: %w", err)
 	}
+
+	log.Ctx(context.Background()).Info().
+		Time("startTime", time.UnixMilli(d.startTime)).
+		Time("stopTime", time.UnixMilli(stopTime)).
+		Str("filePath", timestampedFilePath).
+		Int("rowCount", d.rowCount).
+		Msg("flushed disk store")
 
 	// Reset writer and file pointers
 	d.writer = nil
