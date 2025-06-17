@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-config-values
+  name: {{ .Release.Name }}-helmless-cm
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" .Values.commonMetaLabels) | nindent 2 }}
   {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
