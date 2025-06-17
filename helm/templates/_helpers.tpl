@@ -565,6 +565,13 @@ Name for the certificate init job resource. Should be a new name each installati
 {{- end }}
 
 {{/*
+Name for the helmless job resource. Should be a new name each installation/upgrade.
+*/}}
+{{- define "cloudzero-agent.helmlessJobName" -}}
+{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "helmless" "Version" .Chart.Version "Values" .Values) -}}
+{{- end }}
+
+{{/*
 Annotations for the webhooks
 */}}
 {{- define "cloudzero-agent.webhooks.annotations" -}}

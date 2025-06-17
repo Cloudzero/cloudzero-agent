@@ -17,10 +17,17 @@ RUN grep nobody /etc/passwd > /etc/passwd_nobody
 # Copy the Go module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download \
-    && apk add build-base make zig
+    && apk add \
+        binutils-gold \
+        build-base \
+        make \
+        npm \
+        zig
 
 # Copy the source code
 COPY . .
+
+RUN make install-tools
 
 # Build the Go binary
 RUN make build OUTPUT_BIN_DIR=/go/bin \
@@ -72,6 +79,7 @@ COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
 COPY --from=builder /go/bin/cloudzero-webhook /app/cloudzero-webhook
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 COPY --from=builder /go/bin/cloudzero-cluster-config /app/cloudzero-cluster-config
+COPY --from=builder /go/bin/cloudzero-helmless /app/cloudzero-helmless
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command
