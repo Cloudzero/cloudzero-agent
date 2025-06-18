@@ -161,7 +161,7 @@ components:
     # executables, to provide CloudZero functionality.
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-      tag: 1.2.0 # <- Software release corresponding to this chart version.
+      tag: 1.2.1  # <- Software release corresponding to this chart version.
     podDisruptionBudget:
       minAvailable:
       maxUnavailable:
@@ -179,7 +179,7 @@ components:
   prometheus:
     image:
       repository: quay.io/prometheus/prometheus
-      tag: # This will fall back on .Chart.AppVersion if not set.
+      tag:  # This will fall back on .Chart.AppVersion if not set.
 
   # prometheusReloader contains details about where to find the Prometheus
   # reloader image.
@@ -486,7 +486,7 @@ insightsController:
     # Caution: The CloudZero system has a limit of 300 labels and annotations,
     # so it is advisable to provide a specific list of required annotations rather than a wildcard.
     patterns:
-      - ".*" # Use regex patterns to specify which annotations to collect. ".*" collects all annotations.
+      - ".*"  # Use regex patterns to specify which annotations to collect. ".*" collects all annotations.
     # Specify which resources to collect annotations from.
     resources:
       # Whether to collect annotations from CronJobs.
@@ -856,3 +856,4 @@ aggregator:
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+

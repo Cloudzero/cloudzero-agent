@@ -43,8 +43,8 @@ jobs:
       - name: Update image version in Helm chart
         run: |
           sed -ri "s/^( *[a-z]*): +[^ ]+  (# <- Software release corresponding to this chart version.)$/\1: ${{ github.event.inputs.version }}  \2/" helm/values.yaml helm/templates/_helpers.tpl
-          make helm-generate-tests format
-          git add helm/values.yaml helm/templates/*.tpl tests/helm/template/*.yaml
+          make helm-generate-tests format app/functions/helmless/default-values.yaml
+          git add helm/values.yaml helm/templates/*.tpl tests/helm/template/*.yaml app/functions/helmless/default-values.yaml
           git commit -m "Update image version in Helm chart to ${{ github.event.inputs.version }}"
 
       - name: Checkout main branch
