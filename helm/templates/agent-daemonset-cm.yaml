@@ -6,7 +6,7 @@ metadata:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
   name: {{ .Release.Name }}-daemonset-cm
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge .Values.defaults.annotations .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   prometheus.yml.in: |-
     {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
