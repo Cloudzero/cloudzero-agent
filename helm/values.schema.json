@@ -21769,6 +21769,19 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements",
           "description": "Resource requirements and limits for the server.\n\nFor details, see the Kubernetes documentation on resource management:\nhttps://kubernetes.io/docs/concepts/configuration/manage-resources-containers/\n"
         },
+        "serviceAccount": {
+          "additionalProperties": false,
+          "deprecated": true,
+          "description": "This field is deprecated. Please use the top-level `serviceAccount` instead.\n\nConfiguration for the service account used by the server component.\nThis is only used as a fallback when `serviceAccount.create` is false.\n",
+          "properties": {
+            "name": {
+              "default": "default",
+              "description": "Name of the service account to use when `serviceAccount.create` is false.\nThis field is deprecated. Please use the top-level `serviceAccount.name` instead.\n",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
         "terminationGracePeriodSeconds": {
           "default": 300,
           "description": "Termination grace period in seconds.\n\nSee the Kubernetes documentation for details:\nhttps://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination\n",

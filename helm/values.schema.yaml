@@ -1323,6 +1323,22 @@ properties:
               Number of successful checks required to mark as alive.
             type: integer
             default: 1
+      serviceAccount:
+        deprecated: true
+        description: |
+          This field is deprecated. Please use the top-level `serviceAccount` instead.
+
+          Configuration for the service account used by the server component.
+          This is only used as a fallback when `serviceAccount.create` is false.
+        type: object
+        additionalProperties: false
+        properties:
+          name:
+            type: string
+            default: "default"
+            description: |
+              Name of the service account to use when `serviceAccount.create` is false.
+              This field is deprecated. Please use the top-level `serviceAccount.name` instead.
 
   serverConfig:
     description: |
