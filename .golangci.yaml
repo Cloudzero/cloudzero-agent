@@ -16,6 +16,7 @@ linters:
   enable:
     # Bugs & Errors
     - copyloopvar # Detects places where loop variables are copied unnecessarily (in Go 1.22+)
+    - dupword # Check for duplicate words that might indicate copy-paste errors
     - dupl # Detects duplicate code
     - errcheck # Check for unexamined errors
     - gosec # Check for security issues
@@ -26,6 +27,7 @@ linters:
     - revive # Framework with many sub-linters
     - sqlclosecheck # Check that SQL rows/statements are closed
     - staticcheck # Subset of checks from the stand-along staticcheck tool
+    - testifylint # Check for common testify usage mistakes
     - tparallel # Finds incorrect usage of t.Parallel()
     - zerologlint # Check for correct usage of zerolog
 
@@ -134,6 +136,11 @@ linters-settings:
         # Any struct tag type can be used.
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`.
         yaml: snake
+
+  testifylint:
+    # Enable all checkers (default)
+    enable-all: true
+    # The useless-assert checker will catch reflect.DeepEqual with identical arguments
 
 issues:
   uniq-by-line: false
