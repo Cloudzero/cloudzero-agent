@@ -746,7 +746,7 @@ Generate a pod disruption budget
 */}}
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
-{{- $pdb := merge .component.podDisruptionBudget .root.Values.defaults.podDisruptionBudget -}}
+{{- $pdb := merge (deepCopy .component.podDisruptionBudget) .root.Values.defaults.podDisruptionBudget -}}
 {{- if ($pdb.minAvailable | default $pdb.maxUnavailable) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
