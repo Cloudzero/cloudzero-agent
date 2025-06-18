@@ -841,7 +841,7 @@ data:
       webhookServer:
         podDisruptionBudget:
           maxUnavailable: null
-          minAvailable: 1
+          minAvailable: null
         replicas: 3
     configmapReload:
       prometheus:
