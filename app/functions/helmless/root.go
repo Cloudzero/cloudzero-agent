@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/cloudzero/cloudzero-agent/app/functions/helmless/overrides"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -99,12 +99,13 @@ func run(config Config) error {
 		}
 	}
 
-	// Remove kubeStateMetrics; it's special.
-	delete(configuredValues, "kubeStateMetrics")
+	// Create extractor with kubeStateMetrics excluded (it's an alias for a
+	// subchart, and subchart values aren't included in the output of
+	// `helm show values ./helm`)
+	extractor := overrides.NewExtractor("kubeStateMetrics")
+	overridesMap := extractor.Extract(configuredValues, defaultValues)
 
-	overrides := diffMaps(configuredValues, defaultValues)
-
-	if err := writeYAML(config.OutputPath, overrides); err != nil {
+	if err := writeYAML(config.OutputPath, overridesMap); err != nil {
 		return fmt.Errorf("writing overrides: %w", err)
 	}
 
@@ -142,85 +143,6 @@ func writeYAML(output *os.File, data interface{}) error {
 	}
 
 	return nil
-}
-
-// diffMaps returns a map containing only the keys whose values differ from the
-// defaults. It recursively compares maps and arrays, only including values that
-// are significant (non-empty strings, non-zero numbers, non-empty maps/arrays,
-// or boolean values).
-func diffMaps(configured, defaults map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	for key, confVal := range configured {
-		defVal, exists := defaults[key]
-		if !exists {
-			// If key doesn't exist in defaults and is significant, it's an
-			// override
-			if isSignificantValue(confVal) {
-				result[key] = confVal
-			}
-			continue
-		}
-
-		// Both exist, compare values
-		if !cmp.Equal(confVal, defVal) {
-			// If they're both maps, recursively compare them
-			confMap, confIsMap := confVal.(map[string]interface{})
-			defMap, defIsMap := defVal.(map[string]interface{})
-			if confIsMap && defIsMap {
-				if len(confMap) > 0 {
-					diff := diffMaps(confMap, defMap)
-					if len(diff) > 0 {
-						result[key] = diff
-					}
-				}
-				continue
-			}
-
-			// For non-map values, include if significant
-			if isSignificantValue(confVal) {
-				result[key] = confVal
-			}
-		}
-	}
-	return result
-}
-
-// isSignificantValue determines if a value is significant enough to be included
-// in the output. A value is considered significant if it is:
-//
-//   - A non-empty string
-//   - A non-zero number
-//   - A non-empty map or array
-//   - A boolean value (true/false)
-func isSignificantValue(value interface{}) bool {
-	switch v := value.(type) {
-	case map[string]interface{}:
-		// For maps, check if any of their values are significant
-		for _, val := range v {
-			if isSignificantValue(val) {
-				return true
-			}
-		}
-		return false
-	case []interface{}:
-		// For slices, check if any of their values are significant
-		for _, val := range v {
-			if isSignificantValue(val) {
-				return true
-			}
-		}
-		return false
-	case string:
-		return v != ""
-	case bool:
-		return true
-	case int, int64, float64:
-		return true
-	case nil:
-		return false
-	default:
-		return fmt.Sprintf("%v", v) != ""
-	}
 }
 
 func main() {
