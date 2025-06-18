@@ -5,11 +5,11 @@ package handler_test
 
 import (
 	"context"
-	"reflect"
 	"regexp"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
@@ -96,14 +96,14 @@ func TestDataFormatters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.formatter(tt.accessor, tt.obj)
 
-			if !reflect.DeepEqual(tt.expected.MetricLabels, tt.expected.MetricLabels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.MetricLabels, tt.expected.MetricLabels)
+			if diff := cmp.Diff(tt.expected.MetricLabels, result.MetricLabels); diff != "" {
+				t.Errorf("MetricLabels mismatch (-want +got):\n%s", diff)
 			}
-			if !reflect.DeepEqual(tt.expected.Labels, tt.expected.Labels) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Labels, tt.expected.Labels)
+			if diff := cmp.Diff(tt.expected.Labels, result.Labels); diff != "" {
+				t.Errorf("Labels mismatch (-want +got):\n%s", diff)
 			}
-			if !reflect.DeepEqual(tt.expected.Annotations, tt.expected.Annotations) {
-				t.Errorf("Maps are not equal:\nExpected: %v\nGot: %v", tt.expected.Annotations, tt.expected.Annotations)
+			if diff := cmp.Diff(tt.expected.Annotations, result.Annotations); diff != "" {
+				t.Errorf("Annotations mismatch (-want +got):\n%s", diff)
 			}
 			assert.Equal(t, tt.expected.Type, result.Type)
 			assert.Equal(t, tt.expected.Name, result.Name)
