@@ -72,7 +72,7 @@ spec:
       volumes:
         - name: config-values
           configMap:
-            name: {{ .Release.Name }}-config-values
+            name: {{ include "cloudzero-agent.helmlessConfigMapName" . }}
         - name: config-volume
           configMap:
             name: {{ template "cloudzero-agent.configMapName" . }}

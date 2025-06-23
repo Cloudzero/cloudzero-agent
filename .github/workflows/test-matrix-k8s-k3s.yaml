@@ -208,6 +208,25 @@ jobs:
             --for condition=Available=True \
             --timeout=600s
 
+      - name: Validate All Resources Created Successfully
+        run: |
+          # Check that all Jobs completed successfully
+          kubectl wait --for=condition=Complete job -n cz-agent --all --timeout=300s
+
+          # Check that all pods are either Running or Completed
+          timeout 300s bash -c 'while true; do all_ready=true; for pod in $(kubectl get pods -n cz-agent --no-headers -o custom-columns=":metadata.name" 2>/dev/null || true); do if [ -z "$pod" ]; then continue; fi; phase=$(kubectl get pod "$pod" -n cz-agent -o jsonpath="{.status.phase}" 2>/dev/null || echo "Unknown"); if [[ "$phase" != "Running" && "$phase" != "Succeeded" ]]; then all_ready=false; echo "Pod $pod is not ready (phase: $phase)"; break; fi; done; if [[ "$all_ready" == "true" ]] && [[ -n "$(kubectl get pods -n cz-agent --no-headers 2>/dev/null)" ]]; then echo "✅ All pods are either Running or Completed"; exit 0; fi; sleep 2; done'
+
+          # Check that all Deployments are available
+          echo "Checking deployment status..."
+          kubectl get deployments -n cz-agent -o json | jq -r '.items[] | select(.status.readyReplicas != .spec.replicas) | .metadata.name' > /tmp/unready_deployments
+          if [ -s /tmp/unready_deployments ]; then
+            echo "Found deployments not fully ready:"
+            cat /tmp/unready_deployments
+            false
+          else
+            echo "All deployments are ready"
+          fi
+
       - name: Apply and Run TestKube Tests
         run: |
           kubectl apply -f ./tests/testkube/tests.yaml
