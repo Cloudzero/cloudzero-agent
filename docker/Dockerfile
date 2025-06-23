@@ -38,7 +38,7 @@ RUN make build OUTPUT_BIN_DIR=/go/bin \
     BUILD_TIME=${BUILD_TIME}
 
 # Stage 2: Access current certs
-FROM gcr.io/distroless/static-debian12:debug@sha256:b2141e58dd62baf0ff941e48ee8fdc58ffe4296bbe05b400eff1122484586160 AS certs
+FROM gcr.io/distroless/static-debian12:debug@sha256:112141358ce173d72800bb0e85b4d9dda7505ffc37203e70e475425d5a0d097b AS certs
 
 # Note: For debugging, you can temporarily change the image used for building by
 # passing in something like this to 'docker build':
