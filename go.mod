@@ -78,7 +78,7 @@ require (
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-obvious/server v0.1.15
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
