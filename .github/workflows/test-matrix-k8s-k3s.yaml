@@ -208,6 +208,14 @@ jobs:
             --for condition=Available=True \
             --timeout=600s
 
+      - name: Validate All Resources Created Successfully
+        run: |
+          # Check that all Jobs completed successfully
+          kubectl wait --for=condition=Complete job -n cz-agent --all --timeout=300s
+
+          # Check that all Pods are running without restarts
+          kubectl get pods -n cz-agent -o json | jq '.items[] | select(.status.containerStatuses[]?.restartCount > 0)'
+
       - name: Apply and Run TestKube Tests
         run: |
           kubectl apply -f ./tests/testkube/tests.yaml
