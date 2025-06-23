@@ -518,7 +518,7 @@ Name for the issuer resource
 Map for initBackfillJob values; this allows us to preferably use initBackfillJob, but if users are still using the deprecated initScrapeJob, we will accept those as well
 */}}
 {{- define "cloudzero-agent.backFill" -}}
-{{- merge .Values.initBackfillJob (.Values.initScrapeJob | default (dict)) | toYaml }}
+{{- merge (deepCopy .Values.initBackfillJob) (.Values.initScrapeJob | default (dict)) | toYaml }}
 {{- end }}
 
 {{/*
@@ -715,7 +715,7 @@ Generate affinity sections
 {{- define "cloudzero-agent.generateAffinity" -}}
 {{ $affinity := .default }}
 {{- if .affinity -}}
-{{ $affinity = merge .affinity .default }}
+{{ $affinity = merge (deepCopy .affinity) .default }}
 {{- end -}}
 {{- if $affinity -}}
 affinity:
