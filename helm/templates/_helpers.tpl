@@ -54,6 +54,10 @@ Name for the validating webhook
 {{- printf "%s-validator-configuration" .Release.Name -}}
 {{- end}}
 
+{{ define "cloudzero-agent.helmlessConfigMapName" -}}
+{{- printf "%s-helmless-cm" .Release.Name -}}
+{{- end}}
+
 {{ define "cloudzero-agent.configLoaderJobName" -}}
 {{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "confload" "Version" .Chart.Version "Values" .Values) -}}
 {{- end}}

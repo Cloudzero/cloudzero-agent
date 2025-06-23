@@ -33,7 +33,7 @@ spec:
       volumes:
         - name: helmless-cm
           configMap:
-            name: {{ .Release.Name }}-helmless-cm
+            name: {{ include "cloudzero-agent.helmlessConfigMapName" . }}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" .Values.defaults.tolerations | nindent 6 }}
