@@ -2763,7 +2763,7 @@ spec:
       volumes:
         - name: config-values
           configMap:
-            name: cz-agent-config-values
+            name: cz-agent-helmless-cm
         - name: config-volume
           configMap:
             name: cz-agent-configuration
