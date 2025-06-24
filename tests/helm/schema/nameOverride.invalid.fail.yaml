@@ -1,0 +1,2 @@
+# Test for invalid nameOverride (should fail)
+nameOverride: 123 # Should be string or null, not number

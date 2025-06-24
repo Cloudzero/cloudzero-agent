@@ -1,0 +1,3 @@
+# Test for null aggregator.name (should pass)
+aggregator:
+  name: null

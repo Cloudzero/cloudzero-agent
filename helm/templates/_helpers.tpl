@@ -582,7 +582,7 @@ Annotations for the webhooks
 {{- if or .Values.insightsController.tls.useCertManager .Values.insightsController.webhooks.annotations }}
 annotations:
 {{- if .Values.insightsController.webhooks.annotations }}
-{{ toYaml .Values.insightsController.webhook.annotations | nindent 2}}
+{{ toYaml .Values.insightsController.webhooks.annotations | nindent 2}}
 {{- end }}
 {{- if .Values.insightsController.tls.useCertManager }}
   cert-manager.io/inject-ca-from: {{ .Values.insightsController.webhooks.caInjection | default (printf "%s/%s" .Release.Namespace (include "cloudzero-agent.certificateName" .)) }}
@@ -742,7 +742,7 @@ Generate nodeSelector sections
 */}}
 {{- define "cloudzero-agent.generateNodeSelector" -}}
 {{- $nodeSelector := .nodeSelector | default .default -}}
-{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "nodeselector" "value" $nodeSelector) -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "nodeSelector" "value" $nodeSelector) -}}
 {{- end -}}
 
 {{/*
