@@ -296,7 +296,9 @@ initBackfillJob:
   annotations: {}
   tolerations: []
   # -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
-  # imagePullSecrets: []
+  imagePullSecrets:
+  # -- Node selector for the init-backfill-job. Falls back to insightsController.server.nodeSelector if not set.
+  nodeSelector:
   image:
     repository:
     tag:
@@ -305,20 +307,25 @@ initBackfillJob:
   enabled: true
 
 # -- This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.
-# initScrapeJob:
-# -- By default, all image settings use those set in insightsController.server. Optionally use the below to override. This should not be common.
-# imagePullSecrets: []
-# image:
-#   repository:
-#   tag:
-#   pullPolicy:
+initScrapeJob:
+  imagePullSecrets:
+  nodeSelector:
+  image:
+    repository:
+    tag:
+    digest:
+    pullPolicy:
+  annotations:
+  tolerations:
 
 initCertJob:
   enabled: true
   # -- Defaults to the same setting as the insightsController.server if set, otherwise left empty.
-  # imagePullSecrets: []
+  imagePullSecrets:
   annotations: {}
   tolerations: []
+  # -- Node selector for the init-cert-job. Falls back to insightsController.server.nodeSelector if not set.
+  nodeSelector: {}
   image:
     repository:
     pullPolicy:
@@ -339,6 +346,7 @@ initCertJob:
 
 # -- Annotations to be added to the Secret, if the chart is configured to create one
 secretAnnotations: {}
+# -- Image pull secrets for container images. Deprecated. Please use defaults.image.pullSecrets instead.
 imagePullSecrets: []
 
 # environment validator image allows for CI to use a different image in testing
@@ -353,6 +361,8 @@ validator:
     digest:
     pullPolicy:
     pullSecrets:
+  # -- Resource requirements and limits for the validator.
+  resources: {}
 
 server:
   name: server
@@ -364,6 +374,16 @@ server:
     tag:
     digest:
     pullPolicy:
+  # -- Override for the server's fully qualified name. Used in resource naming.
+  fullnameOverride:
+  # -- Override for the server's cluster role name. If not set, uses the server's fullname.
+  clusterRoleNameOverride:
+  # -- If set, use an existing ClusterRole instead of creating one.
+  useExistingClusterRoleName:
+  # -- Deprecated. Use serviceAccount.automountServiceAccountToken instead. Whether to automatically mount a ServiceAccount token in the server pods.
+  automountServiceAccountToken:
+  # -- Additional environment variables to add to the server pods.
+  env: []
   # Node selector configuration for the server pods.
   #
   # See the Kubernetes documentation for details:
@@ -383,6 +403,10 @@ server:
   deploymentAnnotations: {}
   # Annotations to add to the server pods.
   podAnnotations: {}
+  # -- Labels to add to the server pods.
+  podLabels: {}
+  # -- Priority class name for the server pods. Falls back to defaults.priorityClassName if not set.
+  priorityClassName:
   # Whether the server is running in agent mode.
   agentMode: true
   # Command-line arguments to pass to the server.
@@ -405,6 +429,14 @@ server:
       - ReadWriteOnce
     # Annotations to add to the PersistentVolumeClaim.
     annotations: {}
+    # -- Labels to add to the PersistentVolumeClaim.
+    labels: {}
+    # -- Selector for the PersistentVolumeClaim.
+    selector: {}
+    # -- Volume binding mode for the PersistentVolumeClaim.
+    volumeBindingMode:
+    # -- Volume name for the PersistentVolumeClaim.
+    volumeName:
   # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
@@ -429,6 +461,16 @@ server:
     timeoutSeconds: 4
     failureThreshold: 3
     successThreshold: 1
+  # -- Initial delay before starting readiness checks.
+  readinessProbeInitialDelay:
+  # -- Interval between readiness checks.
+  readinessProbePeriodSeconds:
+  # -- Timeout for readiness check requests.
+  readinessProbeTimeout:
+  # -- Number of failed checks before marking as not ready.
+  readinessProbeFailureThreshold:
+  # -- Number of successful checks required to mark as ready.
+  readinessProbeSuccessThreshold:
   # Liveness probe configuration
   livenessProbe:
     initialDelaySeconds: 30
@@ -436,6 +478,20 @@ server:
     timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
+  # -- Initial delay before starting liveness checks.
+  livenessProbeInitialDelay:
+  # -- Interval between liveness checks.
+  livenessProbePeriodSeconds:
+  # -- Timeout for liveness check requests.
+  livenessProbeTimeout:
+  # -- Number of failed checks before marking as not alive.
+  livenessProbeFailureThreshold:
+  # -- Number of successful checks required to mark as alive.
+  livenessProbeSuccessThreshold:
+  # -- Configuration for the service account used by the server component.
+  serviceAccount:
+    # -- Name of the service account to use when serviceAccount.create is false.
+    name:
 
 # Configuration for the webhook server (née Insights Controller), which collects
 # and processes Kubernetes resource metadata for cost attribution and analysis.
@@ -527,6 +583,8 @@ insightsController:
     # Whether to use cert-manager for certificate management. If disabled, a
     # self-signed certificate will be used.
     useCertManager: false
+    # -- Configuration for cert-manager issuer spec when useCertManager is true.
+    issuerSpec: {}
   # Configuration for the webhook server component.
   server:
     # Name of the webhook server component.
@@ -540,6 +598,8 @@ insightsController:
       repository:
       tag:
       pullPolicy:
+    # -- Image pull secrets for the webhook server. Falls back to insightsController server, then top-level imagePullSecrets.
+    imagePullSecrets: []
     # Port that the webhook server listens on.
     port: 8443
     # Timeout for reading HTTP requests.
@@ -647,6 +707,8 @@ serviceAccount:
   # For more information, see the Kubernetes documentation:
   # https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   annotations: {}
+  # -- Whether to automatically mount a ServiceAccount token in pods using this service account.
+  automountServiceAccountToken:
 
 # Configuration for the RBAC resources in the chart (e.g., ClusterRole,
 # ClusterRoleBinding, Role, RoleBinding, etc.).
@@ -695,6 +757,8 @@ configmapReload:
 # of any loss of communication with the CloudZero API, even when a
 # misconfiguration (such as an incorrect API key) prevents it.
 aggregator:
+  # -- Name override for the aggregator component. If not set, defaults to "<release-name>-aggregator".
+  name:
   # Configuration for logging behavior of the aggregator components.
   logging:
     # Logging level that will be posted to stdout.
@@ -856,3 +920,10 @@ aggregator:
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+
+# -- Deprecated. Override the name of the chart. Used in resource naming.
+nameOverride:
+# -- Deprecated. Force all resources to be deployed to a specific namespace, overriding .Release.Namespace.
+forceNamespace:
+# -- Deprecated. Override the name of the main Prometheus ConfigMap.
+configMapNameOverride:

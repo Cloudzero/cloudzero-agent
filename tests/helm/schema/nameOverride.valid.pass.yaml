@@ -1,0 +1,2 @@
+# Test for valid nameOverride
+nameOverride: "custom-name"

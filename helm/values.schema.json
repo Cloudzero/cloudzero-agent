@@ -20722,6 +20722,11 @@
         "mountRoot": {
           "type": "string"
         },
+        "name": {
+          "deprecated": true,
+          "description": "Name override for the aggregator component. If not set, defaults to \"<release-name>-aggregator\".\n",
+          "type": ["string", "null"]
+        },
         "nodeSelector": {
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
         },
@@ -20881,6 +20886,11 @@
       },
       "type": "object"
     },
+    "configMapNameOverride": {
+      "deprecated": true,
+      "description": "Override the name of the main Prometheus ConfigMap.\n",
+      "type": ["string", "null"]
+    },
     "configmapReload": {
       "deprecated": true,
       "description": "This field is deprecated.\n\nThis field is used to configure the reloading of ConfigMaps. It allows you\nto specify settings for how and when ConfigMaps should be reloaded.\n",
@@ -20963,6 +20973,11 @@
       "description": "The name of an existing Kubernetes secret containing the API key.\n",
       "type": ["string", "null"]
     },
+    "forceNamespace": {
+      "deprecated": true,
+      "description": "Force resources to be deployed to a specific namespace, overriding .Release.Namespace.\n",
+      "type": ["string", "null"]
+    },
     "global": {
       "additionalProperties": true,
       "description": "Global values that can be accessed by all charts and subcharts. When this chart\nis used as a subchart, Helm automatically creates this property to share values\nbetween parent and child charts.\n\nFor more information, see: https://helm.sh/docs/chart_template_guide/subcharts_and_globals/\n",
@@ -20974,9 +20989,16 @@
       "type": "string"
     },
     "imagePullSecrets": {
-      "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets",
       "deprecated": true,
-      "description": "This field is deprecated. Please use `defaults.image.pullSecrets` instead.\n"
+      "description": "This field is deprecated. Please use `defaults.image.pullSecrets` instead.\n",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "initBackfillJob": {
       "additionalProperties": false,
@@ -20995,6 +21017,28 @@
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",
           "description": "Container image configuration for the init-backfill-job.\n"
+        },
+        "imagePullSecrets": {
+          "description": "Image pull secrets for the init-backfill-job. Falls back to insightsController server, then top-level imagePullSecrets.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nodeSelector": {
+          "description": "Node selector for the init-backfill-job. Falls back to insightsController.server.nodeSelector if not set.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "tolerations": {
           "$ref": "#/$defs/com.cloudzero.agent.tolerations",
@@ -21019,6 +21063,21 @@
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",
           "description": "Container image configuration for the init-cert-job.\n"
+        },
+        "imagePullSecrets": {
+          "description": "Image pull secrets for the init-cert-job. Falls back to insightsController server, then top-level imagePullSecrets.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nodeSelector": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector",
+          "description": "Node selector for the init-cert-job. Falls back to insightsController.server.nodeSelector if not set.\n"
         },
         "rbac": {
           "description": "RBAC configuration for the init-cert-job.\n",
@@ -21046,6 +21105,56 @@
         "tolerations": {
           "$ref": "#/$defs/com.cloudzero.agent.tolerations",
           "description": "Tolerations to be added to the init-cert-job.\n"
+        }
+      },
+      "type": "object"
+    },
+    "initScrapeJob": {
+      "additionalProperties": false,
+      "deprecated": true,
+      "description": "This is a deprecated field that is replaced by initBackfillJob. However, the fields are identical, and initScrapeJob can still be used to configure the backFill/scrape Job.\n",
+      "properties": {
+        "annotations": {
+          "additionalProperties": true,
+          "description": "Deprecated. Use initBackfillJob instead. Annotations to add to the init-scrape-job.\n",
+          "type": ["object", "null"]
+        },
+        "image": {
+          "$ref": "#/$defs/com.cloudzero.agent.image",
+          "description": "Deprecated. Use initBackfillJob instead. Container image configuration for the init-scrape-job.\n"
+        },
+        "imagePullSecrets": {
+          "description": "Deprecated. Use initBackfillJob instead. Image pull secrets for the init-scrape-job.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nodeSelector": {
+          "description": "Deprecated. Use initBackfillJob instead. Node selector for the init-scrape-job.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tolerations": {
+          "description": "Deprecated. Use initBackfillJob instead. Tolerations to be added to the init-scrape-job.\n",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.tolerations"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "type": "object"
@@ -21279,6 +21388,10 @@
               "$ref": "#/$defs/com.cloudzero.agent.image",
               "description": "Container image configuration for the webhook server.\n"
             },
+            "imagePullSecrets": {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets",
+              "description": "Image pull secrets for the webhook server. Falls back to insightsController server, then top-level imagePullSecrets.\n"
+            },
             "logging": {
               "additionalProperties": false,
               "description": "Configuration for logging in the webhook server.\n",
@@ -21373,6 +21486,11 @@
               "description": "Whether to enable TLS certificate management.\n",
               "type": "boolean"
             },
+            "issuerSpec": {
+              "additionalProperties": true,
+              "description": "Configuration for cert-manager issuer spec when useCertManager is true.\n",
+              "type": "object"
+            },
             "key": {
               "default": "",
               "description": "TLS private key in PEM format. If empty, a key will be generated.\n",
@@ -21451,11 +21569,16 @@
     },
     "jobConfigID": {
       "description": "We embed a hash of the configuration in some job names, most notably the\nbackfill job. This is done so we can make sure the job gets re-run\nwhenever the configuration changes, while also preserving the job in\nKubernetes since setting a TTL can interfere with systems which attempt to\nkeep the cluster synced to the chart, such as ArgoCD.\n\nUnfortunately this can result in a lot of noise in the generated manifests\n(see tests/helm/template/), so jobConfig ID provides a way to override\nthis behavior and instead generate the same hash every time. It shouldn't\nreally be used anywhere else.\n",
-      "type": "string"
+      "type": ["string", "null"]
     },
     "kubeStateMetrics": {
       "description": "The configuration for the kube-state-metrics chart.\n\nFor details, please see the [kube-state-metrics\nchart](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics).\n",
       "type": "object"
+    },
+    "nameOverride": {
+      "deprecated": true,
+      "description": "Override the name of the chart. Used in resource naming.\n",
+      "type": ["string", "null"]
     },
     "prometheusConfig": {
       "additionalProperties": false,
@@ -21598,6 +21721,9 @@
           "description": "Whether the server is running in agent mode.\n",
           "type": "boolean"
         },
+        "annotations": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+        },
         "args": {
           "default": [
             "--config.file=/etc/config/prometheus/configmaps/prometheus.yml",
@@ -21610,6 +21736,15 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "automountServiceAccountToken": {
+          "deprecated": true,
+          "description": "This field is deprecated. Please use the top-level `serviceAccount.automountServiceAccountToken` instead.\n\nWhether to automatically mount a ServiceAccount token in the server pods.\n",
+          "type": ["boolean", "null"]
+        },
+        "clusterRoleNameOverride": {
+          "description": "Override for the server's cluster role name. If not set, uses the server's fullname.\n",
+          "type": ["string", "null"]
         },
         "deploymentAnnotations": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
@@ -21626,6 +21761,17 @@
             }
           },
           "type": "object"
+        },
+        "env": {
+          "description": "Additional environment variables to add to the server pods.\n",
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.EnvVar"
+          },
+          "type": "array"
+        },
+        "fullnameOverride": {
+          "description": "Override for the server's fully qualified name. Used in resource naming.\n",
+          "type": ["string", "null"]
         },
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",
@@ -21663,6 +21809,26 @@
             }
           },
           "type": "object"
+        },
+        "livenessProbeFailureThreshold": {
+          "description": "Number of failed checks before marking as not alive.\n",
+          "type": ["integer", "null"]
+        },
+        "livenessProbeInitialDelay": {
+          "description": "Initial delay before starting liveness checks.\n",
+          "type": ["integer", "null"]
+        },
+        "livenessProbePeriodSeconds": {
+          "description": "Interval between liveness checks.\n",
+          "type": ["integer", "null"]
+        },
+        "livenessProbeSuccessThreshold": {
+          "description": "Number of successful checks required to mark as alive.\n",
+          "type": ["integer", "null"]
+        },
+        "livenessProbeTimeout": {
+          "description": "Timeout for liveness check requests.\n",
+          "type": ["integer", "null"]
         },
         "logging": {
           "additionalProperties": false,
@@ -21708,10 +21874,18 @@
               "description": "Name of an existing PersistentVolumeClaim to use.\n",
               "type": "string"
             },
+            "labels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels",
+              "description": "Labels to add to the PersistentVolumeClaim.\n"
+            },
             "mountPath": {
               "default": "/data",
               "description": "Path where the volume will be mounted.\n",
               "type": "string"
+            },
+            "selector": {
+              "$ref": "#/$defs/io.k8s.api.core.v1.PersistentVolumeClaimSpec/properties/selector",
+              "description": "Selector for the PersistentVolumeClaim.\n"
             },
             "size": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity",
@@ -21725,6 +21899,14 @@
               "default": "",
               "description": "Sub-path within the volume to mount.\n",
               "type": "string"
+            },
+            "volumeBindingMode": {
+              "description": "Volume binding mode for the PersistentVolumeClaim.\n",
+              "type": ["string", "null"]
+            },
+            "volumeName": {
+              "description": "Volume name for the PersistentVolumeClaim.\n",
+              "type": ["string", "null"]
             }
           },
           "type": "object"
@@ -21732,6 +21914,14 @@
         "podAnnotations": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
           "description": "Annotations to add to the server pods.\n"
+        },
+        "podLabels": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels",
+          "description": "Labels to add to the server pods.\n"
+        },
+        "priorityClassName": {
+          "description": "Priority class name for the server pods. Falls back to defaults.priorityClassName if not set.\n",
+          "type": ["string", "null"]
         },
         "readinessProbe": {
           "additionalProperties": false,
@@ -21765,6 +21955,26 @@
           },
           "type": "object"
         },
+        "readinessProbeFailureThreshold": {
+          "description": "Number of failed checks before marking as not ready.\n",
+          "type": ["integer", "null"]
+        },
+        "readinessProbeInitialDelay": {
+          "description": "Initial delay before starting readiness checks.\n",
+          "type": ["integer", "null"]
+        },
+        "readinessProbePeriodSeconds": {
+          "description": "Interval between readiness checks.\n",
+          "type": ["integer", "null"]
+        },
+        "readinessProbeSuccessThreshold": {
+          "description": "Number of successful checks required to mark as ready.\n",
+          "type": ["integer", "null"]
+        },
+        "readinessProbeTimeout": {
+          "description": "Timeout for readiness check requests.\n",
+          "type": ["integer", "null"]
+        },
         "resources": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements",
           "description": "Resource requirements and limits for the server.\n\nFor details, see the Kubernetes documentation on resource management:\nhttps://kubernetes.io/docs/concepts/configuration/manage-resources-containers/\n"
@@ -21774,10 +21984,13 @@
           "deprecated": true,
           "description": "This field is deprecated. Please use the top-level `serviceAccount` instead.\n\nConfiguration for the service account used by the server component.\nThis is only used as a fallback when `serviceAccount.create` is false.\n",
           "properties": {
+            "automountServiceAccountToken": {
+              "description": "Whether to automatically mount a ServiceAccount token in pods using this service account.\n",
+              "type": ["boolean", "null"]
+            },
             "name": {
-              "default": "default",
               "description": "Name of the service account to use when `serviceAccount.create` is false.\nThis field is deprecated. Please use the top-level `serviceAccount.name` instead.\n",
-              "type": "string"
+              "type": ["string", "null"]
             }
           },
           "type": "object"
@@ -21797,6 +22010,10 @@
             "$ref": "#/$defs/io.k8s.api.core.v1.TopologySpreadConstraint"
           },
           "type": "array"
+        },
+        "useExistingClusterRoleName": {
+          "description": "If set, use an existing ClusterRole instead of creating one.\n",
+          "type": ["string", "null"]
         }
       },
       "type": "object"
@@ -21823,8 +22040,11 @@
       "description": "Configuration for the service account in the chart.\n",
       "properties": {
         "annotations": {
-          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
-          "description": "For more information, see the Kubernetes documentation:\nhttps://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/\n"
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+        },
+        "automountServiceAccountToken": {
+          "description": "Whether to automatically mount a ServiceAccount token in pods using this service account.\n",
+          "type": ["boolean", "null"]
         },
         "create": {
           "default": true,
@@ -21851,6 +22071,10 @@
           "default": "env-validator",
           "description": "Name of the validator component.\n",
           "type": "string"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements",
+          "description": "Resource requirements and limits for the validator.\n"
         },
         "serviceEndpoints": {
           "additionalProperties": false,
