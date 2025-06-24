@@ -316,11 +316,15 @@ HELM_ARGS = \
 	--set host=$(CLOUDZERO_HOST) \
 	$(CLOUD_HELM_EXTRA_ARGS) \
 
-.PHONY: helm-install-deps
-helm-install-deps:
+# Use a timestamp file to track helm dependency installation
+helm/charts/.stamp: helm/Chart.yaml
 	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
 	$(HELM) repo update prometheus-community
 	$(HELM) dependency build ./helm
+	@touch helm/charts/.stamp
+
+.PHONY: helm-install-deps
+helm-install-deps: helm/charts/.stamp
 
 .PHONY: helm-install
 helm-install: api-tests-check-env helm-install-deps
@@ -341,49 +345,80 @@ helm-lint: helm/values.schema.json
 helm-lint: ## Lint the Helm chart
 	@$(HELM) lint ./helm $(HELM_ARGS)
 
+# Generate list of all schema test targets (file paths without .yaml extension)
+SCHEMA_TEST_FILES := $(wildcard tests/helm/schema/*.yaml)
+SCHEMA_TEST_TARGETS := $(SCHEMA_TEST_FILES:.yaml=)
+SCHEMA_TEMPLATE_TARGETS := $(addsuffix -template,$(SCHEMA_TEST_TARGETS))
+SCHEMA_KUBECONFORM_TARGETS := $(addsuffix -kubeconform,$(filter %pass,$(SCHEMA_TEST_TARGETS)))
+
+# Targets that depend on both template and kubeconform validation
+# For .pass tests, depend on both template and kubeconform targets
+# For .fail tests, only depend on template target
+$(filter %pass,$(SCHEMA_TEST_TARGETS)): %: %-template %-kubeconform
+
+$(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
+
+# Pattern rule for Helm template validation
+tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
+	@file="tests/helm/schema/$*.yaml"; \
+	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
+	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>&1); \
+	if [ $$? -eq 0 ]; then \
+		result="pass"; \
+	else \
+		result="fail"; \
+	fi; \
+	if [ "$$result" = "$$expected_result" ]; then \
+		echo "$(INFO_COLOR)✓ $$file (Helm validation)$(NO_COLOR)"; \
+	else \
+		echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
+		if [ "$$expected_result" = "pass" ]; then \
+			echo "Helm command output:"; \
+			echo ""; \
+			echo "$$output"; \
+		fi; \
+		exit 1; \
+	fi
+
+# Pattern rule for kubeconform validation (only for .pass tests)
+tests/helm/schema/%-kubeconform: helm/charts/.stamp helm/values.schema.json
+	@file="tests/helm/schema/$*.yaml"; \
+	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>/dev/null | $(KUBECONFORM) \
+		-kubernetes-version 1.33.0 \
+		-schema-location default \
+		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+		-strict \
+		-summary \
+		- 2>&1); \
+	kubeconform_exit=$$?; \
+	if [ $$kubeconform_exit -eq 0 ]; then \
+		echo "$(INFO_COLOR)✓ $$file (kubeconform validation)$(NO_COLOR)"; \
+	else \
+		echo "$(ERROR_COLOR)✗ $$file (kubeconform validation failed)$(NO_COLOR)"; \
+		echo "kubeconform output:"; \
+		echo "$$kubeconform_output"; \
+		exit 1; \
+	fi
+
 .PHONY: helm-test-schema
-helm-test-schema: helm/values.schema.json ## Run the Helm values schema validation tests
-	@for file in tests/helm/schema/*.yaml; do \
-		expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-		output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>&1); \
-		if [ $$? -eq 0 ]; then \
-			result="pass"; \
-		else \
-			result="fail"; \
-		fi; \
-		if [ "$$result" = "$$expected_result" ]; then \
-			echo "$(INFO_COLOR)✓ $$file (Helm validation)$(NO_COLOR)"; \
-			if [ "$$expected_result" = "pass" ] && [ "$$result" = "pass" ]; then \
-				kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>/dev/null | $(KUBECONFORM) \
-					-kubernetes-version 1.33.0 \
-					-schema-location default \
-					-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
-					-strict \
-					-summary \
-					- 2>&1); \
-				kubeconform_exit=$$?; \
-				if [ $$kubeconform_exit -eq 0 ]; then \
-					echo "$(INFO_COLOR)✓ $$file (kubeconform validation)$(NO_COLOR)"; \
-				else \
-					echo "$(ERROR_COLOR)✗ $$file (kubeconform validation failed)$(NO_COLOR)"; \
-					echo "kubeconform output:"; \
-					echo "$$kubeconform_output"; \
-					exit 1; \
-				fi; \
-			fi; \
-		else \
-			echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
-			if [ "$$expected_result" = "pass" ]; then \
-				echo "Helm command output:"; \
-				echo ""; \
-				echo "$$output"; \
-			fi; \
-			exit 1; \
-		fi; \
-	done
+helm-test-schema: ## Run the Helm values schema validation tests
+helm-test-schema: helm/charts/.stamp
+helm-test-schema: $(SCHEMA_TEST_TARGETS)
+
+.PHONY: helm-test-schema-template
+helm-test-schema-template: ## Run only the Helm template validation tests
+helm-test-schema-template: helm/charts/.stamp
+helm-test-schema-template: $(SCHEMA_TEMPLATE_TARGETS)
+
+.PHONY: helm-test-schema-kubeconform
+helm-test-schema-kubeconform: ## Run only the kubeconform validation tests
+helm-test-schema-kubeconform: helm/charts/.stamp
+helm-test-schema-kubeconform: $(SCHEMA_KUBECONFORM_TARGETS)
 
 .PHONY: helm-test-subchart
-helm-test-subchart: helm/values.schema.json ## Run the Helm subchart validation tests
+helm-test-subchart: ## Run the Helm subchart validation tests
+helm-test-subchart: helm/charts/.stamp
+helm-test-subchart: helm/values.schema.json
 	@echo "$(INFO_COLOR)Building subchart dependencies...$(NO_COLOR)"
 	@for dir in tests/helm/subchart/*/; do \
 		if [ -d "$$dir/chart" ]; then \
@@ -419,9 +454,10 @@ helm-test-subchart: helm/values.schema.json ## Run the Helm subchart validation 
 	done
 
 .PHONY: helm-test
-helm-test: helm-test-schema helm-test-subchart ## Run all Helm validation tests
+helm-test: ## Run all Helm validation tests
+helm-test: helm-test-schema helm-test-subchart
 
-tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/values.schema.json helm-install-deps FORCE
+tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json FORCE
 	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
 helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
