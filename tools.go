@@ -7,6 +7,7 @@ package tools
 
 import (
 	_ "github.com/itchyny/gojq/cmd/gojq"
+	_ "github.com/yannh/kubeconform/cmd/kubeconform"
 	_ "go.uber.org/mock/mockgen"
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 	_ "helm.sh/helm/v3/cmd/helm"

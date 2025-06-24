@@ -6,19 +6,20 @@
 # These are dependencies that are expected to be installed system-wide. For
 # tools we install via `make install-tools` there is no need to allow overriding
 # the path to the executable.
-GO     ?= go
-GOJQ   ?= gojq
-AWK    ?= awk
-CC     ?= $(shell $(GO) env CC)
-CXX    ?= $(shell $(GO) env CXX)
-CURL   ?= curl
-DOCKER ?= docker
-GREP   ?= grep
-HELM   ?= helm
-NPM    ?= npm
-PROTOC ?= protoc
-RM     ?= rm
-XARGS  ?= xargs
+GO          ?= go
+GOJQ        ?= gojq
+AWK         ?= awk
+CC          ?= $(shell $(GO) env CC)
+CXX         ?= $(shell $(GO) env CXX)
+CURL        ?= curl
+DOCKER      ?= docker
+GREP        ?= grep
+HELM        ?= helm
+KUBECONFORM ?= kubeconform
+NPM         ?= npm
+PROTOC      ?= protoc
+RM          ?= rm
+XARGS       ?= xargs
 
 # Build configuration
 GO_MODULE      ?= $(shell $(GO) list -m)
@@ -351,7 +352,25 @@ helm-test-schema: helm/values.schema.json ## Run the Helm values schema validati
 			result="fail"; \
 		fi; \
 		if [ "$$result" = "$$expected_result" ]; then \
-			echo "$(INFO_COLOR)✓ $$file$(NO_COLOR)"; \
+			echo "$(INFO_COLOR)✓ $$file (Helm validation)$(NO_COLOR)"; \
+			if [ "$$expected_result" = "pass" ] && [ "$$result" = "pass" ]; then \
+				kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f $$file $(HELM_ARGS) 2>/dev/null | $(KUBECONFORM) \
+					-kubernetes-version 1.33.0 \
+					-schema-location default \
+					-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+					-strict \
+					-summary \
+					- 2>&1); \
+				kubeconform_exit=$$?; \
+				if [ $$kubeconform_exit -eq 0 ]; then \
+					echo "$(INFO_COLOR)✓ $$file (kubeconform validation)$(NO_COLOR)"; \
+				else \
+					echo "$(ERROR_COLOR)✗ $$file (kubeconform validation failed)$(NO_COLOR)"; \
+					echo "kubeconform output:"; \
+					echo "$$kubeconform_output"; \
+					exit 1; \
+				fi; \
+			fi; \
 		else \
 			echo "$(ERROR_COLOR)✗ $$file (expected $$expected_result, got $$result)$(NO_COLOR)"; \
 			if [ "$$expected_result" = "pass" ]; then \
