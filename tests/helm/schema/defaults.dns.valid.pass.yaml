@@ -8,7 +8,7 @@ defaults:
       searches:
         - "svc.cluster.local"
         - "cluster.local"
-      option:
+      options:
         - name: "ndots"
           value: "5"
         - name: "timeout"

@@ -95,21 +95,37 @@ app.kubernetes.io/component: {{ .Values.server.name }}
 {{- end -}}
 
 {{/*
-Create unified labels for prometheus components
+Common base labels for all Kubernetes resources
 */}}
-{{- define "cloudzero-agent.common.metaLabels" -}}
-{{- $labels := dict
+{{- define "cloudzero-agent.baseLabels" -}}
+{{- dict
+    "app.kubernetes.io/name" (include "cloudzero-agent.name" .)
+    "app.kubernetes.io/instance" .Release.Name
     "app.kubernetes.io/version" .Chart.AppVersion
     "helm.sh/chart" (include "cloudzero-agent.chart" .)
     "app.kubernetes.io/managed-by" .Release.Service
     "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .)
--}}
-{{- (merge $labels .Values.defaults.labels .Values.commonMetaLabels) | toYaml -}}
+| toYaml -}}
+{{- end -}}
+
+{{/*
+Create unified labels for prometheus components
+*/}}
+{{- define "cloudzero-agent.common.metaLabels" -}}
+{{ (mergeOverwrite
+     (include "cloudzero-agent.baseLabels" . | fromYaml)
+     (.Values.defaults.labels | default (dict))
+     (.Values.commonMetaLabels | default (dict))
+   ) | toYaml }}
 {{- end -}}
 
 {{- define "cloudzero-agent.server.labels" -}}
-{{ include "cloudzero-agent.server.matchLabels" . }}
-{{ include "cloudzero-agent.common.metaLabels" . }}
+{{ (mergeOverwrite
+     (include "cloudzero-agent.baseLabels" . | fromYaml)
+     (dict "app.kubernetes.io/component" .Values.server.name)
+     (.Values.defaults.labels | default (dict))
+     (.Values.commonMetaLabels | default (dict))
+   ) | toYaml }}
 {{- end -}}
 
 {{/*
@@ -443,8 +459,12 @@ Service selector labels
 {{- end }}
 
 {{- define "cloudzero-agent.insightsController.labels" -}}
-{{ include "cloudzero-agent.insightsController.server.matchLabels" . }}
-{{ include "cloudzero-agent.common.metaLabels" . }}
+{{ (mergeOverwrite
+     (include "cloudzero-agent.baseLabels" . | fromYaml)
+     (dict "app.kubernetes.io/component" .Values.insightsController.server.name)
+     (.Values.defaults.labels | default (dict))
+     (.Values.commonMetaLabels | default (dict))
+   ) | toYaml }}
 {{- end -}}
 
 {{- define "cloudzero-agent.aggregator.selectorLabels" -}}
@@ -453,8 +473,13 @@ Service selector labels
 {{- end }}
 
 {{- define "cloudzero-agent.aggregator.labels" -}}
-{{ include "cloudzero-agent.aggregator.matchLabels" . }}
-{{ include "cloudzero-agent.common.metaLabels" . }}
+{{ (mergeOverwrite
+     (include "cloudzero-agent.baseLabels" . | fromYaml)
+     (dict "app.kubernetes.io/component" "aggregator")
+     (.Values.defaults.labels | default (dict))
+     (.Values.commonMetaLabels | default (dict))
+     (dict "app.kubernetes.io/name" (include "cloudzero-agent.aggregator.name" .))
+   ) | toYaml }}
 {{- end -}}
 
 {{/*
@@ -642,13 +667,11 @@ Generate image configuration with defaults.
 {{- $tag         := (.image.tag         | default .defaults.tag) -}}
 {{- $repository  := (.image.repository  | default .defaults.repository) -}}
 {{- $pullPolicy  := (.image.pullPolicy  | default .defaults.pullPolicy) -}}
-{{- $pullSecrets := (.image.pullSecrets | default .defaults.pullSecrets) -}}
 {{- if .compat -}}
 {{- $digest      = (.compat.digest      | default .image.digest      | default .defaults.digest) -}}
 {{- $tag         = (.compat.tag         | default .image.tag         | default .defaults.tag) -}}
 {{- $repository  = (.compat.repository  | default .image.repository  | default .defaults.repository) -}}
 {{- $pullPolicy  = (.compat.pullPolicy  | default .image.pullPolicy  | default .defaults.pullPolicy) -}}
-{{- $pullSecrets = (.compat.pullSecrets | default .image.pullSecrets | default .defaults.pullSecrets) -}}
 {{- end -}}
 {{- if $digest -}}
 image: "{{ $repository }}@{{ $digest }}"
@@ -657,10 +680,6 @@ image: "{{ $repository }}:{{ $tag }}"
 {{- end }}
 {{ if $pullPolicy -}}
 imagePullPolicy: "{{ $pullPolicy }}"
-{{- end }}
-{{ if $pullSecrets -}}
-imagePullSecrets:
-{{ toYaml $pullSecrets | indent 2 }}
 {{- end }}
 {{- end -}}
 
@@ -688,18 +707,29 @@ dnsConfig:
 Generate labels for a component
 */}}
 {{- define "cloudzero-agent.generateLabels" -}}
-{{- $labels := dict
-    "app.kubernetes.io/version" .globals.Chart.AppVersion
-    "helm.sh/chart" (include "cloudzero-agent.chart" .globals)
-    "app.kubernetes.io/managed-by" .globals.Release.Service
-    "app.kubernetes.io/part-of" (include "cloudzero-agent.name" .globals)
--}}
 {{- if .component -}}
-{{- $labels = merge (dict "app.kubernetes.io/component" .component) $labels -}}
-{{- end -}}
-{{- if len $labels -}}
+{{- $merged := mergeOverwrite
+     (include "cloudzero-agent.baseLabels" .globals | fromYaml)
+     (dict "app.kubernetes.io/component" .component)
+     (.globals.Values.defaults.labels | default (dict))
+     (.globals.Values.commonMetaLabels | default (dict))
+     (.labels | default (dict))
+-}}
+{{- if len $merged -}}
 labels:
-{{- (merge $labels (.labels | default (dict)) .globals.Values.defaults.labels .globals.Values.commonMetaLabels) | toYaml | nindent 2 -}}
+{{- $merged | toYaml | nindent 2 -}}
+{{- end -}}
+{{- else -}}
+{{- $merged := mergeOverwrite
+     (include "cloudzero-agent.baseLabels" .globals | fromYaml)
+     (.globals.Values.defaults.labels | default (dict))
+     (.globals.Values.commonMetaLabels | default (dict))
+     (.labels | default (dict))
+-}}
+{{- if len $merged -}}
+labels:
+{{- $merged | toYaml | nindent 2 -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
