@@ -794,6 +794,7 @@ data:
         capture: true
         level: info
       mountRoot: /cloudzero
+      name: null
       nodeSelector: {}
       profiling: false
       reconnectFrequency: 16
@@ -880,6 +881,8 @@ data:
         pullPolicy: null
         repository: null
         tag: null
+      imagePullSecrets: null
+      nodeSelector: null
       tolerations: []
     initCertJob:
       annotations: {}
@@ -889,12 +892,24 @@ data:
         pullPolicy: null
         repository: null
         tag: null
+      imagePullSecrets: null
+      nodeSelector: {}
       rbac:
         clusterRoleBindingName: ""
         clusterRoleName: ""
         create: true
         serviceAccountName: ""
       tolerations: []
+    initScrapeJob:
+      annotations: null
+      image:
+        digest: null
+        pullPolicy: null
+        repository: null
+        tag: null
+      imagePullSecrets: null
+      nodeSelector: null
+      tolerations: null
     insightsController:
       ConfigMapNameOverride: null
       annotations:
@@ -945,6 +960,7 @@ data:
           pullPolicy: null
           repository: null
           tag: null
+        imagePullSecrets: []
         logging:
           level: info
         name: webhook-server
@@ -963,6 +979,7 @@ data:
         caBundle: ""
         crt: ""
         enabled: true
+        issuerSpec: {}
         key: ""
         mountPath: /etc/certs
         secret:
@@ -1253,9 +1270,13 @@ data:
       - --web.enable-lifecycle
       - --web.console.libraries=/etc/prometheus/console_libraries
       - --web.console.templates=/etc/prometheus/consoles
+      automountServiceAccountToken: null
+      clusterRoleNameOverride: null
       deploymentAnnotations: {}
       emptyDir:
         sizeLimit: 8Gi
+      env: []
+      fullnameOverride: null
       image:
         digest: null
         pullPolicy: null
@@ -1267,6 +1288,11 @@ data:
         periodSeconds: 15
         successThreshold: 1
         timeoutSeconds: 10
+      livenessProbeFailureThreshold: null
+      livenessProbeInitialDelay: null
+      livenessProbePeriodSeconds: null
+      livenessProbeSuccessThreshold: null
+      livenessProbeTimeout: null
       logging:
         level: null
       name: server
@@ -1277,31 +1303,46 @@ data:
         annotations: {}
         enabled: false
         existingClaim: ""
+        labels: {}
         mountPath: /data
+        selector: {}
         size: 8Gi
         storageClass: ""
         subPath: ""
+        volumeBindingMode: null
+        volumeName: null
       podAnnotations: {}
+      podLabels: {}
+      priorityClassName: null
       readinessProbe:
         failureThreshold: 3
         initialDelaySeconds: 30
         periodSeconds: 5
         successThreshold: 1
         timeoutSeconds: 4
+      readinessProbeFailureThreshold: null
+      readinessProbeInitialDelay: null
+      readinessProbePeriodSeconds: null
+      readinessProbeSuccessThreshold: null
+      readinessProbeTimeout: null
       resources:
         limits:
           memory: 1024Mi
         requests:
           cpu: 250m
           memory: 512Mi
+      serviceAccount:
+        name: null
       terminationGracePeriodSeconds: 300
       tolerations: []
       topologySpreadConstraints: []
+      useExistingClusterRoleName: null
     serverConfig:
       containerSecretFileName: value
       containerSecretFilePath: /etc/config/secrets/
     serviceAccount:
       annotations: {}
+      automountServiceAccountToken: null
       create: true
       name: ""
     validator:
@@ -1312,6 +1353,7 @@ data:
         repository: null
         tag: null
       name: env-validator
+      resources: {}
       serviceEndpoints:
         kubeStateMetrics: null
 ---

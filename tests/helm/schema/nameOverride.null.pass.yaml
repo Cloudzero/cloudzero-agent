@@ -1,0 +1,2 @@
+# Test for null nameOverride (should pass)
+nameOverride: null

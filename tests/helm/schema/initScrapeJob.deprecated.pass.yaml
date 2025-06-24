@@ -1,0 +1,8 @@
+# Test for deprecated initScrapeJob (should pass but with warnings)
+initScrapeJob:
+  annotations:
+    example.com/deprecated: "true"
+  imagePullSecrets:
+    - name: "my-registry-secret"
+  nodeSelector:
+    kubernetes.io/os: linux
