@@ -1,5 +1,1 @@
-cloudAccountId: "123456789"
-clusterName: "test-cluster"
-region: "us-east-1"
-host: "api.cloudzero.com"
 global: {}

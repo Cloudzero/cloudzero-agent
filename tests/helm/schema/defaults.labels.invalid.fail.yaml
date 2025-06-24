@@ -1,8 +1,3 @@
-host: "test-host"
-clusterName: "test-cluster"
-cloudAccountId: "test-account"
-region: "us-west-2"
-
 defaults:
   labels:
     - foo
