@@ -421,9 +421,13 @@ data:
           match: exact
         - pattern: "resource"
           match: exact
+        - pattern: "resource_type"
+          match: exact
         - pattern: "unit"
           match: exact
         - pattern: "uid"
+          match: exact
+        - pattern: "workload"
           match: exact
         - pattern: "_"
           match: prefix
