@@ -91,6 +91,7 @@ require (
 	github.com/shirou/gopsutil/v4 v4.25.5
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
+	github.com/yannh/kubeconform v0.7.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.6.0
@@ -222,6 +223,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/rubenv/sql-migrate v1.8.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

@@ -39,6 +39,28 @@ jobs:
             --chart-repos=kube-state-metrics=$PROM_CHART_REPO \
             --helm-lint-extra-args "--set=existingSecretName=api-token,clusterName=$CLUSTER_NAME,cloudAccountId=$CLOUD_ACCOUNT_ID,region=$REGION"
 
+  # This job runs helm tests using the project's Makefile
+  helm-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: SETUP - Checkout
+        uses: actions/checkout@v4
+
+      - name: SETUP - Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: SETUP - Install tools
+        run: make install-tools
+
+      - name: TEST - Run helm tests
+        env:
+          CLOUDZERO_DEV_API_KEY: "fake-api-key"
+        run: make -j helm-test
+
   # This job tests the chart on a KinD cluster
   # and if we are in the develop or tag branch, it will
   # publish the image to the production registry
