@@ -84,6 +84,17 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -f prometheus-config-reloader"
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
