@@ -2681,9 +2681,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    checkov.io/skip1: CKV_K8S_22=Webhook server container may need write access for temporary
-      files and processing
+  
 spec:
   replicas: 3
   selector:
@@ -2748,6 +2746,7 @@ spec:
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -3006,9 +3005,7 @@ kind: Job
 metadata:
   name: cz-agent-helmless-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   namespace: cz-agent
-  annotations:
-    checkov.io/skip1: CKV_K8S_22=Helmless job container needs write access for configuration
-      processing and output generation
+  
   labels:
     app.kubernetes.io/component: helmless
     app.kubernetes.io/instance: cz-agent
@@ -3063,6 +3060,7 @@ spec:
               cpu: 100m
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
