@@ -10,9 +10,6 @@ skip-check:
   # configurable, the default namespace is only used if that is the
   # configuration the user chooses.
   - CKV_K8S_21
-  # Skip "Minimize the admission of containers wishing to share the host process
-  # ID namespace" check.
-  - CKV_K8S_28
   # Skip "Image should use digest" check. Using image digests instead of tags
   # makes development and maintenance more complex. This is typically skipped in
   # development environments.
