@@ -1,0 +1,7 @@
+cloudAccountId: "1234567890"
+clusterName: "my-cluster"
+region: "us-east-1"
+apiKey: "not-a-real-api-key"
+
+# For testing only, you should never use this property in production.
+jobConfigID: "DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E"

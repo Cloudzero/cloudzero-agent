@@ -64,6 +64,11 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.aggregator.collector.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
@@ -97,6 +102,11 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.aggregator.shipper.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         {{- if .Values.aggregator.debugContainer }}
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-debug
           image: busybox:stable
@@ -108,6 +118,11 @@ spec:
             requests:
               cpu: 50m
               memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume
