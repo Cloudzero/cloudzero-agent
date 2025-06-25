@@ -41,6 +41,11 @@ spec:
             limits:
               memory: 64Mi
               cpu: 100m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values
