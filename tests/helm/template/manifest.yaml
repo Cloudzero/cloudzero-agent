@@ -1301,6 +1301,7 @@ data:
       readinessProbeTimeout: null
       resources:
         limits:
+          cpu: 1000m
           memory: 1024Mi
         requests:
           cpu: 250m
@@ -2234,6 +2235,7 @@ spec:
             successThreshold: 1
           resources:
             limits:
+              cpu: 1000m
               memory: 1024Mi
             requests:
               cpu: 250m
