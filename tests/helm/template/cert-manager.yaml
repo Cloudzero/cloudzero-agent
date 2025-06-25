@@ -1122,7 +1122,13 @@ data:
       releaseLabel: false
       releaseNamespace: false
       replicas: 1
-      resources: {}
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 10m
+          memory: 64Mi
       revisionHistoryLimit: 10
       securityContext:
         enabled: true
@@ -1964,7 +1970,12 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
         resources:
-          {}
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
