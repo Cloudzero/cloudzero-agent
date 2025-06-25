@@ -38,13 +38,8 @@ spec:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
             - -backfill
-          resources:
-            {{- toYaml .Values.insightsController.resources | nindent 12 }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+          {{- include "cloudzero-agent.generateResources" (dict "resources" .Values.insightsController.resources) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" . | nindent 10 }}
           volumeMounts:
             - name: insights-server-config
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}

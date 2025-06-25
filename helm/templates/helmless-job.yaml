@@ -28,13 +28,7 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
-          resources:
-            requests:
-              memory: 32Mi
-              cpu: 10m
-            limits:
-              memory: 64Mi
-              cpu: 100m
+          {{- include "cloudzero-agent.generateSmallJobResources" . | nindent 10 }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

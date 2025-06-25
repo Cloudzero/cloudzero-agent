@@ -46,8 +46,7 @@ spec:
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
           ports:
             - containerPort: 8443
-          resources:
-            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+          {{- include "cloudzero-agent.generateResources" (dict "resources" .Values.insightsController.resources) | nindent 10 }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
