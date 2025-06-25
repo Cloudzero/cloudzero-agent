@@ -6,6 +6,7 @@ metadata:
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
       (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
+      (dict "checkov.io/skip1" "CKV_K8S_22=Config loader job container needs write access for configuration validation and output generation")
     ) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}

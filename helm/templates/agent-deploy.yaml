@@ -5,6 +5,7 @@ metadata:
       (deepCopy .Values.server.deploymentAnnotations)
       (deepCopy .Values.defaults.annotations)
       (dict "checkov.io/skip1" "CKV_K8S_38=Service account token needed for Prometheus to scrape cAdvisor endpoints with API authentication")
+      (dict "checkov.io/skip2" "CKV_K8S_22=Prometheus container needs write access to /data volume for metrics storage")
     ) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.server.labels" . | nindent 4 }}

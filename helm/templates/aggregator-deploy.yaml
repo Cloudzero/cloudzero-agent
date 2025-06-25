@@ -6,6 +6,7 @@ metadata:
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
       .Values.components.aggregator.annotations
+      (dict "checkov.io/skip1" "CKV_K8S_22=Aggregator containers need write access to /data volume for data processing and storage")
     ) | nindent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "globals" .

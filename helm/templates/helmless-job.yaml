@@ -3,7 +3,10 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.helmlessJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (deepCopy .Values.defaults.annotations)
+      (dict "checkov.io/skip1" "CKV_K8S_22=Helmless job container needs write access for configuration processing and output generation")
+    ) | nindent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 2 }}
 spec:
   template:
