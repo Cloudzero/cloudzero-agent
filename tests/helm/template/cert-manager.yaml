@@ -931,7 +931,8 @@ data:
     jobConfigID: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
     kubeStateMetrics:
       affinity: {}
-      annotations: {}
+      annotations:
+        checkov.io/skip1: CKV_K8S_38=Service account token needed for API access
       automountServiceAccountToken: true
       autosharding:
         enabled: false
@@ -1906,6 +1907,8 @@ metadata:
     app.kubernetes.io/name: cloudzero-state-metrics
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/version: "2.15.0"
+  annotations:
+    checkov.io/skip1: CKV_K8S_38=Service account token needed for API access
 spec:
   selector:
     matchLabels:      
