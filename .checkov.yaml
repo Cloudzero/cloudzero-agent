@@ -17,3 +17,7 @@ skip-check:
   # makes development and maintenance more complex. This is typically skipped in
   # development environments.
   - CKV_K8S_43
+  # Skip "Use read-only filesystem for containers where possible" check. Many
+  # containers in this deployment legitimately need to write data (Prometheus
+  # for metrics storage, aggregator for data processing, jobs for file operations).
+  - CKV_K8S_22
