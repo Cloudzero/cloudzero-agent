@@ -2184,6 +2184,8 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       
       
@@ -2342,6 +2344,8 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       
       
@@ -2412,6 +2416,8 @@ spec:
         runAsNonRoot: true
         runAsGroup: 65534
         fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       affinity:
         podAntiAffinity:
@@ -2513,6 +2519,13 @@ spec:
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       
       
@@ -2575,6 +2588,13 @@ spec:
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       
       containers:
@@ -2683,6 +2703,13 @@ spec:
       
     spec:
       restartPolicy: OnFailure
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       
       
       containers:
