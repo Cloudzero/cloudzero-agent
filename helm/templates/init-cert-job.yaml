@@ -26,13 +26,7 @@ spec:
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.initCertJob.tolerations .Values.insightsController.server.tolerations) | nindent 6 }}
       serviceAccountName: {{ include "cloudzero-agent.initCertJob.serviceAccountName" . }}
       restartPolicy: Never
-      securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      {{- include "cloudzero-agent.generateSecurityContext" . | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}

@@ -804,6 +804,19 @@ spec:
 {{- end -}}
 
 {{/*
+Generate standard security context for pod-level security
+*/}}
+{{- define "cloudzero-agent.generateSecurityContext" -}}
+securityContext:
+  runAsUser: 65534
+  runAsNonRoot: true
+  runAsGroup: 65534
+  fsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+{{- end -}}
+
+{{/*
 Generate imagePullSecrets block
 Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
 Example usage:
