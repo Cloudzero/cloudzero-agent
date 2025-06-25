@@ -6,7 +6,11 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.initBackfillJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.initBackfillJob.annotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge 
+      (deepCopy .Values.defaults.annotations) 
+      .Values.initBackfillJob.annotations
+      (dict "checkov.io/skip1" "CKV_K8S_38=Service account token needed for webhook backfill to read Kubernetes resources")
+    ) | nindent 2 }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
 spec:

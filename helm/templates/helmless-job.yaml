@@ -13,6 +13,7 @@ spec:
       {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 6 }}
       {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
+      automountServiceAccountToken: false
       restartPolicy: OnFailure
       securityContext:
         runAsUser: 65534

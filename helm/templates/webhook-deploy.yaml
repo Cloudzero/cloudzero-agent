@@ -26,6 +26,7 @@ spec:
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      automountServiceAccountToken: false
       {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
       securityContext:
         runAsUser: 65534
