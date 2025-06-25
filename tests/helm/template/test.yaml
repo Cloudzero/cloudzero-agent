@@ -2156,6 +2156,17 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             successThreshold: 1
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -f prometheus-config-reloader"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
