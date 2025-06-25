@@ -6,11 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge 
-      (deepCopy .Values.defaults.annotations) 
-      .Values.insightsController.server.deploymentAnnotations
-      (dict "checkov.io/skip1" "CKV_K8S_22=Webhook server container may need write access for temporary files and processing")
-    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.insightsController.server.deploymentAnnotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas }}
   selector:
@@ -60,6 +56,7 @@ spec:
             {{- toYaml .Values.insightsController.resources | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
