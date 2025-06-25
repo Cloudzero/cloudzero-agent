@@ -803,7 +803,13 @@ data:
           pullPolicy: null
           repository: null
           tag: null
-        resources: {}
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
     defaults:
       affinity: {}
       annotations: {}
@@ -893,7 +899,13 @@ data:
           statefulsets: false
       podAnnotations: {}
       podLabels: {}
-      resources: {}
+      resources:
+        limits:
+          cpu: 200m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
       server:
         affinity: {}
         deploymentAnnotations: {}
@@ -1311,7 +1323,13 @@ data:
         repository: null
         tag: null
       name: env-validator
-      resources: {}
+      resources:
+        limits:
+          cpu: 100m
+          memory: 64Mi
+        requests:
+          cpu: 10m
+          memory: 32Mi
       serviceEndpoints:
         kubeStateMetrics: null
 ---
@@ -2055,6 +2073,13 @@ spec:
             - install
             - --destination
             - /checks/bin/cloudzero-agent-validator
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2085,6 +2110,13 @@ spec:
             - pre-start
             - -f
             - /checks/config/validator.yml
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2106,6 +2138,13 @@ spec:
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
           livenessProbe:
             exec:
               command:
@@ -2467,7 +2506,12 @@ spec:
           ports:
             - containerPort: 8443
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2563,7 +2607,12 @@ spec:
             - "/etc/cloudzero-agent-insights/server-config.yaml"
             - -backfill
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2655,7 +2704,12 @@ spec:
             - --config-aggregator
             - /cloudzero/config/config.yml
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2746,6 +2800,13 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+              cpu: 100m
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values
@@ -2801,6 +2862,13 @@ spec:
           imagePullPolicy: "Always"
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+              cpu: 100m
           args:
             - |
               #!/bin/bash
