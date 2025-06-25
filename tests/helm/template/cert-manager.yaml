@@ -2043,6 +2043,11 @@ spec:
             - install
             - --destination
             - /checks/bin/cloudzero-agent-validator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2068,6 +2073,11 @@ spec:
             - pre-start
             - -f
             - /checks/config/validator.yml
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2084,6 +2094,11 @@ spec:
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -2145,6 +2160,11 @@ spec:
             requests:
               cpu: 250m
               memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
@@ -2265,6 +2285,11 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
         - name: cz-agent-aggregator-shipper
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.2"
@@ -2307,6 +2332,11 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true
@@ -2409,6 +2439,11 @@ spec:
             - containerPort: 8443
           resources:
             {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
