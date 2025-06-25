@@ -3052,12 +3052,12 @@ spec:
             - --output
             - "-"
           resources:
-            requests:
-              memory: 32Mi
-              cpu: 10m
             limits:
-              memory: 64Mi
               cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -3124,12 +3124,12 @@ spec:
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
           resources:
-            requests:
-              memory: 32Mi
-              cpu: 10m
             limits:
-              memory: 64Mi
               cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

@@ -817,6 +817,38 @@ securityContext:
 {{- end -}}
 
 {{/*
+Generate standard container security context
+*/}}
+{{- define "cloudzero-agent.generateContainerSecurityContext" -}}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+{{- end -}}
+
+{{/*
+Generate resources block using maybeGenerateSection
+Accepts a dictionary with "resources" key containing the resource configuration
+Example usage:
+{{- include "cloudzero-agent.generateResources" (dict "resources" .Values.some.resources) | nindent 10 }}
+*/}}
+{{- define "cloudzero-agent.generateResources" -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "resources" "value" .resources) -}}
+{{- end -}}
+
+{{/*
+Generate standard small job resources (for lightweight jobs like init-cert, helmless, etc.)
+*/}}
+{{- define "cloudzero-agent.generateSmallJobResources" -}}
+{{- $smallJobResources := dict 
+    "requests" (dict "memory" "32Mi" "cpu" "10m")
+    "limits" (dict "memory" "64Mi" "cpu" "100m")
+-}}
+{{- include "cloudzero-agent.generateResources" (dict "resources" $smallJobResources) -}}
+{{- end -}}
+
+{{/*
 Generate imagePullSecrets block
 Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
 Example usage:

@@ -41,11 +41,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+          {{- include "cloudzero-agent.generateContainerSecurityContext" . | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -66,11 +62,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+          {{- include "cloudzero-agent.generateContainerSecurityContext" . | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -110,11 +102,7 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
             successThreshold: 1
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+          {{- include "cloudzero-agent.generateContainerSecurityContext" . | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -177,11 +165,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+          {{- include "cloudzero-agent.generateContainerSecurityContext" . | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
