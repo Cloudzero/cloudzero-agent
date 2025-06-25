@@ -682,7 +682,13 @@ insightsController:
   # Additional volumes to add to the insights controller pods.
   volumes: []
   # Resource requirements and limits for the insights controller.
-  resources: {}
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 128Mi
+      cpu: 200m
   # Annotations to add to the insights controller pods.
   podAnnotations: {}
   # Labels to add to the insights controller pods.
@@ -747,7 +753,13 @@ configmapReload:
     #
     # For details, see the Kubernetes documentation on resource management:
     # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-    resources: {}
+    resources:
+      requests:
+        memory: 16Mi
+        cpu: 10m
+      limits:
+        memory: 32Mi
+        cpu: 50m
 
 # The aggregator provides an intermediary between the CloudZero Agent and the
 # CloudZero API. It is composed of two applications, the collector and the
