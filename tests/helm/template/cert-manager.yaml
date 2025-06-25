@@ -2012,6 +2012,8 @@ metadata:
   annotations:
     checkov.io/skip1: CKV_K8S_38=Service account token needed for Prometheus to scrape
       cAdvisor endpoints with API authentication
+    checkov.io/skip2: CKV_K8S_22=Prometheus container needs write access to /data volume
+      for metrics storage
   labels:
     app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
@@ -2274,7 +2276,9 @@ kind: Deployment
 metadata:
   name: cz-agent-aggregator
   namespace: cz-agent
-  
+  annotations:
+    checkov.io/skip1: CKV_K8S_22=Aggregator containers need write access to /data volume
+      for data processing and storage
   labels:
     app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
@@ -2449,7 +2453,9 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  
+  annotations:
+    checkov.io/skip1: CKV_K8S_22=Webhook server container may need write access for temporary
+      files and processing
 spec:
   replicas: 3
   selector:
@@ -2567,6 +2573,8 @@ metadata:
   annotations:
     checkov.io/skip1: CKV_K8S_38=Service account token needed for webhook backfill to
       read Kubernetes resources
+    checkov.io/skip2: CKV_K8S_22=Backfill job container needs write access for data processing
+      and output generation
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
@@ -2645,6 +2653,8 @@ metadata:
   name: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   namespace: cz-agent
   annotations:
+    checkov.io/skip1: CKV_K8S_22=Config loader job container needs write access for configuration
+      validation and output generation
     checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   labels:
     app.kubernetes.io/component: webhook-server
@@ -2768,7 +2778,9 @@ kind: Job
 metadata:
   name: cz-agent-helmless-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   namespace: cz-agent
-  
+  annotations:
+    checkov.io/skip1: CKV_K8S_22=Helmless job container needs write access for configuration
+      processing and output generation
   labels:
     app.kubernetes.io/component: helmless
     app.kubernetes.io/instance: cz-agent
