@@ -414,6 +414,7 @@ server:
       cpu: 250m
     limits:
       memory: 1024Mi
+      cpu: 1000m
   # Annotations to add to the server Deployment.
   deploymentAnnotations: {}
   # Annotations to add to the server pods.
