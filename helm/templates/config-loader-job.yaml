@@ -19,6 +19,7 @@ spec:
       {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
+      automountServiceAccountToken: false
       restartPolicy: OnFailure
       securityContext:
         runAsUser: 65534

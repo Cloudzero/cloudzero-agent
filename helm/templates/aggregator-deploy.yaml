@@ -30,6 +30,7 @@ spec:
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
+      automountServiceAccountToken: false
       {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
       containers:
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-collector
