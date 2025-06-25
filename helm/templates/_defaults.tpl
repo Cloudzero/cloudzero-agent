@@ -171,8 +171,10 @@ metricFilters:
         - product_name
         - provider_id
         - resource
+        - resource_type
         - unit
         - uid
+        - workload
       prefix:
         - "_"
         - "label_"
