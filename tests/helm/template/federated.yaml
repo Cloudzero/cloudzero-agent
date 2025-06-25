@@ -2847,6 +2847,11 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2945,6 +2950,11 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -3043,6 +3053,11 @@ spec:
             limits:
               memory: 64Mi
               cpu: 100m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values
@@ -3107,6 +3122,11 @@ spec:
             limits:
               memory: 64Mi
               cpu: 100m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           args:
             - |
               #!/bin/bash
