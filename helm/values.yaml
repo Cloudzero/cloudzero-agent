@@ -371,7 +371,13 @@ validator:
     pullPolicy:
     pullSecrets:
   # -- Resource requirements and limits for the validator.
-  resources: {}
+  resources:
+    requests:
+      memory: 32Mi
+      cpu: 10m
+    limits:
+      memory: 64Mi
+      cpu: 100m
 
 server:
   name: server
