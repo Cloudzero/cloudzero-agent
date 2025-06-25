@@ -803,7 +803,13 @@ data:
           pullPolicy: null
           repository: null
           tag: null
-        resources: {}
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
     defaults:
       affinity: {}
       annotations: {}
@@ -893,7 +899,13 @@ data:
           statefulsets: false
       podAnnotations: {}
       podLabels: {}
-      resources: {}
+      resources:
+        limits:
+          cpu: 200m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
       server:
         affinity: {}
         deploymentAnnotations: {}
@@ -2106,6 +2118,13 @@ spec:
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
           livenessProbe:
             exec:
               command:
@@ -2467,7 +2486,12 @@ spec:
           ports:
             - containerPort: 8443
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2563,7 +2587,12 @@ spec:
             - "/etc/cloudzero-agent-insights/server-config.yaml"
             - -backfill
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2655,7 +2684,12 @@ spec:
             - --config-aggregator
             - /cloudzero/config/config.yml
           resources:
-            {}
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
