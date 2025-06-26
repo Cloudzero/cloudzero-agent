@@ -21563,7 +21563,7 @@
             },
             "timeoutSeconds": {
               "default": 1,
-              "description": "Timeout for the validating admission webhook..\n",
+              "description": "Timeout for the validating admission webhook.\n",
               "type": "integer"
             }
           },
