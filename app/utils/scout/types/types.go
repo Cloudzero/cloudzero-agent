@@ -15,6 +15,8 @@ type CloudProvider string
 const (
 	// CloudProviderAWS represents Amazon Web Services
 	CloudProviderAWS CloudProvider = "aws"
+	// CloudProviderGoogle represents Google Cloud Platform
+	CloudProviderGoogle CloudProvider = "google"
 	// CloudProviderUnknown represents an undetected or unsupported cloud provider
 	CloudProviderUnknown CloudProvider = "unknown"
 	// CloudProviderMock represents a mock provider for testing
