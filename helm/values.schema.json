@@ -20763,6 +20763,7 @@
     "cloudAccountId": {
       "description": "The CloudZero Cloud Account ID.\n",
       "minLength": 1,
+      "pattern": "^[a-zA-Z0-9\\'\\- !]+$",
       "type": "string"
     },
     "clusterName": {

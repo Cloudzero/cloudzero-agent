@@ -105,6 +105,17 @@ properties:
   cloudAccountId:
     type: string
     minLength: 1
+    # There are a few different possibilities, depending on the CSP:
+    #
+    # - AWS: Account ID is a 12-digit numeric identifier (possibly starting with a 0).
+    # - Google Cloud: this can be either a project name or project ID. IDs are
+    #   numeric, and "A project name can contain only letters, numbers, single
+    #   quotes, hyphens, spaces, or exclamation points, and must be between 4
+    #   and 30 characters."
+    # - Azure: a UUID.
+    #
+    # Other CSPs may use different formats.
+    pattern: ^[a-zA-Z0-9\'\- !]+$
     description: |
       The CloudZero Cloud Account ID.
   clusterName:
