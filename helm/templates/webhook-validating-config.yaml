@@ -37,6 +37,6 @@ webhooks:
       {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 15
+    timeoutSeconds: {{ .Values.insightsController.webhooks.timeoutSeconds }}
 {{- end }}
 {{- end }}

@@ -21560,6 +21560,11 @@
               "default": "/validate",
               "description": "Path for the validating admission webhook.\n",
               "type": "string"
+            },
+            "timeoutSeconds": {
+              "default": 1,
+              "description": "Timeout for the validating admission webhook..\n",
+              "type": "integer"
             }
           },
           "type": "object"
