@@ -1158,6 +1158,7 @@ properties:
               Timeout for the validating admission webhook.
             type: integer
             default: 1
+            $ref: "#/$defs/io.k8s.api.admissionregistration.v1.ValidatingWebhook/properties/timeoutSeconds"
           caInjection:
             type:
               - string

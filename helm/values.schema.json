@@ -21562,6 +21562,7 @@
               "type": "string"
             },
             "timeoutSeconds": {
+              "$ref": "#/$defs/io.k8s.api.admissionregistration.v1.ValidatingWebhook/properties/timeoutSeconds",
               "default": 1,
               "description": "Timeout for the validating admission webhook.\n",
               "type": "integer"
