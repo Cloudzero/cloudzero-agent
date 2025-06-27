@@ -125,16 +125,20 @@ secrets-act:
 .PHONY: format
 format: ## Run go fmt against code
 
+GOFUMPT_TARGET        ?= .
+
 .PHONY: format-go
 format: format-go
 format-go:
-	@gofumpt -w .
+	@gofumpt -w $(GOFUMPT_TARGET)
 	@$(GO) mod tidy
+
+PRETTIER_TARGET       ?= .
 
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	@prettier --write .
+	@prettier --write $(PRETTIER_TARGET)
 
 .PHONY: lint-go
 lint-go:
@@ -238,9 +242,11 @@ CLEANFILES += \
 api-tests-check-env:
 	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests and helm chart installation. Consider adding to local-config.mk." && exit 1 || true
 
+GO_TEST_TARGET        ?= ./...
+
 .PHONY: test
 test: ## Run the unit tests
-	$(GO) test -test.short -timeout 120s ./... -race -cover
+	$(GO) test -test.short -timeout 120s $(GO_TEST_TARGET) -race -cover
 
 .PHONY: test-integration
 test-integration: api-tests-check-env
