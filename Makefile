@@ -499,3 +499,16 @@ app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
 generate: app/types/clusterconfig/clusterconfig.pb.go
 app/types/clusterconfig/clusterconfig.pb.go: app/types/clusterconfig/clusterconfig.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/clusterconfig/clusterconfig.proto
+
+# ----------- CHANGELOG GENERATION ------------
+
+.PHONY: generate-changelog
+generate-changelog: ## Generate or update changelog for specified version (TAG_VERSION=1.2.3 make generate-changelog)
+	@if [ -z "$(TAG_VERSION)" ]; then \
+		echo "$(ERROR_COLOR)Error: TAG_VERSION is required. Usage: TAG_VERSION=1.2.3 make generate-changelog$(NO_COLOR)"; \
+		exit 1; \
+	fi
+	@MINOR_VERSION=$$(echo "$(TAG_VERSION)" | cut -d. -f1,2); \
+	CHANGELOG_FILE="docs/releases/CHANGELOG-$$MINOR_VERSION.md"; \
+	echo "$(INFO_COLOR)Generating changelog for version $(TAG_VERSION) in $$CHANGELOG_FILE$(NO_COLOR)"; \
+	claude -p --dangerously-skip-permissions "Generate or update changelog entries for CloudZero Agent version $(TAG_VERSION). Analyze git commits since the last release tag to extract user-facing changes. Follow the exact format and structure used in existing CHANGELOG files in docs/releases/ directory. If $$CHANGELOG_FILE exists, add new entries at the top under a new version section. If it doesn't exist, create it following the same format as other CHANGELOG files. Focus on: major features, performance improvements, bug fixes, breaking changes, security updates, and configuration changes. Group entries by category and use clear, user-focused language. Only modify $$CHANGELOG_FILE - do not change any other files. Reference the changelog format documentation in CLAUDE.md for detailed formatting guidelines."
