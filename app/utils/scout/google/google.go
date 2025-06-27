@@ -18,9 +18,10 @@ import (
 
 const (
 	// GCP metadata service endpoints
-	metadataBaseURL = "http://metadata.google.internal/computeMetadata/v1"
-	projectEndpoint = metadataBaseURL + "/project/project-id"
-	zoneEndpoint    = metadataBaseURL + "/instance/zone"
+	metadataBaseURL     = "http://metadata.google.internal/computeMetadata/v1"
+	projectEndpoint     = metadataBaseURL + "/project/project-id"
+	zoneEndpoint        = metadataBaseURL + "/instance/zone"
+	clusterNameEndpoint = metadataBaseURL + "/instance/attributes/cluster-name"
 
 	requestTimeout = 5 * time.Second
 )
@@ -55,10 +56,19 @@ func (s *Scout) EnvironmentInfo(ctx context.Context) (*types.EnvironmentInfo, er
 	// Extract region from zone (e.g., "projects/123456789/zones/us-central1-a" -> "us-central1")
 	region := s.extractRegionFromZone(zone)
 
+	// Get cluster name (may not be available in non-GKE environments)
+	clusterName, err := s.getMetadata(ctx, clusterNameEndpoint)
+	if err != nil {
+		// Cluster name is optional - log debug info but don't fail
+		// This allows the scout to work in non-GKE environments
+		clusterName = ""
+	}
+
 	return &types.EnvironmentInfo{
 		CloudProvider: types.CloudProviderGoogle,
 		Region:        strings.TrimSpace(region),
 		AccountID:     strings.TrimSpace(projectID),
+		ClusterName:   strings.TrimSpace(clusterName),
 	}, nil
 }
 
