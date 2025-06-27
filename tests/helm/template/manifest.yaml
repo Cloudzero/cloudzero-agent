@@ -926,6 +926,7 @@ data:
         replicaCount: null
         send_interval: 1m
         send_timeout: 1m
+        suppressIstioAnnotations: false
         tolerations: []
         write_timeout: 10s
       service:
@@ -2374,6 +2375,7 @@ spec:
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       annotations:
         checksum/config: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+        sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       

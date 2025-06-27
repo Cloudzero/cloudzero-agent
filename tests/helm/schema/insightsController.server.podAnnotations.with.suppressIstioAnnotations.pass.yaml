@@ -1,0 +1,5 @@
+insightsController:
+  server:
+    podAnnotations:
+      sidecar.istio.io/inject: "false"
+    suppressIstioAnnotations: false

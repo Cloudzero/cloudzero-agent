@@ -668,6 +668,13 @@ insightsController:
     deploymentAnnotations: {}
     # Annotations to add to the webhook server pods.
     podAnnotations: {}
+    # Whether to suppress Istio-related annotations on webhook server pods. When
+    # false (default), the sidecar.istio.io/inject: "false" annotation is added
+    # to prevent Istio sidecar injection which can interfere with webhook TLS.
+    # Set to true to disable this behavior and allow Istio sidecar injection.
+    # For additional information, see:
+    # https://github.com/Cloudzero/cloudzero-charts/blob/develop/charts/cloudzero-agent/docs/istio.md
+    suppressIstioAnnotations: false
   # Additional volume mounts to add to the insights controller pods.
   volumeMounts: []
   # Additional volumes to add to the insights controller pods.

@@ -19,9 +19,14 @@ spec:
         {{- with .Values.insightsController.server.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- $istioAnnotations := dict -}}
+      {{- if not .Values.insightsController.server.suppressIstioAnnotations -}}
+      {{- $istioAnnotations = dict "sidecar.istio.io/inject" "false" -}}
+      {{- end -}}
       {{- include "cloudzero-agent.generateAnnotations" (merge
           (deepCopy .Values.defaults.annotations)
           .Values.insightsController.server.podAnnotations
+          $istioAnnotations
           (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
         ) | nindent 6 }}
     spec:
