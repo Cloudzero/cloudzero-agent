@@ -20766,7 +20766,7 @@
     },
     "clusterName": {
       "description": "The name of the Kubernetes cluster.\n",
-      "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?$",
+      "pattern": "^(|[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?)$",
       "type": "string"
     },
     "commonMetaLabels": {
@@ -22090,6 +22090,6 @@
       "type": "object"
     }
   },
-  "required": ["clusterName", "host"],
+  "required": ["host"],
   "type": "object"
 }

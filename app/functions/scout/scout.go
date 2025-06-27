@@ -161,11 +161,14 @@ func outputEnvironmentInfo(info *types.EnvironmentInfo) error {
 		fmt.Printf("cloudProvider: %s\n", info.CloudProvider)
 		fmt.Printf("region: %s\n", info.Region)
 		fmt.Printf("accountId: %s\n", info.AccountID)
+		fmt.Printf("clusterName: %s\n", info.ClusterName)
 
 	case "table":
-		fmt.Printf("%-15s: %s\n", "Cloud Provider", info.CloudProvider)
-		fmt.Printf("%-15s: %s\n", "Region", info.Region)
-		fmt.Printf("%-15s: %s\n", "Account ID", info.AccountID)
+		const tableFormatString = "%-15s: %s\n"
+		fmt.Printf(tableFormatString, "Cloud Provider", info.CloudProvider)
+		fmt.Printf(tableFormatString, "Region", info.Region)
+		fmt.Printf(tableFormatString, "Account ID", info.AccountID)
+		fmt.Printf(tableFormatString, "Cluster Name", info.ClusterName)
 
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)

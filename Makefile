@@ -125,16 +125,20 @@ secrets-act:
 .PHONY: format
 format: ## Run go fmt against code
 
+GOFUMPT_TARGET        ?= .
+
 .PHONY: format-go
 format: format-go
 format-go:
-	@gofumpt -w .
+	@gofumpt -w $(GOFUMPT_TARGET)
 	@$(GO) mod tidy
+
+PRETTIER_TARGET       ?= .
 
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	@prettier --write .
+	@prettier --write $(PRETTIER_TARGET)
 
 .PHONY: lint-go
 lint-go:
@@ -238,9 +242,11 @@ CLEANFILES += \
 api-tests-check-env:
 	@test -z "$(CLOUDZERO_DEV_API_KEY)" && echo "CLOUDZERO_DEV_API_KEY is not set but is required for smoke tests and helm chart installation. Consider adding to local-config.mk." && exit 1 || true
 
+GO_TEST_TARGET        ?= ./...
+
 .PHONY: test
 test: ## Run the unit tests
-	$(GO) test -test.short -timeout 120s ./... -race -cover
+	$(GO) test -test.short -timeout 120s $(GO_TEST_TARGET) -race -cover
 
 .PHONY: test-integration
 test-integration: api-tests-check-env
@@ -362,7 +368,7 @@ $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>&1); \
+	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
 	if [ $$? -eq 0 ]; then \
 		result="pass"; \
 	else \
@@ -383,7 +389,7 @@ tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 # Pattern rule for kubeconform validation (only for .pass tests)
 tests/helm/schema/%-kubeconform: helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
-	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>/dev/null | $(KUBECONFORM) \
+	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
 		-kubernetes-version 1.33.0 \
 		-schema-location default \
 		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
