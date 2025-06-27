@@ -1,147 +1,290 @@
-# Developers Quick Start
+# CloudZero Agent Development Guide
 
-## Prerequisites
+## Repository Overview
 
-Before getting started with the development of the CloudZero Agent Validator, make sure you have the following prerequisites installed on your system:
+This repository contains the complete CloudZero Agent ecosystem for Kubernetes integration with the CloudZero platform. It includes:
+
+### Core Applications
+
+- **CloudZero Insights Controller** - Webhook application that collects resource labels, annotations, and metadata
+- **CloudZero Collector** - Prometheus-compatible metrics collection service
+- **CloudZero Shipper** - File monitoring and S3 upload service
+- **CloudZero Agent Validator** - Installation validation and lifecycle management
+- **CloudZero Agent** - Metrics scraping service (supports federated mode for large clusters)
+
+### Helm Chart
+
+- **Helm Chart** (`helm/`) - Complete Kubernetes deployment configuration
+- **Chart Testing** - Comprehensive validation and testing framework
+- **Schema Validation** - JSON schema validation for configuration
+
+### Utilities and Tools
+
+- **Helmless Tool** - Configuration analysis and minimal override generation
+- **Agent Inspector** - Debugging and inspection utilities
+- **Scout** - Cloud provider metadata detection (AWS, Google Cloud)
+
+## Development Setup
+
+### Prerequisites
 
 - [Go 1.24+](https://go.dev/doc/install)
 - [Docker](https://docs.docker.com/engine/install/)
-- [Rancher Desktop - recommended for testing](https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade)
-- [Github Actions Utility - for local ci/cd testing](https://github.com/nektos/act)
-- [Protocol buffer](https://developers.google.com/protocol-buffers) compiler, `protoc`, [version 3](https://protobuf.dev/programming-guides/proto3).
-- **Go plugins** for the protocol compiler:
+- [Helm 3.14+](https://helm.sh/docs/intro/install/)
+- [Kubernetes cluster](https://kubernetes.io/docs/setup/) (local or remote)
+- [Protocol Buffers compiler](https://protobuf.dev/downloads/)
 
-  1. Install the protocol compiler plugins for Go using the following commands:
+### Quick Start
 
-     ```sh
-     $ go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-     $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
-     ```
-
-  2. Update your `PATH` so that the `protoc` compiler can find the plugins:
-
-     ```sh
-     $ export PATH="$PATH:$(go env GOPATH)/bin"
-     ```
-
-## Development Quick Start
-
-To quickly get started with the development of the CloudZero Agent Validator, follow these steps:
-
-### 1. Repository Setup
-
-1. Clone the repository:
-
-   ```sh
-   $ git clone https://github.com/Cloudzero/cloudzero-agent.git
+1. **Clone and Setup**
+   ```bash
+   git clone https://github.com/cloudzero/cloudzero-agent.git
+   cd cloudzero-agent
+   make install-tools
    ```
 
-2. Change to the project directory:
-
-   ```sh
-   $ cd cloudzero-agent
+2. **Build Applications**
+   ```bash
+   make build
    ```
 
-### 2. Building the Code
-
-1. Install the project dependencies:
-
-   ```sh
-   $ go mod download
-   $  make install-tools
+3. **Run Tests**
+   ```bash
+   make test
+   make helm-test
    ```
 
-2. Generate the status protobuf definition package:
-
-   ```sh
-   $ make generate
+4. **Build Docker Images**
+   ```bash
+   make package-build
    ```
 
-3. Build the binary:
+## Development Workflow
 
-   ```sh
-   $ make build
+### Code Organization
+
+```
+app/
+├── functions/          # Standalone applications
+│   ├── agent-validator/
+│   ├── collector/
+│   ├── shipper/
+│   └── webhook/
+├── domain/            # Core business logic
+├── handlers/          # HTTP handlers
+├── storage/           # Data persistence
+└── types/            # Shared types and protobuf definitions
+
+helm/                  # Helm chart
+├── templates/         # Kubernetes manifests
+├── values.yaml        # Default configuration
+└── docs/             # Chart documentation
+
+tests/                 # Test suites
+├── helm/             # Helm chart tests
+├── integration/      # Integration tests
+└── smoke/           # Smoke tests
+```
+
+### Key Make Targets
+
+```bash
+# Development
+make build                    # Build all binaries
+make test                     # Run unit tests
+make test-integration         # Run integration tests
+make lint                     # Run linters
+make format                   # Format code
+
+# Docker
+make package-build           # Build Docker images locally
+make package                 # Build and push Docker images
+
+# Helm
+make helm-install           # Install chart locally
+make helm-test              # Run helm validation tests
+make helm-lint              # Lint helm chart
+make helm-template          # Generate templates
+
+# Changelog
+make generate-changelog     # Generate changelog (TAG_VERSION=1.2.3)
+```
+
+### Environment Configuration
+
+Create `local-config.mk` for local overrides:
+
+```makefile
+# API Configuration
+CLOUDZERO_DEV_API_KEY=your-dev-api-key
+CLOUDZERO_HOST=dev-api.cloudzero.com
+
+# Cluster Configuration
+CLUSTER_NAME=my-test-cluster
+CLOUD_ACCOUNT_ID=123456789
+CSP_REGION=us-east-1
+```
+
+## Release Process
+
+### Overview
+
+The CloudZero Agent follows a structured release process with automated chart mirroring to the [cloudzero-charts](https://github.com/cloudzero/cloudzero-charts) repository.
+
+### Release Workflow
+
+1. **Development** - Work on `develop` branch
+2. **Chart Mirroring** - Automatic sync to `cloudzero-charts` on push to `develop`
+3. **Release Preparation** - Manual workflow creates release branch and tags
+4. **Release Notes** - Must exist in `helm/docs/releases/{version}.md`
+
+### Creating a Release
+
+1. **Prepare Release Notes**
+   ```bash
+   # Create release notes file
+   touch helm/docs/releases/1.2.3.md
+   # Add release content following existing format
    ```
 
-### 3. Local Testing
+2. **Generate Changelog** (Optional)
+   ```bash
+   TAG_VERSION=1.2.3 make generate-changelog
+   ```
 
-To run the go formatter, go linter, unit tests to verify code changes, use the following command:
+3. **Trigger Release**
+   - Go to GitHub Actions
+   - Run "Manual Prepare Release" workflow
+   - Input version (e.g., `1.2.3`)
 
-```sh
-make format lint test
+4. **Release Process**
+   - Updates image version in Helm chart
+   - Merges `develop` into `main`
+   - Creates Git tag
+   - Creates GitHub release (draft)
+
+### Chart Mirroring
+
+The `mirror-chart.yml` workflow automatically:
+- Syncs `helm/` directory to `cloudzero-charts/charts/cloudzero-agent/`
+- Preserves commit history and authorship
+- Runs on every push to `develop` branch
+
+## Testing
+
+### Unit Tests
+```bash
+make test
 ```
 
-### 4. CI/CD Testing
-
-Several workflows are defined in the [.github/workflows](.github/workflows) directory to ensure code quality. Before opening a pull request, it is recommended to run these workflows.
-
-#### Listing Available Workflows
-
-To see the available workflows, run:
-
-```sh
-act --container-architecture linux/arm64 -l
+### Integration Tests
+```bash
+export CLOUDZERO_DEV_API_KEY=your-key
+make test-integration
 ```
 
-**Example:**
-
-```sh
-$ act --container-architecture linux/arm64 -l
-Stage  Job ID   Job name  Workflow name   Workflow file        Events
-0      docker           docker           DockerBuild             docker-build.yml     push,pull_request,release
-0      build            build            GoTest                  golang-build.yml     push
-0      format           format           GoFmt                   golang-fmt.yml       push
-0      lint             lint             GoLint                  golang-lint.yml      push
-0      release-to-main  release-to-main  Manual Prepare Release  release-to-main.yml  workflow_dispatch
+### Helm Chart Tests
+```bash
+make helm-test                    # All helm tests
+make helm-test-schema            # Schema validation
+make helm-test-subchart          # Subchart tests
 ```
 
-#### Linting a Workflow
-
-If you are working on the CI/CD Action Workflows, it is useful to perform a `--dry-run` on the workflow to ensure the syntax is valid. To do this, run:
-
-```sh
-$ act --container-architecture linux/arm64 --dryrun -j lint
+### Smoke Tests
+```bash
+make test-smoke
 ```
 
-#### Running a Workflow
+## Debugging
 
-To run a workflow, use the `Job ID` value and pass it into the following command:
+### Local Development
 
-```sh
-$ act --container-architecture linux/arm64 -j lint
-...
-[GoLint/lint] Cleaning up container for job lint
-[GoLint/lint] 🏁  Job succeeded
+1. **Use Debug Images**
+   ```bash
+   make package-build-debug
+   ```
+
+2. **Deploy Debug Container**
+   ```bash
+   kubectl run debug --image=busybox:stable-uclibc --rm -it -- sh
+   ```
+
+3. **Monitor Application Logs**
+   ```bash
+   kubectl logs -f deployment/cloudzero-agent
+   ```
+
+### Common Issues
+
+- **Certificate Issues** - Check `docs/cert-trouble-shooting.md`
+- **Validation Failures** - See `docs/deploy-validation.md`
+- **Storage Issues** - Review `docs/storage/` guides
+
+## Configuration
+
+### Helm Values
+
+Key configuration areas:
+- **API Authentication** - `global.apiKey`, `global.existingSecretName`
+- **Cluster Identification** - `clusterName`, `cloudAccountId`, `region`
+- **Component Control** - `components.*.enabled`
+- **Resource Limits** - `components.*.resources`
+
+### Environment Variables
+
+Applications support configuration via:
+- Helm chart values
+- Environment variables
+- ConfigMaps
+- Secrets
+
+## Contributing
+
+1. **Follow existing patterns** - Review similar components
+2. **Add tests** - Unit tests for new functionality
+3. **Update documentation** - Keep docs current
+4. **Validate changes** - Run full test suite
+
+### Code Style
+
+- Use `gofumpt` for formatting
+- Follow Go best practices
+- Add godoc comments for public APIs
+- Use structured logging
+
+### Commit Messages
+
+Follow conventional commit format:
+```
+type(scope): description
+
+- feat: new feature
+- fix: bug fix
+- docs: documentation
+- test: testing
+- refactor: code refactoring
 ```
 
-For more examples, [see the README in the workflow directory](./.github/workflows/README.md).
+## Troubleshooting
 
-Remember to refer to the available targets in the Makefile for other development tasks.
+### Build Issues
+- Ensure Go version matches `go.mod`
+- Run `make install-tools` to install dependencies
+- Check Docker daemon is running
 
----
+### Test Failures
+- Verify API key is set for integration tests
+- Ensure Kubernetes cluster is accessible
+- Check resource limits and permissions
 
-# Release Process
+### Deployment Issues
+- Validate Helm chart with `make helm-lint`
+- Check cluster permissions
+- Review application logs
 
-Publishing a new release can be accomplished by running the `Manual Prepare Release` workflow.
+## Additional Resources
 
-![](./docs/assets/release-1.png)
-
-**Once run the following occurs:**
-
-1. _All changes on the `develop` branch_ are merged into the `main` branch.
-2. A new semver `tag` is created.
-3. A new `pre-release` is created, with the `change log` for changes since the last release.
-
-Next we can visit the release page, and locate the `pre-release` and `click the edit icon`:
-![](./docs/assets/release-2.png)
-
-Finally - we will publish the `draft-release`. Make sure you:
-
-1. Remove the `draft` checkbox
-2. Update _`Set as pre-release`_ to **`Set as the latest release`**
-
-![](./docs/assets/release-3.png)
-
-When this is done, it will cause an automated release of the `docker image` for the release value, and `latest` to be created in GHCR.
-
-That's it, Happy coding!
+- [Configuration Guide](../CONFIGURATION.md) - Detailed configuration options
+- [Usage Guide](../USAGE.md) - Usage examples and patterns
+- [Contributing Guide](../CONTRIBUTING.md) - Contribution guidelines
+- [Release Process](releases/RELEASE_PROCESS.md) - Detailed release procedures
