@@ -149,7 +149,7 @@ func (s *Settings) Validate() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.CloudAccountID)
+	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.CloudAccountID, &s.ClusterName)
 	if err != nil {
 		return fmt.Errorf("failed to auto-detect cloud environment: %w", err)
 	}

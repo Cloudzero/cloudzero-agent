@@ -31,18 +31,23 @@ const (
 //   - CloudProvider: The detected cloud provider
 //   - Region: The cloud region/location where the instance is running
 //   - AccountID: The cloud account identifier
+//   - ClusterName: The cluster identifier for the environment
 type EnvironmentInfo struct {
 	CloudProvider CloudProvider `json:"cloudProvider"`
 	Region        string        `json:"region"`
 	AccountID     string        `json:"accountId"`
+	ClusterName   string        `json:"clusterName"`
 }
 
-// Scout defines the interface for cloud environment detection and metadata retrieval.
+// Scout defines the interface for cloud environment detection and metadata
+// retrieval.
 type Scout interface {
-	// Detect determines if the current environment is running in this cloud provider.
+	// Detect determines if the current environment is running in this cloud
+	// provider.
 	//
 	// Returns:
-	//   - CloudProvider: CloudProvider value if detected (e.g., CloudProviderAWS), CloudProviderUnknown if not detected
+	//   - CloudProvider: CloudProvider value if detected (e.g.,
+	//     CloudProviderAWS), CloudProviderUnknown if not detected
 	//   - error: If detection fails due to network or other errors
 	Detect(ctx context.Context) (CloudProvider, error)
 

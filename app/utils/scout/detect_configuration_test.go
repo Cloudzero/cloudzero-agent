@@ -20,48 +20,74 @@ func TestDetectConfiguration_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name              string
-		inputRegion       *string
-		inputAccountID    *string
-		expectedRegion    string
-		expectedAccountID string
-		environmentInfo   *types.EnvironmentInfo
-		envInfoError      error
+		name                string
+		inputRegion         *string
+		inputAccountID      *string
+		inputClusterName    *string
+		expectedRegion      string
+		expectedAccountID   string
+		expectedClusterName string
+		environmentInfo     *types.EnvironmentInfo
+		envInfoError        error
 	}{
 		{
-			name:              "detect both region and account",
-			inputRegion:       stringPtr(""),
-			inputAccountID:    stringPtr(""),
-			expectedRegion:    "us-west-2",
-			expectedAccountID: "123456789012",
+			name:                "detect all three values",
+			inputRegion:         stringPtr(""),
+			inputAccountID:      stringPtr(""),
+			inputClusterName:    stringPtr(""),
+			expectedRegion:      "us-west-2",
+			expectedAccountID:   "123456789012",
+			expectedClusterName: "test-cluster",
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-west-2",
 				AccountID:     "123456789012",
+				ClusterName:   "test-cluster",
 			},
 		},
 		{
-			name:              "detect only region when account is already set",
-			inputRegion:       stringPtr(""),
-			inputAccountID:    stringPtr("existing-account"),
-			expectedRegion:    "eu-west-1",
-			expectedAccountID: "existing-account",
+			name:                "detect only region and cluster when account is already set",
+			inputRegion:         stringPtr(""),
+			inputAccountID:      stringPtr("existing-account"),
+			inputClusterName:    stringPtr(""),
+			expectedRegion:      "eu-west-1",
+			expectedAccountID:   "existing-account",
+			expectedClusterName: "detected-cluster",
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "eu-west-1",
 				AccountID:     "987654321098",
+				ClusterName:   "detected-cluster",
 			},
 		},
 		{
-			name:              "detect only account when region is already set",
-			inputRegion:       stringPtr("existing-region"),
-			inputAccountID:    stringPtr(""),
-			expectedRegion:    "existing-region",
-			expectedAccountID: "detected-account",
+			name:                "detect only account and cluster when region is already set",
+			inputRegion:         stringPtr("existing-region"),
+			inputAccountID:      stringPtr(""),
+			inputClusterName:    stringPtr(""),
+			expectedRegion:      "existing-region",
+			expectedAccountID:   "detected-account",
+			expectedClusterName: "production-cluster",
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-central1",
 				AccountID:     "detected-account",
+				ClusterName:   "production-cluster",
+			},
+		},
+		{
+			name:                "detect only cluster when region and account are already set",
+			inputRegion:         stringPtr("existing-region"),
+			inputAccountID:      stringPtr("existing-account"),
+			inputClusterName:    stringPtr(""),
+			expectedRegion:      "existing-region",
+			expectedAccountID:   "existing-account",
+			expectedClusterName: "staging-cluster",
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "us-west-2",
+				AccountID:     "123456789012",
+				ClusterName:   "staging-cluster",
 			},
 		},
 	}
@@ -71,14 +97,14 @@ func TestDetectConfiguration_Success(t *testing.T) {
 			mockScout := mocks.NewMockScout(ctrl)
 
 			// Set up expectations for EnvironmentInfo if needed
-			if (tt.inputRegion != nil && *tt.inputRegion == "") || (tt.inputAccountID != nil && *tt.inputAccountID == "") {
+			if (tt.inputRegion != nil && *tt.inputRegion == "") || (tt.inputAccountID != nil && *tt.inputAccountID == "") || (tt.inputClusterName != nil && *tt.inputClusterName == "") {
 				mockScout.EXPECT().
 					EnvironmentInfo(gomock.Any()).
 					Return(tt.environmentInfo, tt.envInfoError)
 			}
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID)
+			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 			if err != nil {
 				t.Errorf("Expected no error, got: %v", err)
 			}
@@ -90,6 +116,10 @@ func TestDetectConfiguration_Success(t *testing.T) {
 
 			if tt.inputAccountID != nil && *tt.inputAccountID != tt.expectedAccountID {
 				t.Errorf("Expected accountID %s, got %s", tt.expectedAccountID, *tt.inputAccountID)
+			}
+
+			if tt.inputClusterName != nil && *tt.inputClusterName != tt.expectedClusterName {
+				t.Errorf("Expected clusterName %s, got %s", tt.expectedClusterName, *tt.inputClusterName)
 			}
 		})
 	}
@@ -103,6 +133,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 		name             string
 		inputRegion      *string
 		inputAccountID   *string
+		inputClusterName *string
 		environmentInfo  *types.EnvironmentInfo
 		envInfoError     error
 		expectedErrorMsg string
@@ -111,40 +142,60 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 			name:             "environment info fails",
 			inputRegion:      stringPtr(""),
 			inputAccountID:   stringPtr(""),
+			inputClusterName: stringPtr(""),
 			envInfoError:     errors.New("environment info failed"),
 			expectedErrorMsg: "failed to detect cloud provider: environment info failed",
 		},
 		{
-			name:           "cloud provider unknown after detection",
-			inputRegion:    stringPtr(""),
-			inputAccountID: nil,
+			name:             "cloud provider unknown after detection",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   nil,
+			inputClusterName: stringPtr(""),
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderUnknown,
 				Region:        "us-west-2",
+				ClusterName:   "test-cluster",
 			},
 			expectedErrorMsg: "cloud provider could not be auto-detected, manual configuration may be required",
 		},
 		{
-			name:           "region detection fails when required",
-			inputRegion:    stringPtr(""),
-			inputAccountID: nil,
+			name:             "region detection fails when required",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   nil,
+			inputClusterName: nil,
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "", // Empty region should cause error
 				AccountID:     "123456789012",
+				ClusterName:   "test-cluster",
 			},
 			expectedErrorMsg: "region could not be auto-detected, manual configuration may be required",
 		},
 		{
-			name:           "account ID detection fails when required",
-			inputRegion:    nil,
-			inputAccountID: stringPtr(""),
+			name:             "account ID detection fails when required",
+			inputRegion:      nil,
+			inputAccountID:   stringPtr(""),
+			inputClusterName: nil,
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-west-2",
 				AccountID:     "", // Empty account ID should cause error
+				ClusterName:   "test-cluster",
 			},
 			expectedErrorMsg: "account ID could not be auto-detected, manual configuration may be required",
+		},
+		{
+			name:             "cluster name detection fails when required",
+			inputRegion:      nil,
+			inputAccountID:   nil,
+			inputClusterName: stringPtr(""),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "us-west-2",
+				AccountID:     "123456789012",
+				ClusterName:   "", // Empty cluster name should cause error
+			},
+			expectedErrorMsg: "cluster name could not be auto-detected, manual configuration may be required",
 		},
 	}
 
@@ -158,7 +209,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				Return(tt.environmentInfo, tt.envInfoError)
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID)
+			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 
 			if err == nil {
 				t.Errorf("Expected error, but got none")
@@ -177,50 +228,75 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name              string
-		inputRegion       *string
-		inputAccountID    *string
-		environmentInfo   *types.EnvironmentInfo
-		expectError       bool
-		expectedRegion    string
-		expectedAccountID string
+		name                string
+		inputRegion         *string
+		inputAccountID      *string
+		inputClusterName    *string
+		environmentInfo     *types.EnvironmentInfo
+		expectError         bool
+		expectedRegion      string
+		expectedAccountID   string
+		expectedClusterName string
 	}{
 		{
-			name:           "both region and account ID must be set on success",
-			inputRegion:    stringPtr(""),
-			inputAccountID: stringPtr(""),
+			name:             "all values must be set on success",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   stringPtr(""),
+			inputClusterName: stringPtr(""),
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-east-1",
 				AccountID:     "111111111111",
+				ClusterName:   "production-cluster",
 			},
-			expectError:       false,
-			expectedRegion:    "us-east-1",
-			expectedAccountID: "111111111111",
+			expectError:         false,
+			expectedRegion:      "us-east-1",
+			expectedAccountID:   "111111111111",
+			expectedClusterName: "production-cluster",
 		},
 		{
-			name:           "region must be set when requested",
-			inputRegion:    stringPtr(""),
-			inputAccountID: nil,
+			name:             "region and cluster must be set when requested",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   nil,
+			inputClusterName: stringPtr(""),
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-west-1",
 				AccountID:     "222222222222",
+				ClusterName:   "staging-cluster",
 			},
-			expectError:    false,
-			expectedRegion: "us-west-1",
+			expectError:         false,
+			expectedRegion:      "us-west-1",
+			expectedClusterName: "staging-cluster",
 		},
 		{
-			name:           "account ID must be set when requested",
-			inputRegion:    nil,
-			inputAccountID: stringPtr(""),
+			name:             "account and cluster must be set when requested",
+			inputRegion:      nil,
+			inputAccountID:   stringPtr(""),
+			inputClusterName: stringPtr(""),
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
 				Region:        "us-west-2",
 				AccountID:     "333333333333",
+				ClusterName:   "development-cluster",
 			},
-			expectError:       false,
-			expectedAccountID: "333333333333",
+			expectError:         false,
+			expectedAccountID:   "333333333333",
+			expectedClusterName: "development-cluster",
+		},
+		{
+			name:             "cluster only must be set when requested",
+			inputRegion:      nil,
+			inputAccountID:   nil,
+			inputClusterName: stringPtr(""),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "eu-central-1",
+				AccountID:     "444444444444",
+				ClusterName:   "test-cluster",
+			},
+			expectError:         false,
+			expectedClusterName: "test-cluster",
 		},
 	}
 
@@ -229,14 +305,14 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 			mockScout := mocks.NewMockScout(ctrl)
 
 			// Set up expectations
-			if (tt.inputRegion != nil && *tt.inputRegion == "") || (tt.inputAccountID != nil && *tt.inputAccountID == "") {
+			if (tt.inputRegion != nil && *tt.inputRegion == "") || (tt.inputAccountID != nil && *tt.inputAccountID == "") || (tt.inputClusterName != nil && *tt.inputClusterName == "") {
 				mockScout.EXPECT().
 					EnvironmentInfo(gomock.Any()).
 					Return(tt.environmentInfo, nil)
 			}
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID)
+			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -248,7 +324,7 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 				return
 			}
 
-			// CRITICAL: Verify that region and accountID are ALWAYS set when non-nil pointers are provided
+			// CRITICAL: Verify that region, accountID, and clusterName are ALWAYS set when non-nil pointers are provided
 			if tt.inputRegion != nil {
 				if *tt.inputRegion == "" {
 					t.Error("Region pointer was provided but not set after DetectConfiguration call")
@@ -266,6 +342,15 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 					t.Errorf("Expected accountID %q, got %q", tt.expectedAccountID, *tt.inputAccountID)
 				}
 			}
+
+			if tt.inputClusterName != nil {
+				if *tt.inputClusterName == "" {
+					t.Error("ClusterName pointer was provided but not set after DetectConfiguration call")
+				}
+				if tt.expectedClusterName != "" && *tt.inputClusterName != tt.expectedClusterName {
+					t.Errorf("Expected clusterName %q, got %q", tt.expectedClusterName, *tt.inputClusterName)
+				}
+			}
 		})
 	}
 }
@@ -278,7 +363,7 @@ func TestDetectConfiguration_NilPointers(t *testing.T) {
 	mockScout := mocks.NewMockScout(ctrl)
 
 	// Should not call any mock methods since all pointers are nil
-	err := scout.DetectConfiguration(context.Background(), mockScout, nil, nil)
+	err := scout.DetectConfiguration(context.Background(), mockScout, nil, nil, nil)
 	if err != nil {
 		t.Errorf("Expected no error when all pointers are nil, got: %v", err)
 	}
@@ -288,32 +373,26 @@ func TestDetectConfiguration_PartialDetection(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Test that when some values are already set, only the missing ones are detected
 	mockScout := mocks.NewMockScout(ctrl)
 
-	// Should only call EnvironmentInfo since region needs detection but accountID is already set
-	mockScout.EXPECT().
-		EnvironmentInfo(gomock.Any()).
-		Return(&types.EnvironmentInfo{
-			CloudProvider: types.CloudProviderAWS,
-			Region:        "us-west-2",
-			AccountID:     "123456789012",
-		}, nil)
+	region := "existing-region"       // Already set
+	accountID := "existing-account"   // Already set
+	clusterName := "existing-cluster" // Already set
 
-	region := ""                    // Needs detection
-	accountID := "existing-account" // Already set
-
-	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID)
+	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID, &clusterName)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 
-	// Verify only region was updated
-	if region != "us-west-2" {
-		t.Errorf("Expected region to be detected as 'us-west-2', got: %s", region)
+	// Values should remain unchanged
+	if region != "existing-region" {
+		t.Errorf("Expected region to remain unchanged, got: %s", region)
 	}
 	if accountID != "existing-account" {
-		t.Errorf("AccountID should not have changed, got: %s", accountID)
+		t.Errorf("Expected accountID to remain unchanged, got: %s", accountID)
+	}
+	if clusterName != "existing-cluster" {
+		t.Errorf("Expected clusterName to remain unchanged, got: %s", clusterName)
 	}
 }
 
@@ -449,16 +528,18 @@ func TestDetectConfiguration_CriticalRequirement(t *testing.T) {
 				Return(tt.environmentInfo, tt.envInfoError)
 
 			// Create copies of the input values for testing
-			var regionCopy, accountIDCopy *string
+			var regionCopy, accountIDCopy, clusterNameCopy *string
 			if tt.inputRegion != nil {
 				regionCopy = stringPtr(*tt.inputRegion)
 			}
 			if tt.inputAccountID != nil {
 				accountIDCopy = stringPtr(*tt.inputAccountID)
 			}
+			// Note: We don't test clusterName in this critical test since it focuses on the original region/account requirements
+			// but we need to provide a parameter for the function signature
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, regionCopy, accountIDCopy)
+			err := scout.DetectConfiguration(context.Background(), mockScout, regionCopy, accountIDCopy, clusterNameCopy)
 
 			// CRITICAL VALIDATION: Error handling
 			if tt.expectError {
@@ -516,11 +597,12 @@ func TestDetectConfiguration_NilScout(t *testing.T) {
 	// Test that passing nil scout uses the default scout
 	region := ""
 	accountID := ""
+	clusterName := ""
 
 	// This should not panic and should use the default scout
 	// We don't expect it to succeed since there's no real cloud environment,
 	// but it should attempt detection without panicking
-	err := scout.DetectConfiguration(context.Background(), nil, &region, &accountID)
+	err := scout.DetectConfiguration(context.Background(), nil, &region, &accountID, &clusterName)
 
 	// We expect some kind of error since we're not in a real cloud environment
 	// The important thing is that it doesn't panic
@@ -536,15 +618,16 @@ func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
 	defer ctrl.Finish()
 
 	// This is the new test requested by the user:
-	// Ensure Scout is not invoked when both region and accountID are already provided
+	// Ensure Scout is not invoked when all values are already provided
 	mockScout := mocks.NewMockScout(ctrl)
 
 	// NO mock expectations should be set - if Scout methods are called, the test will fail
 
 	region := "pre-set-region"
 	accountID := "pre-set-account"
+	clusterName := "pre-set-cluster"
 
-	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID)
+	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID, &clusterName)
 	if err != nil {
 		t.Errorf("Expected no error when values are pre-set, got: %v", err)
 	}
@@ -555,6 +638,9 @@ func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
 	}
 	if accountID != "pre-set-account" {
 		t.Errorf("Expected accountID to remain unchanged, got: %s", accountID)
+	}
+	if clusterName != "pre-set-cluster" {
+		t.Errorf("Expected clusterName to remain unchanged, got: %s", clusterName)
 	}
 }
 

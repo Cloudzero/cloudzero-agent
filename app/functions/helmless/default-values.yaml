@@ -3,7 +3,7 @@ host: api.cloudzero.com
 # -- Account ID of the account the cluster is running in. This must be a string - even if it is a number in your system.
 cloudAccountId: null
 # -- Name of the clusters.
-clusterName: null
+clusterName: ""
 # -- Region the cluster is running in.
 region: null
 

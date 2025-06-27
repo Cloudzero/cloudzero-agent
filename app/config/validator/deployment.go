@@ -29,7 +29,7 @@ func (s *Deployment) Validate() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.AccountID)
+	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.AccountID, &s.ClusterName)
 	if err != nil {
 		return errors.Wrap(err, "failed to auto-detect cloud environment")
 	}

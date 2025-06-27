@@ -368,7 +368,7 @@ $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>&1); \
+	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
 	if [ $$? -eq 0 ]; then \
 		result="pass"; \
 	else \
@@ -389,7 +389,7 @@ tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 # Pattern rule for kubeconform validation (only for .pass tests)
 tests/helm/schema/%-kubeconform: helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
-	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" $(HELM_ARGS) 2>/dev/null | $(KUBECONFORM) \
+	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
 		-kubernetes-version 1.33.0 \
 		-schema-location default \
 		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \

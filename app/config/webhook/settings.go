@@ -86,7 +86,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &cfg.Region, &cfg.CloudAccountID)
+	err := scout.DetectConfiguration(ctx, nil, &cfg.Region, &cfg.CloudAccountID, &cfg.ClusterName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-detect cloud environment: %w", err)
 	}
