@@ -1,268 +1,360 @@
-# Release Process
+# CloudZero Agent Release Process
 
-This guide outlines the steps and best practices for managing releases in the repository. Following this process ensures consistency, quality, and clear communication with all stakeholders, including necessary external approvals.
+This guide outlines the steps and best practices for managing releases of the CloudZero Agent. The process uses centralized changelog files and automated workflows to ensure consistency, quality, and proper chart mirroring to the cloudzero-charts repository.
 
 ## Overview
 
-1. **Create Release Document**
-2. **Submit Pull Request (PR)**
-3. **Review and Merge**
-4. **Trigger Manual Release Workflow**
-5. **Obtain External Approvals**
-6. **Publish Release**, **IMPORANT as the release is published only as a `pre-release` due to actions workflow limitations\_**
+The CloudZero Agent release process has been streamlined to use centralized changelog files instead of individual release notes:
+
+1. **Generate Changelog**
+2. **Review Changelog**
+3. **Trigger Manual Release Workflow**  
+4. **Automated Chart Mirroring**
+5. **Publish Release**
 
 ---
 
 ## Step-by-Step Process
 
-### 1. Create a New Release Document
+### 1. Generate Changelog
 
-- **Location:** [docs/releases](.)
-- **Filename Format:** `X.X.X.md` (e.g., `1.2.3.md`)
-- **Template:** Use the provided [Release Notes Template](#release-notes-template) below.
+Use the automated changelog generation tool to create or update the changelog file:
 
-**Instructions:**
+```bash
+# Generate changelog for version 1.2.3 (will update CHANGELOG-1.2.md)
+TAG_VERSION=1.2.3 make generate-changelog
+```
 
-- Duplicate the release notes template.
-- Replace placeholders with the appropriate version number and details.
-- Save the file with the correct naming convention in the `docs/releases` folder.
+**What this does:**
+- Analyzes git commits since the last release
+- Extracts user-facing changes, bug fixes, and new features  
+- Updates or creates `docs/releases/CHANGELOG-X.Y.md` file
+- Follows the established changelog format used across the project
 
-### 2. Open a Pull Request (PR)
+**Changelog Location:**
+- **Directory:** `docs/releases/`
+- **Filename Format:** `CHANGELOG-X.Y.md` (e.g., `CHANGELOG-1.2.md`)
+- **Content:** Version-specific sections within the changelog file
 
-- **Target Branch:** `develop`
-- **PR Title:** `Release X.X.X - [Brief Description]`
+### 2. Review and Commit Changelog
 
-**Automations:**
+Review the generated changelog for accuracy and completeness:
 
-- Opening a PR will automatically notify the **Product Management (PM)** and **Documentation** teams for review.
+```bash
+# Review the generated changelog
+git diff docs/releases/CHANGELOG-*.md
 
-### 3. Review and Merge the PR
+# Make any necessary edits to improve clarity or add context
+# Commit the changelog
+git add docs/releases/CHANGELOG-*.md
+git commit -m "Update changelog for version 1.2.3"
+git push origin develop
+```
 
-- **Reviewers:** PM Team, Documentation Team
-- **Approval:** Obtain necessary approvals from the reviewers.
-- **Merge:** Once approved, merge the release notes PR into the `develop` branch.
+**Review Guidelines:**
+- Ensure user-facing language is clear and non-technical
+- Verify all major features and breaking changes are captured
+- Check that version sections are properly formatted
+- Validate that grouped changes are logically organized
 
-### 4. Trigger the Manual Release Workflow
+### 3. Trigger Manual Release Workflow
 
-- **Workflow Link:** [Manual Release Workflow](https://github.com/Cloudzero/cloudzero-insights-controller/actions/workflows/release-to-main.yml)
+Navigate to GitHub Actions and trigger the release workflow:
 
-**Purpose:**
+- **Workflow:** "Manual Prepare Release"
+- **Location:** `Actions > Manual Prepare Release`
+- **Input Required:** Version number (e.g., `1.2.3`)
 
-- Ensures stakeholders review the functionality and public-facing documentation before publishing.
-- **External Approvals Required:** Designated stakeholders must manually approve the release.
+**What the workflow does:**
+1. **Validates:** Confirms the required changelog file exists (`docs/releases/CHANGELOG-1.2.md`)
+2. **Updates:** Helm chart version references and regenerates templates
+3. **Merges:** `develop` branch into `main` with fast-forward merge
+4. **Tags:** Creates git tag `v1.2.3`
+5. **Extracts:** Release notes from the changelog file automatically
+6. **Creates:** GitHub release (as draft) with extracted content
 
-**Steps:**
+### 4. Automated Chart Mirroring
 
-1. Navigate to the **Actions** tab in your repository.
-2. Select the **Manual Release** workflow.
-3. Trigger the workflow and follow any on-screen instructions.
-4. **Await Stakeholder Approval:** Stakeholders will receive a notification to review and approve the release.
+The chart mirroring process runs automatically on every push to `develop`:
 
-### 5. Obtain External Approvals
+**Mirror Workflow (`mirror-chart.yml`):**
+- **Triggers:** Automatically on push to `develop` branch
+- **Syncs:** `helm/` directory to `cloudzero-charts/charts/cloudzero-agent/`
+- **Includes:** Changelog files are now synced to charts repository
+- **Preserves:** Commit history and authorship information
 
-- **Stakeholders Involved:** Product Management, Documentation, and any other designated external parties.
-- **Approval Process:**
-  - Stakeholders review the functionality, documentation, and overall release readiness.
-  - Upon satisfaction, stakeholders provide manual approval through the workflow interface.
+**Chart Repository Structure:**
+```
+cloudzero-charts/
+└── charts/
+    └── cloudzero-agent/
+        ├── templates/          # Helm templates
+        ├── values.yaml         # Chart values
+        ├── Chart.yaml          # Chart metadata  
+        └── docs/
+            └── releases/       # Centralized changelog files (mirrored from docs/releases/)
+                ├── CHANGELOG-1.0.md
+                ├── CHANGELOG-1.1.md
+                ├── CHANGELOG-1.2.md
+                └── RELEASE_PROCESS.md
+```
 
-**Note:** The release cannot proceed to publication without obtaining these external approvals.
+**Key Changes**:
+- **Single Source**: `docs/releases/` is the authoritative location for all release documentation
+- **No Duplication**: `helm/docs/releases/` legacy files are excluded from mirroring
+- **Complete Sync**: Entire `docs/releases/` directory (including RELEASE_PROCESS.md) is mirrored to charts repo
 
-### 6. Publish the Release
+### 5. Publish Release
 
-- Once the manual release workflow is approved and completed, the release will be published only as a `pre-release`.
-- _**You must go to the release and remove the `pre-release` flag. This will trigger the container image publish.**_
-- Stakeholders will be notified upon successful publication.
+After the release workflow completes:
+
+1. **Review Draft Release:** Navigate to GitHub Releases and review the draft
+2. **Verify Content:** Ensure release notes are properly extracted from changelog
+3. **Publish Release:** Remove draft status to publish the release
+
+**Post-Publication:**
+- Container images are automatically built and published
+- Charts repository is updated with latest changes
+- Release notifications are sent to watchers
 
 ---
 
-## Creating Release Notes
+## Changelog Format and Guidelines
 
-Effective release notes provide clear and concise information about the changes in each release. Follow these guidelines to create comprehensive release notes.
+The CloudZero Agent uses centralized changelog files following a consistent format. The automated changelog generation tool analyzes git commits and creates well-structured changelogs.
 
-### Pro-Tip
+### Changelog Structure
 
-- **Review Changes:** Examine the GitHub diff between the previous and current release to identify all changes.
-- **Commit Messages:** Use commit titles to outline the changes and categorize them appropriately. Include a link to the relevant commit where possible.
+Changelog files follow this standardized format:
 
-### Release Notes Structure
+```markdown
+# CloudZero Agent X.Y.Z - Changelog
 
-Use the following sections to organize your release notes:
+## Overview
+Brief summary of the release series and major themes.
 
-1. **Upgrade Steps**
-2. **Breaking Changes**
-3. **New Features**
-4. **Bug Fixes**
-5. **Improvements**
-6. **Other Changes**
+## Major Features
+### Feature Name
+- **Key Capability**: Description of what it does for users
+- **Benefits**: How it helps users
+- **Configuration**: Any relevant configuration details
 
-#### Upgrade Steps
+## Performance Enhancements
+- **Improvement Description**: Include metrics when available
+- **Enhanced Functionality**: Details about optimizations
 
-- **Purpose:** Detail any actions users must take to upgrade beyond updating dependencies.
-- **Content:**
-  - Step-by-step instructions for the upgrade.
-  - Pseudocode or code snippets highlighting necessary changes.
-  - Recommendations to upgrade due to known issues in older versions.
-- **Note:** Ideally, no upgrade steps are required.
+## Bug Fixes Across X.Y.Z Series
+### X.Y.0 Fixes
+- **Issue Description**: Clear explanation of what was fixed
+- **Resolution**: How the issue was resolved
 
-#### Breaking Changes
+## Breaking Changes
+- **Change Description**: Impact and migration requirements
 
-- **Purpose:** List all breaking changes that may affect users.
-- **Content:**
-  - Comprehensive list of changes that are not backward compatible.
-  - Typically included in major version releases.
-- **Note:** Aim to minimize breaking changes.
+## Upgrade Path
+```bash
+helm upgrade --install <RELEASE_NAME> cloudzero/cloudzero-agent -f configuration.yaml --version X.Y.Z
+```
 
-#### New Features
+## Version History
+- **X.Y.0** (YYYY-MM-DD): Initial release description
+- **X.Y.1** (YYYY-MM-DD): Maintenance release description
+```
 
-- **Purpose:** Describe new functionalities introduced in the release.
-- **Content:**
-  - Detailed descriptions of each new feature.
-  - Usage scenarios and benefits.
-  - Include screenshots or diagrams where applicable.
-  - Mention any caveats, warnings, or if the feature is in beta.
+### Automated Changelog Generation
 
-#### Bug Fixes
+The `make generate-changelog` command:
 
-- **Purpose:** Highlight fixes for existing issues.
-- **Content:**
-  - Description of the issues that have been resolved.
-  - Reference to related features or functionalities.
+1. **Analyzes Commits**: Reviews git history since last release tag
+2. **Extracts Changes**: Identifies user-facing changes, features, and fixes
+3. **Categorizes Content**: Groups changes by type (features, fixes, improvements)
+4. **Formats Output**: Follows existing changelog structure and style
+5. **User-Focused Language**: Emphasizes benefits and impact to users
 
-#### Improvements
+### Manual Changelog Enhancement
 
-- **Purpose:** Outline enhancements made to existing features or workflows.
-- **Content:**
-  - Performance optimizations.
-  - Improved logging or error messaging.
-  - Enhancements to user experience.
+After generation, developers should:
 
-#### Other Changes
-
-- **Purpose:** Capture miscellaneous changes that do not fit into the above categories.
-- **Content:**
-  - Minor updates or maintenance tasks.
-  - Documentation updates.
-- **Note:** Aim to keep this section empty by categorizing changes appropriately.
+1. **Review Accuracy**: Ensure all major changes are captured
+2. **Improve Clarity**: Rewrite technical language for user-friendly descriptions
+3. **Add Context**: Include configuration examples and upgrade guidance
+4. **Verify Formatting**: Check markdown structure and section organization
 
 ---
 
-### Release Notes Template
+## Workflow Details
 
-Copy and paste the following template to create your release notes. Replace placeholders with relevant information.
+### Release Workflow (`release-to-main.yml`)
 
-```markdown
-## [X.X.X](https://github.com/Cloudzero/cloudzero-insights-controller/compare/vX.X.X-1...vX.X.X) (YYYY-MM-DD)
+The manual release workflow performs these automated steps:
 
-> Brief description of the release.
+1. **Validation Phase**:
+   ```bash
+   # Validates that the required changelog exists
+   MINOR_VERSION=$(echo "1.2.3" | cut -d. -f1,2)
+   test -f "docs/releases/CHANGELOG-${MINOR_VERSION}.md"
+   ```
 
-### Upgrade Steps
+2. **Version Update Phase**:
+   - Updates Helm chart image versions
+   - Regenerates chart templates and tests
+   - Commits version changes to `develop`
 
-- [ACTION REQUIRED]
-- Detailed upgrade instructions or steps.
+3. **Release Phase**:
+   - Fast-forward merges `develop` into `main`
+   - Creates git tag (e.g., `v1.2.3`)
+   - Extracts release notes from changelog file
+   - Creates GitHub draft release
 
-### Breaking Changes
+4. **Release Notes Extraction**:
+   ```bash
+   # Automatically extracts version-specific content
+   awk '/^## .*1.2.3/ { found=1; next } /^## / && found { exit } found { print }' CHANGELOG-1.2.md
+   ```
 
-- Description of breaking change 1.
-- Description of breaking change 2.
+### Chart Mirroring Workflow (`mirror-chart.yml`)
 
-### New Features
+Automatically syncs changes to the charts repository:
 
-- **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
-- **Feature Name:** Detailed description, usage scenarios, and any relevant notes or images.
+1. **Trigger**: Every push to `develop` branch
+2. **Sync Operations**:
+   - Mirrors `helm/` directory to `cloudzero-charts/charts/cloudzero-agent/`
+   - Copies changelog files to chart's `docs/releases/` directory
+   - Preserves commit authorship and history
+3. **Result**: Charts repository stays synchronized with latest changes
 
-### Bug Fixes
+### Automation Benefits
 
-- **Bug Fix Description:** Explanation of the issue and how it was resolved.
-- **Bug Fix Description:** Explanation of the issue and how it was resolved.
-
-### Improvements
-
-- **Improvement Description:** Details about the enhancement.
-- **Improvement Description:** Details about the enhancement.
-
-### Other Changes
-
-- **Change Description:** Brief explanation of the change.
-- **Change Description:** Brief explanation of the change.
-```
-
-**Example:**
-
-```markdown
-## [0.29.0](https://github.com/Cloudzero/cloudzero-insights-controller/compare/v0.27.0...v0.29.0) (2024-11-07)
-
-> This release includes performance improvements and minor changes to documentation.
-
-### Performance Improvements
-
-- **dependencies:** Bump dependencies to latest versions for improved security and performance. [4a4ee13](https://github.com/Cloudzero/cloudzero-insights-controller/commit/4a4ee13)
-
-### Other Changes
-
-- **chore(conventionalChangelog):** Add Conventional Changelog for automated release notes generation. [aafcdd9](https://github.com/Cloudzero/cloudzero-insights-controller/commit/aafcdd9)
-- **docs(CHANGELOG):** Add changelog documentation. [e2c7435](https://github.com/Cloudzero/cloudzero-insights-controller/commit/e2c7435)
-```
+- **Consistency**: Standardized changelog format across all releases
+- **Efficiency**: Automated extraction eliminates manual copy-paste errors
+- **Traceability**: Single source of truth for release information
+- **Integration**: Seamless sync between repositories
 
 ---
 
 ## Best Practices
 
-- **Consistency:** Maintain a consistent format and structure across all release notes.
-- **Clarity:** Use clear and concise language to describe changes.
-- **Categorization:** Properly categorize changes to make it easier for users to find relevant information.
-- **Visual Aids:** Include screenshots or diagrams for new features to enhance understanding.
-- **Review:** Ensure all sections are thoroughly reviewed by relevant teams before publishing.
-- **Highlight External Approvals:** Clearly indicate when external approvals are required and obtained.
+### Changelog Management
+- **Single Source of Truth**: Use centralized changelog files instead of individual release notes
+- **Automated Generation**: Leverage `make generate-changelog` for consistency
+- **User-Focused Language**: Write for users, not developers - emphasize benefits and impact
+- **Version Organization**: Group related changes by minor version series (1.2.x)
+- **Regular Updates**: Update changelogs incrementally rather than at release time
+
+### Release Coordination
+- **Early Preparation**: Generate changelog files well before release deadlines
+- **Stakeholder Review**: Allow time for team review of generated changelogs
+- **Testing Integration**: Ensure release process includes full testing suite
+- **Documentation Sync**: Verify charts repository receives updated documentation
+
+### Quality Assurance
+- **Validation**: Use automated workflow validation to catch issues early
+- **Content Review**: Manually review automated changelog generation for accuracy
+- **Format Consistency**: Follow established changelog structure and formatting
+- **Link Verification**: Ensure all references and links are functional
 
 ---
 
-## Roles and Responsibilities
+## Troubleshooting
 
-- **Developer:** Drafts the release notes using the provided template.
-- **Product Management (PM) Team:** Reviews and approves the release notes for accuracy and completeness.
-- **Documentation Team:** Ensures that the release notes are well-documented and user-friendly.
-- **Stakeholders:** Review and provide external approval for the release through the Manual Release workflow.
-- **Release Manager:** Oversees the release process, ensuring all steps, including external approvals, are completed.
+### Common Issues
+
+**Changelog File Missing**:
+```bash
+# Error: test -f "docs/releases/CHANGELOG-1.2.md" fails
+# Solution: Generate the changelog first
+TAG_VERSION=1.2.3 make generate-changelog
+```
+
+**Release Notes Extraction Issues**:
+```bash
+# Problem: No content extracted from changelog
+# Cause: Version section not found in changelog
+# Solution: Ensure changelog has proper version headers (## 1.2.3)
+```
+
+**Chart Mirroring Delays**:
+- Check that `develop` branch is up to date
+- Verify mirror workflow completed successfully
+- Confirm cloudzero-charts repository permissions
+
+**Workflow Permissions**:
+- Ensure `VERSION_BUMP_DEPLOY_KEY` secret is configured
+- Verify `CLOUDZERO_CHARTS_DEPLOY_KEY` secret exists
+- Check repository permissions for workflow execution
+
+### Recovery Procedures
+
+**Failed Release Workflow**:
+1. Review workflow logs for specific error
+2. Fix underlying issue (changelog, permissions, etc.)
+3. Re-run workflow with same version number
+4. Verify all steps complete successfully
+
+**Missing Chart Updates**:
+1. Manually trigger mirror workflow if needed
+2. Verify chart repository has latest changes
+3. Confirm changelog files are properly synced
 
 ---
 
-## External Approvals
+## Migration from Legacy Process
 
-External approvals are a critical part of the release process to ensure that all stakeholders are aligned and that the release meets quality and functionality standards.
+### Key Changes from Previous Process
 
-### Approval Workflow
+**Before (Legacy)**:
+- Individual `helm/docs/releases/{version}.md` files
+- Manual creation of release notes
+- Separate chart and agent documentation
 
-1. **Initiate Approval:**
+**After (Current)**:
+- Centralized `docs/releases/CHANGELOG-{minor}.md` files
+- Automated changelog generation with manual review
+- Synchronized documentation across repositories
 
-   - After triggering the Manual Release workflow, stakeholders receive a notification to review the release.
+### Migration Steps for Existing Releases
 
-2. **Review Process:**
+1. **Consolidate Existing Notes**: Move individual release files into appropriate changelog files
+2. **Update Workflows**: Ensure workflows reference changelog files instead of individual notes  
+3. **Clean Up Legacy Files**: Remove `helm/docs/releases/` directory to eliminate duplication
+4. **Team Training**: Educate team on new `make generate-changelog` process
+5. **Documentation Update**: Update all references to point to new process
 
-   - Stakeholders evaluate the functionality, documentation, and overall readiness of the release.
-   - Any feedback or required changes are communicated back to the release manager or developer.
+### Cleanup Strategy
 
-3. **Provide Approval:**
+**Remove Legacy Release Files**:
+```bash
+# The helm/docs/releases/ directory can be safely removed
+# All content has been consolidated into docs/releases/CHANGELOG-*.md files
+rm -rf helm/docs/releases/
 
-   - Once satisfied, stakeholders provide manual approval within the workflow interface.
-   - The release process proceeds to publication upon receiving all necessary approvals.
+# Update any documentation that references the old location
+# All chart documentation now sources from docs/releases/
+```
 
-4. **Handling Rejections:**
-   - If a stakeholder rejects the release, the release manager must address the feedback and possibly iterate on the release notes or code before resubmitting for approval.
-
-**Note:** The release cannot be published until all required external approvals are obtained.
+**Benefits of Consolidation**:
+- **Single Source of Truth**: Only `docs/releases/` contains release documentation
+- **Reduced Maintenance**: No need to maintain duplicate files
+- **Automatic Sync**: Charts repository gets complete release documentation
+- **Simplified Workflow**: One location for all release-related files
 
 ---
 
-## FAQs
+## Integration with External Systems
 
-**Q: What if there are no changes for a minor release?**
-A: Even if there are no significant changes, create a release document indicating that it is a maintenance or patch release.
+### GitHub Releases
+- Release content automatically extracted from changelog files
+- Draft releases created for review before publication
+- Tag creation and branch management fully automated
 
-**Q: How often should releases be made?**
-A: Follow the project's release cadence, whether it's weekly, bi-weekly, monthly, etc., to ensure regular updates.
+### CloudZero Charts Repository
+- Automatic mirroring of helm chart and changelog files
+- Preservation of commit history and authorship
+- Seamless integration without manual intervention
 
-**Q: Who approves the final release?**
-A: Designated stakeholders must manually approve the release through the Manual Release workflow.
+### CI/CD Pipeline
+- Integration with existing build and test processes
+- Validation of changelog files before release
+- Automated image building and publishing upon release
 
-**Q: What happens if external approvals are not obtained in a timely manner?**
-A: Communicate with stakeholders to address any blockers and ensure that the release schedule accommodates the approval process.
+This updated process provides a streamlined, automated approach to releases while maintaining quality and consistency across the CloudZero Agent ecosystem.
