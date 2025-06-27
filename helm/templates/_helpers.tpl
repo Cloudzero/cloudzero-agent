@@ -73,12 +73,17 @@ Name for the validating webhook
 
 {{/*
   This helper function trims whitespace and newlines from a given string.
+  Returns empty string if input is nil.
 */}}
 {{- define "cloudzero-agent.cleanString" -}}
   {{- $input := . -}}
-  {{- $cleaned := trimAll "\n\t\r\f\v ~`!@#$%^&*()[]{}_-+=|\\:;\"'<,>.?/" $input -}}
-  {{- $cleaned := trim $cleaned -}}
-  {{- $cleaned -}}
+  {{- if $input -}}
+    {{- $cleaned := trimAll "\n\t\r\f\v ~`!@#$%^&*()[]{}_-+=|\\:;\"'<,>.?/" $input -}}
+    {{- $cleaned := trim $cleaned -}}
+    {{- $cleaned -}}
+  {{- else -}}
+    {{- "" -}}
+  {{- end -}}
 {{- end -}}
 
 {{/*

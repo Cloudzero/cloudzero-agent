@@ -96,15 +96,14 @@ $defs:
 type: object
 additionalProperties: false
 required:
-  - cloudAccountId
   - clusterName
-  - region
   - host
 
 properties:
   cloudAccountId:
-    type: string
-    minLength: 1
+    type:
+      - string
+      - "null"
     description: |
       The CloudZero Cloud Account ID.
   clusterName:
@@ -113,8 +112,9 @@ properties:
     description: |
       The name of the Kubernetes cluster.
   region:
-    type: string
-    minLength: 1
+    type:
+      - string
+      - "null"
     description: |
       The cloud provider region.
   apiKey:

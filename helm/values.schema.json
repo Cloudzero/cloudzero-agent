@@ -20762,8 +20762,7 @@
     },
     "cloudAccountId": {
       "description": "The CloudZero Cloud Account ID.\n",
-      "minLength": 1,
-      "type": "string"
+      "type": ["string", "null"]
     },
     "clusterName": {
       "description": "The name of the Kubernetes cluster.\n",
@@ -21698,8 +21697,7 @@
     },
     "region": {
       "description": "The cloud provider region.\n",
-      "minLength": 1,
-      "type": "string"
+      "type": ["string", "null"]
     },
     "secretAnnotations": {
       "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
@@ -22092,6 +22090,6 @@
       "type": "object"
     }
   },
-  "required": ["cloudAccountId", "clusterName", "region", "host"],
+  "required": ["clusterName", "host"],
   "type": "object"
 }
