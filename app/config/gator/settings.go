@@ -16,6 +16,7 @@ import (
 
 	"github.com/ccoveille/go-safecast"
 	"github.com/cloudzero/cloudzero-agent/app/domain/filter"
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -142,13 +143,17 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 func (s *Settings) Validate() error {
 	// Cleanup and validate settings
 	s.CloudAccountID = strings.TrimSpace(s.CloudAccountID)
-	if s.CloudAccountID == "" {
-		return errors.New("cloud account ID is empty")
-	}
 	s.Region = strings.TrimSpace(s.Region)
-	if s.Region == "" {
-		return errors.New("region is empty")
+
+	// Auto-detect cloud account ID and region if needed
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.CloudAccountID)
+	if err != nil {
+		return fmt.Errorf("failed to auto-detect cloud environment: %w", err)
 	}
+
 	s.ClusterName = strings.TrimSpace(s.ClusterName)
 	if s.ClusterName == "" {
 		return errors.New("cluster name is empty")

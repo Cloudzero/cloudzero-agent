@@ -80,6 +80,7 @@ COPY --from=builder /go/bin/cloudzero-webhook /app/cloudzero-webhook
 COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 COPY --from=builder /go/bin/cloudzero-cluster-config /app/cloudzero-cluster-config
 COPY --from=builder /go/bin/cloudzero-helmless /app/cloudzero-helmless
+COPY --from=builder /go/bin/cloudzero-scout /app/cloudzero-scout
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

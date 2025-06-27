@@ -3,7 +3,15 @@
 
 package config
 
-import "github.com/pkg/errors"
+import (
+	"context"
+	"strings"
+	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
+)
 
 type Deployment struct {
 	AccountID   string `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
@@ -12,16 +20,22 @@ type Deployment struct {
 }
 
 func (s *Deployment) Validate() error {
-	if s.AccountID == "" {
-		return errors.New(ErrNoAccountIDMsg)
+	// Trim whitespace from all fields
+	s.AccountID = strings.TrimSpace(s.AccountID)
+	s.ClusterName = strings.TrimSpace(s.ClusterName)
+	s.Region = strings.TrimSpace(s.Region)
+
+	// Auto-detect cloud account ID and region if needed
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.AccountID)
+	if err != nil {
+		return errors.Wrap(err, "failed to auto-detect cloud environment")
 	}
 
 	if s.ClusterName == "" {
 		return errors.New(ErrNoClusterNameMsg)
-	}
-
-	if s.Region == "" {
-		return errors.New(ErrNoRegionMsg)
 	}
 
 	return nil

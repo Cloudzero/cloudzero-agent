@@ -5,6 +5,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -78,6 +80,16 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	// clean unexpected characters from CloudAccountID
 	// should only be A-Z, a-z, 0-9 at beginning and end
 	cfg.CloudAccountID = cleanString(cfg.CloudAccountID)
+	cfg.Region = strings.TrimSpace(cfg.Region)
+
+	// Auto-detect cloud account ID and region if needed
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := scout.DetectConfiguration(ctx, nil, &cfg.Region, &cfg.CloudAccountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to auto-detect cloud environment: %w", err)
+	}
 
 	cfg.setCompiledFilters()
 
