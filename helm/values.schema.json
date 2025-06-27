@@ -21442,6 +21442,11 @@
               "default": "1m",
               "description": "Timeout for sending data to clients.\n"
             },
+            "suppressIstioAnnotations": {
+              "default": false,
+              "description": "Whether to suppress Istio-related annotations on webhook server pods.\nWhen false (default), the sidecar.istio.io/inject: \"false\" annotation is added\nto prevent Istio sidecar injection which can interfere with webhook TLS.\nSet to true to disable this behavior and allow Istio sidecar injection.\n",
+              "type": "boolean"
+            },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations",
               "description": "Tolerations configuration for the webhook server pods.\n"
