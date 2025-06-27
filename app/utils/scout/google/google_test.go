@@ -114,6 +114,10 @@ func TestEnvironmentInfo_Success(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("projects/123456789/zones/us-central1-a"))
 
+		case "/computeMetadata/v1/instance/attributes/cluster-name":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("test-cluster-name"))
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -140,6 +144,10 @@ func TestEnvironmentInfo_Success(t *testing.T) {
 
 	if info.AccountID != "test-project-123" {
 		t.Errorf("Expected account ID 'test-project-123', got '%s'", info.AccountID)
+	}
+
+	if info.ClusterName != "test-cluster-name" {
+		t.Errorf("Expected cluster name 'test-cluster-name', got '%s'", info.ClusterName)
 	}
 }
 
@@ -170,6 +178,60 @@ func TestEnvironmentInfo_ProjectIDFailure(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "failed to get project ID") {
 		t.Errorf("Expected project ID error, got: %v", err)
+	}
+}
+
+func TestEnvironmentInfo_ClusterNameNotAvailable(t *testing.T) {
+	// Test when cluster name is not available (non-GKE environment)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Metadata-Flavor") != "Google" {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/computeMetadata/v1/project/project-id":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("test-project-123"))
+
+		case "/computeMetadata/v1/instance/zone":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("projects/123456789/zones/us-central1-a"))
+
+		case "/computeMetadata/v1/instance/attributes/cluster-name":
+			w.WriteHeader(http.StatusNotFound) // Cluster name not available
+
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	info, err := scout.EnvironmentInfo(ctx)
+	if err != nil {
+		t.Fatalf("Expected no error even when cluster name unavailable, got: %v", err)
+	}
+
+	if info.CloudProvider != types.CloudProviderGoogle {
+		t.Errorf("Expected cloud provider %s, got %s", types.CloudProviderGoogle, info.CloudProvider)
+	}
+
+	if info.Region != "us-central1" {
+		t.Errorf("Expected region 'us-central1', got '%s'", info.Region)
+	}
+
+	if info.AccountID != "test-project-123" {
+		t.Errorf("Expected account ID 'test-project-123', got '%s'", info.AccountID)
+	}
+
+	// Cluster name should be empty when not available
+	if info.ClusterName != "" {
+		t.Errorf("Expected empty cluster name when not available, got '%s'", info.ClusterName)
 	}
 }
 
