@@ -128,7 +128,7 @@ When adding content for a new version (e.g., 1.2.3):
 ### Existing Feature 2  
 ...existing content...
 
-### Scout Application  ← ADD NEW MAJOR FEATURES HERE
+### Configuration Automation  ← ADD NEW MAJOR FEATURES HERE
 - **Cloud Provider Detection**: Automatic CSP metadata detection
 - **Configuration Simplification**: Reduces manual configuration requirements
 - **Multi-Cloud Support**: AWS and Google Cloud integration
