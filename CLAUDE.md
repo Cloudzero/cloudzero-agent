@@ -85,44 +85,73 @@ When generating or updating changelog files for CloudZero Agent releases, follow
 
 When adding content for a new version (e.g., 1.2.3):
 
-1. **Bug Fixes**: Add under existing "### Major Bug Fixes Across 1.2.X Series" as "#### 1.2.3 Fixes"
-2. **Features**: Add under appropriate existing major sections (don't create new major sections)
-3. **Version History**: Update the existing list to include the new version
-4. **NEVER**: Add content after "## Upgrade Path" section
-5. **NEVER**: Create duplicate section headers
-6. **ALWAYS**: Maintain existing document structure and only INSERT within existing sections
+1. **Major Features**: Add new subsections under existing "## Major Features" section using "### Feature Name" format
+2. **Performance Improvements**: Add under existing "## Performance and Efficiency Improvements" section
+3. **Bug Fixes**: Add under existing "### Major Bug Fixes Across 1.2.X Series" as "#### 1.2.3 Fixes"
+4. **Version History**: Update the existing list to include the new version
+5. **NEVER**: Add content after "## Upgrade Path" section
+6. **NEVER**: Create duplicate section headers
+7. **ALWAYS**: Maintain existing document structure and only INSERT within existing sections
+
+### Content Classification Guidelines
+
+**Major Features** (add to "## Major Features"):
+- New standalone applications or services (e.g., collector, shipper, webhook)
+- Significant user-facing capabilities
+- Configuration simplification that reduces manual setup
+- New integration support (cloud providers, tools)
+- Auto-detection and zero-configuration capabilities
+
+**IMPORTANT**: Distinguish between:
+- **Standalone Applications**: collector, shipper, webhook, validator (deployed as separate containers)
+- **Shared Packages/Libraries**: scout, utils, storage packages (used across applications)
+- **Configuration Features**: Auto-detection capabilities enabled by shared packages
+
+**Performance Improvements** (add to "## Performance and Efficiency Improvements"):
+- Speed enhancements, memory optimizations
+- Reduced resource usage
+- Improved scalability
+
+**Bug Fixes** (add to "### Major Bug Fixes Across 1.2.X Series"):
+- Issue resolution, error fixes
+- Template/validation improvements
+- Certificate handling fixes
 
 ### Example of Correct Section Placement
 
 ```markdown
+## Major Features
+
+### Existing Feature 1
+...existing content...
+
+### Existing Feature 2  
+...existing content...
+
+### Scout Application  ← ADD NEW MAJOR FEATURES HERE
+- **Cloud Provider Detection**: Automatic CSP metadata detection
+- **Configuration Simplification**: Reduces manual configuration requirements
+- **Multi-Cloud Support**: AWS and Google Cloud integration
+
+## Performance and Efficiency Improvements
+
+### Existing Performance Section
+...existing content...
+
+### Configuration Automation  ← ADD PERFORMANCE IMPROVEMENTS HERE
+- **Reduced Manual Setup**: Scout eliminates need for manual region/account configuration
+- **Faster Deployment**: Automatic environment detection speeds up installation
+
 ## Reliability and Bug Fixes
 
 ### Major Bug Fixes Across 1.2.X Series
 
-#### 1.2.0 Fixes
-- **Issue**: Description
-
-#### 1.2.1 Fixes  
-- **Issue**: Description
-
-#### 1.2.2 Fixes
-- **Issue**: Description
-
-#### 1.2.3 Fixes  ← ADD NEW VERSION HERE
-- **New Issue**: Description
-- **Another Fix**: Description
-
-## Security and Availability
-...existing content...
-
-## Upgrade Path
-...existing content... ← NEVER ADD CONTENT AFTER THIS
+#### 1.2.3 Fixes  ← ADD BUG FIXES HERE
+- **Certificate Handling**: Fixed webhook certificate annotations
+- **Template Validation**: Enhanced kubeconform integration
 
 ## Version History
-- **1.2.0** (2025-06-05): Description
-- **1.2.1** (2025-06-17): Description  
-- **1.2.2** (2025-06-24): Description
-- **1.2.3** (2025-06-27): Description ← UPDATE THIS LIST
+- **1.2.3** (2025-06-27): Major release with Scout application and configuration automation ← UPDATE THIS
 ```
 
 ### Formatting Guidelines
