@@ -57,10 +57,12 @@ When generating or updating changelog files for CloudZero Agent releases, follow
    - Breaking changes in configuration
    - API key management changes
 
-5. **Bug Fixes Section**
-   - Organize by version (e.g., "1.2.0 Fixes", "1.2.1 Fixes")
-   - Use descriptive titles for each fix
-   - Focus on user impact and resolution
+5. **Bug Fixes Section** - CRITICAL PLACEMENT RULES
+   - **Section Header**: "## Reliability and Bug Fixes" followed by "### Major Bug Fixes Across X.Y.Z Series"
+   - **Version Subsections**: Organize by version using "#### X.Y.Z Fixes" format
+   - **New Versions**: Add new version fixes in chronological order WITHIN this existing section
+   - **Location**: NEVER add content after "## Upgrade Path" or "## Version History"
+   - **Format**: Use bullet points with "**Issue**: Description" format
 
 6. **Breaking Changes**
    - Clearly list any breaking changes
@@ -74,9 +76,54 @@ When generating or updating changelog files for CloudZero Agent releases, follow
    - Provide clear upgrade instructions
    - Include helm commands with version placeholders
 
-9. **Version History**
+9. **Version History** 
    - List all versions in the series with release dates
    - Brief description of each version's focus
+   - UPDATE this section to include the new version being added
+
+### CRITICAL SECTION PLACEMENT RULES
+
+When adding content for a new version (e.g., 1.2.3):
+
+1. **Bug Fixes**: Add under existing "### Major Bug Fixes Across 1.2.X Series" as "#### 1.2.3 Fixes"
+2. **Features**: Add under appropriate existing major sections (don't create new major sections)
+3. **Version History**: Update the existing list to include the new version
+4. **NEVER**: Add content after "## Upgrade Path" section
+5. **NEVER**: Create duplicate section headers
+6. **ALWAYS**: Maintain existing document structure and only INSERT within existing sections
+
+### Example of Correct Section Placement
+
+```markdown
+## Reliability and Bug Fixes
+
+### Major Bug Fixes Across 1.2.X Series
+
+#### 1.2.0 Fixes
+- **Issue**: Description
+
+#### 1.2.1 Fixes  
+- **Issue**: Description
+
+#### 1.2.2 Fixes
+- **Issue**: Description
+
+#### 1.2.3 Fixes  ← ADD NEW VERSION HERE
+- **New Issue**: Description
+- **Another Fix**: Description
+
+## Security and Availability
+...existing content...
+
+## Upgrade Path
+...existing content... ← NEVER ADD CONTENT AFTER THIS
+
+## Version History
+- **1.2.0** (2025-06-05): Description
+- **1.2.1** (2025-06-17): Description  
+- **1.2.2** (2025-06-24): Description
+- **1.2.3** (2025-06-27): Description ← UPDATE THIS LIST
+```
 
 ### Formatting Guidelines
 
