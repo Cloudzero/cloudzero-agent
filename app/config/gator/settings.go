@@ -146,10 +146,11 @@ func (s *Settings) Validate() error {
 	s.Region = strings.TrimSpace(s.Region)
 
 	// Auto-detect cloud account ID and region if needed
+	logger := log.Logger.With().Str("component", "gator-settings").Logger()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.CloudAccountID, &s.ClusterName)
+	err := scout.DetectConfiguration(ctx, &logger, nil, &s.Region, &s.CloudAccountID, &s.ClusterName)
 	if err != nil {
 		return fmt.Errorf("failed to auto-detect cloud environment: %w", err)
 	}
