@@ -949,6 +949,7 @@ data:
         caInjection: null
         namespaceSelector: {}
         path: /validate
+        timeoutSeconds: 1
     jobConfigID: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
     kubeStateMetrics:
       affinity: {}
@@ -2817,4 +2818,4 @@ webhooks:
         port: 443
     admissionReviewVersions: ["v1"]
     sideEffects: None
-    timeoutSeconds: 15
+    timeoutSeconds: 1
