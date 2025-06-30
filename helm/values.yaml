@@ -697,6 +697,8 @@ insightsController:
     namespaceSelector: {}
     # Path for the validating admission webhook.
     path: /validate
+    # Timeout for the validating admission webhook.
+    timeoutSeconds: 1
     caInjection:
   configurationMountPath:
   ConfigMapNameOverride:
