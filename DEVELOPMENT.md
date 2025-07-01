@@ -37,6 +37,7 @@ This repository contains the complete CloudZero Agent ecosystem for Kubernetes i
 ### Quick Start
 
 1. **Clone and Setup**
+
    ```bash
    git clone https://github.com/cloudzero/cloudzero-agent.git
    cd cloudzero-agent
@@ -44,11 +45,13 @@ This repository contains the complete CloudZero Agent ecosystem for Kubernetes i
    ```
 
 2. **Build Applications**
+
    ```bash
    make build
    ```
 
 3. **Run Tests**
+
    ```bash
    make test
    make helm-test
@@ -141,6 +144,7 @@ The CloudZero Agent follows a structured release process with automated chart mi
 ### Creating a Release
 
 1. **Prepare Release Notes**
+
    ```bash
    # Create release notes file
    touch helm/docs/releases/1.2.3.md
@@ -148,11 +152,13 @@ The CloudZero Agent follows a structured release process with automated chart mi
    ```
 
 2. **Generate Changelog** (Optional)
+
    ```bash
    TAG_VERSION=1.2.3 make generate-changelog
    ```
 
 3. **Trigger Release**
+
    - Go to GitHub Actions
    - Run "Manual Prepare Release" workflow
    - Input version (e.g., `1.2.3`)
@@ -166,6 +172,7 @@ The CloudZero Agent follows a structured release process with automated chart mi
 ### Chart Mirroring
 
 The `mirror-chart.yml` workflow automatically:
+
 - Syncs `helm/` directory to `cloudzero-charts/charts/cloudzero-agent/`
 - Preserves commit history and authorship
 - Runs on every push to `develop` branch
@@ -173,17 +180,20 @@ The `mirror-chart.yml` workflow automatically:
 ## Testing
 
 ### Unit Tests
+
 ```bash
 make test
 ```
 
 ### Integration Tests
+
 ```bash
 export CLOUDZERO_DEV_API_KEY=your-key
 make test-integration
 ```
 
 ### Helm Chart Tests
+
 ```bash
 make helm-test                    # All helm tests
 make helm-test-schema            # Schema validation
@@ -191,6 +201,7 @@ make helm-test-subchart          # Subchart tests
 ```
 
 ### Smoke Tests
+
 ```bash
 make test-smoke
 ```
@@ -200,11 +211,13 @@ make test-smoke
 ### Local Development
 
 1. **Use Debug Images**
+
    ```bash
    make package-build-debug
    ```
 
 2. **Deploy Debug Container**
+
    ```bash
    kubectl run debug --image=busybox:stable-uclibc --rm -it -- sh
    ```
@@ -225,6 +238,7 @@ make test-smoke
 ### Helm Values
 
 Key configuration areas:
+
 - **API Authentication** - `global.apiKey`, `global.existingSecretName`
 - **Cluster Identification** - `clusterName`, `cloudAccountId`, `region`
 - **Component Control** - `components.*.enabled`
@@ -233,6 +247,7 @@ Key configuration areas:
 ### Environment Variables
 
 Applications support configuration via:
+
 - Helm chart values
 - Environment variables
 - ConfigMaps
@@ -255,6 +270,7 @@ Applications support configuration via:
 ### Commit Messages
 
 Follow conventional commit format:
+
 ```
 type(scope): description
 
@@ -268,16 +284,19 @@ type(scope): description
 ## Troubleshooting
 
 ### Build Issues
+
 - Ensure Go version matches `go.mod`
 - Run `make install-tools` to install dependencies
 - Check Docker daemon is running
 
 ### Test Failures
+
 - Verify API key is set for integration tests
 - Ensure Kubernetes cluster is accessible
 - Check resource limits and permissions
 
 ### Deployment Issues
+
 - Validate Helm chart with `make helm-lint`
 - Check cluster permissions
 - Review application logs

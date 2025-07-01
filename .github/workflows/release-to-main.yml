@@ -65,14 +65,14 @@ jobs:
         run: |
           MINOR_VERSION=$(echo "${{ github.event.inputs.version }}" | cut -d. -f1,2)
           CHANGELOG_FILE="docs/releases/CHANGELOG-${MINOR_VERSION}.md"
-          
+
           # Extract version-specific content from changelog
           awk '
           /^## .*'"${{ github.event.inputs.version }}"'/ { found=1; next }
           /^## / && found { exit }
           found { print }
           ' "$CHANGELOG_FILE" > release_notes.md
-          
+
           # If no version-specific section found, use the latest changes
           if [ ! -s release_notes.md ]; then
             echo "No specific section found for ${{ github.event.inputs.version }}, using latest changes from changelog"

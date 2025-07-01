@@ -8,7 +8,7 @@ The CloudZero Agent release process has been streamlined to use centralized chan
 
 1. **Generate Changelog**
 2. **Review Changelog**
-3. **Trigger Manual Release Workflow**  
+3. **Trigger Manual Release Workflow**
 4. **Automated Chart Mirroring**
 5. **Publish Release**
 
@@ -26,12 +26,14 @@ TAG_VERSION=1.2.3 make generate-changelog
 ```
 
 **What this does:**
+
 - Analyzes git commits since the last release
-- Extracts user-facing changes, bug fixes, and new features  
+- Extracts user-facing changes, bug fixes, and new features
 - Updates or creates `docs/releases/CHANGELOG-X.Y.md` file
 - Follows the established changelog format used across the project
 
 **Changelog Location:**
+
 - **Directory:** `docs/releases/`
 - **Filename Format:** `CHANGELOG-X.Y.md` (e.g., `CHANGELOG-1.2.md`)
 - **Content:** Version-specific sections within the changelog file
@@ -52,6 +54,7 @@ git push origin develop
 ```
 
 **Review Guidelines:**
+
 - Ensure user-facing language is clear and non-technical
 - Verify all major features and breaking changes are captured
 - Check that version sections are properly formatted
@@ -66,6 +69,7 @@ Navigate to GitHub Actions and trigger the release workflow:
 - **Input Required:** Version number (e.g., `1.2.3`)
 
 **What the workflow does:**
+
 1. **Validates:** Confirms the required changelog file exists (`docs/releases/CHANGELOG-1.2.md`)
 2. **Updates:** Helm chart version references and regenerates templates
 3. **Merges:** `develop` branch into `main` with fast-forward merge
@@ -78,19 +82,21 @@ Navigate to GitHub Actions and trigger the release workflow:
 The chart mirroring process runs automatically on every push to `develop`:
 
 **Mirror Workflow (`mirror-chart.yml`):**
+
 - **Triggers:** Automatically on push to `develop` branch
 - **Syncs:** `helm/` directory to `cloudzero-charts/charts/cloudzero-agent/`
 - **Includes:** Changelog files are now synced to charts repository
 - **Preserves:** Commit history and authorship information
 
 **Chart Repository Structure:**
+
 ```
 cloudzero-charts/
 └── charts/
     └── cloudzero-agent/
         ├── templates/          # Helm templates
         ├── values.yaml         # Chart values
-        ├── Chart.yaml          # Chart metadata  
+        ├── Chart.yaml          # Chart metadata
         └── docs/
             └── releases/       # Centralized changelog files (mirrored from docs/releases/)
                 ├── CHANGELOG-1.0.md
@@ -100,6 +106,7 @@ cloudzero-charts/
 ```
 
 **Key Changes**:
+
 - **Single Source**: `docs/releases/` is the authoritative location for all release documentation
 - **No Duplication**: `helm/docs/releases/` legacy files are excluded from mirroring
 - **Complete Sync**: Entire `docs/releases/` directory (including RELEASE_PROCESS.md) is mirrored to charts repo
@@ -113,6 +120,7 @@ After the release workflow completes:
 3. **Publish Release:** Remove draft status to publish the release
 
 **Post-Publication:**
+
 - Container images are automatically built and published
 - Charts repository is updated with latest changes
 - Release notifications are sent to watchers
@@ -127,39 +135,50 @@ The CloudZero Agent uses centralized changelog files following a consistent form
 
 Changelog files follow this standardized format:
 
-```markdown
+````markdown
 # CloudZero Agent X.Y.Z - Changelog
 
 ## Overview
+
 Brief summary of the release series and major themes.
 
 ## Major Features
+
 ### Feature Name
+
 - **Key Capability**: Description of what it does for users
 - **Benefits**: How it helps users
 - **Configuration**: Any relevant configuration details
 
 ## Performance Enhancements
+
 - **Improvement Description**: Include metrics when available
 - **Enhanced Functionality**: Details about optimizations
 
 ## Bug Fixes Across X.Y.Z Series
+
 ### X.Y.0 Fixes
+
 - **Issue Description**: Clear explanation of what was fixed
 - **Resolution**: How the issue was resolved
 
 ## Breaking Changes
+
 - **Change Description**: Impact and migration requirements
 
 ## Upgrade Path
+
 ```bash
 helm upgrade --install <RELEASE_NAME> cloudzero/cloudzero-agent -f configuration.yaml --version X.Y.Z
 ```
+````
 
 ## Version History
+
 - **X.Y.0** (YYYY-MM-DD): Initial release description
 - **X.Y.1** (YYYY-MM-DD): Maintenance release description
-```
+
+````
 
 ### Automated Changelog Generation
 
@@ -193,14 +212,16 @@ The manual release workflow performs these automated steps:
    # Validates that the required changelog exists
    MINOR_VERSION=$(echo "1.2.3" | cut -d. -f1,2)
    test -f "docs/releases/CHANGELOG-${MINOR_VERSION}.md"
-   ```
+````
 
 2. **Version Update Phase**:
+
    - Updates Helm chart image versions
    - Regenerates chart templates and tests
    - Commits version changes to `develop`
 
 3. **Release Phase**:
+
    - Fast-forward merges `develop` into `main`
    - Creates git tag (e.g., `v1.2.3`)
    - Extracts release notes from changelog file
@@ -235,6 +256,7 @@ Automatically syncs changes to the charts repository:
 ## Best Practices
 
 ### Changelog Management
+
 - **Single Source of Truth**: Use centralized changelog files instead of individual release notes
 - **Automated Generation**: Leverage `make generate-changelog` for consistency
 - **User-Focused Language**: Write for users, not developers - emphasize benefits and impact
@@ -242,12 +264,14 @@ Automatically syncs changes to the charts repository:
 - **Regular Updates**: Update changelogs incrementally rather than at release time
 
 ### Release Coordination
+
 - **Early Preparation**: Generate changelog files well before release deadlines
 - **Stakeholder Review**: Allow time for team review of generated changelogs
 - **Testing Integration**: Ensure release process includes full testing suite
 - **Documentation Sync**: Verify charts repository receives updated documentation
 
 ### Quality Assurance
+
 - **Validation**: Use automated workflow validation to catch issues early
 - **Content Review**: Manually review automated changelog generation for accuracy
 - **Format Consistency**: Follow established changelog structure and formatting
@@ -260,6 +284,7 @@ Automatically syncs changes to the charts repository:
 ### Common Issues
 
 **Changelog File Missing**:
+
 ```bash
 # Error: test -f "docs/releases/CHANGELOG-1.2.md" fails
 # Solution: Generate the changelog first
@@ -267,6 +292,7 @@ TAG_VERSION=1.2.3 make generate-changelog
 ```
 
 **Release Notes Extraction Issues**:
+
 ```bash
 # Problem: No content extracted from changelog
 # Cause: Version section not found in changelog
@@ -274,11 +300,13 @@ TAG_VERSION=1.2.3 make generate-changelog
 ```
 
 **Chart Mirroring Delays**:
+
 - Check that `develop` branch is up to date
 - Verify mirror workflow completed successfully
 - Confirm cloudzero-charts repository permissions
 
 **Workflow Permissions**:
+
 - Ensure `VERSION_BUMP_DEPLOY_KEY` secret is configured
 - Verify `CLOUDZERO_CHARTS_DEPLOY_KEY` secret exists
 - Check repository permissions for workflow execution
@@ -286,12 +314,14 @@ TAG_VERSION=1.2.3 make generate-changelog
 ### Recovery Procedures
 
 **Failed Release Workflow**:
+
 1. Review workflow logs for specific error
 2. Fix underlying issue (changelog, permissions, etc.)
 3. Re-run workflow with same version number
 4. Verify all steps complete successfully
 
 **Missing Chart Updates**:
+
 1. Manually trigger mirror workflow if needed
 2. Verify chart repository has latest changes
 3. Confirm changelog files are properly synced
@@ -303,11 +333,13 @@ TAG_VERSION=1.2.3 make generate-changelog
 ### Key Changes from Previous Process
 
 **Before (Legacy)**:
+
 - Individual `helm/docs/releases/{version}.md` files
 - Manual creation of release notes
 - Separate chart and agent documentation
 
 **After (Current)**:
+
 - Centralized `docs/releases/CHANGELOG-{minor}.md` files
 - Automated changelog generation with manual review
 - Synchronized documentation across repositories
@@ -315,7 +347,7 @@ TAG_VERSION=1.2.3 make generate-changelog
 ### Migration Steps for Existing Releases
 
 1. **Consolidate Existing Notes**: Move individual release files into appropriate changelog files
-2. **Update Workflows**: Ensure workflows reference changelog files instead of individual notes  
+2. **Update Workflows**: Ensure workflows reference changelog files instead of individual notes
 3. **Clean Up Legacy Files**: Remove `helm/docs/releases/` directory to eliminate duplication
 4. **Team Training**: Educate team on new `make generate-changelog` process
 5. **Documentation Update**: Update all references to point to new process
@@ -323,6 +355,7 @@ TAG_VERSION=1.2.3 make generate-changelog
 ### Cleanup Strategy
 
 **Remove Legacy Release Files**:
+
 ```bash
 # The helm/docs/releases/ directory can be safely removed
 # All content has been consolidated into docs/releases/CHANGELOG-*.md files
@@ -333,6 +366,7 @@ rm -rf helm/docs/releases/
 ```
 
 **Benefits of Consolidation**:
+
 - **Single Source of Truth**: Only `docs/releases/` contains release documentation
 - **Reduced Maintenance**: No need to maintain duplicate files
 - **Automatic Sync**: Charts repository gets complete release documentation
@@ -343,16 +377,19 @@ rm -rf helm/docs/releases/
 ## Integration with External Systems
 
 ### GitHub Releases
+
 - Release content automatically extracted from changelog files
 - Draft releases created for review before publication
 - Tag creation and branch management fully automated
 
 ### CloudZero Charts Repository
+
 - Automatic mirroring of helm chart and changelog files
 - Preservation of commit history and authorship
 - Seamless integration without manual intervention
 
 ### CI/CD Pipeline
+
 - Integration with existing build and test processes
 - Validation of changelog files before release
 - Automated image building and publishing upon release

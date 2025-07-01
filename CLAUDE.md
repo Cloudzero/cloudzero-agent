@@ -38,26 +38,31 @@ When generating or updating changelog files for CloudZero Agent releases, follow
 ### Content Structure
 
 1. **Overview Section**
+
    - Brief summary of the release series
    - Highlight major themes or features introduced
 
 2. **Major Features Section**
+
    - List new significant features with descriptive subsections
    - Use `###` for feature names
    - Include bullet points with detailed descriptions
    - Focus on user-facing capabilities and benefits
 
 3. **Performance/Architecture Improvements**
+
    - Separate section for performance enhancements
    - Include monitoring, efficiency, and architectural changes
    - Use clear metrics when available (e.g., "every 1 minute previously 2 minutes")
 
 4. **Configuration Changes**
+
    - New configuration options with default values
    - Breaking changes in configuration
    - API key management changes
 
 5. **Bug Fixes Section** - CRITICAL PLACEMENT RULES
+
    - **Section Header**: "## Reliability and Bug Fixes" followed by "### Major Bug Fixes Across X.Y.Z Series"
    - **Version Subsections**: Organize by version using "#### X.Y.Z Fixes" format
    - **New Versions**: Add new version fixes in chronological order WITHIN this existing section
@@ -65,18 +70,21 @@ When generating or updating changelog files for CloudZero Agent releases, follow
    - **Format**: Use bullet points with "**Issue**: Description" format
 
 6. **Breaking Changes**
+
    - Clearly list any breaking changes
    - Explain impact and migration requirements
 
 7. **Security Section** (if applicable)
+
    - Vulnerability status
    - Security improvements
 
 8. **Upgrade Path**
+
    - Provide clear upgrade instructions
    - Include helm commands with version placeholders
 
-9. **Version History** 
+9. **Version History**
    - List all versions in the series with release dates
    - Brief description of each version's focus
    - UPDATE this section to include the new version being added
@@ -96,6 +104,7 @@ When adding content for a new version (e.g., 1.2.3):
 ### Content Classification Guidelines
 
 **Major Features** (add to "## Major Features"):
+
 - New standalone applications or services (e.g., collector, shipper, webhook)
 - Significant user-facing capabilities
 - Configuration simplification that reduces manual setup
@@ -103,16 +112,19 @@ When adding content for a new version (e.g., 1.2.3):
 - Auto-detection and zero-configuration capabilities
 
 **IMPORTANT**: Distinguish between:
+
 - **Standalone Applications**: collector, shipper, webhook, validator (deployed as separate containers)
 - **Shared Packages/Libraries**: scout, utils, storage packages (used across applications)
 - **Configuration Features**: Auto-detection capabilities enabled by shared packages
 
 **Performance Improvements** (add to "## Performance and Efficiency Improvements"):
+
 - Speed enhancements, memory optimizations
 - Reduced resource usage
 - Improved scalability
 
 **Bug Fixes** (add to "### Major Bug Fixes Across 1.2.X Series"):
+
 - Issue resolution, error fixes
 - Template/validation improvements
 - Certificate handling fixes
@@ -123,12 +135,15 @@ When adding content for a new version (e.g., 1.2.3):
 ## Major Features
 
 ### Existing Feature 1
+
 ...existing content...
 
-### Existing Feature 2  
+### Existing Feature 2
+
 ...existing content...
 
-### Configuration Automation  ← ADD NEW MAJOR FEATURES HERE
+### Configuration Automation ← ADD NEW MAJOR FEATURES HERE
+
 - **Cloud Provider Detection**: Automatic CSP metadata detection
 - **Configuration Simplification**: Reduces manual configuration requirements
 - **Multi-Cloud Support**: AWS and Google Cloud integration
@@ -136,9 +151,11 @@ When adding content for a new version (e.g., 1.2.3):
 ## Performance and Efficiency Improvements
 
 ### Existing Performance Section
+
 ...existing content...
 
-### Configuration Automation  ← ADD PERFORMANCE IMPROVEMENTS HERE
+### Configuration Automation ← ADD PERFORMANCE IMPROVEMENTS HERE
+
 - **Reduced Manual Setup**: Scout eliminates need for manual region/account configuration
 - **Faster Deployment**: Automatic environment detection speeds up installation
 
@@ -146,11 +163,13 @@ When adding content for a new version (e.g., 1.2.3):
 
 ### Major Bug Fixes Across 1.2.X Series
 
-#### 1.2.3 Fixes  ← ADD BUG FIXES HERE
+#### 1.2.3 Fixes ← ADD BUG FIXES HERE
+
 - **Certificate Handling**: Fixed webhook certificate annotations
 - **Template Validation**: Enhanced kubeconform integration
 
 ## Version History
+
 - **1.2.3** (2025-06-27): Major release with Scout application and configuration automation ← UPDATE THIS
 ```
 
@@ -176,6 +195,7 @@ When adding content for a new version (e.g., 1.2.3):
 
 ```markdown
 ### Feature Name
+
 - **Key Capability**: Description of what it does for users
 - **Benefits**: How it helps users
 - **Configuration**: Any relevant configuration details
