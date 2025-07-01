@@ -8,6 +8,7 @@ package scout
 import (
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout/auto"
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout/aws"
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout/azure"
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout/google"
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout/types"
 )
@@ -16,6 +17,7 @@ import (
 func NewScout() types.Scout {
 	return auto.NewScout(
 		aws.NewScout(),
+		azure.NewScout(),
 		google.NewScout(),
 	)
 }

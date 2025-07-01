@@ -1,10 +1,38 @@
 # -- CloudZero host to send metrics to.
 host: api.cloudzero.com
-# -- Account ID of the account the cluster is running in. This must be a string - even if it is a number in your system.
+
+# Account ID of the account the cluster is running in.
+#
+# This value can be automatically detected by the CloudZero Agent on AWS (EKS),
+# Google Cloud (GKE), and Azure (AKS), but if specified explicitly the specified
+# value will be used instead of the detected value. If you wish to use the
+# detected value, leave this property set to null.
+#
+# Note also that this must be a string value, even where the account ID may be
+# numeric (e.g., an AWS account ID). i.e., `"123456789012"` not `123456789012`.
+# If you are passing this as a parameter to the Helm CLI, you should generally
+# use --set-string (e.g., "cloudAccountId=123456789012").
 cloudAccountId: null
-# -- Name of the clusters.
+
+# Name of the Kubernetes cluster.
+#
+# This value can be automatically detected reliably by the CloudZero Agent on
+# GKE. On Azure, due to Azure API limitations the cluster name can be detected
+# only if it does not contain any underscores, otherwise it may be detected
+# incorrectly. On AWS, the cluster name cannot be detected at all and you'll
+# need to pass it explicitly.
+#
+# If specified explicitly the specified value will be used instead of the
+# detected value. If you wish to use the detected value, leave this property set
+# to null.
 clusterName: ""
-# -- Region the cluster is running in.
+
+# Region the cluster is running in.
+#
+# This value can be automatically detected by the CloudZero Agent on AWS (EKS),
+# Google Cloud (GKE), and Azure (AKS), but if specified explicitly the specified
+# value will be used instead of the detected value. If you wish to use the
+# detected value, leave this property set to null.
 region: null
 
 # -- CloudZero API key. Required if existingSecretName is null.
