@@ -133,8 +133,15 @@ func TestScout_Detect_NotAzure(t *testing.T) {
 }
 
 func TestScout_Detect_NetworkError(t *testing.T) {
-	scout := NewScout()
-	scout.client.Timeout = 10 * time.Millisecond // Very short timeout
+	// Use custom transport that simulates network failure
+	scout := &Scout{
+		client: &http.Client{
+			Timeout: requestTimeout,
+			Transport: &customTransport{
+				baseURL: "http://192.0.2.1", // RFC 5737 TEST-NET-1 - guaranteed unreachable
+			},
+		},
+	}
 
 	ctx := context.Background()
 	result, err := scout.Detect(ctx)
@@ -290,8 +297,15 @@ func TestScout_EnvironmentInfo_Errors(t *testing.T) {
 }
 
 func TestScout_EnvironmentInfo_NetworkError(t *testing.T) {
-	scout := NewScout()
-	scout.client.Timeout = 10 * time.Millisecond // Very short timeout
+	// Use custom transport that simulates network failure
+	scout := &Scout{
+		client: &http.Client{
+			Timeout: requestTimeout,
+			Transport: &customTransport{
+				baseURL: "http://192.0.2.1", // RFC 5737 TEST-NET-1 - guaranteed unreachable
+			},
+		},
+	}
 
 	ctx := context.Background()
 	result, err := scout.EnvironmentInfo(ctx)
