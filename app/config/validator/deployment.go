@@ -12,12 +12,20 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout/types"
 )
 
 type Deployment struct {
-	AccountID   string `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
-	ClusterName string `yaml:"cluster_name" env:"CLUSTER_NAME" required:"true" env-description:"Cluster Name"`
-	Region      string `yaml:"region" env:"REGION" required:"true" env-description:"AWS Region"`
+	AccountID   string      `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
+	ClusterName string      `yaml:"cluster_name" env:"CLUSTER_NAME" required:"true" env-description:"Cluster Name"`
+	Region      string      `yaml:"region" env:"REGION" required:"true" env-description:"AWS Region"`
+	scout       types.Scout `yaml:"-" env:"-" env-description:"Scout"`
+}
+
+// SetScout provides a way to specify a scout. By default, an auto scout will be
+// used.
+func (s *Deployment) SetScout(scout types.Scout) {
+	s.scout = scout
 }
 
 func (s *Deployment) Validate() error {
@@ -31,7 +39,7 @@ func (s *Deployment) Validate() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, &logger, nil, &s.Region, &s.AccountID, &s.ClusterName)
+	err := scout.DetectConfiguration(ctx, &logger, s.scout, &s.Region, &s.AccountID, &s.ClusterName)
 	if err != nil {
 		return errors.Wrap(err, "failed to auto-detect cloud environment")
 	}
