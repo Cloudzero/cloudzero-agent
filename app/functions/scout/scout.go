@@ -35,6 +35,7 @@ Use 'scout detect' to only identify the cloud provider.
 
 Supported cloud providers:
 - Amazon Web Services (AWS)
+- Microsoft Azure
 - Google Cloud`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runScout()
@@ -46,7 +47,7 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Retrieve cloud environment information",
 	Long: `Retrieve detailed information about the current cloud environment including:
-- Cloud provider (aws, google)
+- Cloud provider (aws, azure, google)
 - Region/location
 - Account ID/Subscription ID/Project ID`,
 	RunE: func(cmd *cobra.Command, args []string) error {
