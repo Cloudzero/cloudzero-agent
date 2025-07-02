@@ -22,7 +22,26 @@ webhooks:
       - operations: [ "CREATE", "UPDATE", "DELETE" ]
         apiGroups: ["*"]
         apiVersions: ["*"]
-        resources: ["*"]
+        resources:
+          {{/* See app/types/k8s_object.go for the list of supported resources */}}
+          - deployment
+          - statefulset
+          - daemonset
+          - replicaset
+          - pod
+          - namespace
+          - node
+          - service
+          - storageclass
+          - persistentvolume
+          - persistentvolumeclaim
+          - job
+          - cronjob
+          - customresourcedefinition
+          - ingress
+          - ingressclass
+          - gateway
+          - gatewayclass
         scope: "*"
     clientConfig:
       service:
