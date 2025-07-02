@@ -115,6 +115,12 @@ type WebhookController interface {
 	//     whether the request is allowed or denied.
 	//   - error: Any error encountered during processing.
 	Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error)
+
+	// Settings returns the configuration settings for the webhook controller.
+	//
+	// Returns:
+	//   - *config.Settings: The settings instance containing webhook configuration.
+	Settings() *config.Settings
 }
 
 type webhookController struct {
@@ -291,4 +297,8 @@ func (wc *webhookController) registered(g, v, k string) bool {
 		}
 	}
 	return false
+}
+
+func (wc *webhookController) Settings() *config.Settings {
+	return wc.settings
 }

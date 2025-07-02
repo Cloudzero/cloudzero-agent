@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -179,6 +180,18 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 		log.Ctx(ctx).Error().Err(err).Send()
 		request.Reply(r, w, fmt.Sprintf("review failure: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// If we're using HTTP/1.x, we want to periodically close the connection to
+	// help distribute the load across the various webhook replicas.
+	//
+	// Unfortunately this won't work for HTTP/2, but currently all traffic we're
+	// seeing from the Kubernetes API server is HTTP/1.1.
+	if r.ProtoMajor == 1 {
+		rf := a.controller.Settings().Server.ReconnectFrequency
+		if rf > 0 && rand.Intn(rf) == 0 { //nolint:gosec // a weak PRNG is fine here
+			w.Header().Set("Connection", "close")
+		}
 	}
 
 	resp, err := a.marshallResponseToJSON(ctx, review, result)

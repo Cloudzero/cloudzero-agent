@@ -1020,6 +1020,14 @@ properties:
               Timeout for idle connections.
             $ref: "#/$defs/com.cloudzero.agent.duration"
             default: "120s"
+          reconnectFrequency:
+            type: integer
+            minimum: 0
+            default: 16
+            description: |
+              How frequently to close HTTP connections from clients, to help
+              distribute the load across the various webhook replicas. 0=never,
+              otherwise 1/N probability.
           logging:
             description: |
               Configuration for logging in the webhook server.
