@@ -3796,6 +3796,11 @@
               "$ref": "#/$defs/com.cloudzero.agent.duration",
               "default": "10s"
             },
+            "reconnectFrequency": {
+              "default": 16,
+              "minimum": 0,
+              "type": "integer"
+            },
             "replicaCount": {
               "deprecated": true,
               "type": ["integer", "null"]

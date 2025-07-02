@@ -923,6 +923,7 @@ data:
         podAnnotations: {}
         port: 8443
         read_timeout: 10s
+        reconnectFrequency: 16
         replicaCount: null
         send_interval: 1m
         send_timeout: 1m
@@ -1442,6 +1443,7 @@ data:
       read_timeout: 10s
       write_timeout: 10s
       idle_timeout: 120s
+      reconnect_frequency: 16
     filters:
       labels:
         enabled: true

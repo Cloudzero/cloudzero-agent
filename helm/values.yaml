@@ -655,6 +655,10 @@ insightsController:
     # This is formatted as a Go duration string; see
     # https://pkg.go.dev/time#ParseDuration for details.
     idle_timeout: 120s
+    # Frequency to close HTTP connections from clients, to help distribute the
+    # load across the various webhook replicas. 0=never, otherwise 1/N
+    # probability.
+    reconnectFrequency: 16
     # Configuration for logging in the webhook server.
     logging:
       # Logging level for the webhook server.
