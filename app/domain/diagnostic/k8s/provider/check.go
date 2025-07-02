@@ -6,15 +6,14 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/common"
+	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/sirupsen/logrus"
@@ -58,14 +57,14 @@ func (c *checker) Check(ctx context.Context, client *http.Client, accessor statu
 }
 
 func (c *checker) getProviderID(ctx context.Context) (string, error) {
-	// ensure the correct env variables were injected
-	ns, exists := os.LookupEnv("NAMESPACE")
-	if !exists {
-		return "", errors.New("the env variable `NAMESPACE` must exist")
+	// get the required values
+	ns, err := k8s.GetNamespace()
+	if err != nil {
+		return "", err
 	}
-	name, exists := os.LookupEnv("POD_NAME")
-	if !exists {
-		return "", errors.New("the env variable `POD_NAME` must exist")
+	name, err := k8s.GetPodName()
+	if err != nil {
+		return "", err
 	}
 
 	// create the k8s client

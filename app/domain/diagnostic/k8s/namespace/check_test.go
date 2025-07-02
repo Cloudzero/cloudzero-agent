@@ -19,7 +19,7 @@ func TestUnit_Diagnostic_K8s_Namespace_CheckOK(t *testing.T) {
 
 	// set the namespace for the test
 	expectedNs := "test-ns"
-	os.Setenv("NAMESPACE", expectedNs)
+	os.Setenv("K8S_NAMESPACE", expectedNs)
 
 	provider := namespace.NewProvider(context.Background(), cfg)
 

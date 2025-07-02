@@ -7,10 +7,10 @@ package namespace
 import (
 	"context"
 	"net/http"
-	"os"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
+	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/sirupsen/logrus"
@@ -31,16 +31,16 @@ func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider 
 }
 
 func (c *checker) Check(ctx context.Context, client *http.Client, accessor status.Accessor) error {
-	// check the environment var set
-	val, exists := os.LookupEnv("NAMESPACE")
-	if !exists {
-		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticK8sNamespace, Error: "the env variable `NAMESPACE` must exist"})
+	// get the namespace
+	ns, err := k8s.GetNamespace()
+	if err != nil {
+		accessor.AddCheck(&status.StatusCheck{Name: DiagnosticK8sNamespace, Error: err.Error()})
 		return nil
 	}
 
 	// add to the report
 	accessor.WriteToReport(func(cs *status.ClusterStatus) {
-		cs.Namespace = val
+		cs.Namespace = ns
 	})
 	accessor.AddCheck(&status.StatusCheck{Name: DiagnosticK8sNamespace, Passing: true})
 	return nil
