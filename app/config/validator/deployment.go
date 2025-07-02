@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
 )
@@ -26,10 +27,11 @@ func (s *Deployment) Validate() error {
 	s.Region = strings.TrimSpace(s.Region)
 
 	// Auto-detect cloud account ID and region if needed
+	logger := log.Logger.With().Str("component", "validator-deployment").Logger()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &s.Region, &s.AccountID, &s.ClusterName)
+	err := scout.DetectConfiguration(ctx, &logger, nil, &s.Region, &s.AccountID, &s.ClusterName)
 	if err != nil {
 		return errors.Wrap(err, "failed to auto-detect cloud environment")
 	}

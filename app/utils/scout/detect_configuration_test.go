@@ -4,10 +4,12 @@
 package scout_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"go.uber.org/mock/gomock"
 
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
@@ -96,15 +98,13 @@ func TestDetectConfiguration_Success(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockScout := mocks.NewMockScout(ctrl)
 
-			// Set up expectations for EnvironmentInfo if needed
-			if (tt.inputRegion != nil && *tt.inputRegion == "") || (tt.inputAccountID != nil && *tt.inputAccountID == "") || (tt.inputClusterName != nil && *tt.inputClusterName == "") {
-				mockScout.EXPECT().
-					EnvironmentInfo(gomock.Any()).
-					Return(tt.environmentInfo, tt.envInfoError)
-			}
+			// Set up expectations for EnvironmentInfo - now always called
+			mockScout.EXPECT().
+				EnvironmentInfo(gomock.Any()).
+				Return(tt.environmentInfo, tt.envInfoError)
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+			err := scout.DetectConfiguration(context.Background(), nil, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 			if err != nil {
 				t.Errorf("Expected no error, got: %v", err)
 			}
@@ -209,7 +209,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				Return(tt.environmentInfo, tt.envInfoError)
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+			err := scout.DetectConfiguration(context.Background(), nil, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 
 			if err == nil {
 				t.Errorf("Expected error, but got none")
@@ -312,7 +312,7 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 			}
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+			err := scout.DetectConfiguration(context.Background(), nil, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -355,17 +355,56 @@ func TestDetectConfiguration_EnsurePropertiesAlwaysSet(t *testing.T) {
 	}
 }
 
-func TestDetectConfiguration_NilPointers(t *testing.T) {
+func TestDetectConfiguration_AllNilValues(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Test that nil pointers are handled correctly and don't cause detection attempts
+	// Test that when all values are nil, scout is not called at all
 	mockScout := mocks.NewMockScout(ctrl)
 
-	// Should not call any mock methods since all pointers are nil
-	err := scout.DetectConfiguration(context.Background(), mockScout, nil, nil, nil)
+	// No expectations - scout should not be called
+
+	err := scout.DetectConfiguration(context.Background(), nil, mockScout, nil, nil, nil)
 	if err != nil {
-		t.Errorf("Expected no error when all pointers are nil, got: %v", err)
+		t.Errorf("Expected no error when all values are nil, got: %v", err)
+	}
+}
+
+func TestDetectConfiguration_AllEmptyStringValues(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Test that when all values are empty strings, scout is called and values are set
+	mockScout := mocks.NewMockScout(ctrl)
+
+	// Scout should be called and return valid environment info
+	mockScout.EXPECT().
+		EnvironmentInfo(gomock.Any()).
+		Return(&types.EnvironmentInfo{
+			CloudProvider: types.CloudProviderAWS,
+			Region:        "us-west-2",
+			AccountID:     "123456789012",
+			ClusterName:   "test-cluster",
+		}, nil)
+
+	region := ""
+	accountID := ""
+	clusterName := ""
+
+	err := scout.DetectConfiguration(context.Background(), nil, mockScout, &region, &accountID, &clusterName)
+	if err != nil {
+		t.Errorf("Expected no error when all values are empty strings, got: %v", err)
+	}
+
+	// Verify that values were set from detection
+	if region != "us-west-2" {
+		t.Errorf("Expected region to be set to 'us-west-2', got: %s", region)
+	}
+	if accountID != "123456789012" {
+		t.Errorf("Expected accountID to be set to '123456789012', got: %s", accountID)
+	}
+	if clusterName != "test-cluster" {
+		t.Errorf("Expected clusterName to be set to 'test-cluster', got: %s", clusterName)
 	}
 }
 
@@ -375,11 +414,21 @@ func TestDetectConfiguration_PartialDetection(t *testing.T) {
 
 	mockScout := mocks.NewMockScout(ctrl)
 
+	// Scout should be called even when values are already set
+	mockScout.EXPECT().
+		EnvironmentInfo(gomock.Any()).
+		Return(&types.EnvironmentInfo{
+			CloudProvider: types.CloudProviderAWS,
+			Region:        "detected-region",
+			AccountID:     "detected-account",
+			ClusterName:   "detected-cluster",
+		}, nil)
+
 	region := "existing-region"       // Already set
 	accountID := "existing-account"   // Already set
 	clusterName := "existing-cluster" // Already set
 
-	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID, &clusterName)
+	err := scout.DetectConfiguration(context.Background(), nil, mockScout, &region, &accountID, &clusterName)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -539,7 +588,7 @@ func TestDetectConfiguration_CriticalRequirement(t *testing.T) {
 			// but we need to provide a parameter for the function signature
 
 			// Call the actual function with mock scout
-			err := scout.DetectConfiguration(context.Background(), mockScout, regionCopy, accountIDCopy, clusterNameCopy)
+			err := scout.DetectConfiguration(context.Background(), nil, mockScout, regionCopy, accountIDCopy, clusterNameCopy)
 
 			// CRITICAL VALIDATION: Error handling
 			if tt.expectError {
@@ -602,7 +651,7 @@ func TestDetectConfiguration_NilScout(t *testing.T) {
 	// This should not panic and should use the default scout
 	// We don't expect it to succeed since there's no real cloud environment,
 	// but it should attempt detection without panicking
-	err := scout.DetectConfiguration(context.Background(), nil, &region, &accountID, &clusterName)
+	err := scout.DetectConfiguration(context.Background(), nil, nil, &region, &accountID, &clusterName)
 
 	// We expect some kind of error since we're not in a real cloud environment
 	// The important thing is that it doesn't panic
@@ -617,17 +666,25 @@ func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// This is the new test requested by the user:
-	// Ensure Scout is not invoked when all values are already provided
+	// Test that Scout is still invoked even when all values are already
+	// provided. This allows for mismatch warnings to be logged.
 	mockScout := mocks.NewMockScout(ctrl)
 
-	// NO mock expectations should be set - if Scout methods are called, the test will fail
+	// Scout should be called to allow comparison and warning logs
+	mockScout.EXPECT().
+		EnvironmentInfo(gomock.Any()).
+		Return(&types.EnvironmentInfo{
+			CloudProvider: types.CloudProviderAWS,
+			Region:        "detected-region",
+			AccountID:     "detected-account",
+			ClusterName:   "detected-cluster",
+		}, nil)
 
 	region := "pre-set-region"
 	accountID := "pre-set-account"
 	clusterName := "pre-set-cluster"
 
-	err := scout.DetectConfiguration(context.Background(), mockScout, &region, &accountID, &clusterName)
+	err := scout.DetectConfiguration(context.Background(), nil, mockScout, &region, &accountID, &clusterName)
 	if err != nil {
 		t.Errorf("Expected no error when values are pre-set, got: %v", err)
 	}
@@ -641,6 +698,298 @@ func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
 	}
 	if clusterName != "pre-set-cluster" {
 		t.Errorf("Expected clusterName to remain unchanged, got: %s", clusterName)
+	}
+}
+
+func TestDetectConfiguration_WarningLogsForMismatchedValues(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name               string
+		inputRegion        *string
+		inputAccountID     *string
+		inputClusterName   *string
+		environmentInfo    *types.EnvironmentInfo
+		expectedWarnings   []string
+		expectedNoWarnings []string
+	}{
+		{
+			name:             "warn for region mismatch",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr(""),
+			inputClusterName: nil,
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "detected-account",
+				ClusterName:   "detected-cluster",
+			},
+			expectedWarnings: []string{
+				"provided region does not match detected region",
+				`"provided":"provided-region"`,
+				`"detected":"detected-region"`,
+			},
+			expectedNoWarnings: []string{
+				"provided account ID does not match",
+				"provided cluster name does not match",
+			},
+		},
+		{
+			name:             "warn for account ID mismatch",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: nil,
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "detected-account",
+				ClusterName:   "detected-cluster",
+			},
+			expectedWarnings: []string{
+				"provided account ID does not match detected account ID",
+				`"provided":"provided-account"`,
+				`"detected":"detected-account"`,
+			},
+			expectedNoWarnings: []string{
+				"provided region does not match",
+				"provided cluster name does not match",
+			},
+		},
+		{
+			name:             "warn for cluster name mismatch",
+			inputRegion:      nil,
+			inputAccountID:   nil,
+			inputClusterName: stringPtr("provided-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "detected-account",
+				ClusterName:   "detected-cluster",
+			},
+			expectedWarnings: []string{
+				"provided cluster name does not match detected cluster name",
+				`"provided":"provided-cluster"`,
+				`"detected":"detected-cluster"`,
+			},
+			expectedNoWarnings: []string{
+				"provided region does not match",
+				"provided account ID does not match",
+			},
+		},
+		{
+			name:             "warn for multiple mismatches",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "detected-account",
+				ClusterName:   "detected-cluster",
+			},
+			expectedWarnings: []string{
+				"provided region does not match detected region",
+				"provided account ID does not match detected account ID",
+				"provided cluster name does not match detected cluster name",
+				`"provided":"provided-region"`,
+				`"detected":"detected-region"`,
+				`"provided":"provided-account"`,
+				`"detected":"detected-account"`,
+				`"provided":"provided-cluster"`,
+				`"detected":"detected-cluster"`,
+			},
+		},
+		{
+			name:             "no warnings when values match",
+			inputRegion:      stringPtr("matching-region"),
+			inputAccountID:   stringPtr("matching-account"),
+			inputClusterName: stringPtr("matching-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "matching-region",
+				AccountID:     "matching-account",
+				ClusterName:   "matching-cluster",
+			},
+			expectedNoWarnings: []string{
+				"provided region does not match",
+				"provided account ID does not match",
+				"provided cluster name does not match",
+			},
+		},
+		{
+			name:             "no warnings when detected values are empty",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "", // Empty detected values should not cause warnings
+				AccountID:     "",
+				ClusterName:   "",
+			},
+			expectedNoWarnings: []string{
+				"provided region does not match",
+				"provided account ID does not match",
+				"provided cluster name does not match",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Prepare a buffer to capture log output
+			var buf bytes.Buffer
+
+			// Create a zerolog logger that writes to the buffer
+			testLogger := zerolog.New(&buf).With().Timestamp().Logger()
+
+			// Create a context with the test logger attached
+			ctx := testLogger.WithContext(t.Context())
+
+			mockScout := mocks.NewMockScout(ctrl)
+
+			// Set up mock expectations
+			mockScout.EXPECT().
+				EnvironmentInfo(gomock.Any()).
+				Return(tt.environmentInfo, nil)
+
+			// Call the function with the context that captures logs
+			err := scout.DetectConfiguration(ctx, &testLogger, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+			if err != nil {
+				t.Errorf("Expected no error, got: %v", err)
+			}
+
+			// Retrieve output from the buffer
+			logOutput := buf.String()
+
+			// Check for expected warnings
+			for _, expectedWarning := range tt.expectedWarnings {
+				if !contains(logOutput, expectedWarning) {
+					t.Errorf("Expected log output to contain %q, but it didn't. Full log output:\n%s", expectedWarning, logOutput)
+				}
+			}
+
+			// Check that no unexpected warnings are present
+			for _, notExpectedWarning := range tt.expectedNoWarnings {
+				if contains(logOutput, notExpectedWarning) {
+					t.Errorf("Expected log output to NOT contain %q, but it did. Full log output:\n%s", notExpectedWarning, logOutput)
+				}
+			}
+		})
+	}
+}
+
+func TestDetectConfiguration_GracefulFailureHandling(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name             string
+		inputRegion      *string
+		inputAccountID   *string
+		inputClusterName *string
+		envInfoError     error
+		environmentInfo  *types.EnvironmentInfo
+		expectError      bool
+		expectedWarnings []string
+	}{
+		{
+			name:             "detection failure with all values provided - should warn but not error",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			envInfoError:     errors.New("network timeout"),
+			expectError:      false,
+			expectedWarnings: []string{
+				"cloud provider detection failed, but all required values are already provided",
+				"network timeout",
+			},
+		},
+		{
+			name:             "detection failure with empty values - should error",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			envInfoError:     errors.New("network timeout"),
+			expectError:      true,
+		},
+		{
+			name:             "unknown cloud provider with all values provided - should warn but not error",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderUnknown,
+			},
+			expectError: false,
+			expectedWarnings: []string{
+				"cloud provider could not be auto-detected, but all required values are already provided",
+			},
+		},
+		{
+			name:             "unknown cloud provider with empty values - should error",
+			inputRegion:      stringPtr(""),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: stringPtr("provided-cluster"),
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderUnknown,
+			},
+			expectError: true,
+		},
+		{
+			name:             "partial values provided with detection failure - should warn but not error",
+			inputRegion:      stringPtr("provided-region"),
+			inputAccountID:   stringPtr("provided-account"),
+			inputClusterName: nil, // nil values don't count as "needing detection"
+			envInfoError:     errors.New("network timeout"),
+			expectError:      false,
+			expectedWarnings: []string{
+				"cloud provider detection failed, but all required values are already provided",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Prepare a buffer to capture log output
+			var buf bytes.Buffer
+
+			// Create a zerolog logger that writes to the buffer
+			testLogger := zerolog.New(&buf).With().Timestamp().Logger()
+
+			// Create a context with the test logger attached
+			ctx := testLogger.WithContext(t.Context())
+
+			mockScout := mocks.NewMockScout(ctrl)
+
+			// Set up mock expectations
+			mockScout.EXPECT().
+				EnvironmentInfo(gomock.Any()).
+				Return(tt.environmentInfo, tt.envInfoError)
+
+			// Call the function with the context that captures logs
+			err := scout.DetectConfiguration(ctx, &testLogger, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+
+			// Check error expectation
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %v", err)
+				}
+			}
+
+			// Retrieve output from the buffer and check warnings
+			logOutput := buf.String()
+			for _, expectedWarning := range tt.expectedWarnings {
+				if !contains(logOutput, expectedWarning) {
+					t.Errorf("Expected log output to contain %q, but it didn't. Full log output:\n%s", expectedWarning, logOutput)
+				}
+			}
+		})
 	}
 }
 
