@@ -58,6 +58,14 @@ func (a *MockAdmissionController) Review(ctx context.Context, ar *types.Admissio
 	return &types.AdmissionResponse{Allowed: true, Message: "success"}, nil
 }
 
+func (a *MockAdmissionController) Settings() *config.Settings {
+	return &config.Settings{
+		Server: config.Server{
+			ReconnectFrequency: 16,
+		},
+	}
+}
+
 type MockNilController struct {
 	*MockAdmissionController // simply deref the complete and override the function we want (gotta love go)
 }

@@ -32,6 +32,7 @@ server:
   read_timeout: {{ .server.read_timeout }}
   write_timeout: {{ .server.write_timeout }}
   idle_timeout: {{ .server.idle_timeout }}
+  reconnect_frequency: {{ .server.reconnectFrequency | default 16 }}
 {{- end }}
 filters:
   labels:
