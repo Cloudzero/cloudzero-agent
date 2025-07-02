@@ -21,6 +21,9 @@ const (
 	V1Beta2 = "v1beta2"
 	V1Beta1 = "v1beta1"
 
+	// Important: when adding a new resource type, please remember to also
+	// update the list in the webhook-validating-config.yaml template in the
+	// Helm chart.
 	KindDeployment            = "deployment"
 	KindStatefulSet           = "statefulset"
 	KindDaemonSet             = "daemonset"
