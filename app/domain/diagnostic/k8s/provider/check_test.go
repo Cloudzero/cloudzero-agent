@@ -22,8 +22,8 @@ func TestUnit_Diagnostic_K8s_Provider_CheckOK(t *testing.T) {
 	// set this to the namespace and the pod name you have currently running within a
 	// local kubernetes cluster.
 	// TODO: we should run some tests inside of a k8s cluster
-	os.Setenv("NAMESPACE", "flux-system")
-	os.Setenv("POD_NAME", "flux-59dbfd5444-dlr5c")
+	os.Setenv("K8S_NAMESPACE", "flux-system")
+	os.Setenv("K8S_POD_NAME", "flux-59dbfd5444-dlr5c")
 
 	p := provider.NewProvider(t.Context(), cfg)
 	accessor := status.NewAccessor(&status.ClusterStatus{})
