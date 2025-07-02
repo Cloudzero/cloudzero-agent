@@ -1,4 +1,0 @@
-defaults:
-  nodeSelector:
-    kubernetes.io/os:
-      nested: "value" # Should fail as it's a nested object, not a string

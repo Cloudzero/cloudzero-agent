@@ -1,3 +1,0 @@
-insightsController:
-  server:
-    suppressIstioAnnotations: false

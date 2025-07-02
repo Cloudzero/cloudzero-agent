@@ -164,8 +164,9 @@ defaults:
   # Note that if you set this, you'll likely also want to set
   # kubeStateMetrics.podDisruptionBudget.
   podDisruptionBudget:
+    enabled: true
     minAvailable: 1
-    maxUnavailable:
+    # maxUnavailable:
   # If set, this priority class name will be used for all deployments and jobs.
   #
   # Note that, if used, you will need to create the PriorityClass resource
@@ -191,8 +192,9 @@ components:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
       tag: 1.2.3  # <- Software release corresponding to this chart version.
     podDisruptionBudget:
-      minAvailable:
-      maxUnavailable:
+      # enabled:
+      # minAvailable:
+      # maxUnavailable:
 
   # kubectl contains details about where to find the kubectl image.  This chart
   # uses the kubectl image as part of the job to initialize certificates.
@@ -225,8 +227,9 @@ components:
   aggregator:
     replicas: 3
     podDisruptionBudget:
-      minAvailable:
-      maxUnavailable:
+      # enabled:
+      # minAvailable:
+      # maxUnavailable:
     tolerations: []
     annotations: {}
 
@@ -234,8 +237,9 @@ components:
   webhookServer:
     replicas: 3
     podDisruptionBudget:
-      minAvailable:
-      maxUnavailable:
+      # enabled:
+      # minAvailable:
+      # maxUnavailable:
 
 # Due to limitations of Helm, we are unfortunately not able to automatically configure the
 # kube-state-metrics subchart using the configuration above, and instead need to configure

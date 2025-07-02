@@ -1,0 +1,10 @@
+defaults:
+  podDisruptionBudget:
+    minAvailable: 1
+    maxUnavailable: 1
+
+components:
+  agent:
+    podDisruptionBudget:
+      minAvailable: 2
+      maxUnavailable: 2
