@@ -83,10 +83,11 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	cfg.Region = strings.TrimSpace(cfg.Region)
 
 	// Auto-detect cloud account ID and region if needed
+	logger := log.Logger.With().Str("component", "webhook-settings").Logger()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := scout.DetectConfiguration(ctx, nil, &cfg.Region, &cfg.CloudAccountID, &cfg.ClusterName)
+	err := scout.DetectConfiguration(ctx, &logger, nil, &cfg.Region, &cfg.CloudAccountID, &cfg.ClusterName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-detect cloud environment: %w", err)
 	}
