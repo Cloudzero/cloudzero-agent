@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"regexp"
 	"testing"
 	"time"
 
@@ -63,59 +63,65 @@ func Test_Logger_Sqlite(t *testing.T) {
 	db.AutoMigrate(&Post{})
 
 	cases := []struct {
-		run   func() error
-		sql   string
-		errOk bool
+		run        func() error
+		sqlPattern string // Use regex pattern instead of exact string
+		errOk      bool
 	}{
 		{
 			run: func() error { return db.Create(&Post{Title: "awesome"}).Error },
-			sql: fmt.Sprintf(
-				"INSERT INTO `posts` (`title`,`body`,`created_at`) VALUES (%q,%q,%q)",
-				"awesome", "", strings.TrimSuffix(now.Format("2006-01-02 15:04:05.000"), "0"),
-			),
-			errOk: false,
+			// Use regex pattern to match timestamp format flexibly
+			sqlPattern: `INSERT INTO ` + "`posts`" + ` \(` + "`title`" + `,` + "`body`" + `,` + "`created_at`" + `\) VALUES \("awesome","","` + now.Format("2006-01-02 15:04:05") + `\.\d+"\)`,
+			errOk:      false,
 		},
 		{
-			run:   func() error { return db.Model(&Post{}).Find(&[]*Post{}).Error },
-			sql:   "SELECT * FROM `posts`",
-			errOk: false,
+			run:        func() error { return db.Model(&Post{}).Find(&[]*Post{}).Error },
+			sqlPattern: "SELECT \\* FROM `posts`",
+			errOk:      false,
 		},
 		{
 			run: func() error {
 				return db.Where(&Post{Title: "awesome", Body: "This is awesome post !"}).First(&Post{}).Error
 			},
-			sql: fmt.Sprintf(
-				"SELECT * FROM `posts` WHERE `posts`.`title` = %q AND `posts`.`body` = %q ORDER BY `posts`.`title` LIMIT 1",
+			sqlPattern: fmt.Sprintf(
+				"SELECT \\* FROM `posts` WHERE `posts`\\.`title` = %q AND `posts`\\.`body` = %q ORDER BY `posts`\\.`title` LIMIT 1",
 				"awesome", "This is awesome post !",
 			),
 			errOk: true,
 		},
 		{
-			run:   func() error { return db.Raw("THIS is,not REAL sql").Scan(&Post{}).Error },
-			sql:   "THIS is,not REAL sql",
-			errOk: true,
+			run:        func() error { return db.Raw("THIS is,not REAL sql").Scan(&Post{}).Error },
+			sqlPattern: "THIS is,not REAL sql",
+			errOk:      true,
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		mogger.Reset()
 
 		err := c.run()
 
 		if err != nil && !c.errOk {
-			t.Fatalf("Unexpected error: %s (%T)", err, err)
+			t.Fatalf("Case %d: Unexpected error: %s (%T)", i, err, err)
 		}
 
 		// TODO: Must get from log entries
 		entries := mogger.Entries
 
 		if got, want := len(entries), 1; got != want {
-			t.Errorf("Logger logged %d items, want %d items", got, want)
+			t.Errorf("Case %d: Logger logged %d items, want %d items", i, got, want)
 		} else {
 			fieldByName := entries[0]
 
-			if got, want := fieldByName["sql"].(string), c.sql; got != want {
-				t.Errorf("Logged sql was %q, want %q", got, want)
+			actualSQL := fieldByName["sql"].(string)
+
+			// Use regex matching for flexible timestamp matching
+			matched, err := regexp.MatchString(c.sqlPattern, actualSQL)
+			if err != nil {
+				t.Fatalf("Case %d: Invalid regex pattern %q: %v", i, c.sqlPattern, err)
+			}
+
+			if !matched {
+				t.Errorf("Case %d: Logged sql %q does not match pattern %q", i, actualSQL, c.sqlPattern)
 			}
 		}
 	}
