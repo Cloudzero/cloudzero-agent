@@ -1,0 +1,112 @@
+suite: test pod disruption budget comprehensive
+templates:
+  - templates/agent-pdb.yaml
+  - templates/aggregator-pdb.yaml
+  - templates/webhook-pdb.yaml
+tests:
+  # Test component override (all or nothing logic)
+  - it: should use component minAvailable override for agent only
+    set:
+      components.agent.podDisruptionBudget.minAvailable: 5
+    asserts:
+      # Agent should use component override
+      - equal:
+          path: spec.minAvailable
+          value: 5
+        template: templates/agent-pdb.yaml
+
+      # Other components should use defaults
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: templates/aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: templates/webhook-pdb.yaml
+
+  # Test maxUnavailable override without minAvailable
+  - it: should use maxUnavailable when only maxUnavailable is set
+    set:
+      components.agent.podDisruptionBudget.maxUnavailable: 2
+    asserts:
+      # Agent should use maxUnavailable with null minAvailable
+      - isNull:
+          path: spec.minAvailable
+        template: templates/agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 2
+        template: templates/agent-pdb.yaml
+
+  # Test percentage values
+  - it: should work with percentage maxUnavailable
+    set:
+      components.agent.podDisruptionBudget.maxUnavailable: "25%"
+    asserts:
+      - isNull:
+          path: spec.minAvailable
+        template: templates/agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: "25%"
+        template: templates/agent-pdb.yaml
+
+  # Test different components can have different settings
+  - it: should allow different PDB settings per component
+    set:
+      components.agent.podDisruptionBudget.minAvailable: 3
+      components.aggregator.podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      # Agent uses minAvailable override
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: templates/agent-pdb.yaml
+      - isNull:
+          path: spec.maxUnavailable
+        template: templates/agent-pdb.yaml
+
+      # Aggregator uses maxUnavailable override (no defaults)
+      - isNull:
+          path: spec.minAvailable
+        template: templates/aggregator-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+        template: templates/aggregator-pdb.yaml
+
+      # Webhook uses defaults
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: templates/webhook-pdb.yaml
+
+  # Test custom defaults
+  - it: should use custom defaults when defaults are overridden
+    set:
+      defaults.podDisruptionBudget.minAvailable: 3
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: templates/agent-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: templates/aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: templates/webhook-pdb.yaml
+
+  # Test validation error when both minAvailable and maxUnavailable are set
+  - it: should fail when both minAvailable and maxUnavailable are set
+    templates:
+      - templates/agent-pdb.yaml
+    set:
+      components.agent.podDisruptionBudget.minAvailable: 3
+      components.agent.podDisruptionBudget.maxUnavailable: 2
+    asserts:
+      - failedTemplate:
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-server cannot have both minAvailable and maxUnavailable set."

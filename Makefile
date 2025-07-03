@@ -114,6 +114,15 @@ install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
 	@$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b .tools/bin $(GOLANGCI_LINT_VERSION)
 
+.PHONY: install-tools-helm-unittest
+install-tools: install-tools-helm-unittest
+install-tools-helm-unittest: install-tools-go # For helm.
+install-tools-helm-unittest:
+	@if ! $(HELM) plugin list | grep -q unittest; then \
+		echo "$(INFO_COLOR)Installing helm unittest plugin...$(NO_COLOR)"; \
+		$(HELM) plugin install https://github.com/helm-unittest/helm-unittest; \
+	fi
+
 # Generate the secrets file used by the `act` tool for local GitHub Action development.
 secrets-act:
 	@if [[ "$(CLOUDZERO_DEV_API_KEY)" == "" ]] || [[ "$(GITHUB_TOKEN)" == "" ]]; then echo "CLOUDZERO_DEV_API_KEY and GITHUB_TOKEN are required to generate the .github/workflows/.secret file, but at least one of them is not set. Consider adding to local-config.mk."; exit 1; fi
@@ -459,9 +468,14 @@ helm-test-subchart: helm/values.schema.json
 		fi; \
 	done
 
+.PHONY: helm-test-unittest
+helm-test-unittest: ## Run Helm unittest tests
+helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
+	$(HELM) unittest ./helm --values helm/tests/values.yaml
+
 .PHONY: helm-test
 helm-test: ## Run all Helm validation tests
-helm-test: helm-test-schema helm-test-subchart
+helm-test: helm-test-schema helm-test-subchart helm-test-unittest
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json FORCE
 	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
