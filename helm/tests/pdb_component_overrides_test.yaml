@@ -1,0 +1,228 @@
+suite: test pod disruption budget component overrides
+templates:
+  - agent-pdb.yaml
+  - aggregator-pdb.yaml
+  - webhook-pdb.yaml
+tests:
+  - it: should use component minAvailable override (all or nothing logic)
+    set:
+      components.agent.podDisruptionBudget.minAvailable: 5
+    asserts:
+      # Agent should use component override
+      - equal:
+          path: spec.minAvailable
+          value: 5
+        template: agent-pdb.yaml
+      - isNull:
+          path: spec.maxUnavailable
+        template: agent-pdb.yaml
+
+      # Other components should use defaults
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: webhook-pdb.yaml
+
+  - it: should use component maxUnavailable override (ignores defaults)
+    set:
+      defaults.podDisruptionBudget.minAvailable: 2
+      components.agent.podDisruptionBudget.maxUnavailable: 3
+    asserts:
+      # Agent should use ONLY component PDB (no defaults)
+      - isNull:
+          path: spec.minAvailable
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 3
+        template: agent-pdb.yaml
+
+      # Other components should use defaults
+      - equal:
+          path: spec.minAvailable
+          value: 2
+        template: aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 2
+        template: webhook-pdb.yaml
+
+  - it: should use explicit override for maxUnavailable without minAvailable
+    set:
+      components.agent.podDisruptionBudget.maxUnavailable: 2
+    asserts:
+      # Agent should use component PDB with only maxUnavailable
+      - isNull:
+          path: spec.minAvailable
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 2
+        template: agent-pdb.yaml
+
+  - it: should work with percentage values
+    set:
+      components.agent.podDisruptionBudget.maxUnavailable: "25%"
+    asserts:
+      - isNull:
+          path: spec.minAvailable
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: "25%"
+        template: agent-pdb.yaml
+
+  - it: should work with different components
+    set:
+      components.aggregator.podDisruptionBudget.minAvailable: 2
+      components.webhookServer.podDisruptionBudget.maxUnavailable: 3
+    asserts:
+      # Agent uses defaults
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: agent-pdb.yaml
+
+      # Aggregator uses override
+      - equal:
+          path: spec.minAvailable
+          value: 2
+        template: aggregator-pdb.yaml
+      - isNull:
+          path: spec.maxUnavailable
+        template: aggregator-pdb.yaml
+
+      # Webhook uses override
+      - isNull:
+          path: spec.minAvailable
+        template: webhook-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 3
+        template: webhook-pdb.yaml
+
+  - it: should not create PDB when defaults enabled is false
+    set:
+      defaults.podDisruptionBudget.enabled: false
+      defaults.podDisruptionBudget.minAvailable: 1
+    asserts:
+      # No PDBs should be created when defaults.enabled is false
+      - hasDocuments:
+          count: 0
+        template: agent-pdb.yaml
+      - hasDocuments:
+          count: 0
+        template: aggregator-pdb.yaml
+      - hasDocuments:
+          count: 0
+        template: webhook-pdb.yaml
+
+  - it: should not create PDB when component enabled is false
+    set:
+      defaults.podDisruptionBudget.enabled: true
+      defaults.podDisruptionBudget.minAvailable: 1
+      components.agent.podDisruptionBudget.enabled: false
+    asserts:
+      # Agent PDB should not be created when component.enabled is false
+      - hasDocuments:
+          count: 0
+        template: agent-pdb.yaml
+
+      # Other components should use defaults (enabled: true)
+      - hasDocuments:
+          count: 1
+        template: aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: aggregator-pdb.yaml
+      - hasDocuments:
+          count: 1
+        template: webhook-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: webhook-pdb.yaml
+
+  - it: should create PDB when component enabled overrides defaults disabled
+    set:
+      defaults.podDisruptionBudget.enabled: false
+      defaults.podDisruptionBudget.minAvailable: 1
+      components.agent.podDisruptionBudget.enabled: true
+      components.agent.podDisruptionBudget.minAvailable: 2
+    asserts:
+      # Agent PDB should be created when component.enabled is true
+      - hasDocuments:
+          count: 1
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 2
+        template: agent-pdb.yaml
+
+      # Other components should not be created (defaults.enabled is false)
+      - hasDocuments:
+          count: 0
+        template: aggregator-pdb.yaml
+      - hasDocuments:
+          count: 0
+        template: webhook-pdb.yaml
+
+  - it: should inherit defaults enabled when not specified in component
+    set:
+      defaults.podDisruptionBudget.enabled: true
+      defaults.podDisruptionBudget.minAvailable: 1
+      components.agent.podDisruptionBudget.minAvailable: 3
+    asserts:
+      # Agent should inherit enabled: true from defaults and use component minAvailable
+      - hasDocuments:
+          count: 1
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: agent-pdb.yaml
+
+      # Other components should use defaults
+      - hasDocuments:
+          count: 1
+        template: aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: aggregator-pdb.yaml
+
+  - it: should work with enabled false and component overrides
+    set:
+      defaults.podDisruptionBudget.enabled: false
+      defaults.podDisruptionBudget.minAvailable: 1
+      components.agent.podDisruptionBudget.enabled: true
+      components.agent.podDisruptionBudget.maxUnavailable: 2
+      components.aggregator.podDisruptionBudget.enabled: false
+      components.aggregator.podDisruptionBudget.minAvailable: 3
+    asserts:
+      # Agent should be created (enabled: true explicitly set)
+      - hasDocuments:
+          count: 1
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.maxUnavailable
+          value: 2
+        template: agent-pdb.yaml
+      - isNull:
+          path: spec.minAvailable
+        template: agent-pdb.yaml
+
+      # Aggregator should not be created (enabled: false explicitly set)
+      - hasDocuments:
+          count: 0
+        template: aggregator-pdb.yaml
+
+      # Webhook should not be created (inherits defaults.enabled: false)
+      - hasDocuments:
+          count: 0
+        template: webhook-pdb.yaml

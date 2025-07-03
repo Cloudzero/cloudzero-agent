@@ -1,0 +1,35 @@
+suite: test pod disruption budget defaults
+templates:
+  - agent-pdb.yaml
+  - aggregator-pdb.yaml
+  - webhook-pdb.yaml
+tests:
+  - it: should use default minAvailable for all components when no overrides
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 1
+        template: agent-pdb.yaml
+      - isNull:
+          path: spec.maxUnavailable
+        template: agent-pdb.yaml
+
+  - it: should use custom defaults when defaults are overridden
+    set:
+      defaults.podDisruptionBudget.minAvailable: 3
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: agent-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: aggregator-pdb.yaml
+      - equal:
+          path: spec.minAvailable
+          value: 3
+        template: webhook-pdb.yaml

@@ -20,6 +20,7 @@ RUN go mod download \
     && apk add \
         binutils-gold \
         build-base \
+        git \
         make \
         npm \
         zig

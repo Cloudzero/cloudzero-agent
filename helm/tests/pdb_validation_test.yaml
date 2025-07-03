@@ -1,0 +1,31 @@
+suite: test pod disruption budget validation
+templates:
+  - webhook-pdb.yaml
+tests:
+  - it: should fail when both minAvailable and maxUnavailable are set
+    set:
+      components.webhookServer.podDisruptionBudget.minAvailable: 2
+      components.webhookServer.podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-webhook-server cannot have both minAvailable and maxUnavailable set."
+
+  - it: should fail when defaults has both values set
+    set:
+      defaults.podDisruptionBudget.minAvailable: 1
+      defaults.podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-webhook-server cannot have both minAvailable and maxUnavailable set."
+
+  - it: should succeed with only maxUnavailable set
+    set:
+      components.webhookServer.podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - isNull:
+          path: spec.minAvailable
+      - equal:
+          path: spec.maxUnavailable
+          value: 1

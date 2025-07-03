@@ -756,14 +756,10 @@ data:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.3
-        podDisruptionBudget:
-          maxUnavailable: null
-          minAvailable: null
+        podDisruptionBudget: null
       aggregator:
         annotations: {}
-        podDisruptionBudget:
-          maxUnavailable: null
-          minAvailable: null
+        podDisruptionBudget: null
         replicas: 3
         tolerations: []
       kubectl:
@@ -779,9 +775,7 @@ data:
           repository: quay.io/prometheus-operator/prometheus-config-reloader
           tag: v0.83.0
       webhookServer:
-        podDisruptionBudget:
-          maxUnavailable: null
-          minAvailable: null
+        podDisruptionBudget: null
         replicas: 3
     configmapReload:
       prometheus:
@@ -806,7 +800,7 @@ data:
       labels: {}
       nodeSelector: {}
       podDisruptionBudget:
-        maxUnavailable: null
+        enabled: true
         minAvailable: 1
       priorityClassName: null
       tolerations: []
