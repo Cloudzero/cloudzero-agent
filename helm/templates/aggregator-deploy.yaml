@@ -146,18 +146,6 @@ spec:
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
-        - name: cloudzero-agent-storage-volume
-        {{- if .Values.server.persistentVolume.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ if .Values.server.persistentVolume.existingClaim }}{{ .Values.server.persistentVolume.existingClaim }}{{- else }}{{ template "cloudzero-agent.server.fullname" . }}{{- end }}
-        {{- else }}
-          emptyDir:
-          {{- if .Values.server.emptyDir.sizeLimit }}
-            sizeLimit: {{ .Values.server.emptyDir.sizeLimit }}
-          {{- else }}
-            {}
-          {{- end }}
-        {{- end }}
         - name: aggregator-config-volume
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
