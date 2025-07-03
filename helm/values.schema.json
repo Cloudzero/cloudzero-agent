@@ -2844,53 +2844,6 @@
       },
       "type": "object"
     },
-    "io.k8s.api.policy.v1.PodDisruptionBudgetStatus": {
-      "properties": {
-        "conditions": {
-          "items": {
-            "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Condition"
-          },
-          "type": "array",
-          "x-kubernetes-list-map-keys": ["type"],
-          "x-kubernetes-list-type": "map",
-          "x-kubernetes-patch-merge-key": "type",
-          "x-kubernetes-patch-strategy": "merge"
-        },
-        "currentHealthy": {
-          "format": "int32",
-          "type": "integer"
-        },
-        "desiredHealthy": {
-          "format": "int32",
-          "type": "integer"
-        },
-        "disruptedPods": {
-          "additionalProperties": {
-            "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
-          },
-          "type": "object"
-        },
-        "disruptionsAllowed": {
-          "format": "int32",
-          "type": "integer"
-        },
-        "expectedPods": {
-          "format": "int32",
-          "type": "integer"
-        },
-        "observedGeneration": {
-          "format": "int64",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "disruptionsAllowed",
-        "currentHealthy",
-        "desiredHealthy",
-        "expectedPods"
-      ],
-      "type": "object"
-    },
     "io.k8s.apimachinery.pkg.api.resource.Quantity": {
       "oneOf": [
         {
@@ -2900,31 +2853,6 @@
           "type": "number"
         }
       ]
-    },
-    "io.k8s.apimachinery.pkg.apis.meta.v1.Condition": {
-      "properties": {
-        "lastTransitionTime": {
-          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
-        },
-        "message": {
-          "type": "string"
-        },
-        "observedGeneration": {
-          "format": "int64",
-          "type": "integer"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        }
-      },
-      "required": ["type", "status", "lastTransitionTime", "reason", "message"],
-      "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1": {
       "type": "object"
@@ -3164,7 +3092,19 @@
               "$ref": "#/$defs/com.cloudzero.agent.duration"
             },
             "emptyDir": {
-              "$ref": "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource"
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "medium": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource/properties/medium"
+                },
+                "sizeLimit": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource/properties/sizeLimit"
+                }
+              },
+              "type": "object"
             },
             "maxRecords": {
               "type": "integer"
@@ -3278,7 +3218,14 @@
               "$ref": "#/$defs/com.cloudzero.agent.image"
             },
             "podDisruptionBudget": {
-              "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "replicas": {
               "type": "integer"
@@ -3296,7 +3243,14 @@
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
             },
             "podDisruptionBudget": {
-              "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "replicas": {
               "additionalProperties": false,
@@ -3339,7 +3293,14 @@
           "additionalProperties": false,
           "properties": {
             "podDisruptionBudget": {
-              "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "replicas": {
               "additionalProperties": false,
@@ -3409,7 +3370,7 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
         },
         "podDisruptionBudget": {
-          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
         },
         "priorityClassName": {
           "type": ["string", "null"]

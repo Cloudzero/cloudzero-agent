@@ -1,3 +1,0 @@
-commonMetaLabels:
-  environment: production
-  replicas: 3

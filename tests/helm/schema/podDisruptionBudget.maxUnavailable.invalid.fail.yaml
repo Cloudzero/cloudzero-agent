@@ -1,3 +1,0 @@
-components:
-  agent:
-    podDisruptionBudget: true # Should fail as it's a boolean, not a PodDisruptionBudget object

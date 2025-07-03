@@ -212,7 +212,7 @@ properties:
       podDisruptionBudget:
         description: |
           Pod Disruption Budget to be added to all resources.
-        $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+        $ref: "#/definitions/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
       priorityClassName:
         description: |
           Priority class name to be used for all deployments and jobs.
@@ -244,7 +244,9 @@ properties:
 
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
-            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+            oneOf:
+              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - type: "null"
           replicas:
             description: |
               Number of replicas to deploy.
@@ -276,7 +278,9 @@ properties:
 
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
-            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+            oneOf:
+              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - type: "null"
           replicas:
             description: |
               Number of replicas to deploy.
@@ -339,7 +343,9 @@ properties:
 
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
-            $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudget"
+            oneOf:
+              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - type: "null"
           replicas:
             description: |
               Number of replicas to deploy.
@@ -450,7 +456,21 @@ properties:
                 type: integer
           # emptyDir volume configuration
           emptyDir:
-            $ref: "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource"
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                type: boolean
+                description: |
+                  Whether to enable the emptyDir volume for the aggregator.
+              medium:
+                $ref: "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource/properties/medium"
+                description: |
+                  Storage medium for the emptyDir volume.
+              sizeLimit:
+                $ref: "#/$defs/io.k8s.api.core.v1.EmptyDirVolumeSource/properties/sizeLimit"
+                description: |
+                  Size limit for the emptyDir volume.
       collector:
         type: object
         additionalProperties: false

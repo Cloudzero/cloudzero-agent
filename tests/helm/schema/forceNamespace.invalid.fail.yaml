@@ -1,2 +1,0 @@
-# Test for invalid forceNamespace (should fail)
-forceNamespace: [] # Should be string or null, not array

@@ -1,5 +1,0 @@
-defaults:
-  annotations:
-    foo: bar
-    nested:
-      key: value

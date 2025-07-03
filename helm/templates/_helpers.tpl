@@ -785,8 +785,28 @@ Generate a pod disruption budget
 */}}
 {{- define "cloudzero-agent.generatePodDisruptionBudget" -}}
 {{- $replicas := int (.replicas | default .component.replicas | default 99999) -}}
-{{- $pdb := merge (deepCopy .component.podDisruptionBudget) .root.Values.defaults.podDisruptionBudget -}}
-{{- if ($pdb.minAvailable | default $pdb.maxUnavailable) }}
+{{- $defaults := .root.Values.defaults.podDisruptionBudget | default (dict) -}}
+{{- $component := .component.podDisruptionBudget | default (dict) -}}
+
+{{/* Determine if PDB is enabled - check component first, then defaults */}}
+{{- $enabled := $defaults.enabled -}}
+{{- if hasKey $component "enabled" -}}
+  {{- $enabled = $component.enabled -}}
+{{- end -}}
+
+{{/* If component has ANY PDB setting, use entire component PDB; otherwise use defaults */}}
+{{- $pdb := $defaults -}}
+{{- if or (hasKey $component "minAvailable") (hasKey $component "maxUnavailable") -}}
+  {{- $pdb = $component -}}
+{{- end -}}
+
+{{/* Validate PDB configuration regardless of enabled state */}}
+{{- if and $pdb.minAvailable $pdb.maxUnavailable }}
+{{- fail (printf "Pod disruption budget for %s cannot have both minAvailable and maxUnavailable set." .name) -}}
+{{- end }}
+
+{{/* Only create PDB if enabled and has some configuration */}}
+{{- if and $enabled (or $pdb.minAvailable $pdb.maxUnavailable .root.Values.defaults.podDisruptionBudget) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
