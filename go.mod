@@ -75,7 +75,7 @@ require (
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/ccoveille/go-safecast v1.6.1
-	github.com/docker/docker v28.3.0+incompatible
+	github.com/docker/docker v28.3.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.2
