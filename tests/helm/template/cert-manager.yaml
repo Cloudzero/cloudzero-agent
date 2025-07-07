@@ -2312,9 +2312,6 @@ spec:
         - name: cloudzero-api-key
           secret:
             secretName: cz-agent-api-key
-        - name: cloudzero-agent-storage-volume
-          emptyDir:
-            sizeLimit: 8Gi
         - name: aggregator-config-volume
           configMap:
             name: cz-agent-aggregator
