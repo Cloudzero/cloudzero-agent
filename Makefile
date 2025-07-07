@@ -7,19 +7,26 @@
 # tools we install via `make install-tools` there is no need to allow overriding
 # the path to the executable.
 GO          ?= go
-GOJQ        ?= gojq
 AWK         ?= awk
 CC          ?= $(shell $(GO) env CC)
 CXX         ?= $(shell $(GO) env CXX)
 CURL        ?= curl
 DOCKER      ?= docker
 GREP        ?= grep
-HELM        ?= helm
-KUBECONFORM ?= kubeconform
 NPM         ?= npm
 PROTOC      ?= protoc
 RM          ?= rm
 XARGS       ?= xargs
+
+# Dependencies we install via `make install-tools`
+GOFUMPT       ?= $(abspath .tools/bin/gofumpt)
+GOJQ          ?= $(abspath .tools/bin/gojq)
+GOLANGCI_LINT ?= $(abspath .tools/bin/golangci-lint)
+HELM          ?= $(abspath .tools/bin/helm)
+KUBECONFORM   ?= $(abspath .tools/bin/kubeconform)
+MOCKGEN       ?= $(abspath .tools/bin/mockgen)
+PRETTIER      ?= $(abspath .tools/node_modules/.bin/prettier)
+STATICCHECK   ?= $(abspath .tools/bin/staticcheck)
 
 # Build configuration
 GO_MODULE      ?= $(shell $(GO) list -m)
@@ -139,19 +146,20 @@ GOFUMPT_TARGET        ?= .
 .PHONY: format-go
 format: format-go
 format-go:
-	@gofumpt -w $(GOFUMPT_TARGET)
-	@$(GO) mod tidy
+	$(GOFUMPT) -w $(GOFUMPT_TARGET)
+	$(GO) mod tidy
 
 PRETTIER_TARGET       ?= .
 
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	@prettier --write $(PRETTIER_TARGET)
+	which $(PRETTIER)
+	$(PRETTIER) --write $(PRETTIER_TARGET)
 
 .PHONY: lint-go
 lint-go:
-	@golangci-lint run ./...
+	$(GOLANGCI_LINT) run ./...
 
 .PHONY: lint
 lint: ## Run the linter
@@ -159,7 +167,7 @@ lint: lint-go
 
 .PHONY: analyze-go
 analyze-go:
-	@staticcheck -checks all ./...
+	$(STATICCHECK) -checks all ./...
 
 .PHONY: analyze
 analyze: ## Run static analysis
@@ -229,7 +237,7 @@ GO_BINARIES = \
 # Generate embedded defaults for helmless
 app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
 	@mkdir -p app/functions/helmless
-	$(HELM) show values ./helm | prettier --stdin-filepath $@ > $@
+	$(HELM) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
 
 bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
@@ -322,7 +330,6 @@ $(eval $(call generate-container-build-target,package-build-debug,load,true))
 PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
 HELM_TARGET_NAMESPACE     ?= cz-agent
 HELM_TARGET               ?= cz-agent
-HELM                      ?= helm
 KUBE_VERSION              ?= 1.33.0
 
 HELM_ARGS = \
@@ -441,7 +448,7 @@ helm-test-subchart: helm/values.schema.json
 	@for dir in tests/helm/subchart/*/; do \
 		if [ -d "$$dir/chart" ]; then \
 			echo "$(INFO_COLOR)Building dependencies for $$(basename $$dir)...$(NO_COLOR)"; \
-			cd "$$dir/chart" && $(HELM) dependency build && cd - > /dev/null; \
+			$(HELM) dependency build "$$dir/chart"; \
 		fi; \
 	done
 	@for dir in tests/helm/subchart/*/; do \
@@ -449,7 +456,7 @@ helm-test-subchart: helm/values.schema.json
 			for file in $$dir*.yaml; do \
 				if [ -f "$$file" ]; then \
 					expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-					output=$$(cd "$$dir/chart" && $(HELM) template parent-test . --values ../$$(basename $$file) 2>&1); \
+					output=$$($(HELM) template parent-test "$$dir/chart" --values "$$file" 2>&1); \
 					if [ $$? -eq 0 ]; then \
 						result="pass"; \
 					else \
@@ -494,7 +501,7 @@ lint: helm-lint
 helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/merge-json-schema.jq
 	$(GOJQ) --yaml-input . helm/values.schema.yaml | \
 		$(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq | \
-		prettier --stdin-filepath "$@" > "$@"
+		$(PRETTIER) --stdin-filepath "$@" > "$@"
 
 generate: helm/values.schema.json
 
@@ -503,7 +510,7 @@ generate: helm/values.schema.json
 K8S_SCHEMA_UPSTREAM ?= https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/_definitions.json
 
 helm/schema/k8s.json:
-	$(CURL) -sSL "$(K8S_SCHEMA_UPSTREAM)" | prettier --stdin-filepath "$@" > "$@"
+	$(CURL) -sSL "$(K8S_SCHEMA_UPSTREAM)" | $(PRETTIER) --stdin-filepath "$@" > "$@"
 
 generate: helm/schema/k8s.json
 
@@ -577,7 +584,7 @@ endef
 
 # Pattern rule for generating mock files
 %_mock.go: $$(call mock-deps,$$@)
-	@mockgen \
+	$(MOCKGEN) \
 		-destination=$@ \
 		-package=mocks \
 		$(GO_MODULE)/$(patsubst %/,%,$(patsubst %/mocks/,%/,$(dir $@))) \

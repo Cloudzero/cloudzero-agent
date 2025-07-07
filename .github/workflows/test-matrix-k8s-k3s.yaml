@@ -75,6 +75,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
       - uses: azure/setup-kubectl@v4
         with:
           version: ${{ matrix.kver.k8s }}
@@ -98,20 +102,15 @@ jobs:
             export PATH="$HOME/.krew/bin:$PATH"
             kubectl krew install stern
 
-      - name: Install Helm
+      - name: Install Dependencies
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 5
           max_attempts: 4
           command: |
-            # Helm
-            curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-            sudo apt-get install apt-transport-https --yes
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-            sudo apt-get update
-            sudo apt-get install helm
+            make install-tools
 
-      - name: Install Helm
+      - name: Install yq
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 5
@@ -161,8 +160,8 @@ jobs:
       - name: Install TestKube
         run: |
           echo "Applying TestKube Helm Chart"
-          helm repo add kubeshop https://kubeshop.github.io/helm-charts
-          helm install testkube kubeshop/testkube \
+          .tools/bin/helm repo add kubeshop https://kubeshop.github.io/helm-charts
+          .tools/bin/helm install testkube kubeshop/testkube \
             --version=v2.1.137 \
             -n testkube --create-namespace
           echo "Wait for testkube deployments"
@@ -192,8 +191,8 @@ jobs:
       - name: Install CZ Agent
         run: |
           echo "Applying CloudZero Agent Helm Chart"
-          helm repo add prom https://prometheus-community.github.io/helm-charts
-          helm dependency build ./helm
+          .tools/bin/helm repo add prom https://prometheus-community.github.io/helm-charts
+          .tools/bin/helm dependency build ./helm
           export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
           echo $CLUSTERNAME
           make \
