@@ -75,7 +75,7 @@ require (
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/ccoveille/go-safecast v1.6.1
-	github.com/docker/docker v28.3.0+incompatible
+	github.com/docker/docker v28.3.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.2
@@ -88,7 +88,7 @@ require (
 	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/prometheus v0.304.2
-	github.com/shirou/gopsutil/v4 v4.25.5
+	github.com/shirou/gopsutil/v4 v4.25.6
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	github.com/yannh/kubeconform v0.7.0
