@@ -229,7 +229,7 @@ GO_BINARIES = \
 # Generate embedded defaults for helmless
 app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/templates/*.yaml)
 	@mkdir -p app/functions/helmless
-	$(HELM) show values ./helm > $@
+	$(HELM) show values ./helm | prettier --stdin-filepath $@ > $@
 
 MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
 
@@ -487,7 +487,9 @@ generate: helm-generate-tests
 lint: helm-lint
 
 helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/merge-json-schema.jq
-	$(GOJQ) --yaml-input . helm/values.schema.yaml | $(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq > helm/values.schema.json
+	$(GOJQ) --yaml-input . helm/values.schema.yaml | \
+		$(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq | \
+		prettier --stdin-filepath "$@" > "$@"
 
 generate: helm/values.schema.json
 
