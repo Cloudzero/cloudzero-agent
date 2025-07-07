@@ -19,6 +19,7 @@ RM          ?= rm
 XARGS       ?= xargs
 
 # Dependencies we install via `make install-tools`
+DYFF          ?= $(abspath .tools/bin/dyff)
 GOFUMPT       ?= $(abspath .tools/bin/gofumpt)
 GOJQ          ?= $(abspath .tools/bin/gojq)
 GOLANGCI_LINT ?= $(abspath .tools/bin/golangci-lint)
@@ -488,7 +489,7 @@ helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
 
 .PHONY: helm-test
 helm-test: ## Run all Helm validation tests
-helm-test: helm-test-schema helm-test-subchart helm-test-unittest
+helm-test: helm-test-schema helm-test-subchart helm-test-unittest helm-test-template
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
 	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
@@ -505,6 +506,9 @@ helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/me
 
 generate: helm/values.schema.json
 
+.PHONY: helm-test-template-diff
+helm-test-template-diff: $(patsubst %-overrides.yml,%.yaml-semdiff,$(wildcard tests/helm/template/*-overrides.yml))
+
 # The JSON Schema for Kubernetes. For details, see:
 # https://github.com/yannh/kubernetes-json-schema/
 K8S_SCHEMA_UPSTREAM ?= https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/_definitions.json
@@ -513,6 +517,44 @@ helm/schema/k8s.json:
 	$(CURL) -sSL "$(K8S_SCHEMA_UPSTREAM)" | $(PRETTIER) --stdin-filepath "$@" > "$@"
 
 generate: helm/schema/k8s.json
+
+# ----------- JSON SEMANTIC DIFF ------------
+#
+# Compare JSON/YAML files with the version in git using dyff. This is a semantic
+# diff tool, so it won't show any differences for things like formatting
+# changes, reordering items, etc., making it invaluable when refactoring.
+#
+# Usage:
+#   make path/to/file.json-semdiff
+#   make path/to/file.yaml-semdiff
+#   make path/to/file.json-semdiff SEMDIFF_REVISION=v1.2.3
+#
+# Variables:
+#   DYFF
+#   SEMDIFF_REVISION=<git-ref>       - Git revision to compare with (default: HEAD)
+
+SEMDIFF_REVISION ?= HEAD
+
+# Shared implementation for semantic diff using dyff
+define semdiff_impl
+@temp_file=$$(mktemp); \
+git show $(SEMDIFF_REVISION):"$(patsubst %-semdiff,%,$@)" > "$$temp_file" 2>/dev/null || { echo "File $(patsubst %-semdiff,%,$@) not found in $(SEMDIFF_REVISION)"; rm -f "$$temp_file"; exit 1; }; \
+$(DYFF) between --set-exit-code "$$temp_file" "$(patsubst %-semdiff,%,$@)"; \
+exit_code=$$?; \
+rm -f "$$temp_file"; \
+exit $$exit_code
+endef
+
+.PHONY: %.json-semdiff %.yaml-semdiff %.yml-semdiff
+
+%.json-semdiff: %.json
+	$(semdiff_impl)
+
+%.yaml-semdiff: %.yaml
+	$(semdiff_impl)
+
+%.yml-semdiff: %.yml
+	$(semdiff_impl)
 
 # ----------- CODE GENERATION ------------
 

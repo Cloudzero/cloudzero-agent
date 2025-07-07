@@ -6,6 +6,7 @@
 package tools
 
 import (
+	_ "github.com/homeport/dyff/cmd/dyff"
 	_ "github.com/itchyny/gojq/cmd/gojq"
 	_ "github.com/yannh/kubeconform/cmd/kubeconform"
 	_ "go.uber.org/mock/mockgen"
