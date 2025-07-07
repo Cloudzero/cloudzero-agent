@@ -491,8 +491,12 @@ helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/me
 
 generate: helm/values.schema.json
 
+# The JSON Schema for Kubernetes. For details, see:
+# https://github.com/yannh/kubernetes-json-schema/
+K8S_SCHEMA_UPSTREAM ?= https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/_definitions.json
+
 helm/schema/k8s.json:
-	@$(CURL) -sSL -o "$@" "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/_definitions.json"
+	@$(CURL) -sSL -o "$@" "$(K8S_SCHEMA_UPSTREAM)"
 
 generate: helm/schema/k8s.json
 

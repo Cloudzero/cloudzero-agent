@@ -93,6 +93,21 @@ $defs:
     type: string
     pattern: '^[0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$'
 
+  com.cloudzero.agent.PodDisruptionBudgetSpec:
+    description: |
+      A Pod Disruption Budget.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether the Pod Disruption Budget should be created.
+        type: boolean
+      minAvailable:
+        $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/minAvailable"
+      maxUnavailable:
+        $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/maxUnavailable"
+
 type: object
 additionalProperties: false
 required:
@@ -212,7 +227,9 @@ properties:
       podDisruptionBudget:
         description: |
           Pod Disruption Budget to be added to all resources.
-        $ref: "#/definitions/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+        oneOf:
+          - $ref: "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
+          - type: "null"
       priorityClassName:
         description: |
           Priority class name to be used for all deployments and jobs.
@@ -245,7 +262,7 @@ properties:
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
             oneOf:
-              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - $ref: "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
               - type: "null"
           replicas:
             description: |
@@ -279,7 +296,7 @@ properties:
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
             oneOf:
-              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - $ref: "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
               - type: "null"
           replicas:
             description: |
@@ -344,7 +361,7 @@ properties:
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
             oneOf:
-              - $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+              - $ref: "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
               - type: "null"
           replicas:
             description: |
