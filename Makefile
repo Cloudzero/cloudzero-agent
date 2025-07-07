@@ -486,9 +486,8 @@ helm-test: helm-test-schema helm-test-subchart helm-test-unittest
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
 	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
-helm-generate-tests: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
-
-generate: helm-generate-tests
+helm-test-template: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
+generate: helm-test-template
 
 lint: helm-lint
 
