@@ -227,9 +227,11 @@ GO_BINARIES = \
 	$(NULL)
 
 # Generate embedded defaults for helmless
-app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/templates/*.yaml)
+app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
 	@mkdir -p app/functions/helmless
 	$(HELM) show values ./helm | prettier --stdin-filepath $@ > $@
+
+bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
 MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
 
@@ -374,7 +376,7 @@ $(filter %pass,$(SCHEMA_TEST_TARGETS)): %: %-template %-kubeconform
 $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 
 # Pattern rule for Helm template validation
-tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
+tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
 	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
@@ -396,7 +398,7 @@ tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 	fi
 
 # Pattern rule for kubeconform validation (only for .pass tests)
-tests/helm/schema/%-kubeconform: helm/charts/.stamp helm/values.schema.json
+tests/helm/schema/%-kubeconform: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
 		-kubernetes-version 1.33.0 \
@@ -468,6 +470,9 @@ helm-test-subchart: helm/values.schema.json
 		fi; \
 	done
 
+helm/tests/%.yaml-unittest: helm/tests/%.yaml
+	@$(HELM) unittest ./helm --values helm/tests/values.yaml -f 'tests/$*.yaml'
+
 .PHONY: helm-test-unittest
 helm-test-unittest: ## Run Helm unittest tests
 helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
@@ -477,10 +482,10 @@ helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
 helm-test: ## Run all Helm validation tests
 helm-test: helm-test-schema helm-test-subchart helm-test-unittest
 
-tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json FORCE
-	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
+tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
+	$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
-helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
+helm-generate-tests: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
 
 generate: helm-generate-tests
 
@@ -498,7 +503,7 @@ generate: helm/values.schema.json
 K8S_SCHEMA_UPSTREAM ?= https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/_definitions.json
 
 helm/schema/k8s.json:
-	@$(CURL) -sSL -o "$@" "$(K8S_SCHEMA_UPSTREAM)"
+	$(CURL) -sSL "$(K8S_SCHEMA_UPSTREAM)" | prettier --stdin-filepath "$@" > "$@"
 
 generate: helm/schema/k8s.json
 
@@ -506,16 +511,75 @@ generate: helm/schema/k8s.json
 
 .PHONY: generate
 generate: ## (Re)generate generated code
-	@$(GO) generate ./...
+
+# ----------- PROTOBUF GENERATION ------------
+
+# Protobuf files to generate
+PROTOBUF_FILES := \
+	app/types/status/cluster_status.pb.go \
+	app/types/clusterconfig/clusterconfig.pb.go \
+	$(NULL)
 
 # We don't yet have a good way to install a specific version of protoc /
 # protoc-gen-go, so for now we'll keep this out of the automatic regeneration
 # path. If you want to regenerate it using the system protoc, manually remove
-# app/types/status/cluster_status.pb.go, then run `make generate`.
-generate: app/types/status/cluster_status.pb.go
-app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/status/cluster_status.proto
+# the .pb.go files, then run `make generate`.
+.PHONY: generate-protobuf
+generate-protobuf: $(PROTOBUF_FILES)
 
-generate: app/types/clusterconfig/clusterconfig.pb.go
-app/types/clusterconfig/clusterconfig.pb.go: app/types/clusterconfig/clusterconfig.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/clusterconfig/clusterconfig.proto
+generate: generate-protobuf
+
+# Pattern rule for generating protobuf files
+%.pb.go: %.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) $<
+
+.PHONY: protobuf-clean
+protobuf-clean:
+	$(RM) $(PROTOBUF_FILES)
+
+maintainer-clean: protobuf-clean
+
+# ----------- MOCK GENERATION ------------
+
+# Mock files to generate
+MOCK_FILES := \
+	app/types/mocks/runnable_mock.go \
+	app/types/mocks/resource_store_mock.go \
+	app/types/mocks/store_mock.go \
+	app/utils/scout/types/mocks/scout_mock.go \
+	app/types/mocks/storage_mock.go \
+	$(NULL)
+
+.PHONY: generate-mocks
+generate-mocks: $(MOCK_FILES)
+
+generate: generate-mocks
+
+.PHONY: mocks-clean
+mocks-clean:
+	$(RM) $(MOCK_FILES)
+
+maintainer-clean: mocks-clean
+
+# Convert snake_case to PascalCase using awk
+# $(1) = snake_case string
+define snake-to-pascal
+$(shell echo "$(1)" | $(AWK) -F'_' '{for(i=1;i<=NF;i++) $$i=toupper(substr($$i,1,1)) substr($$i,2)} {print}' OFS='')
+endef
+
+# Enable secondary expansion for automatic dependency calculation
+.SECONDEXPANSION:
+
+# Helper to calculate mock dependencies
+define mock-deps
+$(subst /mocks/,/,$(subst _mock.go,.go,$(1))) $(wildcard $(1:.go=.diff))
+endef
+
+# Pattern rule for generating mock files
+%_mock.go: $$(call mock-deps,$$@)
+	@mockgen \
+		-destination=$@ \
+		-package=mocks \
+		$(GO_MODULE)/$(patsubst %/,%,$(patsubst %/mocks/,%/,$(dir $@))) \
+		$(call snake-to-pascal,$(subst _mock,,$(basename $(notdir $@))))
+	$(if $(filter %.diff,$^),@echo "Applying patch $(filter %.diff,$^) to $@"; patch -si "$(filter %.diff,$^)" "$@")
