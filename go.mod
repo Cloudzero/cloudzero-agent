@@ -96,7 +96,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.30.0
-	helm.sh/helm/v3 v3.18.3
+	helm.sh/helm/v3 v3.18.4
 	sigs.k8s.io/gateway-api v1.3.0
 )
 
@@ -262,11 +262,11 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250313205543-e70fdf4c4cb4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
 	google.golang.org/grpc v1.72.0 // indirect
-	k8s.io/apiextensions-apiserver v0.33.1 // indirect
-	k8s.io/apiserver v0.33.1 // indirect
-	k8s.io/cli-runtime v0.33.1 // indirect
-	k8s.io/component-base v0.33.1 // indirect
-	k8s.io/kubectl v0.33.1 // indirect
+	k8s.io/apiextensions-apiserver v0.33.2 // indirect
+	k8s.io/apiserver v0.33.2 // indirect
+	k8s.io/cli-runtime v0.33.2 // indirect
+	k8s.io/component-base v0.33.2 // indirect
+	k8s.io/kubectl v0.33.2 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.19.0 // indirect
