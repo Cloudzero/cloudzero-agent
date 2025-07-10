@@ -24,8 +24,10 @@ jobs:
           persist-credentials: true
           fetch-depth: 0 # fetch the whole repo history
 
-      - name: Verify release notes exist
-        run: test -f "helm/docs/releases/${{ github.event.inputs.version }}.md"
+      - name: Verify changelog exists
+        run: |
+          MINOR_VERSION=$(echo "${{ github.event.inputs.version }}" | cut -d. -f1,2)
+          test -f "docs/releases/CHANGELOG-${MINOR_VERSION}.md"
 
       - name: Setup Git
         run: |
@@ -63,11 +65,32 @@ jobs:
       - name: Push changes to main
         run: git push --atomic origin develop main "v${{ github.event.inputs.version }}"
 
+      - name: Extract release notes from changelog
+        run: |
+          MINOR_VERSION=$(echo "${{ github.event.inputs.version }}" | cut -d. -f1,2)
+          CHANGELOG_FILE="docs/releases/CHANGELOG-${MINOR_VERSION}.md"
+
+          # Extract version-specific content from changelog
+          awk '
+          /^## .*'"${{ github.event.inputs.version }}"'/ { found=1; next }
+          /^## / && found { exit }
+          found { print }
+          ' "$CHANGELOG_FILE" > release_notes.md
+
+          # If no version-specific section found, use the latest changes
+          if [ ! -s release_notes.md ]; then
+            echo "No specific section found for ${{ github.event.inputs.version }}, using latest changes from changelog"
+            awk '
+            /^## / { if (first_section) exit; first_section=1; next }
+            first_section { print }
+            ' "$CHANGELOG_FILE" > release_notes.md
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ github.event.inputs.version }}
-          body_path: helm/docs/releases/${{ github.event.inputs.version }}.md
+          body_path: release_notes.md
           prerelease: ${{ contains(github.event.inputs.version, '-beta-') || contains(github.event.inputs.version, '-rc-') }}
           draft: true

@@ -513,3 +513,16 @@ app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
 generate: app/types/clusterconfig/clusterconfig.pb.go
 app/types/clusterconfig/clusterconfig.pb.go: app/types/clusterconfig/clusterconfig.proto
 	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/clusterconfig/clusterconfig.proto
+
+# ----------- CHANGELOG GENERATION ------------
+
+.PHONY: generate-changelog
+generate-changelog: ## Generate or update changelog for specified version (TAG_VERSION=1.2.3 make generate-changelog)
+	@if [ -z "$(TAG_VERSION)" ]; then \
+		echo "$(ERROR_COLOR)Error: TAG_VERSION is required. Usage: TAG_VERSION=1.2.3 make generate-changelog$(NO_COLOR)"; \
+		exit 1; \
+	fi
+	@MINOR_VERSION=$$(echo "$(TAG_VERSION)" | cut -d. -f1,2); \
+	CHANGELOG_FILE="docs/releases/CHANGELOG-$$MINOR_VERSION.md"; \
+	echo "$(INFO_COLOR)Generating changelog for version $(TAG_VERSION) in $$CHANGELOG_FILE$(NO_COLOR)"; \
+	claude -p --dangerously-skip-permissions "CRITICAL: Update CloudZero Agent changelog for version $(TAG_VERSION). Analyze BOTH git commits AND code structure to understand architectural changes:\n\nCODE ANALYSIS REQUIRED:\n1. EXAMINE app/ directory structure to understand applications vs packages\n2. IDENTIFY if changes are new standalone apps or shared library enhancements\n3. UNDERSTAND how scout package integrates with existing applications (collector, shipper, webhook)\n4. RECOGNIZE scout as a Go package/library, NOT a standalone application\n\nCONTENT CLASSIFICATION:\n1. **Configuration Features** (scout package capabilities) → Add under '## Performance and Efficiency Improvements' as configuration automation\n2. **Shared Package Enhancements** → Focus on user benefits, not internal implementation\n3. **Bug Fixes** (certificate handling, validation) → Add under '### Major Bug Fixes Across X.Y.Z Series' as '#### $(TAG_VERSION) Fixes'\n\nSPECIFIC FOCUS for $(TAG_VERSION):\n- Scout is a SHARED PACKAGE used across all applications (not a standalone app)\n- Configuration automation is the USER-FACING FEATURE enabled by scout\n- Auto-detection capabilities integrated into collector, shipper, webhook apps\n- Zero-configuration deployment through enhanced app capabilities\n- Certificate/validation improvements are bug fixes\n\nKEY MESSAGING for Configuration Automation:\n- Scout package enables automatic cloud environment detection\n- All CloudZero Agent applications now support auto-configuration\n- Eliminates manual cloudAccountId and region setup across the platform\n- Multi-cloud support (AWS, Google Cloud) built into the agent ecosystem\n\nFocus on user benefits and deployment simplification, not internal package details. Reference CLAUDE.md for architectural understanding. Only modify $$CHANGELOG_FILE."
