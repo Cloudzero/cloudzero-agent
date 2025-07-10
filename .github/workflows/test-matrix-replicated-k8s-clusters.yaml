@@ -104,6 +104,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install Dependencies
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            make install-tools
+
       - name: Install Krew and Plugins
         uses: nick-fields/retry@v3
         with:
@@ -268,8 +280,8 @@ jobs:
           else
             kubectl create namespace testkube
           fi
-          helm repo add kubeshop https://kubeshop.github.io/helm-charts
-          helm install testkube kubeshop/testkube \
+          .tools/bin/helm repo add kubeshop https://kubeshop.github.io/helm-charts
+          .tools/bin/helm install testkube kubeshop/testkube \
             --version=v2.1.137 \
             -n testkube \
             --values ${{ runner.temp }}/testkube-values.yaml
@@ -303,8 +315,8 @@ jobs:
           timeout_minutes: 5
           max_attempts: 4
           command: |
-            helm repo add prom https://prometheus-community.github.io/helm-charts
-            helm dependency build ./helm
+            .tools/bin/helm repo add prom https://prometheus-community.github.io/helm-charts
+            .tools/bin/helm dependency build ./helm
 
       # Install CloudZero Agent into Cluster
       - name: Install CloudZero Agent
@@ -329,7 +341,7 @@ jobs:
                 repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
                 tag: ${{ inputs.image-tag }}
           EOF
-          helm install cz-agent ./helm \
+          .tools/bin/helm install cz-agent ./helm \
             -n cz-agent \
             --values ${{ runner.temp }}/cz-agent-values.yaml
           echo "Wait for CloudZero Agent deployments"

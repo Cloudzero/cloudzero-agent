@@ -1,5 +1,20 @@
 {
   "$defs": {
+    "com.cloudzero.agent.PodDisruptionBudgetSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "maxUnavailable": {
+          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/maxUnavailable"
+        },
+        "minAvailable": {
+          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/minAvailable"
+        }
+      },
+      "type": "object"
+    },
     "com.cloudzero.agent.dns": {
       "additionalProperties": false,
       "properties": {
@@ -72,6 +87,7 @@
       "type": "array"
     },
     "io.k8s.api.admissionregistration.v1.MatchCondition": {
+      "additionalProperties": false,
       "properties": {
         "expression": {
           "type": "string"
@@ -84,6 +100,7 @@
       "type": "object"
     },
     "io.k8s.api.admissionregistration.v1.RuleWithOperations": {
+      "additionalProperties": false,
       "properties": {
         "apiGroups": {
           "items": {
@@ -120,6 +137,7 @@
       "type": "object"
     },
     "io.k8s.api.admissionregistration.v1.ServiceReference": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -139,6 +157,7 @@
       "type": "object"
     },
     "io.k8s.api.admissionregistration.v1.ValidatingWebhook": {
+      "additionalProperties": false,
       "properties": {
         "admissionReviewVersions": {
           "items": {
@@ -199,6 +218,7 @@
       "type": "object"
     },
     "io.k8s.api.admissionregistration.v1.WebhookClientConfig": {
+      "additionalProperties": false,
       "properties": {
         "caBundle": {
           "format": "byte",
@@ -214,6 +234,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -233,6 +254,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Affinity": {
+      "additionalProperties": false,
       "properties": {
         "nodeAffinity": {
           "$ref": "#/$defs/io.k8s.api.core.v1.NodeAffinity"
@@ -247,6 +269,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.AppArmorProfile": {
+      "additionalProperties": false,
       "properties": {
         "localhostProfile": {
           "type": "string"
@@ -267,6 +290,7 @@
       ]
     },
     "io.k8s.api.core.v1.AzureDiskVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "cachingMode": {
           "type": "string"
@@ -291,6 +315,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.AzureFileVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "readOnly": {
           "type": "boolean"
@@ -306,6 +331,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.CSIVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "driver": {
           "type": "string"
@@ -330,6 +356,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Capabilities": {
+      "additionalProperties": false,
       "properties": {
         "add": {
           "items": {
@@ -349,6 +376,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.CephFSVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "monitors": {
           "items": {
@@ -377,6 +405,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.CinderVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -395,6 +424,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ClusterTrustBundleProjection": {
+      "additionalProperties": false,
       "properties": {
         "labelSelector": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
@@ -416,6 +446,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ConfigMap": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -454,6 +485,7 @@
       ]
     },
     "io.k8s.api.core.v1.ConfigMapEnvSource": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -465,6 +497,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ConfigMapKeySelector": {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"
@@ -481,6 +514,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.ConfigMapProjection": {
+      "additionalProperties": false,
       "properties": {
         "items": {
           "items": {
@@ -499,6 +533,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ConfigMapVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "defaultMode": {
           "format": "int32",
@@ -521,6 +556,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Container": {
+      "additionalProperties": false,
       "properties": {
         "args": {
           "items": {
@@ -643,6 +679,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ContainerPort": {
+      "additionalProperties": false,
       "properties": {
         "containerPort": {
           "format": "int32",
@@ -666,6 +703,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ContainerResizePolicy": {
+      "additionalProperties": false,
       "properties": {
         "resourceName": {
           "type": "string"
@@ -678,6 +716,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.DownwardAPIProjection": {
+      "additionalProperties": false,
       "properties": {
         "items": {
           "items": {
@@ -690,6 +729,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.DownwardAPIVolumeFile": {
+      "additionalProperties": false,
       "properties": {
         "fieldRef": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ObjectFieldSelector"
@@ -709,6 +749,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.DownwardAPIVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "defaultMode": {
           "format": "int32",
@@ -725,6 +766,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EmptyDirVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "medium": {
           "type": "string"
@@ -736,6 +778,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EnvFromSource": {
+      "additionalProperties": false,
       "properties": {
         "configMapRef": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ConfigMapEnvSource"
@@ -750,6 +793,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EnvVar": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -765,6 +809,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EnvVarSource": {
+      "additionalProperties": false,
       "properties": {
         "configMapKeyRef": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ConfigMapKeySelector"
@@ -782,6 +827,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EphemeralContainer": {
+      "additionalProperties": false,
       "properties": {
         "args": {
           "items": {
@@ -907,6 +953,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.EphemeralVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "volumeClaimTemplate": {
           "$ref": "#/$defs/io.k8s.api.core.v1.PersistentVolumeClaimTemplate"
@@ -915,6 +962,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ExecAction": {
+      "additionalProperties": false,
       "properties": {
         "command": {
           "items": {
@@ -927,6 +975,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.FCVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -956,6 +1005,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.FlexVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "driver": {
           "type": "string"
@@ -980,6 +1030,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.FlockerVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "datasetName": {
           "type": "string"
@@ -991,6 +1042,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.GCEPersistentDiskVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -1010,6 +1062,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.GRPCAction": {
+      "additionalProperties": false,
       "properties": {
         "port": {
           "format": "int32",
@@ -1023,6 +1076,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.GitRepoVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "directory": {
           "type": "string"
@@ -1038,6 +1092,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.GlusterfsVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "endpoints": {
           "type": "string"
@@ -1053,6 +1108,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.HTTPGetAction": {
+      "additionalProperties": false,
       "properties": {
         "host": {
           "type": "string"
@@ -1078,6 +1134,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.HTTPHeader": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1090,6 +1147,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.HostAlias": {
+      "additionalProperties": false,
       "properties": {
         "hostnames": {
           "items": {
@@ -1106,6 +1164,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.HostPathVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "path": {
           "type": "string"
@@ -1118,6 +1177,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ISCSIVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "chapAuthDiscovery": {
           "type": "boolean"
@@ -1162,6 +1222,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ImageVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "pullPolicy": {
           "type": "string"
@@ -1173,6 +1234,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.KeyToPath": {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"
@@ -1189,6 +1251,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Lifecycle": {
+      "additionalProperties": false,
       "properties": {
         "postStart": {
           "$ref": "#/$defs/io.k8s.api.core.v1.LifecycleHandler"
@@ -1203,6 +1266,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.LifecycleHandler": {
+      "additionalProperties": false,
       "properties": {
         "exec": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ExecAction"
@@ -1220,6 +1284,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.LocalObjectReference": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1229,6 +1294,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.NFSVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "path": {
           "type": "string"
@@ -1244,6 +1310,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Node": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -1272,6 +1339,7 @@
       ]
     },
     "io.k8s.api.core.v1.NodeAffinity": {
+      "additionalProperties": false,
       "properties": {
         "preferredDuringSchedulingIgnoredDuringExecution": {
           "items": {
@@ -1287,6 +1355,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.NodeSelector": {
+      "additionalProperties": false,
       "properties": {
         "nodeSelectorTerms": {
           "items": {
@@ -1301,6 +1370,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.NodeSelectorRequirement": {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"
@@ -1320,6 +1390,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.NodeSelectorTerm": {
+      "additionalProperties": false,
       "properties": {
         "matchExpressions": {
           "items": {
@@ -1340,6 +1411,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.ObjectFieldSelector": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -1353,6 +1425,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.PersistentVolume": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -1381,6 +1454,7 @@
       ]
     },
     "io.k8s.api.core.v1.PersistentVolumeClaim": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -1409,6 +1483,7 @@
       ]
     },
     "io.k8s.api.core.v1.PersistentVolumeClaimSpec": {
+      "additionalProperties": false,
       "properties": {
         "accessModes": {
           "items": {
@@ -1445,6 +1520,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PersistentVolumeClaimTemplate": {
+      "additionalProperties": false,
       "properties": {
         "metadata": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
@@ -1457,6 +1533,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PersistentVolumeClaimVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "claimName": {
           "type": "string"
@@ -1469,6 +1546,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PhotonPersistentDiskVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -1481,6 +1559,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Pod": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -1509,6 +1588,7 @@
       ]
     },
     "io.k8s.api.core.v1.PodAffinity": {
+      "additionalProperties": false,
       "properties": {
         "preferredDuringSchedulingIgnoredDuringExecution": {
           "items": {
@@ -1528,6 +1608,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodAffinityTerm": {
+      "additionalProperties": false,
       "properties": {
         "labelSelector": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
@@ -1564,6 +1645,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodAntiAffinity": {
+      "additionalProperties": false,
       "properties": {
         "preferredDuringSchedulingIgnoredDuringExecution": {
           "items": {
@@ -1583,6 +1665,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodDNSConfig": {
+      "additionalProperties": false,
       "properties": {
         "nameservers": {
           "items": {
@@ -1609,6 +1692,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodDNSConfigOption": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1620,6 +1704,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodOS": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1629,6 +1714,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodReadinessGate": {
+      "additionalProperties": false,
       "properties": {
         "conditionType": {
           "type": "string"
@@ -1638,6 +1724,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodResourceClaim": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1653,6 +1740,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodSchedulingGate": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -1662,6 +1750,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodSecurityContext": {
+      "additionalProperties": false,
       "properties": {
         "appArmorProfile": {
           "$ref": "#/$defs/io.k8s.api.core.v1.AppArmorProfile"
@@ -1718,6 +1807,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PodSpec": {
+      "additionalProperties": false,
       "properties": {
         "activeDeadlineSeconds": {
           "format": "int64",
@@ -1925,6 +2015,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PortworxVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -1940,6 +2031,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.PreferredSchedulingTerm": {
+      "additionalProperties": false,
       "properties": {
         "preference": {
           "$ref": "#/$defs/io.k8s.api.core.v1.NodeSelectorTerm"
@@ -1953,6 +2045,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Probe": {
+      "additionalProperties": false,
       "properties": {
         "exec": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ExecAction"
@@ -1994,6 +2087,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ProjectedVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "defaultMode": {
           "format": "int32",
@@ -2010,6 +2104,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.QuobyteVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "group": {
           "type": "string"
@@ -2034,6 +2129,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.RBDVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -2068,6 +2164,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ResourceClaim": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -2080,6 +2177,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ResourceFieldSelector": {
+      "additionalProperties": false,
       "properties": {
         "containerName": {
           "type": "string"
@@ -2096,6 +2194,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.ResourceRequirements": {
+      "additionalProperties": false,
       "properties": {
         "claims": {
           "items": {
@@ -2121,6 +2220,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SELinuxOptions": {
+      "additionalProperties": false,
       "properties": {
         "level": {
           "type": "string"
@@ -2138,6 +2238,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.ScaleIOVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -2174,6 +2275,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SeccompProfile": {
+      "additionalProperties": false,
       "properties": {
         "localhostProfile": {
           "type": "string"
@@ -2194,6 +2296,7 @@
       ]
     },
     "io.k8s.api.core.v1.Secret": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -2235,6 +2338,7 @@
       ]
     },
     "io.k8s.api.core.v1.SecretEnvSource": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -2246,6 +2350,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SecretKeySelector": {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"
@@ -2262,6 +2367,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.SecretProjection": {
+      "additionalProperties": false,
       "properties": {
         "items": {
           "items": {
@@ -2280,6 +2386,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SecretVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "defaultMode": {
           "format": "int32",
@@ -2302,6 +2409,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SecurityContext": {
+      "additionalProperties": false,
       "properties": {
         "allowPrivilegeEscalation": {
           "type": "boolean"
@@ -2345,6 +2453,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Service": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -2373,6 +2482,7 @@
       ]
     },
     "io.k8s.api.core.v1.ServiceAccount": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -2415,6 +2525,7 @@
       ]
     },
     "io.k8s.api.core.v1.ServiceAccountTokenProjection": {
+      "additionalProperties": false,
       "properties": {
         "audience": {
           "type": "string"
@@ -2431,6 +2542,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.SleepAction": {
+      "additionalProperties": false,
       "properties": {
         "seconds": {
           "format": "int64",
@@ -2441,6 +2553,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.StorageOSVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -2461,6 +2574,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Sysctl": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string"
@@ -2473,6 +2587,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.TCPSocketAction": {
+      "additionalProperties": false,
       "properties": {
         "host": {
           "type": "string"
@@ -2485,6 +2600,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Toleration": {
+      "additionalProperties": false,
       "properties": {
         "effect": {
           "type": "string"
@@ -2506,6 +2622,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.TopologySpreadConstraint": {
+      "additionalProperties": false,
       "properties": {
         "labelSelector": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
@@ -2542,6 +2659,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.TypedLocalObjectReference": {
+      "additionalProperties": false,
       "properties": {
         "apiGroup": {
           "type": "string"
@@ -2558,6 +2676,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.TypedObjectReference": {
+      "additionalProperties": false,
       "properties": {
         "apiGroup": {
           "type": "string"
@@ -2576,6 +2695,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.Volume": {
+      "additionalProperties": false,
       "properties": {
         "awsElasticBlockStore": {
           "$ref": "#/$defs/io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource"
@@ -2675,6 +2795,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.VolumeDevice": {
+      "additionalProperties": false,
       "properties": {
         "devicePath": {
           "type": "string"
@@ -2687,6 +2808,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.VolumeMount": {
+      "additionalProperties": false,
       "properties": {
         "mountPath": {
           "type": "string"
@@ -2714,6 +2836,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.VolumeProjection": {
+      "additionalProperties": false,
       "properties": {
         "clusterTrustBundle": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ClusterTrustBundleProjection"
@@ -2734,6 +2857,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.VolumeResourceRequirements": {
+      "additionalProperties": false,
       "properties": {
         "limits": {
           "additionalProperties": {
@@ -2751,6 +2875,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.VsphereVirtualDiskVolumeSource": {
+      "additionalProperties": false,
       "properties": {
         "fsType": {
           "type": "string"
@@ -2769,6 +2894,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.WeightedPodAffinityTerm": {
+      "additionalProperties": false,
       "properties": {
         "podAffinityTerm": {
           "$ref": "#/$defs/io.k8s.api.core.v1.PodAffinityTerm"
@@ -2782,6 +2908,7 @@
       "type": "object"
     },
     "io.k8s.api.core.v1.WindowsSecurityContextOptions": {
+      "additionalProperties": false,
       "properties": {
         "gmsaCredentialSpec": {
           "type": "string"
@@ -2799,6 +2926,7 @@
       "type": "object"
     },
     "io.k8s.api.policy.v1.PodDisruptionBudget": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -2827,6 +2955,7 @@
       ]
     },
     "io.k8s.api.policy.v1.PodDisruptionBudgetSpec": {
+      "additionalProperties": false,
       "properties": {
         "maxUnavailable": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.util.intstr.IntOrString"
@@ -2858,6 +2987,7 @@
       "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector": {
+      "additionalProperties": false,
       "properties": {
         "matchExpressions": {
           "items": {
@@ -2877,6 +3007,7 @@
       "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement": {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"
@@ -2896,6 +3027,7 @@
       "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -2922,6 +3054,7 @@
       "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta": {
+      "additionalProperties": false,
       "properties": {
         "annotations": {
           "additionalProperties": {
@@ -2996,6 +3129,7 @@
       "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference": {
+      "additionalProperties": false,
       "properties": {
         "apiVersion": {
           "type": "string"
@@ -3220,7 +3354,7 @@
             "podDisruptionBudget": {
               "oneOf": [
                 {
-                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                  "$ref": "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
                 },
                 {
                   "type": "null"
@@ -3245,7 +3379,7 @@
             "podDisruptionBudget": {
               "oneOf": [
                 {
-                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                  "$ref": "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
                 },
                 {
                   "type": "null"
@@ -3295,7 +3429,7 @@
             "podDisruptionBudget": {
               "oneOf": [
                 {
-                  "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+                  "$ref": "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
                 },
                 {
                   "type": "null"
@@ -3370,7 +3504,14 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
         },
         "podDisruptionBudget": {
-          "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec"
+          "oneOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "priorityClassName": {
           "type": ["string", "null"]
