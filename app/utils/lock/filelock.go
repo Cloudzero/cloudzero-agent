@@ -47,6 +47,7 @@ type FileLock struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	mu       sync.Mutex
+	wg       sync.WaitGroup
 }
 
 type FileLockOption func(fl *FileLock)
@@ -150,7 +151,11 @@ func (fl *FileLock) Acquire() error {
 				// start background refresh
 				ctx, cancel := context.WithCancel(fl.ctx)
 				fl.cancel = cancel
-				go fl.refreshLock(ctx)
+				fl.wg.Add(1)
+				go func() {
+					defer fl.wg.Done()
+					fl.refreshLock(ctx)
+				}()
 				return nil
 			}
 
@@ -197,12 +202,19 @@ func (fl *FileLock) Release() error {
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
 
-	// propigate the cancel across context
+	// propagate the cancel across context
 	if fl.cancel != nil {
 		fl.cancel()
 		fl.cancel = nil
+		// Wait for the background goroutine to complete before proceeding
+		fl.wg.Wait()
 	}
 
+	return fl.releaseFile()
+}
+
+// releaseFile removes the lock file without waiting for goroutines (used internally)
+func (fl *FileLock) releaseFile() error {
 	// remove the file
 	if err := os.Remove(fl.filepath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to release lock: %w", err)
@@ -219,7 +231,7 @@ func (fl *FileLock) refreshLock(ctx context.Context) {
 		case <-ticker.C:
 			if err := fl.updateLock(); err != nil {
 				// if failing to update the lock, release it so we do not lock here
-				_ = fl.Release()
+				_ = fl.releaseFile()
 				return
 			}
 		case <-ctx.Done():
