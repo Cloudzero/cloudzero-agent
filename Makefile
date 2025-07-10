@@ -7,19 +7,27 @@
 # tools we install via `make install-tools` there is no need to allow overriding
 # the path to the executable.
 GO          ?= go
-GOJQ        ?= gojq
 AWK         ?= awk
 CC          ?= $(shell $(GO) env CC)
 CXX         ?= $(shell $(GO) env CXX)
 CURL        ?= curl
 DOCKER      ?= docker
 GREP        ?= grep
-HELM        ?= helm
-KUBECONFORM ?= kubeconform
 NPM         ?= npm
 PROTOC      ?= protoc
 RM          ?= rm
 XARGS       ?= xargs
+
+# Dependencies we install via `make install-tools`
+DYFF          ?= $(abspath .tools/bin/dyff)
+GOFUMPT       ?= $(abspath .tools/bin/gofumpt)
+GOJQ          ?= $(abspath .tools/bin/gojq)
+GOLANGCI_LINT ?= $(abspath .tools/bin/golangci-lint)
+HELM          ?= $(abspath .tools/bin/helm)
+KUBECONFORM   ?= $(abspath .tools/bin/kubeconform)
+MOCKGEN       ?= $(abspath .tools/bin/mockgen)
+PRETTIER      ?= $(abspath .tools/node_modules/.bin/prettier)
+STATICCHECK   ?= $(abspath .tools/bin/staticcheck)
 
 # Build configuration
 GO_MODULE      ?= $(shell $(GO) list -m)
@@ -139,19 +147,20 @@ GOFUMPT_TARGET        ?= .
 .PHONY: format-go
 format: format-go
 format-go:
-	@gofumpt -w $(GOFUMPT_TARGET)
-	@$(GO) mod tidy
+	$(GOFUMPT) -w $(GOFUMPT_TARGET)
+	$(GO) mod tidy
 
 PRETTIER_TARGET       ?= .
 
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	@prettier --write $(PRETTIER_TARGET)
+	which $(PRETTIER)
+	$(PRETTIER) --write $(PRETTIER_TARGET)
 
 .PHONY: lint-go
 lint-go:
-	@golangci-lint run ./...
+	$(GOLANGCI_LINT) run ./...
 
 .PHONY: lint
 lint: ## Run the linter
@@ -159,7 +168,7 @@ lint: lint-go
 
 .PHONY: analyze-go
 analyze-go:
-	@staticcheck -checks all ./...
+	$(STATICCHECK) -checks all ./...
 
 .PHONY: analyze
 analyze: ## Run static analysis
@@ -227,9 +236,11 @@ GO_BINARIES = \
 	$(NULL)
 
 # Generate embedded defaults for helmless
-app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/templates/*.yaml)
+app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
 	@mkdir -p app/functions/helmless
-	$(HELM) show values ./helm > $@
+	$(HELM) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
+
+bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
 MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
 
@@ -320,7 +331,7 @@ $(eval $(call generate-container-build-target,package-build-debug,load,true))
 PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
 HELM_TARGET_NAMESPACE     ?= cz-agent
 HELM_TARGET               ?= cz-agent
-HELM                      ?= helm
+KUBE_VERSION              ?= 1.33.0
 
 HELM_ARGS = \
 	--namespace "$(HELM_TARGET_NAMESPACE)" \
@@ -353,7 +364,7 @@ helm-uninstall: ## Uninstall the Helm chart
 .PHONY: helm-template
 helm-template: api-tests-check-env helm-install-deps helm/values.schema.json
 helm-template: ## Generate the Helm chart templates
-	@$(HELM) template "$(HELM_TARGET)" ./helm $(HELM_ARGS)
+	@$(HELM) template --kube-version $(KUBE_VERSION) "$(HELM_TARGET)" ./helm $(HELM_ARGS)
 
 .PHONY: helm-lint
 helm-lint: helm/values.schema.json
@@ -374,10 +385,10 @@ $(filter %pass,$(SCHEMA_TEST_TARGETS)): %: %-template %-kubeconform
 $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 
 # Pattern rule for Helm template validation
-tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
+tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-	output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
+	output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
 	if [ $$? -eq 0 ]; then \
 		result="pass"; \
 	else \
@@ -396,10 +407,10 @@ tests/helm/schema/%-template: helm/charts/.stamp helm/values.schema.json
 	fi
 
 # Pattern rule for kubeconform validation (only for .pass tests)
-tests/helm/schema/%-kubeconform: helm/charts/.stamp helm/values.schema.json
+tests/helm/schema/%-kubeconform: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
-	kubeconform_output=$$($(HELM) template --kube-version 1.33 "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
-		-kubernetes-version 1.33.0 \
+	kubeconform_output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
+		-kubernetes-version "$(KUBE_VERSION)" \
 		-schema-location default \
 		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
 		-strict \
@@ -438,7 +449,7 @@ helm-test-subchart: helm/values.schema.json
 	@for dir in tests/helm/subchart/*/; do \
 		if [ -d "$$dir/chart" ]; then \
 			echo "$(INFO_COLOR)Building dependencies for $$(basename $$dir)...$(NO_COLOR)"; \
-			cd "$$dir/chart" && $(HELM) dependency build && cd - > /dev/null; \
+			$(HELM) dependency build "$$dir/chart"; \
 		fi; \
 	done
 	@for dir in tests/helm/subchart/*/; do \
@@ -446,7 +457,7 @@ helm-test-subchart: helm/values.schema.json
 			for file in $$dir*.yaml; do \
 				if [ -f "$$file" ]; then \
 					expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-					output=$$(cd "$$dir/chart" && $(HELM) template parent-test . --values ../$$(basename $$file) 2>&1); \
+					output=$$($(HELM) template parent-test "$$dir/chart" --values "$$file" 2>&1); \
 					if [ $$? -eq 0 ]; then \
 						result="pass"; \
 					else \
@@ -468,6 +479,9 @@ helm-test-subchart: helm/values.schema.json
 		fi; \
 	done
 
+helm/tests/%.yaml-unittest: helm/tests/%.yaml
+	@$(HELM) unittest ./helm --values helm/tests/values.yaml -f 'tests/$*.yaml'
+
 .PHONY: helm-test-unittest
 helm-test-unittest: ## Run Helm unittest tests
 helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
@@ -475,41 +489,146 @@ helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
 
 .PHONY: helm-test
 helm-test: ## Run all Helm validation tests
-helm-test: helm-test-schema helm-test-subchart helm-test-unittest
+helm-test: helm-test-schema helm-test-subchart helm-test-unittest helm-test-template
 
-tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json FORCE
-	@$(HELM) template --kube-version 1.33 "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
+tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
+	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
 
-helm-generate-tests: $(wildcard tests/helm/template/*.yaml)
-
-generate: helm-generate-tests
+helm-test-template: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
+generate: helm-test-template
 
 lint: helm-lint
 
 helm/values.schema.json: helm/values.schema.yaml helm/schema/k8s.json scripts/merge-json-schema.jq
-	$(GOJQ) --yaml-input . helm/values.schema.yaml | $(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq > helm/values.schema.json
+	$(GOJQ) --yaml-input . helm/values.schema.yaml | \
+		$(GOJQ) --slurpfile k8s helm/schema/k8s.json -f scripts/merge-json-schema.jq | \
+		$(PRETTIER) --stdin-filepath "$@" > "$@"
 
 generate: helm/values.schema.json
 
+.PHONY: helm-test-template-diff
+helm-test-template-diff: $(patsubst %-overrides.yml,%.yaml-semdiff,$(wildcard tests/helm/template/*-overrides.yml))
+
+# The JSON Schema for Kubernetes. For details, see:
+# https://github.com/yannh/kubernetes-json-schema/
+K8S_SCHEMA_UPSTREAM ?= https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/_definitions.json
+
 helm/schema/k8s.json:
-	@$(CURL) -sSL -o "$@" "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/_definitions.json"
+	$(CURL) -sSL "$(K8S_SCHEMA_UPSTREAM)" | $(PRETTIER) --stdin-filepath "$@" > "$@"
 
 generate: helm/schema/k8s.json
+
+# ----------- JSON SEMANTIC DIFF ------------
+#
+# Compare JSON/YAML files with the version in git using dyff. This is a semantic
+# diff tool, so it won't show any differences for things like formatting
+# changes, reordering items, etc., making it invaluable when refactoring.
+#
+# Usage:
+#   make path/to/file.json-semdiff
+#   make path/to/file.yaml-semdiff
+#   make path/to/file.json-semdiff SEMDIFF_REVISION=v1.2.3
+#
+# Variables:
+#   DYFF
+#   SEMDIFF_REVISION=<git-ref>       - Git revision to compare with (default: HEAD)
+
+SEMDIFF_REVISION ?= HEAD
+
+# Shared implementation for semantic diff using dyff
+define semdiff_impl
+@temp_file=$$(mktemp); \
+git show $(SEMDIFF_REVISION):"$(patsubst %-semdiff,%,$@)" > "$$temp_file" 2>/dev/null || { echo "File $(patsubst %-semdiff,%,$@) not found in $(SEMDIFF_REVISION)"; rm -f "$$temp_file"; exit 1; }; \
+$(DYFF) between --set-exit-code "$$temp_file" "$(patsubst %-semdiff,%,$@)"; \
+exit_code=$$?; \
+rm -f "$$temp_file"; \
+exit $$exit_code
+endef
+
+.PHONY: %.json-semdiff %.yaml-semdiff %.yml-semdiff
+
+%.json-semdiff: %.json
+	$(semdiff_impl)
+
+%.yaml-semdiff: %.yaml
+	$(semdiff_impl)
+
+%.yml-semdiff: %.yml
+	$(semdiff_impl)
 
 # ----------- CODE GENERATION ------------
 
 .PHONY: generate
 generate: ## (Re)generate generated code
-	@$(GO) generate ./...
+
+# ----------- PROTOBUF GENERATION ------------
+
+# Protobuf files to generate
+PROTOBUF_FILES := \
+	app/types/status/cluster_status.pb.go \
+	app/types/clusterconfig/clusterconfig.pb.go \
+	$(NULL)
 
 # We don't yet have a good way to install a specific version of protoc /
 # protoc-gen-go, so for now we'll keep this out of the automatic regeneration
 # path. If you want to regenerate it using the system protoc, manually remove
-# app/types/status/cluster_status.pb.go, then run `make generate`.
-generate: app/types/status/cluster_status.pb.go
-app/types/status/cluster_status.pb.go: app/types/status/cluster_status.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/status/cluster_status.proto
+# the .pb.go files, then run `make generate`.
+.PHONY: generate-protobuf
+generate-protobuf: $(PROTOBUF_FILES)
 
-generate: app/types/clusterconfig/clusterconfig.pb.go
-app/types/clusterconfig/clusterconfig.pb.go: app/types/clusterconfig/clusterconfig.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) app/types/clusterconfig/clusterconfig.proto
+generate: generate-protobuf
+
+# Pattern rule for generating protobuf files
+%.pb.go: %.proto
+	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) $<
+
+.PHONY: protobuf-clean
+protobuf-clean:
+	$(RM) $(PROTOBUF_FILES)
+
+maintainer-clean: protobuf-clean
+
+# ----------- MOCK GENERATION ------------
+
+# Mock files to generate
+MOCK_FILES := \
+	app/types/mocks/runnable_mock.go \
+	app/types/mocks/resource_store_mock.go \
+	app/types/mocks/store_mock.go \
+	app/utils/scout/types/mocks/scout_mock.go \
+	app/types/mocks/storage_mock.go \
+	$(NULL)
+
+.PHONY: generate-mocks
+generate-mocks: $(MOCK_FILES)
+
+generate: generate-mocks
+
+.PHONY: mocks-clean
+mocks-clean:
+	$(RM) $(MOCK_FILES)
+
+maintainer-clean: mocks-clean
+
+# Convert snake_case to PascalCase using awk
+# $(1) = snake_case string
+define snake-to-pascal
+$(shell echo "$(1)" | $(AWK) -F'_' '{for(i=1;i<=NF;i++) $$i=toupper(substr($$i,1,1)) substr($$i,2)} {print}' OFS='')
+endef
+
+# Enable secondary expansion for automatic dependency calculation
+.SECONDEXPANSION:
+
+# Helper to calculate mock dependencies
+define mock-deps
+$(subst /mocks/,/,$(subst _mock.go,.go,$(1))) $(wildcard $(1:.go=.diff))
+endef
+
+# Pattern rule for generating mock files
+%_mock.go: $$(call mock-deps,$$@)
+	$(MOCKGEN) \
+		-destination=$@ \
+		-package=mocks \
+		$(GO_MODULE)/$(patsubst %/,%,$(patsubst %/mocks/,%/,$(dir $@))) \
+		$(call snake-to-pascal,$(subst _mock,,$(basename $(notdir $@))))
+	$(if $(filter %.diff,$^),@echo "Applying patch $(filter %.diff,$^) to $@"; patch -si "$(filter %.diff,$^)" "$@")

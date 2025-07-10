@@ -7,9 +7,6 @@ import (
 	"context"
 )
 
-//go:generate mockgen -destination=mocks/storage_mock.go -package=mocks . StorageCommon,Storage,Creator,Reader,Updater,Deleter
-//go:generate patch -si mocks/resource_store_mock.diff mocks/resource_store_mock.go
-
 // StorageCommon defines common methods all repos implement by virtue of using BaseRepoImpl.
 type StorageCommon interface {
 	// Tx runs block in a transaction.
