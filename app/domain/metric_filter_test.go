@@ -38,6 +38,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 		metrics       []types.Metric
 		cost          []types.Metric
 		observability []types.Metric
+		dropped       []types.Metric
 		wantErr       bool
 	}{
 		{
@@ -61,6 +62,9 @@ func TestMetricFilter_Filter(t *testing.T) {
 			},
 			cost:          nil,
 			observability: nil,
+			dropped: []types.Metric{
+				defaultTestMetric,
+			},
 		},
 		{
 			name: "cost-match",
@@ -85,6 +89,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 				defaultTestMetric,
 			},
 			observability: nil,
+			dropped:       nil,
 		},
 		{
 			name: "observability-match",
@@ -109,6 +114,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 			observability: []types.Metric{
 				defaultTestMetric,
 			},
+			dropped: nil,
 		},
 		{
 			name: "both-match",
@@ -135,6 +141,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 			observability: []types.Metric{
 				defaultTestMetric,
 			},
+			dropped: nil,
 		},
 		{
 			name: "filter-label",
@@ -185,6 +192,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 					return m
 				}(),
 			},
+			dropped: nil,
 		},
 		{
 			name: "default-allow",
@@ -198,6 +206,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 			observability: []types.Metric{
 				defaultTestMetric,
 			},
+			dropped: nil,
 		},
 		{
 			name: "empty-allow",
@@ -216,6 +225,83 @@ func TestMetricFilter_Filter(t *testing.T) {
 			observability: []types.Metric{
 				defaultTestMetric,
 			},
+			dropped: nil,
+		},
+		{
+			name: "multiple-metrics-mixed-results",
+			cfg: config.Metrics{
+				Cost: []filter.FilterEntry{
+					{
+						Pattern: "container_network_transmit_bytes_total",
+						Match:   filter.FilterMatchTypeExact,
+					},
+				},
+				Observability: []filter.FilterEntry{
+					{
+						Pattern: "container_cpu_usage_seconds_total",
+						Match:   filter.FilterMatchTypeExact,
+					},
+				},
+			},
+			metrics: []types.Metric{
+				defaultTestMetric, // matches cost
+				func() types.Metric {
+					m := defaultTestMetric
+					m.ID = uuid.MustParse("a64271ef-46af-4ef9-94b6-c537a186b01d")
+					m.MetricName = "container_cpu_usage_seconds_total"
+					return m
+				}(), // matches observability
+				func() types.Metric {
+					m := defaultTestMetric
+					m.ID = uuid.MustParse("b64271ef-46af-4ef9-94b6-c537a186b01d")
+					m.MetricName = "container_memory_usage_bytes"
+					return m
+				}(), // matches neither - should be dropped
+			},
+			cost: []types.Metric{
+				defaultTestMetric,
+			},
+			observability: []types.Metric{
+				func() types.Metric {
+					m := defaultTestMetric
+					m.ID = uuid.MustParse("a64271ef-46af-4ef9-94b6-c537a186b01d")
+					m.MetricName = "container_cpu_usage_seconds_total"
+					return m
+				}(),
+			},
+			dropped: []types.Metric{
+				func() types.Metric {
+					m := defaultTestMetric
+					m.ID = uuid.MustParse("b64271ef-46af-4ef9-94b6-c537a186b01d")
+					m.MetricName = "container_memory_usage_bytes"
+					return m
+				}(),
+			},
+		},
+		{
+			name: "all-dropped",
+			cfg: config.Metrics{
+				Cost: []filter.FilterEntry{
+					{
+						Pattern: "non_existent_metric",
+						Match:   filter.FilterMatchTypeExact,
+					},
+				},
+				Observability: []filter.FilterEntry{
+					{
+						Pattern: "another_non_existent_metric",
+						Match:   filter.FilterMatchTypeExact,
+					},
+				},
+			},
+			metrics: []types.Metric{
+				defaultTestMetric,
+			},
+			cost:          nil,
+			observability: nil,
+			dropped: []types.Metric{
+				defaultTestMetric,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -230,7 +316,7 @@ func TestMetricFilter_Filter(t *testing.T) {
 				return
 			}
 
-			costMetrics, observabilityMetrics := mf.Filter(tt.metrics)
+			costMetrics, observabilityMetrics, droppedMetrics := mf.Filter(tt.metrics)
 
 			if diff := cmp.Diff(costMetrics, tt.cost); diff != "" {
 				t.Errorf("MetricFilter.Filter() cost mismatch (-want +got):\n%s", diff)
@@ -238,6 +324,10 @@ func TestMetricFilter_Filter(t *testing.T) {
 
 			if diff := cmp.Diff(observabilityMetrics, tt.observability); diff != "" {
 				t.Errorf("MetricFilter.Filter() observability mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(droppedMetrics, tt.dropped); diff != "" {
+				t.Errorf("MetricFilter.Filter() dropped mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
