@@ -1,7 +1,7 @@
 ARG DEPLOY_IMAGE=scratch
 
 # Stage 1: Build the Go binary
-FROM --platform=$BUILDPLATFORM golang:1.24.4-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.5-alpine AS builder
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 ARG REVISION=unknown
