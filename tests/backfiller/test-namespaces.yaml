@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    environment: production
+    team: backend
+    cost-center: engineering
+  annotations:
+    deployment.kubernetes.io/managed-by: cloudzero-test
+    description: "Production namespace for backend services"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    environment: staging
+    team: frontend
+    cost-center: engineering
+  annotations:
+    deployment.kubernetes.io/managed-by: cloudzero-test
+    description: "Staging namespace for frontend services"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    environment: development
+    team: devops
+    cost-center: operations
+  annotations:
+    deployment.kubernetes.io/managed-by: cloudzero-test
+    description: "Development namespace for DevOps tools"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-exclude
+  labels:
+    environment: test
+    exclude-from-monitoring: "true"
+  annotations:
+    deployment.kubernetes.io/managed-by: cloudzero-test
+    description: "Namespace that should be excluded by filters"
