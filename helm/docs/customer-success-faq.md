@@ -75,6 +75,87 @@ Customers must whitelist the following endpoints:
    kubectl run test-ubuntu --image=ubuntu --rm -it -- bash
    # From within container, curl webhook endpoint with mock AdmissionReviewRequest
    ```
+
+   To test a Kubernetes **validating admission webhook** endpoint with `curl`, you typically need to send a `POST` request with a properly formatted AdmissionReview JSON payload and the correct `Content-Type` header.
+
+   Here's a sample `curl` command you can use to test a validating webhook endpoint directly:
+
+   ```bash
+   curl -k -X POST https://<webhook-service>.<namespace>.svc:443/validate \
+     -H "Content-Type: application/json" \
+     -d @admission-review.json
+   ```
+
+   ### Step-by-step:
+
+   1. **Replace the URL**:
+      * `https://<webhook-service>.<namespace>.svc:443/validate` with the actual address and path of your webhook.
+      * If testing outside the cluster, use port-forwarding or the external URL.
+
+   2. **Create a sample `admission-review.json` file**, like this:
+
+   ```json
+   {
+     "apiVersion": "admission.k8s.io/v1",
+     "kind": "AdmissionReview",
+     "request": {
+       "uid": "12345678-1234-1234-1234-1234567890ab",
+       "kind": {
+         "group": "",
+         "version": "v1",
+         "kind": "Pod"
+       },
+       "resource": {
+         "group": "",
+         "version": "v1",
+         "resource": "pods"
+       },
+       "namespace": "default",
+       "operation": "CREATE",
+       "object": {
+         "apiVersion": "v1",
+         "kind": "Pod",
+         "metadata": {
+           "name": "test-pod"
+         },
+         "spec": {
+           "containers": [
+             {
+               "name": "test-container",
+               "image": "nginx"
+             }
+           ]
+         }
+       },
+       "oldObject": null,
+       "dryRun": false,
+       "options": {
+         "apiVersion": "meta.k8s.io/v1",
+         "kind": "CreateOptions"
+       }
+     }
+   }
+   ```
+
+   Save it as `admission-review.json` in your current directory.
+
+   3. **Run the curl command** again:
+
+   ```bash
+   curl -k -X POST https://<webhook-service>.<namespace>.svc:443/validate \
+     -H "Content-Type: application/json" \
+     -d @admission-review.json
+   ```
+
+   ### Notes:
+
+   * Use `-k` to skip TLS verification if you're using self-signed certs. For production, replace this with valid CA bundles.
+   * If you're testing locally or via port-forwarding, change the URL like so:
+
+     ```bash
+     kubectl port-forward svc/my-webhook 8443:443 -n my-namespace
+     curl -k -X POST https://localhost:8443/validate -H "Content-Type: application/json" -d @admission-review.json
+     ```
 4. **Check for service mesh injection**:
    ```bash
    kubectl describe pod <webhook-pod-name>
@@ -316,3 +397,253 @@ image:
 - CloudZero Service Side DB for validator output
 - Customer S3 bucket monitoring (visible within 10 minutes)
 - GitHub repository for code review and security documentation
+
+---
+
+## Comprehensive Troubleshooting Guide: Information Collection
+
+When working with customers experiencing issues, gather the following information systematically to ensure effective troubleshooting:
+
+### Essential Customer Information
+
+#### 1. **Cluster Details**
+```bash
+# Get cluster name and basic info
+kubectl cluster-info
+kubectl get nodes -o wide
+
+# Check Kubernetes version
+kubectl version --short
+
+# Get cluster resource usage
+kubectl top nodes
+kubectl top pods -n cloudzero-agent
+```
+
+#### 2. **Issue Description**
+- **Symptoms**: What exactly is not working?
+- **Timeline**: When did the issue start?
+- **Changes**: Any recent deployments or configuration changes?
+- **Impact**: What functionality is affected?
+- **Error Messages**: Exact error messages from logs or UI
+
+#### 3. **Chart and Configuration Details**
+```bash
+# Get currently deployed chart version
+helm list -n cloudzero-agent
+
+# Get current values (sanitized - remove sensitive data)
+helm get values cloudzero-agent -n cloudzero-agent
+
+# Get chart version history
+helm history cloudzero-agent -n cloudzero-agent
+```
+
+**Request**: Ask customer to provide their values override file (with API keys redacted)
+
+#### 4. **Screenshots and Visual Evidence**
+- CloudZero dashboard showing missing data
+- Kubernetes dashboard or kubectl output
+- Error messages from deployment tools
+- Network policy or security tool alerts
+
+### Pod and Container Investigation
+
+#### 5. **List All Pods and Their Status**
+```bash
+# Get all CloudZero resources (pods, services, deployments, jobs)
+kubectl get all -n cloudzero-agent
+
+# Get all pods in CloudZero namespace with detailed info
+kubectl get pods -n cloudzero-agent -o wide
+
+# Get pod details including events
+kubectl describe pods -n cloudzero-agent
+
+# Check for pending or failed pods
+kubectl get pods -n cloudzero-agent --field-selector=status.phase!=Running
+```
+
+**What a healthy deployment looks like:**
+```
+# Expected pods in a successful deployment:
+# - cloudzero-agent-aggregator-* (3 replicas, 2/2 containers each)
+# - cloudzero-agent-server-* (1 replica, 2/2 containers)
+# - cloudzero-agent-webhook-server-* (3 replicas, 1/1 containers each)
+# - cloudzero-agent-cloudzero-state-metrics-* (1 replica, 1/1 containers)
+# - One-time jobs (Completed status):
+#   - cloudzero-agent-backfill-*
+#   - cloudzero-agent-confload-*
+#   - cloudzero-agent-helmless-*
+#   - cloudzero-agent-init-cert-*
+```
+
+#### 6. **Container Logs Collection**
+```bash
+# Get logs from main application containers
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c collector --tail=100
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c shipper --tail=100
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-server -c collector --tail=100
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-server -c shipper --tail=100
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-webhook-server --tail=100
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-cloudzero-state-metrics --tail=100
+
+# Get logs from one-time jobs (if they failed)
+kubectl logs -n cloudzero-agent job/cloudzero-agent-backfill-* --tail=100
+kubectl logs -n cloudzero-agent job/cloudzero-agent-confload-* --tail=100
+kubectl logs -n cloudzero-agent job/cloudzero-agent-helmless-* --tail=100
+kubectl logs -n cloudzero-agent job/cloudzero-agent-init-cert-* --tail=100
+
+# Get logs from previous container restart (if applicable)
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c collector --previous
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c shipper --previous
+
+# Monitor logs in real-time during issue reproduction
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c collector -f
+```
+
+#### 7. **Container Inspection and Debugging**
+```bash
+# Inspect container configuration
+kubectl describe pod -n cloudzero-agent <pod-name>
+
+# Check container resource usage
+kubectl top pod -n cloudzero-agent <pod-name> --containers
+
+# Execute into container for debugging (if needed)
+kubectl exec -n cloudzero-agent <pod-name> -c collector -- /bin/sh
+```
+
+### Infrastructure and Environment Assessment
+
+#### 8. **Secret Management Investigation**
+```bash
+# Check if secrets exist (don't expose values)
+kubectl get secrets -n cloudzero-agent
+
+# Verify secret structure
+kubectl describe secret -n cloudzero-agent cloudzero-agent-api-key
+```
+
+**Questions to ask**:
+- What secrets manager are you using? (Kubernetes native, AWS Secrets Manager, HashiCorp Vault, etc.)
+- How are secrets rotated?
+- Are there any secret management policies or automation?
+
+#### 9. **Network Policies and Security**
+```bash
+# Check for network policies
+kubectl get networkpolicies -n cloudzero-agent
+kubectl get networkpolicies --all-namespaces | grep cloudzero
+
+# Describe network policies
+kubectl describe networkpolicy -n cloudzero-agent
+
+# Check for pod security policies or admission controllers
+kubectl get podsecuritypolicy
+kubectl get validatingadmissionwebhook
+kubectl get mutatingadmissionwebhook
+```
+
+**Questions to ask**:
+- Are you using network policies?
+- Are there any firewall rules or security groups blocking traffic?
+- Are you using service mesh (Istio, Linkerd, Consul Connect)?
+- Are there any policy agents (OPA Gatekeeper, Kyverno, Falco)?
+
+#### 10. **Service Mesh and Policy Agents**
+```bash
+# Check for Istio
+kubectl get pods -n istio-system
+kubectl get sidecar --all-namespaces
+
+# Check for Linkerd
+kubectl get pods -n linkerd
+kubectl get pods -n cloudzero-agent -o jsonpath='{.items[*].spec.containers[*].name}' | grep linkerd
+
+# Check for OPA Gatekeeper
+kubectl get pods -n gatekeeper-system
+kubectl get constraints
+
+# Check for Kyverno
+kubectl get pods -n kyverno
+kubectl get cpol,pol
+
+# Look for service mesh sidecars in CloudZero pods
+kubectl describe pod -n cloudzero-agent <pod-name> | grep -E "(istio|linkerd|consul)"
+```
+
+#### 11. **Connectivity and DNS Testing**
+```bash
+# Test external connectivity
+kubectl run test-connectivity --image=curlimages/curl --rm -it -- curl -v https://api.cloudzero.com/healthz
+
+# Test DNS resolution
+kubectl run test-dns --image=busybox --rm -it -- nslookup api.cloudzero.com
+
+# Test internal service connectivity
+kubectl run test-internal --image=curlimages/curl --rm -it -- curl -v http://cloudzero-agent-aggregator.cloudzero-agent.svc.cluster.local:8080/healthz
+```
+
+### Additional Diagnostic Commands
+
+#### 12. **Resource and Performance Analysis**
+```bash
+# Check resource quotas
+kubectl get resourcequota -n cloudzero-agent
+
+# Check persistent volumes
+kubectl get pv,pvc -n cloudzero-agent
+
+# Check service accounts and RBAC
+kubectl get serviceaccount -n cloudzero-agent
+kubectl describe clusterrole cloudzero-agent
+kubectl describe clusterrolebinding cloudzero-agent
+```
+
+#### 13. **Events and Cluster Health**
+```bash
+# Get recent events
+kubectl get events -n cloudzero-agent --sort-by='.lastTimestamp'
+
+# Check node conditions
+kubectl describe nodes | grep -A5 Conditions
+
+# Check cluster components
+kubectl get componentstatuses
+```
+
+### Troubleshooting Checklist
+
+When gathering information, use this checklist:
+
+- [ ] **Basic Info**: Cluster name, K8s version, node count
+- [ ] **Issue Details**: Clear description with timeline and impact
+- [ ] **Configuration**: Chart version, values file (redacted), deployment method
+- [ ] **Visual Evidence**: Screenshots of errors or missing data
+- [ ] **Pod Status**: All pods running, no restarts or failures
+- [ ] **Container Logs**: Logs from all containers, especially errors
+- [ ] **Secrets**: Secret manager type and configuration
+- [ ] **Network**: Network policies, service mesh, policy agents
+- [ ] **Connectivity**: External API access, internal service communication
+- [ ] **Resources**: Resource usage, quotas, persistent storage
+- [ ] **Events**: Recent cluster events and node conditions
+
+### Quick Commands Reference Card
+
+```bash
+# Essential diagnostics (provide to customer)
+kubectl get all -n cloudzero-agent
+kubectl get pods -n cloudzero-agent -o wide
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c collector --tail=50
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-aggregator -c shipper --tail=50
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-server -c collector --tail=50
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-server -c shipper --tail=50
+kubectl logs -n cloudzero-agent deployment/cloudzero-agent-webhook-server --tail=50
+kubectl describe pod -n cloudzero-agent <pod-name>
+kubectl get events -n cloudzero-agent --sort-by='.lastTimestamp'
+helm get values cloudzero-agent -n cloudzero-agent
+helm list -n cloudzero-agent
+```
+
+This comprehensive information collection ensures faster issue resolution and reduces back-and-forth communication with customers.
