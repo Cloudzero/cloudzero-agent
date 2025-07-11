@@ -1,12 +1,16 @@
 ARG DEPLOY_IMAGE=scratch
 
-# Stage 1: Build the Go binary
-FROM --platform=$BUILDPLATFORM golang:1.24.5-alpine AS builder
+# Multi-stage Docker build with platform-specific cache optimization:
+# 1. base-tools: Install system packages and tools (cached per platform)
+# 2. dependencies: Download Go modules (cached per platform)
+# 3. builder: Build Go binaries (cached per platform)
+# 4. certs: Extract certificates from distroless image
+# 5. final: Minimal runtime image with compiled binaries
+
+# Stage 1: Base tools installation
+FROM --platform=$BUILDPLATFORM golang:1.24.5-alpine AS base-tools
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
-ARG REVISION=unknown
-ARG TAG=unknown
-ARG BUILD_TIME=unknown
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -14,33 +18,58 @@ WORKDIR /app
 # Steal the nobody user for the scratch image
 RUN grep nobody /etc/passwd > /etc/passwd_nobody
 
-# Copy the Go module files and download dependencies
-COPY go.mod go.sum ./
-RUN go mod download \
-    && apk add \
+# Install system packages
+RUN --mount=type=cache,target=/var/cache/apk,id=apk-$TARGETPLATFORM \
+    apk add \
         binutils-gold \
         build-base \
         git \
         make \
-        npm \
         zig
 
-# Copy the source code
-COPY . .
+# Stage 2: Dependencies stage
+FROM base-tools AS dependencies
+ARG TARGETPLATFORM
+ARG TARGETOS TARGETARCH
 
-RUN make install-tools
+# Copy Go module files first for better layer caching
+COPY go.mod go.sum ./
 
-# Build the Go binary
-RUN make build OUTPUT_BIN_DIR=/go/bin \
+# Download Go dependencies with platform-specific cache mount
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
+    go mod download
+
+# Stage 3: Build stage
+FROM dependencies AS builder
+ARG TARGETPLATFORM
+ARG TARGETOS TARGETARCH
+ARG REVISION=unknown
+ARG TAG=unknown
+ARG BUILD_TIME=unknown
+
+# Copy only the files needed for building
+#
+# Note that this is very slimmed-down; hence the need to pass REGENERATE=never
+# to the build command.
+COPY app/ app/
+COPY Makefile ./
+
+# Build the Go binary with platform-specific cache mounts
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
+    --mount=type=cache,target=/root/.cache/go-build,id=gobuild-$TARGETPLATFORM \
+    --mount=type=cache,target=/root/.cache/zig,id=zig-$TARGETPLATFORM \
+    make build OUTPUT_BIN_DIR=/go/bin \
+    REGENERATE=never \
     TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
     ENABLE_ZIG=true \
     REVISION=${REVISION} \
     TAG=${TAG} \
     BUILD_TIME=${BUILD_TIME}
 
-# Stage 2: Access current certs
+# Stage 4: Access current certs
 FROM gcr.io/distroless/static-debian12:debug@sha256:112141358ce173d72800bb0e85b4d9dda7505ffc37203e70e475425d5a0d097b AS certs
 
+# Stage 5: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
 # passing in something like this to 'docker build':
 #
@@ -51,8 +80,6 @@ FROM ${DEPLOY_IMAGE}
 
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-
-# TODO: Add default configuration file
 
 # Copy the /etc/passwd file with the nobody user
 COPY --from=builder /etc/passwd_nobody /etc/passwd
