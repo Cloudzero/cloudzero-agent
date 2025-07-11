@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	clusterName = "cloudzero-backfiller-test"
-	testTimeout = 2 * time.Minute
+	clusterName       = "cloudzero-backfiller-test"
+	testTimeout       = 2 * time.Minute
 	mockCollectorPort = 8080
 )
 
@@ -49,7 +49,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 	// Set up debug logging for the test
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
-	
+
 	t.Log("Debug logging enabled for integration test")
 
 	// Create temporary directory for test data
@@ -78,7 +78,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 
 	// Create test configuration
 	settings := createTestSettings(tempDir)
-	
+
 	// Debug: Print configuration being used
 	t.Logf("=== BACKFILLER CONFIGURATION ===")
 	t.Logf("Destination: %s", settings.Destination)
@@ -87,7 +87,6 @@ func TestBackfillerKindIntegration(t *testing.T) {
 	t.Logf("RemoteWrite SendInterval: %s", settings.RemoteWrite.SendInterval)
 	t.Logf("RemoteWrite MaxBytesPerSend: %d", settings.RemoteWrite.MaxBytesPerSend)
 	t.Logf("=== END CONFIGURATION ===")
-	
 
 	// Create Kubernetes client
 	k8sClient, err := createKubernetesClient(kubeconfig)
@@ -112,7 +111,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 	err = dataPusher.Run()
 	require.NoError(t, err)
 	t.Log("Pusher started successfully")
-	
+
 	// Check if pusher is running
 	if dataPusher.IsRunning() {
 		t.Log("Pusher is confirmed to be running")
@@ -145,7 +144,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 
 	// Allow some time for metrics to be sent
 	time.Sleep(3 * time.Second)
-	
+
 	// Debug: Check what's in the store before forcing flush
 	t.Log("Checking store contents before flush...")
 	debugCtx := context.Background()
@@ -176,10 +175,10 @@ func TestBackfillerKindIntegration(t *testing.T) {
 	if err := dataPusher.Shutdown(); err != nil {
 		t.Logf("Error shutting down pusher: %v", err)
 	}
-	
+
 	// Wait a bit for any final flushes
 	time.Sleep(2 * time.Second)
-	
+
 	// Log current state for debugging
 	t.Log("=== DEBUG INFO ===")
 	receivedCount := len(mockCollector.GetReceivedData())
@@ -191,11 +190,11 @@ func TestBackfillerKindIntegration(t *testing.T) {
 
 func setupKindCluster(t *testing.T, tempDir string) string {
 	t.Log("Setting up Kind cluster...")
-	
+
 	// Get the test directory path
 	testDir := filepath.Dir(getCurrentFile())
 	kindConfigPath := filepath.Join(testDir, "kind-config.yaml")
-	
+
 	// Create Kind cluster
 	cmd := exec.Command("kind", "create", "cluster", "--config", kindConfigPath, "--wait", "60s")
 	cmd.Stdout = os.Stdout
@@ -208,8 +207,8 @@ func setupKindCluster(t *testing.T, tempDir string) string {
 	cmd = exec.Command("kind", "get", "kubeconfig", "--name", clusterName)
 	output, err := cmd.Output()
 	require.NoError(t, err, "Failed to get kubeconfig")
-	
-	err = os.WriteFile(kubeconfig, output, 0644)
+
+	err = os.WriteFile(kubeconfig, output, 0o644)
 	require.NoError(t, err, "Failed to write kubeconfig")
 
 	t.Log("Kind cluster created successfully")
@@ -228,10 +227,10 @@ func cleanupKindCluster(t *testing.T) {
 
 func applyTestNamespaces(t *testing.T, kubeconfig string) {
 	t.Log("Applying test namespaces...")
-	
+
 	testDir := filepath.Dir(getCurrentFile())
 	manifestPath := filepath.Join(testDir, "test-namespaces.yaml")
-	
+
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "apply", "-f", manifestPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -255,11 +254,11 @@ func createKubernetesClient(kubeconfig string) (kubernetes.Interface, error) {
 func createTestSettings(tempDir string) *config.Settings {
 	// Create fake API key file
 	apiKeyPath := filepath.Join(tempDir, "api-key")
-	err := os.WriteFile(apiKeyPath, []byte("test-api-key"), 0600)
+	err := os.WriteFile(apiKeyPath, []byte("test-api-key"), 0o600)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	// Debug: verify the API key file was created correctly
 	if content, err := os.ReadFile(apiKeyPath); err != nil {
 		panic(fmt.Sprintf("Failed to read API key file: %v", err))
@@ -268,7 +267,7 @@ func createTestSettings(tempDir string) *config.Settings {
 	}
 
 	mockCollectorURL := fmt.Sprintf("http://localhost:%d/v1/container-metrics?cloud_account_id=test-account-123&cluster_name=test-cluster&region=us-west-2", mockCollectorPort)
-	
+
 	settings := &config.Settings{
 		CloudAccountID: "test-account-123",
 		Region:         "us-west-2",
@@ -280,7 +279,7 @@ func createTestSettings(tempDir string) *config.Settings {
 		},
 		RemoteWrite: config.RemoteWrite{
 			Host:            mockCollectorURL,
-			SendInterval:    1 * time.Second,  // Faster interval for testing
+			SendInterval:    1 * time.Second, // Faster interval for testing
 			MaxBytesPerSend: 500000,
 			SendTimeout:     30 * time.Second,
 			MaxRetries:      3,
@@ -289,9 +288,9 @@ func createTestSettings(tempDir string) *config.Settings {
 			PaginationLimit: 100,
 		},
 		Database: config.Database{
-			RetentionTime:     24 * time.Hour,
-			CleanupInterval:   3 * time.Hour,
-			BatchUpdateSize:   500,
+			RetentionTime:   24 * time.Hour,
+			CleanupInterval: 3 * time.Hour,
+			BatchUpdateSize: 500,
 		},
 		Server: config.Server{
 			Port:         8000,
@@ -325,20 +324,20 @@ func createTestSettings(tempDir string) *config.Settings {
 			},
 		},
 	}
-	
+
 	// Initialize the settings with a custom policy that's more permissive
 	// Create a custom policy that bypasses all sanitization for testing
 	settings.Filters.Policy = createPassthroughPolicy()
 	// Compile the filter patterns manually
 	settings.LabelMatches = compilePatterns(settings.Filters.Labels.Patterns)
 	settings.AnnotationMatches = compilePatterns(settings.Filters.Annotations.Patterns)
-	
+
 	// Load the API key from the file
 	if err := settings.SetAPIKey(); err != nil {
 		panic(fmt.Sprintf("Failed to set API key: %v", err))
 	}
 	fmt.Printf("DEBUG: API key loaded successfully: %s\n", settings.GetAPIKey())
-	
+
 	return settings
 }
 
@@ -358,7 +357,7 @@ func createPassthroughPolicy() bluemonday.Policy {
 	// The problem: BlueMondary will ALWAYS sanitize HTML-like content
 	// JSON content gets quotes converted to &#34; etc
 	// For testing, we need to create a policy that truly passes everything through unchanged
-	
+
 	// Unfortunately, BlueMondary's API doesn't allow true passthrough
 	// So we'll use UGCPolicy as the most permissive option available
 	// The test will need to handle that annotation values may be HTML-encoded
@@ -372,14 +371,14 @@ func validateResults(t *testing.T, mockCollector *MockCollector, store types.Res
 	ctx := context.Background()
 	storedResources, err := store.FindAllBy(ctx, "1=1")
 	require.NoError(t, err)
-	
+
 	t.Logf("Found %d resources in store", len(storedResources))
 	assert.Greater(t, len(storedResources), 0, "Expected at least some resources in store")
 
 	// Check if metrics were sent to collector
 	receivedData := mockCollector.GetReceivedData()
 	t.Logf("Received %d WriteRequests from backfiller", len(receivedData))
-	
+
 	if len(receivedData) == 0 {
 		t.Log("No metrics received yet, waiting a bit longer...")
 		time.Sleep(10 * time.Second)
@@ -394,7 +393,7 @@ func validateResults(t *testing.T, mockCollector *MockCollector, store types.Res
 	// We expect at least 3 namespaces (production, staging, development)
 	// test-exclude should be filtered out if filtering is working
 	expectedNamespaces := []string{"production", "staging", "development"}
-	
+
 	if len(namespaceMetrics) > 0 {
 		err = mockCollector.ValidateNamespaceMetrics(expectedNamespaces, []string{"environment", "team", "cost-center"})
 		if err != nil {
@@ -412,12 +411,12 @@ func printDetailedResults(t *testing.T, storedResourcesCount int, receivedData [
 	t.Logf("Stored resources: %d", storedResourcesCount)
 	t.Logf("Received WriteRequests: %d", len(receivedData))
 	t.Logf("Namespace metrics: %d", len(namespaceMetrics))
-	
+
 	// Log first few resources if any
 	if storedResourcesCount > 0 {
 		t.Log("Sample stored resources found in database")
 	}
-	
+
 	if len(namespaceMetrics) > 0 {
 		t.Log("Sample namespace metrics found in collector")
 		for i, metric := range namespaceMetrics {

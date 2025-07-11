@@ -5,10 +5,12 @@ This directory contains minimal integration tests for the CloudZero Agent backfi
 ## Test Components
 
 ### 1. **Kind Cluster Setup** (`kind-config.yaml`)
+
 - Creates a minimal single-node Kind cluster named `cloudzero-backfiller-test`
 - Includes volume mounts for test data exchange
 
 ### 2. **Test Resources** (`test-namespaces.yaml`)
+
 - Creates 4 test namespaces with various labels and annotations:
   - `production` - with `environment=production`, `team=backend`, `cost-center=engineering`
   - `staging` - with `environment=staging`, `team=frontend`, `cost-center=engineering`
@@ -16,12 +18,14 @@ This directory contains minimal integration tests for the CloudZero Agent backfi
   - `test-exclude` - with `exclude-from-monitoring=true` (should be filtered out)
 
 ### 3. **Mock Collector** (`mock_collector.go`)
+
 - HTTP server that mimics the CloudZero collector API
 - Captures Prometheus RemoteWrite requests (protobuf + snappy compression)
 - Validates received metrics and saves them to files for inspection
 - Provides methods to verify namespace-specific metrics
 
 ### 4. **Integration Test** (`backfiller_integration_test.go`)
+
 - End-to-end test that:
   - Sets up Kind cluster
   - Applies test namespaces
@@ -55,10 +59,12 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 **Setup Steps:**
 
 1. **Ensure Docker Desktop is Running**
+
    - Make sure Docker Desktop is running on your machine
    - Kind will use Docker Desktop's Docker daemon
 
 2. **Verify Docker Desktop Setup**
+
    ```bash
    # Check Docker is running
    docker version
@@ -68,6 +74,7 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
    ```
 
 3. **Test Kind Installation**
+
    ```bash
    # Create a test cluster
    kind create cluster --name test-cluster
@@ -84,12 +91,14 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 ## Running the Tests
 
 ### Quick Test
+
 ```bash
 cd tests/backfiller
 make test-backfiller
 ```
 
 ### Debug Mode (keeps cluster running)
+
 ```bash
 cd tests/backfiller
 make test-backfiller-debug
@@ -98,12 +107,14 @@ make test-backfiller-debug
 **Note:** The first run may take 5-10 minutes to download the Kind node image. Subsequent runs will be much faster.
 
 ### Check Test Status
+
 ```bash
 cd tests/backfiller
 make test-backfiller-status
 ```
 
 ### Manual Cleanup
+
 ```bash
 cd tests/backfiller
 make test-backfiller-cleanup
@@ -112,6 +123,7 @@ make test-backfiller-cleanup
 ## Test Configuration
 
 The test uses a configuration (`test-config.yaml`) that:
+
 - **Enables label filtering** for: `environment`, `team`, `cost-center`
 - **Enables annotation filtering** for: `deployment.kubernetes.io/managed-by`, `description`
 - **Focuses on namespaces only** (pods, deployments, etc. are disabled)
@@ -123,7 +135,7 @@ The test validates:
 
 1. **Resource Discovery**: Backfiller discovers all 4 test namespaces
 2. **Label Filtering**: Only configured labels are captured
-3. **Annotation Filtering**: Only configured annotations are captured  
+3. **Annotation Filtering**: Only configured annotations are captured
 4. **Protobuf Format**: Metrics are sent in proper Prometheus RemoteWrite format
 5. **Collector Integration**: Mock collector receives and parses the data correctly
 
@@ -140,11 +152,13 @@ The test generates several outputs:
 The test creates everything automatically:
 
 1. **Creates the Kind cluster** using the `kind-config.yaml` file:
+
    ```bash
    kind create cluster --config kind-config.yaml --wait 60s
    ```
 
 2. **Applies the test namespaces** to the cluster:
+
    ```bash
    kubectl apply -f test-namespaces.yaml
    ```
@@ -181,11 +195,13 @@ kind delete cluster --name cloudzero-backfiller-test
 ### Common Issues
 
 1. **Kind cluster creation fails**:
+
    - Check if Docker Desktop is running
    - Ensure Kind is properly installed
    - Check if port 8080 is available
 
 2. **Test timeout**:
+
    - Increase timeout in test configuration
    - Check if namespaces are created successfully: `kubectl get namespaces`
 
@@ -197,11 +213,13 @@ kind delete cluster --name cloudzero-backfiller-test
 ### Debugging
 
 1. **Keep cluster running**:
+
    ```bash
    make test-backfiller-debug
    ```
 
 2. **Check cluster resources**:
+
    ```bash
    kubectl --kubeconfig /tmp/kubeconfig get namespaces
    kubectl --kubeconfig /tmp/kubeconfig describe namespace production

@@ -62,7 +62,7 @@ func (mc *MockCollector) Start() error {
 	}
 
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(mc.outputDir, 0755); err != nil {
+	if err := os.MkdirAll(mc.outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -129,16 +129,16 @@ func (mc *MockCollector) handleContainerMetrics(w http.ResponseWriter, r *http.R
 	// Debug logging for each write request
 	log.Info().Msg("=== MOCK COLLECTOR DEBUG ===")
 	log.Info().Int("writeRequestNumber", writeRequestCount).Int("timeseriesCount", len(writeRequest.Timeseries)).Msg("Received WriteRequest")
-	
+
 	// Debug each timeseries in the write request
 	for i, ts := range writeRequest.Timeseries {
 		log.Info().Int("timeseriesIndex", i+1).Int("labelCount", len(ts.Labels)).Msg("Processing TimeSeries")
-		
+
 		// Log labels
 		for _, label := range ts.Labels {
 			log.Info().Str("labelName", label.Name).Str("labelValue", label.Value).Msg("TimeSeries label")
 		}
-		
+
 		// Log samples
 		log.Info().Int("sampleCount", len(ts.Samples)).Msg("TimeSeries samples")
 		for j, sample := range ts.Samples {
@@ -155,7 +155,7 @@ func (mc *MockCollector) handleContainerMetrics(w http.ResponseWriter, r *http.R
 	if err := mc.saveMetricsToFile(filePath, writeRequest); err != nil {
 		log.Error().Err(err).Str("filePath", filePath).Msg("Failed to save metrics to file")
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
@@ -195,7 +195,7 @@ func (mc *MockCollector) saveMetricsToFile(filePath string, writeRequest prompb.
 func (mc *MockCollector) GetReceivedData() []prompb.WriteRequest {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	result := make([]prompb.WriteRequest, len(mc.receivedData))
 	copy(result, mc.receivedData)
 	return result
@@ -205,40 +205,40 @@ func (mc *MockCollector) GetReceivedData() []prompb.WriteRequest {
 func (mc *MockCollector) GetNamespaceMetrics() []prompb.TimeSeries {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	var namespaceMetrics []prompb.TimeSeries
-	
+
 	for _, writeRequest := range mc.receivedData {
 		for _, ts := range writeRequest.Timeseries {
 			// Look for namespace metrics
 			for _, label := range ts.Labels {
-				if label.Name == "__name__" && 
-				   (label.Value == "cloudzero_namespace_labels" || 
-				    label.Value == "cloudzero_namespace_annotations") {
+				if label.Name == "__name__" &&
+					(label.Value == "cloudzero_namespace_labels" ||
+						label.Value == "cloudzero_namespace_annotations") {
 					namespaceMetrics = append(namespaceMetrics, ts)
 					break
 				}
 			}
 		}
 	}
-	
+
 	return namespaceMetrics
 }
 
 // ValidateNamespaceMetrics validates that expected namespace metrics were received
 func (mc *MockCollector) ValidateNamespaceMetrics(expectedNamespaces []string, expectedLabels []string) error {
 	namespaceMetrics := mc.GetNamespaceMetrics()
-	
+
 	if len(namespaceMetrics) == 0 {
 		return fmt.Errorf("no namespace metrics received")
 	}
 
 	foundNamespaces := make(map[string]bool)
-	
+
 	for _, ts := range namespaceMetrics {
 		var namespaceName string
 		var metricType string
-		
+
 		// Extract namespace name and metric type from labels
 		for _, label := range ts.Labels {
 			if label.Name == "namespace" {
@@ -248,21 +248,21 @@ func (mc *MockCollector) ValidateNamespaceMetrics(expectedNamespaces []string, e
 				metricType = label.Value
 			}
 		}
-		
+
 		if namespaceName != "" {
 			foundNamespaces[namespaceName] = true
 		}
-		
+
 		fmt.Printf("Found metric: %s for namespace: %s\n", metricType, namespaceName)
 	}
-	
+
 	// Check if all expected namespaces were found
 	for _, expectedNs := range expectedNamespaces {
 		if !foundNamespaces[expectedNs] {
 			return fmt.Errorf("expected namespace %s not found in metrics", expectedNs)
 		}
 	}
-	
+
 	return nil
 }
 
