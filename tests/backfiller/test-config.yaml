@@ -1,0 +1,54 @@
+cloud_account_id: test-account-123
+region: us-west-2
+cluster_name: test-cluster
+host: localhost:8080
+logging:
+  level: debug
+remote_write:
+  send_interval: 5s
+  max_bytes_per_send: 500000
+  send_timeout: 30s
+  max_retries: 3
+k8s_client:
+  timeout: 30s
+  pagination_limit: 100
+database:
+  retention_time: 24h
+  cleanup_interval: 3h
+  batch_update_size: 500
+api_key_path: /tmp/test-api-key
+server:
+  port: 8000
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 120s
+filters:
+  labels:
+    enabled: true
+    patterns:
+      - ^environment$
+      - ^team$
+      - ^cost-center$
+    resources:
+      namespaces: true
+      pods: false
+      deployments: false
+      jobs: false
+      cronjobs: false
+      statefulsets: false
+      daemonsets: false
+      nodes: false
+  annotations:
+    enabled: true
+    patterns:
+      - ^deployment\.kubernetes\.io/managed-by$
+      - ^description$
+    resources:
+      namespaces: true
+      pods: false
+      deployments: false
+      jobs: false
+      cronjobs: false
+      statefulsets: false
+      daemonsets: false
+      nodes: false

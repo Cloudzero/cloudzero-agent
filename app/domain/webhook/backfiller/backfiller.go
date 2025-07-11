@@ -342,10 +342,11 @@ func (s *backfiller) Start(ctx context.Context) error {
 		for _, ns := range namespaces.Items {
 			// dispatch job post namespace validation AdmissionReview
 			namespace := ns.GetName()
+			nsRecord := ns.DeepCopy()
 			pool.Run(
 				func() error {
 					log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("discovered")
-					if ar, err2 := buildAdmissionReview(ns.GroupVersionKind(), &ns); err2 == nil {
+					if ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "namespace"}, nsRecord); err2 == nil {
 						log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("published")
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
@@ -457,16 +458,17 @@ func (s *backfiller) enumerateNodes(ctx context.Context) {
 
 		// Process each node in the current batch
 		for _, o := range nodes.Items {
+			nodeRecord := o.DeepCopy()
 			pool.Run(
 				func() error {
-					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", o.GetName()).Msg("published")
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", nodeRecord.GetName()).Msg("published")
 					// Create an AdmissionReview for the node and post it to the controller
-					if ar, err2 := buildAdmissionReview(o.GroupVersionKind(), &o); err2 == nil {
+					if ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "node"}, nodeRecord); err2 == nil {
 						_, _ = s.controller.Review(context.Background(), ar)
 						return nil
 					}
 					// Log an error if the review fails, but do not retry
-					log.Err(err).Str("name", o.GetName()).Msg("failed to post node review")
+					log.Err(err).Str("name", nodeRecord.GetName()).Msg("failed to post node review")
 					return nil
 				},
 				waiter,
