@@ -65,16 +65,20 @@ func NewMetricFilter(cfg *config.Metrics) (*MetricFilter, error) {
 	return mf, nil
 }
 
-// Filter processes the supplied metrics through the filter. It returns two
-// slices, the first being the list of cost metrics, the second being the list
-// of observability metrics, both of which have also had the labels filtered
-// to only include those that match the filter.
-func (mf *MetricFilter) Filter(metrics []types.Metric) (costMetrics []types.Metric, observabilityMetrics []types.Metric) {
+// Filter processes the supplied metrics through the filter. It returns three
+// slices: the first being the list of cost metrics, the second being the list
+// of observability metrics, and the third being the list of dropped metrics.
+// Both cost and observability metrics have also had the labels filtered to only
+// include those that match the filter. Dropped metrics are defined as those
+// which matched neither the cost nor observability filters.
+func (mf *MetricFilter) Filter(metrics []types.Metric) (costMetrics []types.Metric, observabilityMetrics []types.Metric, droppedMetrics []types.Metric) {
 	if mf == nil {
-		return metrics, metrics
+		return metrics, metrics, nil
 	}
 
 	for _, metric := range metrics {
+		var matchedCost, matchedObservability bool
+
 		if mf.cost == nil || mf.cost.Test(metric.MetricName) {
 			costMetric := metric
 
@@ -88,6 +92,7 @@ func (mf *MetricFilter) Filter(metrics []types.Metric) (costMetrics []types.Metr
 			}
 
 			costMetrics = append(costMetrics, costMetric)
+			matchedCost = true
 		}
 
 		if mf.observability == nil || mf.observability.Test(metric.MetricName) {
@@ -103,8 +108,13 @@ func (mf *MetricFilter) Filter(metrics []types.Metric) (costMetrics []types.Metr
 			}
 
 			observabilityMetrics = append(observabilityMetrics, observabilityMetric)
+			matchedObservability = true
+		}
+
+		if !matchedCost && !matchedObservability {
+			droppedMetrics = append(droppedMetrics, metric)
 		}
 	}
 
-	return costMetrics, observabilityMetrics
+	return costMetrics, observabilityMetrics, droppedMetrics
 }
