@@ -677,8 +677,8 @@ data:
     database:
       storage_path: /cloudzero/data
       max_records: 1.5e+06
-      cost_max_interval: 10m
-      observability_max_interval: 30m
+      cost_max_interval: 30m
+      observability_max_interval: 10m
       compression_level: 8
       purge_rules:
         metrics_older_than: 168h
@@ -729,12 +729,12 @@ data:
             memory: 64Mi
       database:
         compressionLevel: 8
-        costMaxInterval: 10m
+        costMaxInterval: 30m
         emptyDir:
           enabled: true
           sizeLimit: ""
         maxRecords: 1500000
-        observabilityMaxInterval: 30m
+        observabilityMaxInterval: 10m
         purgeRules:
           lazy: true
           metricsOlderThan: 168h
