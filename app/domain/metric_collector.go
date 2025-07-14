@@ -141,7 +141,7 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}
 
-	costMetrics, observabilityMetrics := d.filter.Filter(metrics)
+	costMetrics, observabilityMetrics, droppedMetrics := d.filter.Filter(metrics)
 
 	metricsReceived.WithLabelValues().Add(float64(len(metrics)))
 	metricsReceivedCost.WithLabelValues().Add(float64(len(costMetrics)))
@@ -155,12 +155,16 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		for _, metric := range observabilityMetrics {
 			metricsCount.Add("observability", metric.MetricName)
 		}
+		for _, metric := range droppedMetrics {
+			metricsCount.Add("dropped", metric.MetricName)
+		}
 
 		log.Ctx(ctx).Debug().
 			Interface("metricCounts", metricsCount).
-			Int("metrics", len(metrics)).
+			Int("metricsReceived", len(metrics)).
 			Int("costMetrics", len(costMetrics)).
 			Int("observabilityMetrics", len(observabilityMetrics)).
+			Int("droppedMetrics", len(droppedMetrics)).
 			Msg("metrics received")
 	}
 
