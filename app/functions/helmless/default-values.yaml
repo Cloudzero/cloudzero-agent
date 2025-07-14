@@ -867,10 +867,10 @@ aggregator:
     maxRecords: 1500000
     # Max interval to flush a cost metrics file. This is mostly useful for
     # smaller clusters with little activity.
-    costMaxInterval: 10m
+    costMaxInterval: 30m
     # Max interval to flush an observability metrics file. This is mostly useful
     # for smaller clusters with little activity.
-    observabilityMaxInterval: 30m
+    observabilityMaxInterval: 10m
     # Compression level to use when compressing metrics files on-disk.
     #
     # Valid value range from 0-11, with higher values yielding improved
