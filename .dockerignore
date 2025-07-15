@@ -1,4 +1,0 @@
-# These are platform-specific, and can override using system-wide
-# versions of the tools.
-/.tools/bin
-/.tools/node_modules
