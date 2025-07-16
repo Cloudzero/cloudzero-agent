@@ -1,0 +1,46 @@
+{{- if .Values.components.aggregator.autoscale }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-custom-metrics-reader
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+rules:
+- apiGroups: ["custom.metrics.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-custom-metrics-reader
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-custom-metrics-reader
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: system:controller:horizontal-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-custom-metrics-reader-hpa
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-custom-metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: horizontal-pod-autoscaler
+  namespace: kube-system
+{{- end }} 

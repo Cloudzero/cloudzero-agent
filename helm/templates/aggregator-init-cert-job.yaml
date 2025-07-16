@@ -1,0 +1,74 @@
+{{- if and .Values.aggregator.collector.tls.secret.create .Values.components.aggregator.autoscale }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-init-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+spec:
+  template:
+    metadata:
+      name: {{ include "cloudzero-agent.aggregator.name" . }}-init-cert
+      labels:
+        {{- include "cloudzero-agent.aggregator.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
+      {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 }}
+      containers:
+      - name: create-cert
+        {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 8 }}
+        command: ["/bin/bash", "-c"]
+        workingDir: /var/tmp
+        args:
+          - |
+            #!/bin/bash
+            set -e
+            
+            SECRET_NAME="{{ include "cloudzero-agent.aggregator.tlsSecretName" . }}"
+            SERVICE_NAME="{{ include "cloudzero-agent.aggregator.name" . }}"
+            NAMESPACE="{{ .Release.Namespace }}"
+            
+            EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}' 2>/dev/null || echo "")
+            EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}' 2>/dev/null || echo "")
+            
+            GENERATE_CERTIFICATE=false
+            
+            if [[ -n "$EXISTING_TLS_CRT" && -n "$EXISTING_TLS_KEY" ]]; then
+              # Check if the certificate is valid for our service
+              SAN=$(echo "$EXISTING_TLS_CRT" | base64 -d | openssl x509 -text -noout | grep DNS | sed 's/.*DNS://' || echo "")
+              if [[ "$SAN" != "$SERVICE_NAME.$NAMESPACE.svc" ]]; then
+                echo "The SANs in the certificate do not match the service name."
+                GENERATE_CERTIFICATE=true
+              fi
+            else
+              echo "TLS Secret is missing or incomplete."
+              GENERATE_CERTIFICATE=true
+            fi
+            
+            if [[ $GENERATE_CERTIFICATE == "true" ]]; then
+              echo "Generating new TLS certificate for $SERVICE_NAME.$NAMESPACE.svc"
+              
+              # Generate self-signed certificate and private key
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes \
+                -subj "/CN=$SERVICE_NAME.$NAMESPACE.svc" \
+                -addext "subjectAltName = DNS:$SERVICE_NAME.$NAMESPACE.svc"
+              
+              # Base64 encode the certificate and key
+              TLS_CRT=$(cat tls.crt | base64 | tr -d '\n')
+              TLS_KEY=$(cat tls.key | base64 | tr -d '\n')
+              
+              # Create or update the TLS Secret
+              kubectl create secret tls $SECRET_NAME \
+                --cert=tls.crt \
+                --key=tls.key \
+                --namespace=$NAMESPACE \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              echo "TLS certificate created/updated successfully"
+            else
+              echo "Valid certificate already exists for $SERVICE_NAME.$NAMESPACE.svc"
+            fi
+{{- end }} 

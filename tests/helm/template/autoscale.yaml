@@ -666,13 +666,17 @@ data:
         - pattern: "czo_"
           match: prefix
       
+    certificate:
+      key: /etc/certs/tls.key
+      cert: /etc/certs/tls.crt
     server:
-      mode: http
+      mode: dual
       port: 8080
+      tls_port: 8443
       profiling: false
       reconnect_frequency: 16
     logging:
-      level: "info"
+      level: "debug"
       capture: true
     database:
       storage_path: /cloudzero/data
@@ -752,7 +756,7 @@ data:
         tag: null
       logging:
         capture: true
-        level: info
+        level: debug
       mountRoot: /cloudzero
       name: null
       nodeSelector: {}
@@ -806,7 +810,7 @@ data:
         podDisruptionBudget: null
       aggregator:
         annotations: {}
-        autoscale: false
+        autoscale: true
         podDisruptionBudget: null
         replicas: 3
         tolerations: []
@@ -1740,6 +1744,35 @@ rules:
       - "/metrics"
     verbs:
       - get
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+---
+# Source: cloudzero-agent/templates/custom-metrics-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cz-agent-aggregator-custom-metrics-reader
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+rules:
+- apiGroups: ["custom.metrics.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
 ---
 # Source: cloudzero-agent/templates/init-cert-clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1772,11 +1805,22 @@ rules:
       - "secrets"
     resourceNames:
       - cz-agent-cloudzero-agent-webhook-server-tls
+      - cz-agent-aggregator-tls
     verbs:
       - get
       - list
       - patch
       - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - create
+      - get
+      - list
+      - patch
       - update
   - apiGroups:
       - "admissionregistration.k8s.io"
@@ -1833,6 +1877,52 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: cz-agent-cloudzero-agent-server
+---
+# Source: cloudzero-agent/templates/custom-metrics-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cz-agent-aggregator-custom-metrics-reader
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cz-agent-aggregator-custom-metrics-reader
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: system:controller:horizontal-pod-autoscaler
+---
+# Source: cloudzero-agent/templates/custom-metrics-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cz-agent-aggregator-custom-metrics-reader-hpa
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cz-agent-aggregator-custom-metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: horizontal-pod-autoscaler
+  namespace: kube-system
 ---
 # Source: cloudzero-agent/templates/init-cert-clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1908,6 +1998,10 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 8080
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8443
   type: ClusterIP
 ---
 # Source: cloudzero-agent/templates/webhook-service.yaml
@@ -2263,10 +2357,14 @@ spec:
           ports:
             - name: port-collector
               containerPort: 8080
+            - name: port-coll-tls
+              containerPort: 8443
           command: ["/app/cloudzero-collector", "-config", "/cloudzero/config/config.yml"]
           env:
             - name: SERVER_PORT
               value: "8080"
+            - name: SERVER_TLS_PORT
+              value: "8443"
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2277,6 +2375,9 @@ spec:
               readOnly: true
             - name: aggregator-persistent-storage
               mountPath: /cloudzero/data
+            - name: aggregator-tls-certs
+              mountPath: /etc/certs
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /healthz
@@ -2368,6 +2469,9 @@ spec:
         - name: aggregator-config-volume
           configMap:
             name: cz-agent-aggregator
+        - name: aggregator-tls-certs
+          secret:
+            secretName: cz-agent-aggregator-tls
         - name: aggregator-persistent-storage
           emptyDir:
             {}
@@ -2482,6 +2586,145 @@ spec:
         - name: cloudzero-api-key
           secret:
             secretName: cz-agent-api-key
+---
+# Source: cloudzero-agent/templates/aggregator-hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cz-agent-aggregator
+  namespace: cz-agent
+  
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cz-agent-aggregator
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: czo_cost_metrics_shipping_progress
+      target:
+        type: AverageValue
+        averageValue: 900m
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
+---
+# Source: cloudzero-agent/templates/aggregator-init-cert-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cz-agent-aggregator-init-cert
+  namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+spec:
+  template:
+    metadata:
+      name: cz-agent-aggregator-init-cert
+      labels:
+        app.kubernetes.io/component: aggregator
+        app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cz-agent-aggregator
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.55.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: cz-agent-cloudzero-agent-server
+      
+      containers:
+      - name: create-cert
+        image: "docker.io/bitnami/kubectl:1.33.1"
+        imagePullPolicy: "IfNotPresent"
+        command: ["/bin/bash", "-c"]
+        workingDir: /var/tmp
+        args:
+          - |
+            #!/bin/bash
+            set -e
+            
+            SECRET_NAME="cz-agent-aggregator-tls"
+            SERVICE_NAME="cz-agent-aggregator"
+            NAMESPACE="cz-agent"
+            
+            EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}' 2>/dev/null || echo "")
+            EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}' 2>/dev/null || echo "")
+            
+            GENERATE_CERTIFICATE=false
+            
+            if [[ -n "$EXISTING_TLS_CRT" && -n "$EXISTING_TLS_KEY" ]]; then
+              # Check if the certificate is valid for our service
+              SAN=$(echo "$EXISTING_TLS_CRT" | base64 -d | openssl x509 -text -noout | grep DNS | sed 's/.*DNS://' || echo "")
+              if [[ "$SAN" != "$SERVICE_NAME.$NAMESPACE.svc" ]]; then
+                echo "The SANs in the certificate do not match the service name."
+                GENERATE_CERTIFICATE=true
+              fi
+            else
+              echo "TLS Secret is missing or incomplete."
+              GENERATE_CERTIFICATE=true
+            fi
+            
+            if [[ $GENERATE_CERTIFICATE == "true" ]]; then
+              echo "Generating new TLS certificate for $SERVICE_NAME.$NAMESPACE.svc"
+              
+              # Generate self-signed certificate and private key
+              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes \
+                -subj "/CN=$SERVICE_NAME.$NAMESPACE.svc" \
+                -addext "subjectAltName = DNS:$SERVICE_NAME.$NAMESPACE.svc"
+              
+              # Base64 encode the certificate and key
+              TLS_CRT=$(cat tls.crt | base64 | tr -d '\n')
+              TLS_KEY=$(cat tls.key | base64 | tr -d '\n')
+              
+              # Create or update the TLS Secret
+              kubectl create secret tls $SECRET_NAME \
+                --cert=tls.crt \
+                --key=tls.key \
+                --namespace=$NAMESPACE \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              echo "TLS certificate created/updated successfully"
+            else
+              echo "Valid certificate already exists for $SERVICE_NAME.$NAMESPACE.svc"
+            fi
 ---
 # Source: cloudzero-agent/templates/backfill-job.yaml
 apiVersion: batch/v1
@@ -2813,6 +3056,32 @@ spec:
                 --type='json' \
                 -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
               exit 0
+---
+# Source: cloudzero-agent/templates/custom-metrics-apiservice.yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+  namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cz-agent-aggregator
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+spec:
+  service:
+    name: cz-agent-aggregator
+    namespace: cz-agent
+    port: 443
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  groupPriorityMinimum: 100
+  versionPriority: 100
+  caBundle:
 ---
 # Source: cloudzero-agent/templates/webhook-validating-config.yaml
 apiVersion: admissionregistration.k8s.io/v1

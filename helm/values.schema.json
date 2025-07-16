@@ -233,6 +233,261 @@
       },
       "type": "object"
     },
+    "io.k8s.api.autoscaling.v2.ContainerResourceMetricSource": {
+      "additionalProperties": false,
+      "properties": {
+        "container": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricTarget"
+        }
+      },
+      "required": ["name", "target", "container"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.CrossVersionObjectReference": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["kind", "name"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.ExternalMetricSource": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricIdentifier"
+        },
+        "target": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricTarget"
+        }
+      },
+      "required": ["metric", "target"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.HPAScalingPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "periodSeconds": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": ["type", "value", "periodSeconds"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.HPAScalingRules": {
+      "additionalProperties": false,
+      "properties": {
+        "policies": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HPAScalingPolicy"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "selectPolicy": {
+          "type": "string"
+        },
+        "stabilizationWindowSeconds": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "tolerance": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["HorizontalPodAutoscaler"],
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec"
+        },
+        "status": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerStatus"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "autoscaling",
+          "kind": "HorizontalPodAutoscaler",
+          "version": "v2"
+        }
+      ]
+    },
+    "io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerBehavior": {
+      "additionalProperties": false,
+      "properties": {
+        "scaleDown": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HPAScalingRules"
+        },
+        "scaleUp": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HPAScalingRules"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerBehavior"
+        },
+        "maxReplicas": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricSpec"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "minReplicas": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "scaleTargetRef": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.CrossVersionObjectReference"
+        }
+      },
+      "required": ["scaleTargetRef", "maxReplicas"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.MetricIdentifier": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "selector": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.MetricSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "containerResource": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.ContainerResourceMetricSource"
+        },
+        "external": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.ExternalMetricSource"
+        },
+        "object": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.ObjectMetricSource"
+        },
+        "pods": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.PodsMetricSource"
+        },
+        "resource": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.ResourceMetricSource"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.MetricTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "averageUtilization": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "averageValue": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+        }
+      },
+      "required": ["type"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.ObjectMetricSource": {
+      "additionalProperties": false,
+      "properties": {
+        "describedObject": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.CrossVersionObjectReference"
+        },
+        "metric": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricIdentifier"
+        },
+        "target": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricTarget"
+        }
+      },
+      "required": ["describedObject", "target", "metric"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.PodsMetricSource": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricIdentifier"
+        },
+        "target": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricTarget"
+        }
+      },
+      "required": ["metric", "target"],
+      "type": "object"
+    },
+    "io.k8s.api.autoscaling.v2.ResourceMetricSource": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/io.k8s.api.autoscaling.v2.MetricTarget"
+        }
+      },
+      "required": ["name", "target"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -3210,6 +3465,30 @@
             },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+            },
+            "tls": {
+              "additionalProperties": false,
+              "properties": {
+                "mountPath": {
+                  "default": "/etc/certs",
+                  "type": "string"
+                },
+                "secret": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "create": {
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"
@@ -3279,7 +3558,7 @@
               "type": "boolean"
             },
             "level": {
-              "enum": ["debug", "info", "warn", "error"],
+              "enum": ["trace", "debug", "info", "warn", "error"],
               "type": "string"
             }
           },
@@ -3301,6 +3580,27 @@
         "reconnectFrequency": {
           "minimum": 0,
           "type": "integer"
+        },
+        "scaling": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "behavior": {
+              "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerBehavior"
+            },
+            "maxReplicas": {
+              "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec/properties/maxReplicas"
+            },
+            "minReplicas": {
+              "$ref": "#/$defs/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec/properties/minReplicas"
+            },
+            "targetValue": {
+              "type": "string"
+            }
+          },
+          "type": "object"
         },
         "shipper": {
           "additionalProperties": false,
@@ -3375,6 +3675,9 @@
           "properties": {
             "annotations": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "autoscale": {
+              "type": "boolean"
             },
             "podDisruptionBudget": {
               "oneOf": [

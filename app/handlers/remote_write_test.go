@@ -57,6 +57,10 @@ func TestRemoteWriteMethods(t *testing.T) {
 
 	storage.EXPECT().Put(gomock.Any(), gomock.Any()).Return(nil)
 	storage.EXPECT().Flush().Return(nil)
+	// Add the Pending() expectation for the shipping progress metric
+	storage.EXPECT().Pending().Return(0).AnyTimes()
+	// Add the ElapsedTime() expectation for the time-based shipping progress metric
+	storage.EXPECT().ElapsedTime().Return(int64(10000)).AnyTimes()
 
 	payload, _, _, err := testdata.BuildWriteRequest(testdata.WriteRequestFixture.Timeseries, nil, nil, nil, nil, "snappy")
 	assert.NoError(t, err)

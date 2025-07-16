@@ -79,4 +79,16 @@ rules:
       - "/metrics"
     verbs:
       - get
+  {{- if and .Values.aggregator.collector.tls.secret.create .Values.components.aggregator.autoscale }}
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+  {{- end }}
 {{- end }}
