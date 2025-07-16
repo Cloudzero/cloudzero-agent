@@ -5,7 +5,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "friday"
+      day: "wednesday"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -16,7 +16,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "friday"
+      day: "wednesday"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -27,7 +27,7 @@ updates:
     directory: "/docker/"
     schedule:
       interval: "weekly"
-      day: "friday"
+      day: "wednesday"
     commit-message:
       prefix: "CP-29639: "
 
@@ -35,7 +35,7 @@ updates:
     directory: "/.tools/"
     schedule:
       interval: "weekly"
-      day: "friday"
+      day: "wednesday"
     commit-message:
       prefix: "CP-29639: "
 
@@ -43,6 +43,6 @@ updates:
     directory: "/helm/"
     schedule:
       interval: "weekly"
-      day: "friday"
+      day: "wednesday"
     commit-message:
       prefix: "CP-29639: "
