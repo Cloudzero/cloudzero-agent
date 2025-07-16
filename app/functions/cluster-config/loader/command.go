@@ -14,10 +14,13 @@ import (
 	"io"
 	net "net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	http "github.com/cloudzero/cloudzero-agent/app/http/client"
 	"github.com/cloudzero/cloudzero-agent/app/types/clusterconfig"
+	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -52,9 +55,9 @@ func NewCommand() *cli.Command {
 		Usage:   "load the configuration",
 		Aliases: []string{"l"},
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: FlagAccount, Usage: "account name", Required: true},
-			&cli.StringFlag{Name: FlagRegion, Usage: "region", Required: true},
-			&cli.StringFlag{Name: FlagClusterName, Usage: "cluster name", Required: true},
+			&cli.StringFlag{Name: FlagAccount, Usage: "account name (auto-detected if empty)", Required: false},
+			&cli.StringFlag{Name: FlagRegion, Usage: "region (auto-detected if empty)", Required: false},
+			&cli.StringFlag{Name: FlagClusterName, Usage: "cluster name (auto-detected if empty)", Required: false},
 			&cli.StringFlag{Name: FlagReleaseName, Usage: "release name", Required: true},
 			&cli.StringFlag{Name: FlagChartVersion, Usage: "current chart version", Required: true},
 			&cli.StringFlag{Name: FlagAgentVersion, Usage: "current agent version", Required: true},
@@ -77,6 +80,22 @@ func run(c *cli.Context) error {
 	if err != nil {
 		log.Ctx(c.Context).Err(err).Msg("failed to get the k8s namespace")
 		errs = append(errs, err.Error())
+	}
+
+	// prepare configuration values for auto-detection
+	accountID := strings.TrimSpace(c.String(FlagAccount))
+	region := strings.TrimSpace(c.String(FlagRegion))
+	clusterName := strings.TrimSpace(c.String(FlagClusterName))
+
+	// auto-detect empty values using DetectConfiguration
+	logger := log.Ctx(c.Context).With().Str("component", "confload").Logger()
+	ctx, cancel := context.WithTimeout(c.Context, 10*time.Second)
+	defer cancel()
+
+	err = scout.DetectConfiguration(ctx, &logger, nil, &region, &accountID, &clusterName)
+	if err != nil {
+		log.Ctx(c.Context).Err(err).Msg("failed to auto-detect cloud environment")
+		errs = append(errs, fmt.Sprintf("failed to auto-detect cloud environment: %v", err))
 	}
 
 	// get the provider id
@@ -153,11 +172,11 @@ func run(c *cli.Context) error {
 
 	// create a new cluster config object
 	cfg := clusterconfig.ClusterConfig{
-		Account:                   c.String(FlagAccount),
-		Region:                    c.String(FlagRegion),
+		Account:                   accountID,
+		Region:                    region,
 		Namespace:                 ns,
 		ProviderId:                providerID,
-		ClusterName:               c.String(FlagClusterName),
+		ClusterName:               clusterName,
 		K8SVersion:                k8sVersion,
 		ReleaseName:               c.String(FlagReleaseName),
 		ChartVersion:              c.String(FlagChartVersion),
