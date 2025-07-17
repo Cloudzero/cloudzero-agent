@@ -32,6 +32,7 @@ type ClusterConfig struct {
 	ReleaseName               string                 `protobuf:"bytes,7,opt,name=release_name,json=releaseName,proto3" json:"release_name,omitempty"`
 	ChartVersion              string                 `protobuf:"bytes,8,opt,name=chart_version,json=chartVersion,proto3" json:"chart_version,omitempty"`
 	AgentVersion              string                 `protobuf:"bytes,9,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	CloudProvider             string                 `protobuf:"bytes,10,opt,name=cloud_provider,json=cloudProvider,proto3" json:"cloud_provider,omitempty"`
 	ConfigValuesBase64        string                 `protobuf:"bytes,30,opt,name=config_values_base64,json=configValuesBase64,proto3" json:"config_values_base64,omitempty"`
 	ConfigValidatorBase64     string                 `protobuf:"bytes,31,opt,name=config_validator_base64,json=configValidatorBase64,proto3" json:"config_validator_base64,omitempty"`
 	ConfigWebhookServerBase64 string                 `protobuf:"bytes,32,opt,name=config_webhook_server_base64,json=configWebhookServerBase64,proto3" json:"config_webhook_server_base64,omitempty"`
@@ -134,6 +135,13 @@ func (x *ClusterConfig) GetAgentVersion() string {
 	return ""
 }
 
+func (x *ClusterConfig) GetCloudProvider() string {
+	if x != nil {
+		return x.CloudProvider
+	}
+	return ""
+}
+
 func (x *ClusterConfig) GetConfigValuesBase64() string {
 	if x != nil {
 		return x.ConfigValuesBase64
@@ -173,7 +181,7 @@ var File_clusterconfig_proto protoreflect.FileDescriptor
 
 const file_clusterconfig_proto_rawDesc = "" +
 	"\n" +
-	"\x13clusterconfig.proto\x12\x06status\"\xae\x04\n" +
+	"\x13clusterconfig.proto\x12\x06status\"\xd5\x04\n" +
 	"\rClusterConfig\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x1c\n" +
@@ -185,7 +193,9 @@ const file_clusterconfig_proto_rawDesc = "" +
 	"k8sVersion\x12!\n" +
 	"\frelease_name\x18\a \x01(\tR\vreleaseName\x12#\n" +
 	"\rchart_version\x18\b \x01(\tR\fchartVersion\x12#\n" +
-	"\ragent_version\x18\t \x01(\tR\fagentVersion\x120\n" +
+	"\ragent_version\x18\t \x01(\tR\fagentVersion\x12%\n" +
+	"\x0ecloud_provider\x18\n" +
+	" \x01(\tR\rcloudProvider\x120\n" +
 	"\x14config_values_base64\x18\x1e \x01(\tR\x12configValuesBase64\x126\n" +
 	"\x17config_validator_base64\x18\x1f \x01(\tR\x15configValidatorBase64\x12?\n" +
 	"\x1cconfig_webhook_server_base64\x18  \x01(\tR\x19configWebhookServerBase64\x128\n" +

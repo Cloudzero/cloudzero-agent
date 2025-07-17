@@ -13,6 +13,7 @@ message ClusterConfig {
     string release_name = 7;
     string chart_version = 8;
     string agent_version = 9;
+    string cloud_provider = 10;
 
     string config_values_base64 = 30;
     string config_validator_base64 = 31;

@@ -72,6 +72,9 @@ func NewCommand() *cli.Command {
 }
 
 func run(c *cli.Context) error {
+	ctx, cancel := context.WithTimeout(c.Context, 10*time.Second)
+	defer cancel()
+
 	// create an errors array
 	errs := make([]string, 0)
 
@@ -86,16 +89,26 @@ func run(c *cli.Context) error {
 	accountID := strings.TrimSpace(c.String(FlagAccount))
 	region := strings.TrimSpace(c.String(FlagRegion))
 	clusterName := strings.TrimSpace(c.String(FlagClusterName))
+	cloudProvider := ""
 
 	// auto-detect empty values using DetectConfiguration
-	logger := log.Ctx(c.Context).With().Str("component", "confload").Logger()
-	ctx, cancel := context.WithTimeout(c.Context, 10*time.Second)
-	defer cancel()
-
-	err = scout.DetectConfiguration(ctx, &logger, nil, &region, &accountID, &clusterName)
+	s := scout.NewScout()
+	info, err := s.EnvironmentInfo(ctx)
 	if err != nil {
 		log.Ctx(c.Context).Err(err).Msg("failed to auto-detect cloud environment")
 		errs = append(errs, fmt.Sprintf("failed to auto-detect cloud environment: %v", err))
+	} else {
+		// handle parsed env
+		if accountID == "" {
+			accountID = info.AccountID
+		}
+		if region == "" {
+			region = info.Region
+		}
+		if clusterName == "" {
+			clusterName = info.ClusterName
+		}
+		cloudProvider = string(info.CloudProvider)
 	}
 
 	// get the provider id
@@ -181,6 +194,7 @@ func run(c *cli.Context) error {
 		ReleaseName:               c.String(FlagReleaseName),
 		ChartVersion:              c.String(FlagChartVersion),
 		AgentVersion:              c.String(FlagAgentVersion),
+		CloudProvider:             cloudProvider,
 		ConfigValuesBase64:        valuesB64,
 		ConfigValidatorBase64:     settingsValidatorB64,
 		ConfigWebhookServerBase64: settingsWebhookB64,
