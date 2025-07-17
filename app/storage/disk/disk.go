@@ -275,6 +275,14 @@ func (d *DiskStore) Pending() int {
 	return d.rowCount
 }
 
+// ElapsedTime returns the duration in milliseconds since the current buffer was started
+func (d *DiskStore) ElapsedTime() int64 {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return timestamp.Milli() - d.startTime
+}
+
 func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 	// set to root path
 	allPaths := []string{d.dirPath}

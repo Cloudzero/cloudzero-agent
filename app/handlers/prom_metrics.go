@@ -37,5 +37,6 @@ func (a *PromMetricsAPI) Register(app server.Server) error {
 func (a *PromMetricsAPI) Routes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", promhttp.Handler().ServeHTTP)
+
 	return r
 }

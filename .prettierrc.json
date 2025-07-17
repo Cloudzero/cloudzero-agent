@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": ".cursor/rules/*.mdc",
+      "options": {
+        "parser": "markdown"
+      }
+    }
+  ]
+}

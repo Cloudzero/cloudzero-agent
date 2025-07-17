@@ -635,6 +635,23 @@ Name for the secret holding TLS certificates
 {{- end }}
 
 {{/*
+Name for the secret holding aggregator TLS certificates
+*/}}
+{{- define "cloudzero-agent.aggregator.tlsSecretName" -}}
+{{- .Values.aggregator.collector.tls.secret.name | default (printf "%s-tls" (include "cloudzero-agent.aggregator.name" .)) }}
+{{- end }}
+
+{{/*
+CA Bundle for aggregator custom metrics API
+*/}}
+{{- define "cloudzero-agent.aggregator.caBundle" -}}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace (include "cloudzero-agent.aggregator.tlsSecretName" .) -}}
+{{- if $secret -}}
+{{- index $secret.data "tls.crt" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Volume mount for the API key
 */}}
 {{- define "cloudzero-agent.apiKeyVolumeMount" -}}

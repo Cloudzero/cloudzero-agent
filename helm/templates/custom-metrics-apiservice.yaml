@@ -1,0 +1,28 @@
+{{- if .Values.components.aggregator.autoscale }}
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+spec:
+  service:
+    name: {{ include "cloudzero-agent.aggregator.name" . }}
+    namespace: {{ .Release.Namespace }}
+{{- if .Values.components.aggregator.autoscale }}
+    port: 443
+{{- else }}
+    port: 80
+{{- end }}
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  groupPriorityMinimum: 100
+  versionPriority: 100
+{{- if .Values.components.aggregator.autoscale }}
+  caBundle: {{ include "cloudzero-agent.aggregator.caBundle" . }}
+{{- else }}
+  insecureSkipTLSVerify: true
+{{- end }}
+{{- end }} 

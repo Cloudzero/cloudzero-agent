@@ -305,6 +305,18 @@ properties:
             type:
               - integer
               - "null"
+          autoscale:
+            description: |
+              Whether to enable horizontal pod autoscaling for the aggregator.
+              When enabled, the aggregator will automatically scale based on the
+              czo_cost_metrics_shipping_progress metric. Detailed scaling
+              configuration is found under the aggregator.scaling section.
+
+              This creates:
+              - HPA resource with custom metrics configuration
+              - APIService registration for custom.metrics.k8s.io
+              - RBAC permissions for HPA to access custom metrics
+            type: boolean
           tolerations:
             description: |
               Tolerations configuration for the aggregator pods.
@@ -400,6 +412,7 @@ properties:
           level:
             type: string
             enum:
+              - trace
               - debug
               - info
               - warn
@@ -497,6 +510,37 @@ properties:
           # Resource requirements for the collector
           resources:
             $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          tls:
+            description: |
+              TLS configuration for the collector. When autoscaling is enabled,
+              the collector runs in dual mode (HTTP + HTTPS) to serve both
+              regular metrics collection and the custom metrics API for HPA.
+              When autoscaling is disabled, the collector runs in HTTP-only
+              mode.
+            type: object
+            additionalProperties: false
+            properties:
+              mountPath:
+                description: |
+                  Path where the TLS certificate and key will be mounted in the container
+                type: string
+                default: "/etc/certs"
+              secret:
+                description: |
+                  Configuration for the TLS certificate Secret
+                type: object
+                additionalProperties: false
+                properties:
+                  create:
+                    description: |
+                      Whether to create a Secret to store the TLS certificate and key
+                    type: boolean
+                    default: true
+                  name:
+                    description: |
+                      Name of the Secret to create. If empty, a name will be generated
+                    type: string
+                    default: ""
       shipper:
         type: object
         additionalProperties: false
@@ -515,6 +559,34 @@ properties:
       # Affinity settings for the aggregator
       affinity:
         $ref: "#/$defs/io.k8s.api.core.v1.Affinity"
+      # Scaling configuration for the aggregator
+      scaling:
+        description: |
+          Detailed scaling configuration for the aggregator deployment.
+          This section is only used when components.aggregator.autoscale is enabled.
+        additionalProperties: false
+        type: object
+        properties:
+          minReplicas:
+            $ref: "#/definitions/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec/properties/minReplicas"
+          maxReplicas:
+            $ref: "#/definitions/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerSpec/properties/maxReplicas"
+          targetValue:
+            description: |
+              Target value for the czo_cost_metrics_shipping_progress metric.
+              "900m" = scale when metrics projected to reach 90% of MaxRecords
+              capacity. scaling.
+            type: string
+          annotations:
+            description: |
+              Annotations to be added to the HPA resource.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          behavior:
+            description: |
+              HPA scaling behavior configuration. Configures the scaling
+              behavior of the target in both Up and Down directions. If not set,
+              the default HPAScalingRules for scale up and scale down are used.
+            $ref: "#/definitions/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerBehavior"
 
   prometheusConfig:
     description: |
