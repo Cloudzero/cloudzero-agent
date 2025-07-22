@@ -88,8 +88,12 @@ Based on these 5 requirements, the checks have been designed to help identify pr
 
 **When contacting support**, please provide:
 
-1. The diagnostic JSON file: `cloudzero-diagnostics.json` (created using the command in step 3)
+1. The diagnostic JSON file: `cloudzero-diagnostics.log` (created using the command in step 3)
 2. Pod descriptions: `kubectl -n <namespace> describe all`
 3. Any error output from the error checking command
+4. Helmless job output (configuration and setup information):
+   ```sh
+   kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=helmless --tail=10000
+   ```
 
 Contact support@cloudzero.com with this information for assistance.
