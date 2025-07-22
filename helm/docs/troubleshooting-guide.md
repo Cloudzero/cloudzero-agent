@@ -350,6 +350,7 @@ kubectl -n cloudzero-agent get secrets | grep tls
 ### Helmless Configuration Issues
 
 **❌ Problem: Configuration or setup problems**
+
 ```bash
 # Check helmless job logs for configuration information
 kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=helmless --tail=10000
