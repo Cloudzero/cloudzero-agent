@@ -27,6 +27,27 @@ flowchart LR
     F --> S[Section: Performance & Scaling]
 ```
 
+## Label Selectors & Release Information
+
+This guide uses Kubernetes label selectors instead of pod names for easier troubleshooting. Here's how to find your specific information:
+
+```bash
+# Find your Helm release name
+helm list -n cloudzero-agent
+
+# See all CloudZero agent components and their labels
+kubectl -n cloudzero-agent get pods --show-labels
+
+# Find exact container names for aggregator (needed for some commands)
+kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=aggregator -o jsonpath='{.items[0].spec.containers[*].name}'
+```
+
+**Common Label Selectors:**
+- **Agent Server**: `app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent`
+- **Webhook Server**: `app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent` 
+- **Aggregator**: `app.kubernetes.io/component=aggregator`
+- **All Components**: `app.kubernetes.io/name=cloudzero-agent`
+
 ## Initial Health Check Commands
 
 Before diving into component-specific troubleshooting, run these quick health checks:
@@ -41,8 +62,8 @@ kubectl -n cloudzero-agent top pods
 # Check for error events
 kubectl -n cloudzero-agent get events --sort-by=.metadata.creationTimestamp
 
-# Run validator diagnostics (if agent pod is running)
-kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod-name> -- cat cloudzero-agent-validator.log | jq -r 'select(.checks) | .checks[] | select(.error) | "\(.name): \(.error)"'
+# Run validator diagnostics (uses label selector)
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server -- cat cloudzero-agent-validator.log | jq -r 'select(.checks) | .checks[] | select(.error) | "\(.name): \(.error)"'
 ```
 
 > 💡 **Tip**: For detailed validation results, see [Deployment Validation Guide](./deploy-validation.md)
@@ -55,28 +76,28 @@ kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod-name> -- cat 
 
 **Pods in Pending/ImagePullBackOff State:**
 ```bash
-# Check pod details
-kubectl -n cloudzero-agent describe pod <pod-name>
+# Check pod details (example for agent server)
+kubectl -n cloudzero-agent describe pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent
 
 # Check image pull secrets
-kubectl -n cloudzero-agent get pods <pod-name> -o jsonpath='{.spec.imagePullSecrets}'
+kubectl -n cloudzero-agent get pods -l app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[*].spec.imagePullSecrets}'
 ```
 
 **Pods Crashing (CrashLoopBackOff):**
 ```bash
-# Check recent logs
-kubectl -n cloudzero-agent logs <pod-name> --previous
+# Check recent logs (agent server example)
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent --previous
 
 # Check init container logs
-kubectl -n cloudzero-agent logs <pod-name> -c env-validator-run
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c env-validator-run
 ```
 
 **Resource Issues:**
 ```bash
-# Check resource requests/limits
-kubectl -n cloudzero-agent describe pod <pod-name> | grep -A 10 "Limits:\|Requests:"
+# Check resource requests/limits for all components
+kubectl -n cloudzero-agent describe pods -l app.kubernetes.io/name=cloudzero-agent | grep -A 10 "Limits:\|Requests:"
 
-# Check node capacity
+# Check node capacity (you still need the specific node name)
 kubectl describe node <node-name> | grep -A 10 "Allocated resources:"
 ```
 
@@ -91,7 +112,7 @@ The agent server runs Prometheus and handles metrics collection from Kubernetes.
 **❌ Problem: Metrics targets not discovered**
 ```bash
 # Check Prometheus targets
-kubectl -n cloudzero-agent port-forward <agent-server-pod> 9090:9090
+kubectl -n cloudzero-agent port-forward -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent 9090:9090
 # Visit http://localhost:9090/targets in browser
 
 # Check kube-state-metrics service
@@ -102,10 +123,10 @@ kubectl -n cloudzero-agent get endpoints cloudzero-agent-cloudzero-state-metrics
 **❌ Problem: Remote write failures to aggregator**
 ```bash
 # Check agent logs for remote write errors
-kubectl -n cloudzero-agent logs <agent-server-pod> -c cloudzero-agent-server | grep -i "remote_write\|error\|fail"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server | grep -i "remote_write\|error\|fail"
 
 # Test connectivity to aggregator
-kubectl -n cloudzero-agent exec -ti <agent-server-pod> -c cloudzero-agent-server -- wget -O- http://cloudzero-agent-aggregator:8080/healthz
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server -- wget -O- http://cloudzero-agent-aggregator:8080/healthz
 ```
 
 **❌ Problem: API key authentication failures**
@@ -114,13 +135,13 @@ kubectl -n cloudzero-agent exec -ti <agent-server-pod> -c cloudzero-agent-server
 kubectl -n cloudzero-agent get secret cloudzero-agent-api-key
 
 # Verify API key is mounted correctly
-kubectl -n cloudzero-agent exec <agent-server-pod> -c cloudzero-agent-server -- ls -la /etc/config/secrets/
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server -- ls -la /etc/config/secrets/
 ```
 
 **❌ Problem: Prometheus configuration errors**
 ```bash
 # Check config reload logs
-kubectl -n cloudzero-agent logs <agent-server-pod> -c cloudzero-agent-server | grep -i "reload\|config"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server | grep -i "reload\|config"
 
 # Validate configuration
 kubectl -n cloudzero-agent get configmap cloudzero-agent-configuration -o yaml
@@ -129,13 +150,13 @@ kubectl -n cloudzero-agent get configmap cloudzero-agent-configuration -o yaml
 ### Key Log Commands
 ```bash
 # Real-time monitoring
-kubectl -n cloudzero-agent logs -f <agent-server-pod> -c cloudzero-agent-server
+kubectl -n cloudzero-agent logs -f -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server
 
 # Check validator results
-kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod-name> -- cat cloudzero-agent-validator.log | jq
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server -- cat cloudzero-agent-validator.log | jq
 
 # Check init container validation
-kubectl -n cloudzero-agent logs <agent-server-pod> -c env-validator-run
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c env-validator-run
 ```
 
 ---
@@ -171,7 +192,7 @@ kubectl -n cloudzero-agent get secret cloudzero-agent-webhook-server-tls -o json
 **❌ Problem: Admission timeouts**
 ```bash
 # Check webhook response times
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-webhook-server | grep -i "duration\|timeout"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -i "duration\|timeout"
 
 # Test webhook health directly
 curl -k https://cloudzero-agent-webhook-server-svc.cloudzero-agent.svc:443/healthz
@@ -183,19 +204,19 @@ curl -k https://cloudzero-agent-webhook-server-svc.cloudzero-agent.svc:443/healt
 kubectl get validatingwebhookconfiguration cloudzero-agent-webhook-server-webhook -o yaml
 
 # Check webhook logs for resource processing
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-webhook-server | grep -i "resource\|admit"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -i "resource\|admit"
 ```
 
 ### Key Log Commands
 ```bash
 # Monitor admission requests
-kubectl -n cloudzero-agent logs -f deployment/cloudzero-agent-webhook-server
+kubectl -n cloudzero-agent logs -f -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent
 
 # Check for certificate errors
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-webhook-server | grep -i "cert\|tls\|ssl"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -i "cert\|tls\|ssl"
 
 # Analyze webhook performance
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-webhook-server | grep -i "latency\|duration"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -i "latency\|duration"
 ```
 
 ---
@@ -204,25 +225,27 @@ kubectl -n cloudzero-agent logs deployment/cloudzero-agent-webhook-server | grep
 
 The aggregator consists of collector (receives metrics) and shipper (uploads to CloudZero).
 
+> **Note**: Aggregator commands use `app.kubernetes.io/component=aggregator`. The exact container names depend on your Helm release name (e.g., `cloudzero-agent-aggregator-collector`).
+
 ### Collector Issues
 
 **❌ Problem: Not receiving metrics from agent**
 ```bash
 # Check collector health
-kubectl -n cloudzero-agent port-forward deployment/cloudzero-agent-aggregator 8080:8080
+kubectl -n cloudzero-agent port-forward -l app.kubernetes.io/component=aggregator 8080:8080
 curl http://localhost:8080/healthz
 
-# Check collector logs for remote write requests
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-collector | grep -i "remote_write\|request"
+# Check collector logs for remote write requests (replace <release-name> with your release name)
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-collector | grep -i "remote_write\|request"
 ```
 
 **❌ Problem: Disk space issues**
 ```bash
-# Check persistent volume usage (if using debug container)
-kubectl -n cloudzero-agent exec deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-debug -- df -h /cloudzero/data
+# Check persistent volume usage (if debug container is enabled)
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-debug -- df -h /cloudzero/data
 
 # Check for disk-related errors
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-collector | grep -i "disk\|space\|full"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-collector | grep -i "disk\|space\|full"
 ```
 
 ### Shipper Issues
@@ -230,31 +253,34 @@ kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudze
 **❌ Problem: S3 upload failures**
 ```bash
 # Check shipper logs for upload errors
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper | grep -i "upload\|s3\|error"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -i "upload\|s3\|error"
 
 # Verify API key for CloudZero platform
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper | grep -i "auth\|key\|unauthorized"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -i "auth\|key\|unauthorized"
 ```
 
 **❌ Problem: File processing issues**
 ```bash
 # Check for file compression/processing errors
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper | grep -i "compress\|parquet\|file"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -i "compress\|parquet\|file"
 
 # Monitor file processing statistics
-kubectl -n cloudzero-agent logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper | grep -i "processed\|uploaded"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -i "processed\|uploaded"
 ```
 
 ### Key Log Commands
 ```bash
-# Monitor collector in real-time
-kubectl -n cloudzero-agent logs -f deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-collector
+# Monitor collector in real-time (replace <release-name>)
+kubectl -n cloudzero-agent logs -f -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-collector
 
-# Monitor shipper uploads
-kubectl -n cloudzero-agent logs -f deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper
+# Monitor shipper uploads (replace <release-name>)
+kubectl -n cloudzero-agent logs -f -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper
+
+# Find your exact container names
+kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=aggregator -o jsonpath='{.items[0].spec.containers[*].name}'
 
 # Check aggregator metrics (if exposed)
-kubectl -n cloudzero-agent port-forward deployment/cloudzero-agent-aggregator 8081:8081
+kubectl -n cloudzero-agent port-forward -l app.kubernetes.io/component=aggregator 8081:8081
 curl http://localhost:8081/metrics
 ```
 
@@ -278,17 +304,19 @@ curl http://localhost:8080/metrics | head -20
 
 **❌ Problem: Backfill job failed**
 ```bash
-# Check backfill job logs
-kubectl -n cloudzero-agent logs job/<backfill-job-name>
+# Find and check backfill job logs
+kubectl -n cloudzero-agent get jobs -l app.kubernetes.io/name=cloudzero-agent
+kubectl -n cloudzero-agent logs -l job-name=<backfill-job-name>
 
 # Check job status
-kubectl -n cloudzero-agent describe job/<backfill-job-name>
+kubectl -n cloudzero-agent describe jobs -l app.kubernetes.io/name=cloudzero-agent
 ```
 
 **❌ Problem: Certificate initialization failed**
 ```bash
-# Check init-cert job
-kubectl -n cloudzero-agent logs job/<init-cert-job-name>
+# Find and check init-cert job
+kubectl -n cloudzero-agent get jobs -l app.kubernetes.io/name=cloudzero-agent
+kubectl -n cloudzero-agent logs -l job-name=<init-cert-job-name>
 
 # Verify certificates were created
 kubectl -n cloudzero-agent get secrets | grep tls
@@ -308,8 +336,8 @@ Network policies can block communication between components or external endpoint
 kubectl -n cloudzero-agent get networkpolicies
 
 # Test connectivity between components
-kubectl -n cloudzero-agent exec <agent-server-pod> -- nc -zv cloudzero-agent-aggregator 8080
-kubectl -n cloudzero-agent exec <webhook-pod> -- nc -zv cloudzero-agent-aggregator 8080
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -- nc -zv cloudzero-agent-aggregator 8080
+kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent -- nc -zv cloudzero-agent-aggregator 8080
 ```
 
 **Common Solutions:**
@@ -437,31 +465,31 @@ When contacting support, include:
 **Agent Server Patterns:**
 ```bash
 # Scrape failures
-kubectl logs <pod> -c cloudzero-agent-server | grep -E "dial|connection refused|timeout"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server | grep -E "dial|connection refused|timeout"
 
 # Remote write issues  
-kubectl logs <pod> -c cloudzero-agent-server | grep -E "remote_write.*error|failed to send"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server | grep -E "remote_write.*error|failed to send"
 
 # Config problems
-kubectl logs <pod> -c cloudzero-agent-server | grep -E "config.*error|failed to reload"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server | grep -E "config.*error|failed to reload"
 ```
 
 **Webhook Patterns:**
 ```bash
 # Certificate issues
-kubectl logs deployment/cloudzero-agent-webhook-server | grep -E "tls|certificate|x509"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -E "tls|certificate|x509"
 
 # Admission failures
-kubectl logs deployment/cloudzero-agent-webhook-server | grep -E "admission.*denied|webhook.*failed"
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -E "admission.*denied|webhook.*failed"
 ```
 
 **Aggregator Patterns:**
 ```bash
-# Upload failures
-kubectl logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-shipper | grep -E "upload.*failed|s3.*error"
+# Upload failures (replace <release-name> with your release name)
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -E "upload.*failed|s3.*error"
 
-# Processing issues
-kubectl logs deployment/cloudzero-agent-aggregator -c cloudzero-agent-aggregator-collector | grep -E "decode.*error|write.*failed"
+# Processing issues (replace <release-name> with your release name)
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-collector | grep -E "decode.*error|write.*failed"
 ```
 
 ---
