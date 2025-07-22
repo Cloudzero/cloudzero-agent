@@ -18,17 +18,33 @@ kubectl -n cloudzero-agent get pods
 
 ### 2. Identify the correct pod name
 
-To inspect the logs of the `env-validator` container, you need to identify the pod name for the `cloudzero-agent-server` pod.
+To inspect the logs of the validator containers, you need to identify the pod name for the `cloudzero-agent-server` pod.
 
-### 3. Read the logs for the `env-validator` container
+### 3. Read the logs for the validator containers
 
-Using the pod name obtained in step 2, run the following command:
+The validator runs in multiple phases. To see the validation results:
 
+**For pre-start validation (most common):**
 ```sh
-kubectl -n cloudzero-agent logs -f -c env-validator <pod_name>
+kubectl -n cloudzero-agent logs <pod_name> -c env-validator-run
 ```
 
-> Note: The `-f` flag is used to follow the logs, and the `-c env-validator` flag is used to read the logs of the specific container.
+**For lifecycle validation logs:**
+```sh
+kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod_name> -- cat cloudzero-agent-validator.log
+```
+
+**To check for validation errors quickly:**
+```sh
+kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod_name> -- cat cloudzero-agent-validator.log | jq -r 'select(.checks) | .checks[] | select(.error) | "\(.name): \(.error)"'
+```
+
+**To capture full diagnostics for support:**
+```sh
+kubectl -n cloudzero-agent exec -ti -c cloudzero-agent-server <pod_name> -- cat cloudzero-agent-validator.log > cloudzero-diagnostics.log
+```
+
+> Note: The `env-validator-run` container performs the pre-start diagnostics during pod initialization. The lifecycle validation logs contain structured JSON output with detailed diagnostic information.
 
 Diagnostics are run at 3 lifecycle phases of the `cloudzero-agent` pod deployment:
 
@@ -44,7 +60,18 @@ kubectl -n $NS exec -ti -c cloudzero-agent-server cloudzero-agent-server-766b486
 
 > Remember to use the correct namespace and pod identity.
 
-### 4. Interpret the Results
+### 4. Get the correct validator container name
+
+If you're unsure of the exact container name, first list all containers:
+
+```sh
+kubectl -n cloudzero-agent get pod <pod_name> -o jsonpath='{.spec.containers[*].name}'
+kubectl -n cloudzero-agent get pod <pod_name> -o jsonpath='{.spec.initContainers[*].name}'
+```
+
+Look for containers ending in `-run` for the validation results.
+
+### 5. Interpret the Results
 
 In the screenshot above, notice the `checks` section. This section allows you to view the results of the configured checks. For any checks that are not passing, an error message will be captured to help diagnose the problem.
 
@@ -59,4 +86,11 @@ The CloudZero Agent has the following requirements:
 3. It must be able to communicate with the Cloudzero API to send metrics.
 4. It must be configured to collect the correct metrics and labels to the Cloudzero API.
 
-Based on these 5 requirements, the checks have been designed to help identify problems quickly during a new deployment. Using the tool, and log output, it should be possible to confirm this information. If all else fails, reach out to support@cloudzero.com and provide the output, along with the output of `kubectl -n <namespace> describe all` for the deployment.
+Based on these 5 requirements, the checks have been designed to help identify problems quickly during a new deployment. Using the tool, and log output, it should be possible to confirm this information. 
+
+**When contacting support**, please provide:
+1. The diagnostic JSON file: `cloudzero-diagnostics.json` (created using the command in step 3)
+2. Pod descriptions: `kubectl -n <namespace> describe all`
+3. Any error output from the error checking command
+
+Contact support@cloudzero.com with this information for assistance.
