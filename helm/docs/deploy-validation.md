@@ -25,11 +25,13 @@ The agent server runs the main validation diagnostics. You can target it directl
 The validator runs in multiple phases. To see the validation results:
 
 **For pre-start validation (most common):**
+
 ```sh
 kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c env-validator-run
 ```
 
 **For lifecycle validation logs:**
+
 ```sh
 # Get the agent server pod name, then exec into it
 AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
@@ -37,12 +39,14 @@ kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat 
 ```
 
 **To check for validation errors quickly:**
+
 ```sh
 AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log | jq -r 'select(.checks) | .checks[] | select(.error) | "\(.name): \(.error)"'
 ```
 
 **To capture full diagnostics for support:**
+
 ```sh
 AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log > cloudzero-diagnostics.log
@@ -80,9 +84,10 @@ The CloudZero Agent has the following requirements:
 3. It must be able to communicate with the Cloudzero API to send metrics.
 4. It must be configured to collect the correct metrics and labels to the Cloudzero API.
 
-Based on these 5 requirements, the checks have been designed to help identify problems quickly during a new deployment. Using the tool, and log output, it should be possible to confirm this information. 
+Based on these 5 requirements, the checks have been designed to help identify problems quickly during a new deployment. Using the tool, and log output, it should be possible to confirm this information.
 
 **When contacting support**, please provide:
+
 1. The diagnostic JSON file: `cloudzero-diagnostics.json` (created using the command in step 3)
 2. Pod descriptions: `kubectl -n <namespace> describe all`
 3. Any error output from the error checking command
