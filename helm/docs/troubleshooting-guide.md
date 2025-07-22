@@ -131,8 +131,11 @@ kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubern
 
 **❌ Problem: API key authentication failures**
 ```bash
-# Check API key secret exists
-kubectl -n cloudzero-agent get secret cloudzero-api-key
+# Check API key secret exists (default name, or check your helm values for existingSecretName)
+kubectl -n cloudzero-agent get secret cloudzero-agent-api-key
+
+# List all secrets if you're unsure of the name
+kubectl -n cloudzero-agent get secrets | grep -i api
 
 # Verify API key is mounted correctly
 kubectl -n cloudzero-agent exec -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c cloudzero-agent-server -- ls -la /etc/config/secrets/
