@@ -501,6 +501,146 @@ func TestGetToken_Success(t *testing.T) {
 	}
 }
 
+func TestGetToken_MethodNotAllowed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate endpoint that doesn't support PUT method
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method Not Allowed"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getToken(ctx)
+	if err == nil {
+		t.Fatal("Expected error for HTTP 405 Method Not Allowed")
+	}
+
+	expectedError := "IMDSv2 token endpoint unavailable, falling back to IMDSv1"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetToken_Forbidden(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate endpoint that returns 403 Forbidden
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Forbidden"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getToken(ctx)
+	if err == nil {
+		t.Fatal("Expected error for HTTP 403 Forbidden")
+	}
+
+	expectedError := "access denied to IMDSv2 token endpoint (status: 403)"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetToken_Unauthorized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate endpoint that returns 401 Unauthorized
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getToken(ctx)
+	if err == nil {
+		t.Fatal("Expected error for HTTP 401 Unauthorized")
+	}
+
+	expectedError := "authentication required for IMDSv2 token endpoint (status: 401)"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetToken_UnexpectedStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate endpoint that returns an unexpected status code
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getToken(ctx)
+	if err == nil {
+		t.Fatal("Expected error for HTTP 500 Internal Server Error")
+	}
+
+	expectedError := "failed to get IMDSv2 token, unexpected status: 500"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestEnvironmentInfo_TokenMethodNotAllowed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest/api/token" {
+			// Simulate endpoint that doesn't support PUT method
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Write([]byte("Method Not Allowed"))
+			return
+		}
+		if r.URL.Path == "/latest/meta-data/placement/region" {
+			// Simulate successful IMDSv1 region response
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("us-east-1"))
+			return
+		}
+		if r.URL.Path == "/latest/dynamic/instance-identity/document" {
+			// Simulate successful IMDSv1 identity document response
+			w.WriteHeader(http.StatusOK)
+			identityDoc := `{
+				"accountId": "123456789012",
+				"region": "us-east-1",
+				"instanceId": "i-abcdef1234567890"
+			}`
+			w.Write([]byte(identityDoc))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	info, err := scout.EnvironmentInfo(ctx)
+	if err != nil {
+		t.Errorf("Expected successful fallback to IMDSv1, got error: %v", err)
+		return
+	}
+
+	// Verify the fallback worked correctly
+	if info.CloudProvider != types.CloudProviderAWS {
+		t.Errorf("Expected CloudProviderAWS, got %v", info.CloudProvider)
+	}
+	if info.Region != "us-east-1" {
+		t.Errorf("Expected region 'us-east-1', got '%s'", info.Region)
+	}
+	if info.AccountID != "123456789012" {
+		t.Errorf("Expected account ID '123456789012', got '%s'", info.AccountID)
+	}
+}
+
 func TestGetMetadata_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(tokenHeader) != "valid-token" {
@@ -584,4 +724,269 @@ func TestIdentityDocument_JSONTags(t *testing.T) {
 
 	// The actual JSON unmarshaling is tested in TestGetAccountID_Success
 	// and other integration tests that use the getAccountID method
+}
+
+func TestEnvironmentInfo_IMDSv1Fallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest/api/token" {
+			// Simulate IMDSv2 token endpoint unavailable
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Write([]byte("Method Not Allowed"))
+			return
+		}
+		if r.URL.Path == "/latest/meta-data/placement/region" {
+			// Simulate successful IMDSv1 region response
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("eu-west-1"))
+			return
+		}
+		if r.URL.Path == "/latest/dynamic/instance-identity/document" {
+			// Simulate successful IMDSv1 identity document response
+			w.WriteHeader(http.StatusOK)
+			identityDoc := `{
+				"accountId": "987654321098",
+				"region": "eu-west-1",
+				"instanceId": "i-1234567890abcdef"
+			}`
+			w.Write([]byte(identityDoc))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	info, err := scout.EnvironmentInfo(ctx)
+	if err != nil {
+		t.Errorf("Expected successful IMDSv1 fallback, got error: %v", err)
+		return
+	}
+
+	// Verify the IMDSv1 fallback worked correctly
+	if info.CloudProvider != types.CloudProviderAWS {
+		t.Errorf("Expected CloudProviderAWS, got %v", info.CloudProvider)
+	}
+	if info.Region != "eu-west-1" {
+		t.Errorf("Expected region 'eu-west-1', got '%s'", info.Region)
+	}
+	if info.AccountID != "987654321098" {
+		t.Errorf("Expected account ID '987654321098', got '%s'", info.AccountID)
+	}
+}
+
+func TestEnvironmentInfo_IMDSv1RegionFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest/api/token" {
+			// Simulate IMDSv2 token endpoint unavailable
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Write([]byte("Method Not Allowed"))
+			return
+		}
+		if r.URL.Path == "/latest/meta-data/placement/region" {
+			// Simulate IMDSv1 region endpoint failure
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal Server Error"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := scout.EnvironmentInfo(ctx)
+	if err == nil {
+		t.Error("Expected error for IMDSv1 region failure")
+	}
+
+	expectedError := "failed to get region using IMDSv1"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestEnvironmentInfo_IMDSv1AccountIDFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest/api/token" {
+			// Simulate IMDSv2 token endpoint unavailable
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Write([]byte("Method Not Allowed"))
+			return
+		}
+		if r.URL.Path == "/latest/meta-data/placement/region" {
+			// Simulate successful IMDSv1 region response
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("us-west-2"))
+			return
+		}
+		if r.URL.Path == "/latest/dynamic/instance-identity/document" {
+			// Simulate IMDSv1 identity document failure
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Forbidden"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := scout.EnvironmentInfo(ctx)
+	if err == nil {
+		t.Error("Expected error for IMDSv1 account ID failure")
+	}
+
+	expectedError := "failed to get account ID using IMDSv1"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetMetadataIMDSv1_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate successful IMDSv1 metadata response
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("metadata-value"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	metadata, err := scout.getMetadataIMDSv1(ctx, server.URL+"/test-endpoint")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata != "metadata-value" {
+		t.Errorf("Expected metadata 'metadata-value', got '%s'", metadata)
+	}
+}
+
+func TestGetMetadataIMDSv1_Failure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate IMDSv1 metadata failure
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Not Found"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getMetadataIMDSv1(ctx, server.URL+"/test-endpoint")
+	if err == nil {
+		t.Fatal("Expected error for IMDSv1 metadata failure")
+	}
+
+	expectedError := "failed to get metadata using IMDSv1, status: 404"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetAccountIDIMDSv1_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate successful IMDSv1 identity document response
+		w.WriteHeader(http.StatusOK)
+		identityDoc := `{
+			"accountId": "111222333444",
+			"region": "ap-southeast-1",
+			"instanceId": "i-abcdef1234567890"
+		}`
+		w.Write([]byte(identityDoc))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	accountID, err := scout.getAccountIDIMDSv1(ctx)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if accountID != "111222333444" {
+		t.Errorf("Expected account ID '111222333444', got '%s'", accountID)
+	}
+}
+
+func TestGetAccountIDIMDSv1_Failure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate IMDSv1 identity document failure
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getAccountIDIMDSv1(ctx)
+	if err == nil {
+		t.Fatal("Expected error for IMDSv1 account ID failure")
+	}
+
+	expectedError := "failed to get identity document using IMDSv1, status: 401"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetAccountIDIMDSv1_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate invalid JSON response
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("invalid json"))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getAccountIDIMDSv1(ctx)
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON")
+	}
+
+	expectedError := "failed to parse identity document JSON"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
+}
+
+func TestGetAccountIDIMDSv1_MissingAccountID(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate JSON response without accountId
+		w.WriteHeader(http.StatusOK)
+		identityDoc := `{
+			"region": "us-east-1",
+			"instanceId": "i-abcdef1234567890"
+		}`
+		w.Write([]byte(identityDoc))
+	}))
+	defer server.Close()
+
+	scout := createScoutWithCustomURLs(server.URL)
+	ctx := context.Background()
+
+	_, err := scout.getAccountIDIMDSv1(ctx)
+	if err == nil {
+		t.Fatal("Expected error for missing accountId")
+	}
+
+	expectedError := "accountId not found in identity document"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain %q, got %q", expectedError, err.Error())
+	}
 }
