@@ -52,7 +52,7 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 			}
 			return nil
 		}
-		return fmt.Errorf("failed to detect cloud provider: %w", innerErr)
+		return fmt.Errorf("failed to detect cloud provider: %w. Manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required", innerErr)
 	}
 
 	if ei.CloudProvider == types.CloudProviderUnknown {
@@ -63,7 +63,7 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 			}
 			return nil
 		}
-		return errors.New("cloud provider could not be auto-detected, manual configuration may be required")
+		return errors.New("cloud provider could not be auto-detected, manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required")
 	}
 
 	// Handle region configuration
@@ -71,7 +71,7 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 		if *region == "" {
 			// Empty field - set with detected value
 			if ei.Region == "" {
-				return errors.New("region could not be auto-detected, manual configuration may be required")
+				return errors.New("region could not be auto-detected, manual configuration (setting region in the Helm chart) may be required")
 			}
 			*region = ei.Region
 		} else if ei.Region != "" && *region != ei.Region {
@@ -90,7 +90,7 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 		if *accountID == "" {
 			// Empty field - set with detected value
 			if ei.AccountID == "" {
-				return errors.New("account ID could not be auto-detected, manual configuration may be required")
+				return errors.New("account ID could not be auto-detected, manual configuration (setting cloudAccountID in the Helm chart) may be required")
 			}
 			*accountID = ei.AccountID
 		} else if ei.AccountID != "" && *accountID != ei.AccountID {
@@ -109,7 +109,7 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 		if *clusterName == "" {
 			// Empty field - set with detected value
 			if ei.ClusterName == "" {
-				return errors.New("cluster name could not be auto-detected, manual configuration may be required")
+				return errors.New("cluster name could not be auto-detected, manual configuration (setting clusterName in the Helm chart) may be required")
 			}
 			*clusterName = ei.ClusterName
 		} else if ei.ClusterName != "" && *clusterName != ei.ClusterName {

@@ -144,7 +144,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 			inputAccountID:   stringPtr(""),
 			inputClusterName: stringPtr(""),
 			envInfoError:     errors.New("environment info failed"),
-			expectedErrorMsg: "failed to detect cloud provider: environment info failed",
+			expectedErrorMsg: "failed to detect cloud provider: environment info failed. Manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required",
 		},
 		{
 			name:             "cloud provider unknown after detection",
@@ -156,7 +156,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				Region:        "us-west-2",
 				ClusterName:   "test-cluster",
 			},
-			expectedErrorMsg: "cloud provider could not be auto-detected, manual configuration may be required",
+			expectedErrorMsg: "cloud provider could not be auto-detected, manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required",
 		},
 		{
 			name:             "region detection fails when required",
@@ -169,7 +169,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				AccountID:     "123456789012",
 				ClusterName:   "test-cluster",
 			},
-			expectedErrorMsg: "region could not be auto-detected, manual configuration may be required",
+			expectedErrorMsg: "region could not be auto-detected, manual configuration (setting region in the Helm chart) may be required",
 		},
 		{
 			name:             "account ID detection fails when required",
@@ -182,7 +182,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				AccountID:     "", // Empty account ID should cause error
 				ClusterName:   "test-cluster",
 			},
-			expectedErrorMsg: "account ID could not be auto-detected, manual configuration may be required",
+			expectedErrorMsg: "account ID could not be auto-detected, manual configuration (setting cloudAccountID in the Helm chart) may be required",
 		},
 		{
 			name:             "cluster name detection fails when required",
@@ -195,7 +195,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				AccountID:     "123456789012",
 				ClusterName:   "", // Empty cluster name should cause error
 			},
-			expectedErrorMsg: "cluster name could not be auto-detected, manual configuration may be required",
+			expectedErrorMsg: "cluster name could not be auto-detected, manual configuration (setting clusterName in the Helm chart) may be required",
 		},
 	}
 
