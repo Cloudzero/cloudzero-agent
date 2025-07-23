@@ -9,7 +9,7 @@ Expand the name of the chart.
 The version number of the chart.
 */}}
 {{- define "cloudzero-agent.versionNumber" -}}
-version: 1.2.3  # <- Software release corresponding to this chart version.
+version: 1.2.4  # <- Software release corresponding to this chart version.
 {{- end -}}
 
 {{/*
