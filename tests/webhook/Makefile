@@ -7,16 +7,25 @@ check-deps:
 	@which kind > /dev/null || (echo "Error: kind is not installed. Please install kind first." && exit 1)
 	@which kubectl > /dev/null || (echo "Error: kubectl is not installed. Please install kubectl first." && exit 1)
 
-# Run the webhook integration test
+# Run the webhook integration test (Helm chart deployment)
 test-webhook: check-deps
-	@echo "Running webhook integration test..."
-	RUN_INTEGRATION_TESTS=true go test -v -tags=integration -timeout=10m ./...
+	@echo "Running webhook Helm chart integration test..."
+	@echo "Note: This test requires CLOUDZERO_DEV_API_KEY or CZ_DEV_API_TOKEN"
+	@if [ -z "$$CLOUDZERO_DEV_API_KEY" ] && [ -z "$$CZ_DEV_API_TOKEN" ]; then \
+		echo "Error: CLOUDZERO_DEV_API_KEY or CZ_DEV_API_TOKEN is required for webhook test"; \
+		exit 1; \
+	fi
+	@if [ -z "$$CLOUDZERO_DEV_API_KEY" ] && [ -n "$$CZ_DEV_API_TOKEN" ]; then \
+		echo "Using CZ_DEV_API_TOKEN as CLOUDZERO_DEV_API_KEY..."; \
+		export CLOUDZERO_DEV_API_KEY="$$CZ_DEV_API_TOKEN"; \
+	fi
+	RUN_INTEGRATION_TESTS=true go test -v -tags=integration -timeout=20m ./...
 
 # Manual cleanup (in case test fails to cleanup)
 test-webhook-cleanup:
-	@echo "Cleaning up test resources..."
-	-kind delete cluster --name cloudzero-webhook-test
-	-rm -rf /tmp/cloudzero-webhook-test-*
+	@echo "Cleaning up webhook test resources..."
+	-kind delete cluster --name cloudzero-webhook-chart-test
+	-rm -rf /tmp/cloudzero-webhook-chart-test-*
 
 # Check test status
 test-webhook-status:
@@ -41,11 +50,15 @@ test-webhook-debug: check-deps
 	RUN_INTEGRATION_TESTS=true CLOUDZERO_DEV_API_KEY="$${CLOUDZERO_DEV_API_KEY:-$$CZ_DEV_API_TOKEN}" go test -v -tags=integration -timeout=15m ./... || true
 	@echo "Cluster left running for debugging. Use 'make test-webhook-cleanup' to clean up."
 
+
 help:
 	@echo "Available targets:"
-	@echo "  test-webhook          - Run the webhook integration test"
-	@echo "  test-webhook-cleanup  - Clean up test resources"
-	@echo "  test-webhook-setup    - Check test dependencies"
-	@echo "  test-webhook-debug    - Run test in debug mode (keep cluster)"
-	@echo "  test-webhook-status   - Check test cluster and output status"
-	@echo "  help                  - Show this help message"
+	@echo "  test-webhook               - Run basic webhook integration test (no API key)"
+	@echo "  test-webhook-debug         - Run basic test in debug mode (keep cluster)"
+	@echo "  test-webhook-chart         - Run Helm chart integration test (requires API key)"
+	@echo "  test-webhook-chart-debug   - Run chart test in debug mode (keep cluster)"
+	@echo "  test-webhook-cleanup       - Clean up basic test resources"
+	@echo "  test-webhook-chart-cleanup - Clean up chart test resources"
+	@echo "  test-webhook-setup         - Check test dependencies"
+	@echo "  test-webhook-status        - Check test cluster and output status"
+	@echo "  help                       - Show this help message"

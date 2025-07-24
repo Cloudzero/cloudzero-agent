@@ -9,13 +9,22 @@ This directory contains integration tests for the CloudZero Agent webhook functi
 - Creates a minimal single-node Kind cluster named `cloudzero-webhook-test`
 - Includes volume mounts for test data exchange
 
-### 2. **Integration Test** (`webhook_integration_test.go`)
+### 2. **Basic Integration Test** (`webhook_integration_test.go`)
 
-- End-to-end test that:
+- Resource validation test that:
   - Sets up Kind cluster
   - Creates webhook controller with test configuration
   - Validates supported resource types match webhook configuration
   - Tests that plural resource names are properly recognized
+
+### 3. **Helm Chart Integration Test** (`webhook_chart_integration_test.go`)
+
+- End-to-end webhook deployment test that:
+  - Deploys actual CloudZero Helm chart to Kind cluster
+  - Enables webhook with real TLS certificates and ValidatingWebhookConfiguration
+  - Creates test Kubernetes resources to trigger webhook invocations
+  - Validates webhook receives admission reviews via Prometheus `/metrics` endpoint
+  - **Proves the webhook resource name fix works in practice**
 
 ## What This Test Validates
 
@@ -101,7 +110,7 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 
 ## Running the Tests
 
-### Quick Test
+### Basic Integration Test (No API Key Required)
 
 ```bash
 cd tests/webhook
@@ -113,6 +122,41 @@ make test-webhook
 ```bash
 cd tests/webhook
 make test-webhook-debug
+```
+
+### Helm Chart Integration Test (Requires API Key)
+
+This test deploys the actual Helm chart and validates real webhook invocations:
+
+```bash
+# Set API key (required)
+export CLOUDZERO_DEV_API_KEY="your-api-key"
+# or
+export CZ_DEV_API_TOKEN="your-api-key"
+
+# Run chart test
+cd tests/webhook
+make test-webhook-chart
+```
+
+### Chart Test Debug Mode
+
+```bash
+cd tests/webhook
+make test-webhook-chart-debug
+```
+
+This keeps the cluster and chart deployment running for debugging. You can then:
+
+```bash
+# Access webhook metrics
+kubectl port-forward -n cz-webhook-test svc/webhook-chart-test-cloudzero-agent 8080:8080
+
+# View metrics in browser
+open http://localhost:8080/metrics
+
+# Clean up when done
+make test-webhook-chart-cleanup
 ```
 
 **Note:** The first run may take 5-10 minutes to download the Kind node image. Subsequent runs will be much faster.
