@@ -24,6 +24,7 @@ This directory contains integration tests for the CloudZero Agent webhook functi
   - Enables webhook with real TLS certificates and ValidatingWebhookConfiguration
   - Creates test Kubernetes resources to trigger webhook invocations
   - Validates webhook receives admission reviews via Prometheus `/metrics` endpoint
+  - **Uses kubectl port-forward to access webhook metrics endpoint for validation**
   - **Proves the webhook resource name fix works in practice**
 
 ## What This Test Validates
@@ -155,9 +156,16 @@ kubectl port-forward -n cz-webhook-test svc/webhook-chart-test-cloudzero-agent 8
 # View metrics in browser
 open http://localhost:8080/metrics
 
+# Look for webhook metrics like:
+# webhook_types_total{kind_resource="deployments",operation="CREATE"} 1
+# webhook_types_total{kind_resource="services",operation="CREATE"} 1
+# webhook_types_total{kind_resource="namespaces",operation="CREATE"} 1
+
 # Clean up when done
 make test-webhook-chart-cleanup
 ```
+
+**Note:** The test automatically uses kubectl port-forward to access the webhook metrics endpoint and validate that webhook invocations are recorded correctly.
 
 **Note:** The first run may take 5-10 minutes to download the Kind node image. Subsequent runs will be much faster.
 
