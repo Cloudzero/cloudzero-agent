@@ -290,6 +290,37 @@ test-smoke: ## Run the smoke tests
 	CLUSTER_NAME=$(CLUSTER_NAME) \
 	$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
 
+# Local integration tests (no API key required)
+.PHONY: test-integration-local
+test-integration-local: ## Run local integration tests (backfiller, webhook)
+test-integration-local: test-backfiller test-webhook
+
+.PHONY: test-backfiller
+test-backfiller: ## Run backfiller integration tests
+	@echo "Running backfiller integration tests..."
+	@$(MAKE) -C tests/backfiller test-backfiller
+
+.PHONY: test-backfiller-debug
+test-backfiller-debug: ## Run backfiller integration tests in debug mode
+	@$(MAKE) -C tests/backfiller test-backfiller-debug
+
+.PHONY: test-backfiller-cleanup
+test-backfiller-cleanup: ## Clean up backfiller test resources
+	@$(MAKE) -C tests/backfiller test-backfiller-cleanup
+
+.PHONY: test-webhook
+test-webhook: ## Run webhook integration tests
+	@echo "Running webhook integration tests..."
+	@$(MAKE) -C tests/webhook test-webhook
+
+.PHONY: test-webhook-debug
+test-webhook-debug: ## Run webhook integration tests in debug mode
+	@$(MAKE) -C tests/webhook test-webhook-debug
+
+.PHONY: test-webhook-cleanup
+test-webhook-cleanup: ## Clean up webhook test resources
+	@$(MAKE) -C tests/webhook test-webhook-cleanup
+
 # ----------- DOCKER IMAGE ------------
 
 DEBUG_IMAGE ?= busybox:stable-uclibc
