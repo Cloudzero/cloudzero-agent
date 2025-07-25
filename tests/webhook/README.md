@@ -4,27 +4,22 @@ This directory contains integration tests for the CloudZero Agent webhook functi
 
 ## Test Components
 
-### 1. **Kind Cluster Setup** (`kind-config.yaml`)
+### 1. **Kind Cluster Setup** (embedded configuration)
 
-- Creates a minimal single-node Kind cluster named `cloudzero-webhook-test`
+- Creates a minimal single-node Kind cluster named `cloudzero-webhook-chart-test`
+- Uses shared embedded cluster configuration from `tests/kind/`
 - Includes volume mounts for test data exchange
 
-### 2. **Basic Integration Test** (`webhook_integration_test.go`)
-
-- Resource validation test that:
-  - Sets up Kind cluster
-  - Creates webhook controller with test configuration
-  - Validates supported resource types match webhook configuration
-  - Tests that plural resource names are properly recognized
-
-### 3. **Helm Chart Integration Test** (`webhook_chart_integration_test.go`)
+### 2. **Helm Chart Integration Test** (`webhook_chart_integration_test.go`)
 
 - End-to-end webhook deployment test that:
-  - Deploys actual CloudZero Helm chart to Kind cluster
+  - Deploys actual CloudZero Helm chart to Kind cluster with optimized test configuration
+  - Uses test manifests from `testdata/` directory (deployment, service, namespace)
   - Enables webhook with real TLS certificates and ValidatingWebhookConfiguration
   - Creates test Kubernetes resources to trigger webhook invocations
   - Validates webhook receives admission reviews via Prometheus `/metrics` endpoint
-  - **Uses kubectl port-forward to access webhook metrics endpoint for validation**
+  - **Uses in-cluster curl to access webhook metrics endpoint for validation**
+  - **Saves full metrics output to debug log file for troubleshooting**
   - **Proves the webhook resource name fix works in practice**
 
 ## What This Test Validates
@@ -147,21 +142,22 @@ This keeps the cluster and chart deployment running for debugging. You can then:
 
 ```bash
 # Access webhook metrics
-kubectl port-forward -n cz-webhook-test svc/webhook-chart-test-cloudzero-agent 8080:8080
+kubectl port-forward -n cz-webhook-test svc/webhook-chart-test-cloudzero-agent-webhook-server-svc 8080:443
 
-# View metrics in browser
-open http://localhost:8080/metrics
+# View metrics in browser (note: HTTPS with self-signed cert)
+open https://localhost:8080/metrics
 
 # Look for webhook metrics like:
-# webhook_types_total{kind_resource="deployments",operation="CREATE"} 1
-# webhook_types_total{kind_resource="services",operation="CREATE"} 1
-# webhook_types_total{kind_resource="namespaces",operation="CREATE"} 1
+# czo_webhook_types_total{kind_resource="deployments",operation="create"} 1
+# czo_webhook_types_total{kind_resource="services",operation="create"} 1
+# czo_webhook_types_total{kind_resource="namespaces",operation="create"} 1
+# http_requests_total{code="200",method="post"} 11
 
 # Clean up when done
 make test-webhook-cleanup
 ```
 
-**Note:** The test automatically uses kubectl port-forward to access the webhook metrics endpoint and validate that webhook invocations are recorded correctly.
+**Note:** The test automatically uses in-cluster curl to access the webhook metrics endpoint and validate that webhook invocations are recorded correctly. Full metrics are saved to `/tmp/webhook-metrics-debug.log` for debugging.
 
 **Note:** The first run may take 5-10 minutes to download the Kind node image. Subsequent runs will be much faster.
 
@@ -231,11 +227,12 @@ Group:
 
 The test creates everything automatically:
 
-1. **Creates the Kind cluster** using the `kind-config.yaml` file
-2. **Initializes webhook controller** with test configuration
-3. **Queries supported resources** from the webhook controller
-4. **Validates resource support** against expected configuration
-5. **Cleans up** (unless you use debug mode)
+1. **Creates the Kind cluster** using embedded configuration from `tests/kind/`
+2. **Deploys Helm chart** with webhook enabled and optimized test configuration
+3. **Creates test resources** from `testdata/` manifests to trigger webhook
+4. **Validates webhook invocations** via Prometheus metrics endpoint
+5. **Saves debug metrics** to `/tmp/webhook-metrics-debug.log`
+6. **Cleans up** (unless you use debug mode)
 
 ## Background: The Resource Name Fix
 
@@ -305,9 +302,13 @@ To extend these tests:
 
 ```
 tests/webhook/
-├── README.md                     # This file
-├── Makefile                      # Test automation
-├── kind-config.yaml              # Kind cluster configuration
-├── webhook_integration_test.go   # Main integration test
-└── [generated files]             # Test outputs and temporary files
+├── README.md                          # This file
+├── Makefile                           # Test automation
+├── testdata/                          # Test configuration and manifests
+│   ├── values-override.yaml           # Helm chart test configuration
+│   ├── test-deployment.yaml           # Test deployment manifest
+│   ├── test-service.yaml              # Test service manifest
+│   └── test-namespace.yaml            # Test namespace manifest
+├── webhook_chart_integration_test.go  # Main integration test
+└── [generated files]                  # Test outputs and temporary files
 ```

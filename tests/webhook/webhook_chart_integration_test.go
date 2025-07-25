@@ -358,8 +358,8 @@ func validateWebhookInvocations(t *testing.T, metrics string) {
 		return
 	}
 
-	// Look for webhook event metrics for our test resources
-	expectedResources := []string{"deployments", "services", "namespaces"}
+	// Look for webhook event metrics for our test resources (metrics use singular kind names)
+	expectedResources := []string{"deployment", "service", "namespace"}
 	foundInvocations := 0
 
 	for _, resource := range expectedResources {
