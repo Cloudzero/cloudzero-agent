@@ -186,7 +186,7 @@ func deployWebhookChart(t *testing.T, kubeconfig, apiKey string) {
 		t.Fatalf("Failed to update Helm dependencies: %v", err)
 	}
 
-	// Install Helm chart with webhook enabled
+	// Install Helm chart with webhook enabled and minimal replicas for faster testing
 	cmd = exec.Command("helm", "upgrade", "--install", releaseName, helmDir,
 		"--namespace", webhookNamespace,
 		"--set", "cloudAccountId=test-account-123",
@@ -197,6 +197,11 @@ func deployWebhookChart(t *testing.T, kubeconfig, apiKey string) {
 		"--set", "insightsController.enabled=true",
 		"--set", "insightsController.labels.enabled=true",
 		"--set", "insightsController.annotations.enabled=false",
+		// Reduce replicas for faster test deployment
+		"--set", "components.aggregator.replicas=1",
+		"--set", "components.webhookServer.replicas=1",
+		// Disable unnecessary components for webhook-only testing
+		"--set", "initBackfillJob.enabled=false",
 		"--timeout", "10m",
 		"--wait",
 		"--debug",
@@ -255,7 +260,8 @@ func waitForWebhookReady(t *testing.T, k8sClient kubernetes.Interface) {
 					deployment.Name, deployment.Status.ReadyReplicas,
 					deployment.Status.AvailableReplicas, deployment.Status.Replicas)
 
-				if deployment.Status.ReadyReplicas > 0 && deployment.Status.AvailableReplicas > 0 {
+				// For webhook testing, we just need at least 1 replica ready
+				if deployment.Status.ReadyReplicas >= 1 && deployment.Status.AvailableReplicas >= 1 {
 					ready = true
 					break
 				}
