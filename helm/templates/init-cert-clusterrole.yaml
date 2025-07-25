@@ -23,10 +23,27 @@ rules:
       - "secrets"
     resourceNames:
       - {{ include "cloudzero-agent.tlsSecretName" . }}
+      {{- if and .Values.aggregator.collector.tls.secret.create .Values.components.aggregator.autoscale }}
+      - {{ include "cloudzero-agent.aggregator.tlsSecretName" . }}
+      {{- end }}
     verbs:
       - get
       - list
       - patch
+      - create
+      - update
+  {{- if and .Values.aggregator.collector.tls.secret.create .Values.components.aggregator.autoscale }}
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+  {{- end }}
   - apiGroups:
       - "admissionregistration.k8s.io"
     resources:

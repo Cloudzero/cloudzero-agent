@@ -65,6 +65,14 @@ var (
 		},
 		[]string{},
 	)
+	// Custom metric for HPA scaling based on cost metrics shipping progress
+	costMetricsShippingProgress = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: types.ObservabilityMetric("cost_metrics_shipping_progress"),
+			Help: "Progress towards cost metrics shipping goal (ratio of currentPending/targetProgress), where targetProgress = (elapsedTime/costMaxInterval) * maxRecords, 1.0 = 100% of expected rate",
+		},
+		[]string{},
+	)
 )
 
 // MetricCollector is responsible for collecting and flushing metrics.
@@ -173,6 +181,9 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 			return stats, err
 		}
 
+		// Update the shipping progress metric for HPA scaling
+		d.updateShippingProgressMetric()
+
 		// In order to reduce the amount of time until the server starts seeing
 		// data, we perform a first flush 🍵 of the cost metrics immediately
 		// upon receipt.
@@ -193,6 +204,41 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	return stats, nil
 }
 
+// updateShippingProgressMetric calculates and updates the shipping progress metric
+// for HPA scaling based on time-based expected progress versus actual pending records.
+func (d *MetricCollector) updateShippingProgressMetric() {
+	currentPending := d.costStore.Pending()
+	maxRecords := d.settings.Database.MaxRecords
+	elapsedTime := d.costStore.ElapsedTime()
+	costMaxInterval := d.settings.Database.CostMaxInterval
+
+	// Calculate time-based target progress using the correct formula:
+	// targetProgress = (elapsedTime / costMaxInterval) * maxRecords
+	// progress = currentPending / targetProgress
+
+	// Convert costMaxInterval to milliseconds for calculation
+	costMaxIntervalMs := costMaxInterval.Milliseconds()
+
+	// Calculate expected number of records at this point in time
+	var progress float64
+	if elapsedTime == 0 || costMaxIntervalMs == 0 {
+		// At the very beginning or with invalid interval, use simple ratio
+		progress = float64(currentPending) / float64(maxRecords)
+	} else {
+		// Calculate time-based expected progress
+		targetProgress := (float64(elapsedTime) / float64(costMaxIntervalMs)) * float64(maxRecords)
+
+		if targetProgress == 0 {
+			// Avoid division by zero at the very start
+			progress = 0.0
+		} else {
+			progress = float64(currentPending) / targetProgress
+		}
+	}
+
+	costMetricsShippingProgress.WithLabelValues().Set(progress)
+}
+
 type metricCounter map[string]map[string]int
 
 func (m metricCounter) Add(metricName string, metricValue string) {
@@ -207,6 +253,10 @@ func (d *MetricCollector) Flush(ctx context.Context) error {
 	if err := d.costStore.Flush(); err != nil {
 		return err
 	}
+
+	// Update the shipping progress metric after flushing
+	d.updateShippingProgressMetric()
+
 	return d.observabilityStore.Flush()
 }
 

@@ -9,7 +9,14 @@ spec:
   selector:
     {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 4 }}
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: {{ .Values.aggregator.collector.port }}
+    {{- if .Values.components.aggregator.autoscale }}
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: {{ .Values.aggregator.collector.tls.port | default 8443 }}
+    {{- end }}
   type: ClusterIP
