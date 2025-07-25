@@ -24,24 +24,24 @@ webhooks:
         apiVersions: ["*"]
         resources:
           {{/* See app/types/k8s_object.go for the list of supported resources */}}
-          - deployment
-          - statefulset
-          - daemonset
-          - replicaset
-          - pod
-          - namespace
-          - node
-          - service
-          - storageclass
-          - persistentvolume
-          - persistentvolumeclaim
-          - job
-          - cronjob
-          - customresourcedefinition
-          - ingress
-          - ingressclass
-          - gateway
-          - gatewayclass
+          - deployments
+          - statefulsets
+          - daemonsets
+          - replicasets
+          - pods
+          - namespaces
+          - nodes
+          - services
+          - storageclasses
+          - persistentvolumes
+          - persistentvolumeclaims
+          - jobs
+          - cronjobs
+          - customresourcedefinitions
+          - ingresses
+          - ingressclasses
+          - gateways
+          - gatewayclasses
         scope: "*"
     clientConfig:
       service:

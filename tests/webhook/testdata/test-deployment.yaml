@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-test-deployment
+  namespace: default
+  labels:
+    app: webhook-test
+    environment: test
+    team: engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-test
+  template:
+    metadata:
+      labels:
+        app: webhook-test
+    spec:
+      containers:
+        - name: test-container
+          image: nginx:alpine

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-test-service
+  namespace: default
+  labels:
+    app: webhook-test
+    environment: test
+spec:
+  selector:
+    app: webhook-test
+  ports:
+    - port: 80
+      targetPort: 80

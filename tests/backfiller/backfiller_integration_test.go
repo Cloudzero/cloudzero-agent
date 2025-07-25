@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"testing"
 	"time"
 
@@ -23,8 +22,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/pusher"
@@ -33,6 +30,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
+	"github.com/cloudzero/cloudzero-agent/tests/kind"
 )
 
 const (
@@ -59,7 +57,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 
 	// Setup Kind cluster
 	kubeconfig := setupKindCluster(t, tempDir)
-	defer cleanupKindCluster(t)
+	defer kind.CleanupCluster(t, clusterName)
 
 	// Apply test namespaces
 	applyTestNamespaces(t, kubeconfig)
@@ -89,7 +87,7 @@ func TestBackfillerKindIntegration(t *testing.T) {
 	t.Logf("=== END CONFIGURATION ===")
 
 	// Create Kubernetes client
-	k8sClient, err := createKubernetesClient(kubeconfig)
+	k8sClient, err := kind.CreateKubernetesClient(kubeconfig)
 	require.NoError(t, err)
 
 	// Create storage and webhook controller
@@ -189,47 +187,14 @@ func TestBackfillerKindIntegration(t *testing.T) {
 }
 
 func setupKindCluster(t *testing.T, tempDir string) string {
-	t.Log("Setting up Kind cluster...")
-
-	// Get the test directory path
-	testDir := filepath.Dir(getCurrentFile())
-	kindConfigPath := filepath.Join(testDir, "kind-config.yaml")
-
-	// Create Kind cluster
-	cmd := exec.Command("kind", "create", "cluster", "--config", kindConfigPath, "--wait", "60s")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	require.NoError(t, err, "Failed to create Kind cluster")
-
-	// Get kubeconfig path
-	kubeconfig := filepath.Join(tempDir, "kubeconfig")
-	cmd = exec.Command("kind", "get", "kubeconfig", "--name", clusterName)
-	output, err := cmd.Output()
-	require.NoError(t, err, "Failed to get kubeconfig")
-
-	err = os.WriteFile(kubeconfig, output, 0o644)
-	require.NoError(t, err, "Failed to write kubeconfig")
-
-	t.Log("Kind cluster created successfully")
-	return kubeconfig
-}
-
-func cleanupKindCluster(t *testing.T) {
-	t.Log("Cleaning up Kind cluster...")
-	cmd := exec.Command("kind", "delete", "cluster", "--name", clusterName)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		t.Logf("Warning: Failed to cleanup Kind cluster: %v", err)
-	}
+	return kind.SetupClusterWithEmbeddedConfig(t, clusterName, tempDir)
 }
 
 func applyTestNamespaces(t *testing.T, kubeconfig string) {
 	t.Log("Applying test namespaces...")
 
-	testDir := filepath.Dir(getCurrentFile())
-	manifestPath := filepath.Join(testDir, "test-namespaces.yaml")
+	testDir := filepath.Dir(kind.GetCurrentFile())
+	manifestPath := filepath.Join(testDir, "testdata", "test-namespaces.yaml")
 
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "apply", "-f", manifestPath)
 	cmd.Stdout = os.Stdout
@@ -240,15 +205,6 @@ func applyTestNamespaces(t *testing.T, kubeconfig string) {
 	// Wait for namespaces to be ready
 	t.Log("Waiting for namespaces to be ready...")
 	time.Sleep(5 * time.Second)
-}
-
-func createKubernetesClient(kubeconfig string) (kubernetes.Interface, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
 }
 
 func createTestSettings(tempDir string) *config.Settings {
@@ -431,9 +387,4 @@ func printDetailedResults(t *testing.T, storedResourcesCount int, receivedData [
 			}
 		}
 	}
-}
-
-func getCurrentFile() string {
-	_, filename, _, _ := runtime.Caller(0)
-	return filename
 }
