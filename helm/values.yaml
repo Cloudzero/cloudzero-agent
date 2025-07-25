@@ -12,7 +12,7 @@ host: api.cloudzero.com
 # numeric (e.g., an AWS account ID). i.e., `"123456789012"` not `123456789012`.
 # If you are passing this as a parameter to the Helm CLI, you should generally
 # use --set-string (e.g., "cloudAccountId=123456789012").
-cloudAccountId: null
+cloudAccountId: ""
 
 # Name of the Kubernetes cluster.
 #
