@@ -824,7 +824,7 @@ data:
       agent:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-          tag: 1.2.4
+          tag: 1.2.5
         podDisruptionBudget: null
       aggregator:
         annotations: {}
@@ -2229,7 +2229,7 @@ spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       initContainers:
         - name: env-validator-copy
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -2253,7 +2253,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
         - name: env-validator-run
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -2425,7 +2425,7 @@ spec:
       
       containers:
         - name: cz-agent-aggregator-collector
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: port-collector
@@ -2467,7 +2467,7 @@ spec:
               memory: 64Mi
 
         - name: cz-agent-aggregator-shipper
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: port-shipper
@@ -2596,7 +2596,7 @@ spec:
       
       containers:
         - name: webhook-server
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/cloudzero-webhook
@@ -2681,7 +2681,7 @@ spec:
       
       containers:
         - name: init-scrape
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/cloudzero-webhook
@@ -2742,7 +2742,7 @@ spec:
       
       containers:
         - name: run-validator
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -2765,7 +2765,7 @@ spec:
             - --chart-version
             - 1.1.0-dev
             - --agent-version
-            - "1.2.4"
+            - "1.2.5"
             - --values-file
             - /cloudzero/config/values/values.yaml
             - --config-validator
@@ -2850,7 +2850,7 @@ spec:
       
       containers:
         - name: helmless
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.4"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/cloudzero-helmless

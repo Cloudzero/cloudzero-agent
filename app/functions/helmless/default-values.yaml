@@ -190,7 +190,7 @@ components:
     # executables, to provide CloudZero functionality.
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-      tag: 1.2.4  # <- Software release corresponding to this chart version.
+      tag: 1.2.5  # <- Software release corresponding to this chart version.
     podDisruptionBudget:
       # enabled:
       # minAvailable:
@@ -201,7 +201,7 @@ components:
   kubectl:
     image:
       repository: docker.io/bitnami/kubectl
-      tag: "1.33.1"
+      tag: "1.33.3"
 
   # prometheus contains details about where to find the Prometheus image.
   # Prometheus is critical to the functionality of this chart, and is used to
@@ -219,7 +219,7 @@ components:
   prometheusReloader:
     image:
       repository: quay.io/prometheus-operator/prometheus-config-reloader
-      tag: "v0.83.0"
+      tag: "v0.84.0"
 
   # Settings for the aggregator component. This is the piece which accepts
   # metrics from the agent, webhook, etc., and sends them to the CloudZero API
@@ -264,7 +264,7 @@ kubeStateMetrics:
   image:
     registry: registry.k8s.io
     repository: kube-state-metrics/kube-state-metrics
-    tag: "v2.15.0"
+    tag: "v2.16.0"
     sha:
     pullPolicy: IfNotPresent
   imagePullSecrets: []
