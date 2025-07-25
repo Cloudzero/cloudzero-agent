@@ -53,12 +53,9 @@ test-webhook-debug: check-deps
 
 help:
 	@echo "Available targets:"
-	@echo "  test-webhook               - Run basic webhook integration test (no API key)"
-	@echo "  test-webhook-debug         - Run basic test in debug mode (keep cluster)"
-	@echo "  test-webhook-chart         - Run Helm chart integration test (requires API key)"
-	@echo "  test-webhook-chart-debug   - Run chart test in debug mode (keep cluster)"
-	@echo "  test-webhook-cleanup       - Clean up basic test resources"
-	@echo "  test-webhook-chart-cleanup - Clean up chart test resources"
-	@echo "  test-webhook-setup         - Check test dependencies"
-	@echo "  test-webhook-status        - Check test cluster and output status"
-	@echo "  help                       - Show this help message"
+	@echo "  test-webhook         - Run webhook Helm chart integration test"
+	@echo "  test-webhook-debug   - Run test in debug mode (keep cluster running)"
+	@echo "  test-webhook-cleanup - Clean up test resources (cluster and temp files)"
+	@echo "  test-webhook-status  - Check test cluster and output status"
+	@echo "  test-webhook-setup   - Check test dependencies"
+	@echo "  help                 - Show this help message"

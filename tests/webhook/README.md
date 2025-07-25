@@ -111,21 +111,7 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 
 ## Running the Tests
 
-### Basic Integration Test (No API Key Required)
-
-```bash
-cd tests/webhook
-make test-webhook
-```
-
-### Debug Mode (keeps cluster running)
-
-```bash
-cd tests/webhook
-make test-webhook-debug
-```
-
-### Helm Chart Integration Test (Requires API Key)
+### Webhook Integration Test (Requires API Key)
 
 This test deploys the actual Helm chart and validates real webhook invocations:
 
@@ -135,16 +121,16 @@ export CLOUDZERO_DEV_API_KEY="your-api-key"
 # or
 export CZ_DEV_API_TOKEN="your-api-key"
 
-# Run chart test
+# Run webhook test
 cd tests/webhook
-make test-webhook-chart
+make test-webhook
 ```
 
-### Chart Test Debug Mode
+### Debug Mode (keeps cluster running)
 
 ```bash
 cd tests/webhook
-make test-webhook-chart-debug
+make test-webhook-debug
 ```
 
 This keeps the cluster and chart deployment running for debugging. You can then:
@@ -162,7 +148,7 @@ open http://localhost:8080/metrics
 # webhook_types_total{kind_resource="namespaces",operation="CREATE"} 1
 
 # Clean up when done
-make test-webhook-chart-cleanup
+make test-webhook-cleanup
 ```
 
 **Note:** The test automatically uses kubectl port-forward to access the webhook metrics endpoint and validate that webhook invocations are recorded correctly.
