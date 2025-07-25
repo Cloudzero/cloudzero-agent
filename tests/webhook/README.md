@@ -34,32 +34,39 @@ This test specifically validates the **webhook resource name fix** from [PR #371
 ✅ **Resource Name Validation**: Confirms webhook controller supports all 18+ resource types from the configuration  
 ✅ **Plural Form Recognition**: Verifies webhook recognizes correct plural resource names  
 ✅ **API Group Support**: Tests support across different Kubernetes API groups  
-✅ **Version Support**: Validates support for multiple API versions  
+✅ **Version Support**: Validates support for multiple API versions
 
 ### Supported Resources Tested
 
 The test validates webhook support for these resource types (with correct plural forms):
 
 **Core API Group (`/v1`)**:
+
 - `pods`, `namespaces`, `nodes`, `services`
 - `persistentvolumes`, `persistentvolumeclaims`
 
 **Apps API Group (`apps/v1`)**:
+
 - `deployments`, `statefulsets`, `daemonsets`, `replicasets`
 
 **Batch API Group (`batch/v1`)**:
+
 - `jobs`, `cronjobs`
 
 **Storage API Group (`storage.k8s.io/v1`)**:
+
 - `storageclasses`
 
 **Networking API Group (`networking.k8s.io/v1`)**:
+
 - `ingresses`, `ingressclasses`
 
 **API Extensions Group (`apiextensions.k8s.io/v1`)**:
+
 - `customresourcedefinitions`
 
 **Gateway API Group (`gateway.networking.k8s.io/v1`)**:
+
 - `gateways`, `gatewayclasses`
 
 ## Prerequisites
@@ -88,23 +95,26 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 **Setup Steps:**
 
 1. **Ensure Docker Desktop is Running**
+
    - Make sure Docker Desktop is running on your machine
    - Kind will use Docker Desktop's Docker daemon
 
 2. **Verify Docker Desktop Setup**
+
    ```bash
    # Check Docker is running
    docker version
    ```
 
 3. **Test Kind Installation**
+
    ```bash
    # Create a test cluster
    kind create cluster --name test-cluster
-   
+
    # Verify it's working
    kubectl cluster-info --context kind-test-cluster
-   
+
    # Clean up
    kind delete cluster --name test-cluster
    ```
@@ -197,6 +207,7 @@ The test generates detailed console output showing:
 4. **Debug Information**: Detailed logging for troubleshooting
 
 Example output:
+
 ```
 === COMPLETE SUPPORTED RESOURCES MAP ===
 Group: apps
@@ -205,7 +216,7 @@ Group: apps
     Kind: statefulset
     Kind: daemonset
     Kind: replicaset
-Group: 
+Group:
   Version: v1
     Kind: pod
     Kind: namespace
@@ -235,6 +246,7 @@ This test was created to validate the fix for a critical webhook configuration i
 **Solution**: Updated all resource names to use correct plural forms (`deployments`, `pods`, `namespaces`, etc.) to match Kubernetes API resource naming.
 
 **Validation**: This integration test confirms that:
+
 - The webhook controller properly supports all the corrected plural resource names
 - The resource name fix enables proper webhook interception of Kubernetes operations
 - All 18+ resource types from the configuration are working correctly
@@ -244,11 +256,13 @@ This test was created to validate the fix for a critical webhook configuration i
 ### Common Issues
 
 1. **Kind cluster creation fails**:
+
    - Check if Docker Desktop is running
    - Ensure Kind is properly installed
    - Check available disk space
 
 2. **Test timeout**:
+
    - Increase timeout in test configuration
    - Check if Kind cluster starts successfully
 
@@ -260,11 +274,13 @@ This test was created to validate the fix for a critical webhook configuration i
 ### Debugging
 
 1. **Keep cluster running**:
+
    ```bash
    make test-webhook-debug
    ```
 
 2. **Check cluster status**:
+
    ```bash
    kubectl --context kind-cloudzero-webhook-test cluster-info
    kubectl --context kind-cloudzero-webhook-test get nodes

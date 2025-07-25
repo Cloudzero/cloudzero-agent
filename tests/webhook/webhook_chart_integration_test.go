@@ -209,7 +209,6 @@ func deployWebhookChart(t *testing.T, kubeconfig, apiKey string) {
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
 	output, err = cmd.CombinedOutput()
-
 	if err != nil {
 		t.Logf("Helm install output: %s", string(output))
 		t.Fatalf("Failed to install Helm chart: %v", err)
@@ -392,7 +391,7 @@ func getWebhookMetrics(t *testing.T) string {
 
 	tempDir := filepath.Join(projectRoot, "tests", "webhook")
 	kubeconfigPath := ""
-	
+
 	// Look for kubeconfig files in temp directories
 	if matches, err := filepath.Glob("/tmp/cloudzero-webhook-chart-test-*/kubeconfig"); err == nil && len(matches) > 0 {
 		kubeconfigPath = matches[0]
@@ -437,14 +436,14 @@ func getWebhookMetrics(t *testing.T) string {
 	// Try to fetch metrics with retries
 	var metricsContent string
 	maxRetries := 3
-	
+
 	for retry := 0; retry < maxRetries; retry++ {
 		t.Logf("Attempting to fetch metrics (attempt %d/%d)...", retry+1, maxRetries)
-		
+
 		// Use curl to fetch metrics
 		curlCmd := exec.Command("curl", "-s", "--connect-timeout", "10", "http://localhost:8080/metrics")
 		output, err := curlCmd.Output()
-		
+
 		if err != nil {
 			t.Logf("Failed to fetch metrics (attempt %d): %v", retry+1, err)
 			if retry < maxRetries-1 {
@@ -550,4 +549,3 @@ func fileExists(path string) bool {
 func int32Ptr(i int32) *int32 {
 	return &i
 }
-
