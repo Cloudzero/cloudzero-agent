@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -990,6 +991,43 @@ func TestDetectConfiguration_GracefulFailureHandling(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDetectConfiguration_AWSTokenMethodNotAllowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Test that AWS token HTTP 405 error propagates with detailed message
+	mockScout := mocks.NewMockScout(ctrl)
+
+	// Set up mock to return the specific AWS token error
+	awsTokenError := errors.New("failed to get IMDSv2 token: IMDSv2 token endpoint does not support PUT method (status: 405). This may indicate an IMDSv1-only environment or misconfigured metadata service")
+	mockScout.EXPECT().
+		EnvironmentInfo(gomock.Any()).
+		Return(nil, awsTokenError)
+
+	// Call DetectConfiguration with empty values that need detection
+	region := ""
+	accountID := ""
+	clusterName := ""
+
+	err := scout.DetectConfiguration(context.Background(), nil, mockScout, &region, &accountID, &clusterName)
+
+	if err == nil {
+		t.Fatal("Expected error for AWS token HTTP 405")
+	}
+
+	// Verify the detailed error message propagates through
+	expectedErrorContains := "IMDSv2 token endpoint does not support PUT method (status: 405)"
+	if !strings.Contains(err.Error(), expectedErrorContains) {
+		t.Errorf("Expected error to contain %q, got %q", expectedErrorContains, err.Error())
+	}
+
+	// Verify the full error chain is preserved (without the settings validation wrapper)
+	expectedFullError := "failed to detect cloud provider: failed to get IMDSv2 token: IMDSv2 token endpoint does not support PUT method (status: 405). This may indicate an IMDSv1-only environment or misconfigured metadata service. Manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required"
+	if err.Error() != expectedFullError {
+		t.Errorf("Expected error %q, got %q", expectedFullError, err.Error())
 	}
 }
 
