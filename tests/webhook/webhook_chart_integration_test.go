@@ -139,11 +139,7 @@ func TestWebhookChartIntegration(t *testing.T) {
 func setupChartKindCluster(t *testing.T, tempDir string) string {
 	t.Log("Setting up Kind cluster for chart deployment...")
 
-	// Get the test directory path
-	testDir := filepath.Dir(kind.GetCurrentFile())
-	kindConfigPath := filepath.Join(testDir, "kind-config.yaml")
-
-	return kind.SetupCluster(t, chartClusterName, tempDir, kindConfigPath)
+	return kind.SetupClusterWithEmbeddedConfig(t, chartClusterName, tempDir)
 }
 
 func deployWebhookChart(t *testing.T, kubeconfig, apiKey string) {
@@ -257,6 +253,10 @@ func getWebhookMetrics(t *testing.T, kubeconfig string) string {
 	serviceURL := buildWebhookServiceURL(releaseName, webhookNamespace)
 	t.Logf("Target service URL: %s", serviceURL)
 
+	// Create file path for debugging metrics output
+	metricsFile := filepath.Join(os.TempDir(), "webhook-metrics-debug.log")
+	t.Logf("📄 Metrics will be saved to: %s", metricsFile)
+
 	// Debug: List all services in the webhook namespace
 	t.Log("🔍 Debugging: Listing services in webhook namespace...")
 	listCmd := kubectlCommand(kubeconfig, "get", "services", "-n", webhookNamespace, "-o", "wide")
@@ -328,6 +328,14 @@ func getWebhookMetrics(t *testing.T, kubeconfig string) string {
 
 	if len(curlOutput) > 0 {
 		t.Logf("✅ Successfully fetched metrics (%d bytes)", len(curlOutput))
+
+		// Write full metrics to file for debugging
+		if err := os.WriteFile(metricsFile, []byte(curlOutput), 0o644); err != nil {
+			t.Logf("⚠️  Failed to write metrics to file: %v", err)
+		} else {
+			t.Logf("📄 Full metrics written to: %s", metricsFile)
+		}
+
 		// Only show first 200 chars to avoid spam in logs
 		if len(curlOutput) > 200 {
 			t.Logf("Metrics sample: %s...", curlOutput[:200])
@@ -355,8 +363,8 @@ func validateWebhookInvocations(t *testing.T, metrics string) {
 	foundInvocations := 0
 
 	for _, resource := range expectedResources {
-		// Look for webhook_types_total metrics with CREATE operations for our resources
-		pattern := fmt.Sprintf(`webhook_types_total\{.*kind_resource="%s".*operation="CREATE".*\}\s+([1-9]\d*)`, resource)
+		// Look for czo_webhook_types_total metrics with create operations for our resources
+		pattern := fmt.Sprintf(`czo_webhook_types_total\{.*kind_resource="%s".*operation="create".*\}\s+([1-9]\d*)`, resource)
 		matched, err := regexp.MatchString(pattern, metrics)
 		if err != nil {
 			t.Logf("Error matching pattern for %s: %v", resource, err)
@@ -364,10 +372,10 @@ func validateWebhookInvocations(t *testing.T, metrics string) {
 		}
 
 		if matched {
-			t.Logf("✅ Webhook was invoked for %s (CREATE)", resource)
+			t.Logf("✅ Webhook was invoked for %s (create)", resource)
 			foundInvocations++
 		} else {
-			t.Logf("❌ No webhook invocation detected for %s (CREATE)", resource)
+			t.Logf("❌ No webhook invocation detected for %s (create)", resource)
 		}
 	}
 

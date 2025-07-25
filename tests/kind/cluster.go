@@ -4,16 +4,52 @@
 package kind
 
 import (
+	_ "embed"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+	"text/template"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+//go:embed testdata/kind-config.yaml
+var kindConfigTemplate string
+
+// KindConfig holds the configuration parameters for the Kind cluster
+type KindConfig struct {
+	ClusterName string
+	HostPath    string
+}
+
+// SetupClusterWithEmbeddedConfig creates a Kind cluster using the embedded configuration template
+func SetupClusterWithEmbeddedConfig(t *testing.T, clusterName, tempDir string) string {
+	t.Logf("Setting up Kind cluster %s...", clusterName)
+
+	// Create Kind config from embedded template
+	kindConfigPath := filepath.Join(tempDir, "kind-config.yaml")
+	config := KindConfig{
+		ClusterName: clusterName,
+		HostPath:    tempDir,
+	}
+
+	tmpl, err := template.New("kind-config").Parse(kindConfigTemplate)
+	require.NoError(t, err, "Failed to parse Kind config template")
+
+	var configContent strings.Builder
+	err = tmpl.Execute(&configContent, config)
+	require.NoError(t, err, "Failed to execute Kind config template")
+
+	err = os.WriteFile(kindConfigPath, []byte(configContent.String()), 0o644)
+	require.NoError(t, err, "Failed to write Kind config file")
+
+	return SetupCluster(t, clusterName, tempDir, kindConfigPath)
+}
 
 // SetupCluster creates a Kind cluster using the specified configuration file
 func SetupCluster(t *testing.T, clusterName, tempDir, kindConfigPath string) string {

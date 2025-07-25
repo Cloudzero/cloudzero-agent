@@ -187,18 +187,14 @@ func TestBackfillerKindIntegration(t *testing.T) {
 }
 
 func setupKindCluster(t *testing.T, tempDir string) string {
-	// Get the test directory path
-	testDir := filepath.Dir(kind.GetCurrentFile())
-	kindConfigPath := filepath.Join(testDir, "kind-config.yaml")
-
-	return kind.SetupCluster(t, clusterName, tempDir, kindConfigPath)
+	return kind.SetupClusterWithEmbeddedConfig(t, clusterName, tempDir)
 }
 
 func applyTestNamespaces(t *testing.T, kubeconfig string) {
 	t.Log("Applying test namespaces...")
 
 	testDir := filepath.Dir(kind.GetCurrentFile())
-	manifestPath := filepath.Join(testDir, "test-namespaces.yaml")
+	manifestPath := filepath.Join(testDir, "testdata", "test-namespaces.yaml")
 
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "apply", "-f", manifestPath)
 	cmd.Stdout = os.Stdout

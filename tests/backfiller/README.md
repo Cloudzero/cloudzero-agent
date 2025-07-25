@@ -9,7 +9,7 @@ This directory contains minimal integration tests for the CloudZero Agent backfi
 - Creates a minimal single-node Kind cluster named `cloudzero-backfiller-test`
 - Includes volume mounts for test data exchange
 
-### 2. **Test Resources** (`test-namespaces.yaml`)
+### 2. **Test Resources** (`testdata/test-namespaces.yaml`)
 
 - Creates 4 test namespaces with various labels and annotations:
   - `production` - with `environment=production`, `team=backend`, `cost-center=engineering`
@@ -122,7 +122,7 @@ make test-backfiller-cleanup
 
 ## Test Configuration
 
-The test uses a configuration (`test-config.yaml`) that:
+The test uses a configuration (`testdata/test-config.yaml`) that:
 
 - **Enables label filtering** for: `environment`, `team`, `cost-center`
 - **Enables annotation filtering** for: `deployment.kubernetes.io/managed-by`, `description`
@@ -151,16 +151,16 @@ The test generates several outputs:
 
 The test creates everything automatically:
 
-1. **Creates the Kind cluster** using the `kind-config.yaml` file:
+1. **Creates the Kind cluster** using the embedded configuration:
 
    ```bash
-   kind create cluster --config kind-config.yaml --wait 60s
+   kind create cluster --name cloudzero-backfiller-test --wait 60s
    ```
 
 2. **Applies the test namespaces** to the cluster:
 
    ```bash
-   kubectl apply -f test-namespaces.yaml
+   kubectl apply -f testdata/test-namespaces.yaml
    ```
 
 3. **Runs the backfiller** against the cluster
@@ -175,7 +175,7 @@ If you want to manually work with Kind clusters:
 
 ```bash
 # Create a cluster manually
-kind create cluster --name cloudzero-backfiller-test --config tests/backfiller/kind-config.yaml
+kind create cluster --name cloudzero-backfiller-test
 
 # List clusters
 kind get clusters
@@ -243,8 +243,8 @@ kind delete cluster --name cloudzero-backfiller-test
 
 To extend these tests:
 
-1. **Add more resource types**: Modify `test-namespaces.yaml` to include pods, deployments, etc.
-2. **Test different filters**: Update `test-config.yaml` with different label/annotation patterns
+1. **Add more resource types**: Modify `testdata/test-namespaces.yaml` to include pods, deployments, etc.
+2. **Test different filters**: Update `testdata/test-config.yaml` with different label/annotation patterns
 3. **Add negative tests**: Create resources that should be filtered out
 4. **Performance testing**: Add many namespaces to test pagination and worker pools
 
@@ -254,9 +254,9 @@ To extend these tests:
 tests/backfiller/
 ├── README.md                          # This file
 ├── Makefile                           # Test automation
-├── kind-config.yaml                   # Kind cluster configuration
-├── test-namespaces.yaml               # Test Kubernetes resources
-├── test-config.yaml                   # Backfiller configuration
+├── testdata/
+│   ├── test-namespaces.yaml           # Test Kubernetes resources
+│   └── test-config.yaml               # Backfiller configuration
 ├── mock_collector.go                  # Mock collector implementation
 ├── backfiller_integration_test.go     # Main integration test
 └── [generated files]                  # Test outputs and temporary files
