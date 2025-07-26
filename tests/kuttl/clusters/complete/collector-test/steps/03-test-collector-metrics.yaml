@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: test-collector-metrics
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - port-forward
+        - service/cz-agent-cloudzero-state-metrics
+        - 8080:8080
+        - -n
+        - cz-agent
+    - command: sleep
+      args:
+        - "5"
+    - command: sh
+      args:
+        - -c
+        - "curl http://localhost:8080/metrics | head -20"
