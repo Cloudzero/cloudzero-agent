@@ -14,6 +14,7 @@ spec:
       {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       restartPolicy: OnFailure
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.agent.image) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
       containers:
