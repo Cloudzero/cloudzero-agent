@@ -15,7 +15,7 @@ spec:
       name: {{ include "cloudzero-agent.configLoaderJobName" . }}
       namespace: {{ .Release.Namespace }}
       labels:
-      {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
+        {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
       {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.validator.image) | nindent 6 }}
