@@ -7,10 +7,6 @@ skip-path:
 
 skip-check:
   # Rule:
-  #   Containers should have readiness probes to control traffic routing.
-  - CKV_K8S_9
-
-  # Rule:
   #   Containers should have CPU requests defined for proper scheduling.
   - CKV_K8S_10
 
