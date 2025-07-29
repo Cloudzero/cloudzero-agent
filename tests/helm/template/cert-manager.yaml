@@ -2079,6 +2079,16 @@ spec:
             timeoutSeconds: 10
             failureThreshold: 3
             successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 3
+            successThreshold: 1
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
