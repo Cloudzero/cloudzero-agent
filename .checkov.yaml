@@ -7,11 +7,6 @@ skip-path:
 
 skip-check:
   # Rule:
-    #   Containers should have liveness probes to detect and restart unhealthy
-    #   containers.
-  - CKV_K8S_8
-
-  # Rule:
   #   Containers should have readiness probes to control traffic routing.
   - CKV_K8S_9
 
@@ -23,9 +18,8 @@ skip-check:
   #   Containers should have CPU limits defined to prevent resource exhaustion.
   - CKV_K8S_11
 
-  # Rule: Containers should have memory requests defined for proper scheduling.
-  # Fix: Add "resources.requests.memory" to container specifications.
-  # Currently skipped as memory requests are configured via values.yaml when needed.
+  # Rule:
+  #   Containers should have memory requests defined for proper scheduling.
   - CKV_K8S_12
 
   # Rule:
