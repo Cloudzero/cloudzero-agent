@@ -62,9 +62,7 @@ func (h *GenericHandler[T]) Delete() hook.AdmitFunc {
 }
 
 func (h *GenericHandler[T]) Connect() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
 
 func (h *GenericHandler[T]) admitFunc(action string) hook.AdmitFunc {

@@ -18,6 +18,12 @@ import (
 // AdmitFunc defines how to process an admission request
 type AdmitFunc func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error)
 
+// AllowAlways is a trivial AdmitFunc that always allows the admission request.
+// This is useful for implementing fail-open webhook behavior.
+func AllowAlways(_ context.Context, _ *types.AdmissionReview, _ metav1.Object) (*types.AdmissionResponse, error) {
+	return &types.AdmissionResponse{Allowed: true}, nil
+}
+
 // Handler represents the set of functions for each operation in an admission webhook.
 type Handler struct {
 	Accessor      config.ConfigAccessor

@@ -116,19 +116,13 @@ func (h *StorageClassHandler) Create() hook.AdmitFunc {
 }
 
 func (h *StorageClassHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
 
 func (h *StorageClassHandler) Delete() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
 
 func (h *StorageClassHandler) Connect() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }

@@ -115,19 +115,13 @@ func (h *IngressClassHandler) Create() hook.AdmitFunc {
 }
 
 func (h *IngressClassHandler) Update() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
 
 func (h *IngressClassHandler) Delete() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
 
 func (h *IngressClassHandler) Connect() hook.AdmitFunc {
-	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
-		return &types.AdmissionResponse{Allowed: true}, nil
-	}
+	return hook.AllowAlways
 }
