@@ -96,7 +96,7 @@ require (
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.6.0
-	gorm.io/gorm v1.30.0
+	gorm.io/gorm v1.30.1
 	helm.sh/helm/v3 v3.18.4
 	sigs.k8s.io/gateway-api v1.3.0
 )
