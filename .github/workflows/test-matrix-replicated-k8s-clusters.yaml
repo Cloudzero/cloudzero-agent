@@ -340,6 +340,8 @@ jobs:
               image:
                 repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
                 tag: ${{ inputs.image-tag }}
+            aggregator:
+              replicas: 1
           EOF
           .tools/bin/helm install cz-agent ./helm \
             -n cz-agent \

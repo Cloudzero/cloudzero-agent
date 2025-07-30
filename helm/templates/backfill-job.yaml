@@ -32,8 +32,10 @@ spec:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
             - -backfill
-          resources:
-            {{- toYaml .Values.insightsController.resources | nindent 12 }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.webhookServer.backfill.resources | default (dict))
+              (.Values.insightsController.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
             - name: insights-server-config
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}

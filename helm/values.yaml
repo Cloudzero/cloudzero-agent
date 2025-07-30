@@ -195,6 +195,100 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Resource requirements and limits for the agent component.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1024Mi"
+        cpu: "1000m"
+    # The agent federated node component runs on each node for federation.
+    federatedNode:
+      # Resource requirements and limits for the agent federated node component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+    # The agent configmap reloader component watches for configuration changes.
+    reloader:
+      # Resource requirements and limits for the agent configmap reloader component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+
+  # The validator component performs validation checks and notifies the platform
+  # of installation status changes.
+  validator:
+    # Resource requirements and limits for the validator component.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+  # Miscellaneous components that don't fit into other categories.
+  miscellaneous:
+    # The config loader job component loads configuration and validates settings.
+    configLoader:
+      # Resource requirements and limits for the config loader job component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    # The helmless job component generates configuration without Helm.
+    helmless:
+      # Resource requirements and limits for the helmless job component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    # The init cert job component initializes TLS certificates.
+    initCert:
+      # Resource requirements and limits for the init cert job component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
 
   # kubectl contains details about where to find the kubectl image.  This chart
   # uses the kubectl image as part of the job to initialize certificates.
@@ -232,6 +326,27 @@ components:
       # maxUnavailable:
     tolerations: []
     annotations: {}
+    collector:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
+    # Configuration for the shipper component of the aggregator.
+    shipper:
+      # Resource requirements and limits for the shipper component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
 
   # Settings for the webhook server.
   webhookServer:
@@ -240,6 +355,30 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Resource requirements and limits for the webhook server component.
+    #
+    # For details, see the Kubernetes documentation on resource management:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    # The backfill job component performs initial data backfilling.
+    backfill:
+      # Resource requirements and limits for the backfill job component.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
 
 # Due to limitations of Helm, we are unfortunately not able to automatically configure the
 # kube-state-metrics subchart using the configuration above, and instead need to configure
@@ -269,6 +408,32 @@ kubeStateMetrics:
     pullPolicy: IfNotPresent
   imagePullSecrets: []
   nameOverride: "cloudzero-state-metrics"
+  # Resource requirements and limits for kube-state-metrics.
+  #
+  # https://github.com/kubernetes/kube-state-metrics/blob/main/README.md#scaling-kube-state-metrics:
+  #
+  #   Resource usage for kube-state-metrics changes with the Kubernetes objects
+  #   (Pods/Nodes/Deployments/Secrets etc.) size of the cluster. To some extent,
+  #   the Kubernetes objects in a cluster are in direct proportion to the node
+  #   number of the cluster.
+  #
+  #   As a general rule, you should allocate:
+  #
+  #   - 250MiB memory
+  #   - 0.1 cores
+  #
+  #   Note that if CPU limits are set too low, kube-state-metrics' internal
+  #   queues will not be able to be worked off quickly enough, resulting in
+  #   increased memory consumption as the queue length grows. If you experience
+  #   problems resulting from high memory allocation or CPU throttling, try
+  #   increasing the CPU limits.
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
   # Disable CloudZero KSM as a Scrape Target since the service endpoint is
   # explicitly defined by the Validators config file.
   prometheusScrape: false
@@ -363,6 +528,17 @@ initCertJob:
     pullPolicy:
     digest:
     tag:
+  # -- Resource requirements and limits for the init-cert job.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
   rbac:
     create: true
     serviceAccountName: ""
@@ -394,7 +570,18 @@ validator:
     pullPolicy:
     pullSecrets:
   # -- Resource requirements and limits for the validator.
-  resources: {}
+  #
+  # **DEPRECATED**: This field is deprecated. Please use `components.validator.resources` instead.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: ""
+      cpu: ""
+    limits:
+      memory: ""
+      cpu: ""
 
 server:
   name: server
@@ -423,14 +610,17 @@ server:
   nodeSelector: {}
   # Resource requirements and limits for the server.
   #
+  # **DEPRECATED**: This field is deprecated. Please use `components.agent.resources` instead.
+  #
   # For details, see the Kubernetes documentation on resource management:
   # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   resources:
     requests:
-      memory: 512Mi
-      cpu: 250m
+      memory: ""
+      cpu: ""
     limits:
-      memory: 1024Mi
+      memory: ""
+      cpu: ""
   # Annotations to add to the server Deployment.
   deploymentAnnotations: {}
   # Annotations to add to the server pods.
@@ -716,7 +906,18 @@ insightsController:
   # Additional volumes to add to the insights controller pods.
   volumes: []
   # Resource requirements and limits for the insights controller.
-  resources: {}
+  #
+  # **DEPRECATED**: This field is deprecated. Please use `components.webhookServer.resources` instead.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: ""
+      cpu: ""
+    limits:
+      memory: ""
+      cpu: ""
   # Annotations to add to the insights controller pods.
   podAnnotations: {}
   # Labels to add to the insights controller pods.
@@ -783,7 +984,13 @@ configmapReload:
     #
     # For details, see the Kubernetes documentation on resource management:
     # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-    resources: {}
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 200m
 
 # The aggregator provides an intermediary between the CloudZero Agent and the
 # CloudZero API. It is composed of two applications, the collector and the
@@ -823,9 +1030,6 @@ aggregator:
   # Whether to enable the profiling endpoint (/debug/pprof/). This should
   # generally be disabled in production.
   profiling: false
-  # Wether to enable rolling a debug container inside the aggregator pod.
-  # This should be disabled in production.
-  debugContainer: false
   # Frequency to close HTTP connections from clients, to help distribute the
   # load across the various collector replicas. 0=never, otherwise 1/N
   # probability.
@@ -930,26 +1134,28 @@ aggregator:
     # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources:
       requests:
-        memory: "64Mi"
-        cpu: "100m"
+        memory: ""
+        cpu: ""
       limits:
-        memory: "1024Mi"
-        cpu: "2000m"
+        memory: ""
+        cpu: ""
   # Configuration for the shipper component of the aggregator.
   shipper:
     # Port that the shipper listens on for internal communication.
     port: 8081
     # Resource requirements and limits for the shipper component.
     #
+    # **DEPRECATED**: This field is deprecated. Please use `components.aggregator.shipper.resources` instead.
+    #
     # For details, see the Kubernetes documentation on resource management:
     # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources:
       requests:
-        memory: "64Mi"
-        cpu: "100m"
+        memory: ""
+        cpu: ""
       limits:
-        memory: "1024Mi"
-        cpu: "2000m"
+        memory: ""
+        cpu: ""
   # Node selector configuration for the aggregator pods.
   #
   # See the Kubernetes documentation for details:
@@ -972,3 +1178,17 @@ nameOverride:
 forceNamespace:
 # -- Deprecated. Override the name of the main Prometheus ConfigMap.
 configMapNameOverride:
+
+# Configuration for the helmless job.
+helmless:
+  # Resource requirements and limits for the helmless job.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 8Mi
+      cpu: 5m
+    limits:
+      memory: 32Mi
+      cpu: 50m

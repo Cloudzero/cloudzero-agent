@@ -1,0 +1,119 @@
+suite: test configmap reloader resources fallback logic
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test that configmapReload.prometheus.resources takes precedence over components.agent.reloader.resources
+  - it: should use configmapReload.prometheus.resources when both are set
+    set:
+      configmapReload.prometheus.enabled: true
+      components.agent.reloader:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      configmapReload.prometheus.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "200m"
+
+  # Test that configmapReload.prometheus.resources is used when components.agent.reloader.resources is not set
+  - it: should use configmapReload.prometheus.resources when components.agent.reloader.resources is not set
+    set:
+      configmapReload.prometheus.enabled: true
+      configmapReload.prometheus.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "200m"
+
+  # Test that components.agent.reloader.resources is used when configmapReload.prometheus.resources is not set
+  - it: should use components.agent.reloader.resources when configmapReload.prometheus.resources is not set
+    set:
+      configmapReload.prometheus.enabled: true
+      components.agent.reloader:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      configmapReload.prometheus.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "400m"
+
+  # Test that default resources are used when both components and legacy resources are null
+  - it: should use default resources when both components and legacy resources are null
+    set:
+      configmapReload.prometheus.enabled: true
+      configmapReload.prometheus.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "200m"

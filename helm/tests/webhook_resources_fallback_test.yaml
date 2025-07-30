@@ -1,0 +1,115 @@
+suite: test webhook resources fallback logic
+templates:
+  - templates/webhook-deploy.yaml
+tests:
+  # Test that insightsController.resources takes precedence over components.webhookServer.resources
+  - it: should use insightsController.resources when both are set
+    set:
+      components.webhookServer:
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
+      insightsController.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+
+  # Test that insightsController.resources is used when components.webhookServer.resources is not set
+  - it: should use insightsController.resources when components.webhookServer.resources is not set
+    set:
+      insightsController.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+
+  # Test that components.webhookServer.resources is used when insightsController.resources is not set
+  - it: should use components.webhookServer.resources when insightsController.resources is not set
+    set:
+      components.webhookServer:
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
+      insightsController.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1000m"
+
+  # Test that default resources are used when both components and legacy resources are null
+  - it: should use default resources when both components and legacy resources are null
+    set:
+      insightsController.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"

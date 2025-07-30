@@ -27,6 +27,7 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
+          {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.helmless.resources | nindent 10 }}
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values

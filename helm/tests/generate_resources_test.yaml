@@ -1,0 +1,267 @@
+suite: test generateResources function
+templates:
+  - aggregator-deploy.yaml
+tests:
+  - it: should omit resources when both legacy and component values are empty strings
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: "RELEASE-NAME-aggregator-collector"
+      - isNull:
+          path: spec.template.spec.containers[0].resources
+      # Note: shipper container still has resources because it has default values in legacy path
+
+  - it: should use component values when legacy values are empty strings
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+
+  - it: should use legacy values when both are set (legacy takes precedence)
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "1024Mi"
+      components.aggregator.collector.resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1000m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "1024Mi"
+
+  - it: should handle partial empty strings correctly
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: "100m"
+          memory: ""
+        limits:
+          cpu: ""
+          memory: "1024Mi"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1000m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "1024Mi"
+
+  - it: should omit resources when all values are empty strings
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: "RELEASE-NAME-aggregator-collector"
+      - isNull:
+          path: spec.template.spec.containers[0].resources
+      # Note: shipper container still has resources because it has default values in legacy path
+
+  - it: should handle CPU empty but memory set
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: "256Mi"
+        limits:
+          cpu: ""
+          memory: "512Mi"
+      components.aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - isNull:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+      - isNull:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+
+  - it: should handle memory empty but CPU set
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: "100m"
+          memory: ""
+        limits:
+          cpu: "500m"
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: ""
+        limits:
+          cpu: ""
+          memory: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+      - isNull:
+          path: spec.template.spec.containers[0].resources.requests.memory
+      - isNull:
+          path: spec.template.spec.containers[0].resources.limits.memory
+
+  - it: should handle component values when legacy has mixed empty values
+    set:
+      aggregator.collector.resources:
+        requests:
+          cpu: ""
+          memory: "128Mi"
+        limits:
+          cpu: "200m"
+          memory: ""
+      components.aggregator.collector.resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "256Mi"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "256Mi"

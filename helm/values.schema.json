@@ -3264,9 +3264,6 @@
           },
           "type": "object"
         },
-        "debugContainer": {
-          "type": "boolean"
-        },
         "image": {
           "$ref": "#/$defs/com.cloudzero.agent.image",
           "deprecated": true
@@ -3349,6 +3346,15 @@
         "agent": {
           "additionalProperties": false,
           "properties": {
+            "federatedNode": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
+            },
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"
             },
@@ -3362,8 +3368,20 @@
                 }
               ]
             },
+            "reloader": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
+            },
             "replicas": {
               "type": "integer"
+            },
+            "resources": {
+              "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
             },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations"
@@ -3376,6 +3394,22 @@
           "properties": {
             "annotations": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "collector": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "resources": {
+                      "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "podDisruptionBudget": {
               "oneOf": [
@@ -3391,6 +3425,22 @@
               "additionalProperties": false,
               "type": ["integer", "null"]
             },
+            "shipper": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "resources": {
+                      "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations"
             }
@@ -3402,6 +3452,39 @@
           "properties": {
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"
+            }
+          },
+          "type": "object"
+        },
+        "miscellaneous": {
+          "additionalProperties": false,
+          "properties": {
+            "configLoader": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
+            },
+            "helmless": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
+            },
+            "initCert": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"
@@ -3424,9 +3507,27 @@
           },
           "type": "object"
         },
+        "validator": {
+          "additionalProperties": false,
+          "properties": {
+            "resources": {
+              "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+            }
+          },
+          "type": "object"
+        },
         "webhookServer": {
           "additionalProperties": false,
           "properties": {
+            "backfill": {
+              "additionalProperties": false,
+              "properties": {
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                }
+              },
+              "type": "object"
+            },
             "podDisruptionBudget": {
               "oneOf": [
                 {
@@ -3440,6 +3541,9 @@
             "replicas": {
               "additionalProperties": false,
               "type": ["integer", "null"]
+            },
+            "resources": {
+              "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
             }
           },
           "type": "object"
@@ -3532,6 +3636,15 @@
     },
     "global": {
       "additionalProperties": true,
+      "type": "object"
+    },
+    "helmless": {
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        }
+      },
       "type": "object"
     },
     "host": {
@@ -3632,6 +3745,9 @@
             }
           },
           "type": "object"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
         },
         "tolerations": {
           "$ref": "#/$defs/com.cloudzero.agent.tolerations"

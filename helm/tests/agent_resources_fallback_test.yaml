@@ -1,0 +1,115 @@
+suite: test agent resources fallback logic
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test that server.resources takes precedence over components.agent.resources
+  - it: should use server.resources when both are set
+    set:
+      components.agent:
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "500m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+      server.resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "1000m"
+
+  # Test that server.resources is used when components.agent.resources is not set
+  - it: should use server.resources when components.agent.resources is not set
+    set:
+      server.resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "1000m"
+
+  # Test that components.agent.resources is used when server.resources is not set
+  - it: should use components.agent.resources when server.resources is not set
+    set:
+      components.agent:
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "500m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+      server.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "2048Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"
+
+  # Test that default resources are used when both components and legacy resources are null
+  - it: should use default resources when both components and legacy resources are null
+    set:
+      server.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "1000m"

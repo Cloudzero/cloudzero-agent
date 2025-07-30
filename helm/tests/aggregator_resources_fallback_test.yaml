@@ -1,0 +1,89 @@
+suite: test aggregator resources fallback logic
+templates:
+  - templates/aggregator-deploy.yaml
+tests:
+  # Test that aggregator.collector.resources takes precedence over components.aggregator.collector.resources
+  - it: should use aggregator.collector.resources when both are set
+    set:
+      components.aggregator.collector.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "200m"
+        limits:
+          memory: "2048Mi"
+          cpu: "4000m"
+      aggregator.collector.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "2000m"
+
+  # Test that aggregator.collector.resources is used when components.aggregator.collector.resources is not set
+  - it: should use aggregator.collector.resources when components.aggregator.collector.resources is not set
+    set:
+      aggregator.collector.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "2000m"
+
+  # Test that components.aggregator.collector.resources is used when aggregator.collector.resources is not set
+  - it: should use components.aggregator.collector.resources when aggregator.collector.resources is not set
+    set:
+      components.aggregator.collector.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "200m"
+        limits:
+          memory: "2048Mi"
+          cpu: "4000m"
+      aggregator.collector.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "2048Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "4000m"

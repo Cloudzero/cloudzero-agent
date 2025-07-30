@@ -1,0 +1,53 @@
+suite: test init cert job resources
+templates:
+  - templates/init-cert-job.yaml
+tests:
+  # Test that components.miscellaneous.initCert.resources is used correctly
+  - it: should use components.miscellaneous.initCert.resources
+    set:
+      insightsController.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      initCertJob.enabled: true
+      components.miscellaneous.initCert:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "400m"
+
+  # Test that default resources are used when not set
+  - it: should use default resources when not set
+    set:
+      insightsController.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      initCertJob.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "200m"
