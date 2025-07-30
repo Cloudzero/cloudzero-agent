@@ -56,6 +56,11 @@ jobs:
       - name: SETUP - Install tools
         run: make install-tools
 
+      - name: Install Checkov
+        run: |
+          command -v pip3 || (sudo apt update && sudo apt install python3-pip -y)
+          pip3 install checkov
+
       - name: TEST - Run helm tests
         env:
           CLOUDZERO_DEV_API_KEY: "fake-api-key"

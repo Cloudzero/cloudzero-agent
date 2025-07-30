@@ -116,6 +116,17 @@ install-tools: install-tools-node
 install-tools-node:
 	@$(NPM) install --prefix ./.tools
 
+# This is for installing tools using Homebrew that we assume are installed
+# system-wide.
+.PHONY: install-tools-homebrew
+install-tools-homebrew: ## Install some tools via Homebrew
+install-tools-homebrew:
+	@brew install \
+		checkov \
+		npm \
+		protoc-gen-go \
+		$(NULL)
+
 # golangci-lint is intentionally not installed via tools.go; see
 # https://golangci-lint.run/welcome/install/#install-from-sources for details.
 GOLANGCI_LINT_VERSION ?= v1.64.4
@@ -182,10 +193,11 @@ analyze-staticcheck:
 
 .PHONY: analyze-checkov
 analyze-checkov: $(addsuffix -analyze-checkov,$(wildcard tests/helm/template/*.yaml))
+analyze: analyze-checkov
 
 .PHONY: tests/helm/template/%.yaml-analyze-checkov
 tests/helm/template/%.yaml-analyze-checkov: tests/helm/template/%.yaml
-	@checkov -f $< \
+	checkov -f $< \
 		--compact \
 		--quiet \
 		--framework kubernetes \

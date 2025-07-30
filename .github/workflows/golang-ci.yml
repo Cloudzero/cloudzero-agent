@@ -56,6 +56,10 @@ jobs:
           go-version-file: go.mod
       - name: Install tools
         run: make install-tools
+      - name: Install Checkov
+        run: |
+          command -v pip3 || (sudo apt update && sudo apt install python3-pip -y)
+          pip3 install checkov
       - name: Run static analysis
         run: make analyze
 
