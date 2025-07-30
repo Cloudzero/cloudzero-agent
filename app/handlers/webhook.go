@@ -40,9 +40,9 @@ const (
 	// minimalAllowResponse is a fallback JSON response that always allows admission requests
 	// Used when normal JSON marshalling fails to ensure fail-open behavior
 	minimalAllowResponse = `{"response":{"allowed":true}}`
-	MaxRequestBodyBytes = int64(6 * 1024 * 1024)
-	DefaultTimeout      = 15 * time.Second
-	MinTimeout          = 5 * time.Second
+	MaxRequestBodyBytes  = int64(6 * 1024 * 1024)
+	DefaultTimeout       = 15 * time.Second
+	MinTimeout           = 5 * time.Second
 )
 
 var (
@@ -179,14 +179,14 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 		if err != nil {
 			// Log the error but still allow the request - fail-open behavior
 			log.Ctx(ctx).Err(err).Msg("could not marshal allow response to json, allowing request anyway")
-			
+
 			// Use minimal JSON response to ensure we always allow
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(minimalAllowResponse))
 			return
 		}
-		
+
 		// Only set headers when we know we'll succeed
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -234,51 +234,6 @@ func configReader(req *http.Request) ([]byte, error) {
 		return nil, apierrors.NewRequestEntityTooLargeError(fmt.Sprintf("limit is %d", MaxRequestBodyBytes))
 	}
 	return data, nil
-}
-
-func (a *ValidationWebhookAPI) errorToJSON(review *types.AdmissionReview, err error) ([]byte, error) {
-	switch review.OriginalAdmissionReview.(type) {
-	case *admissionv1beta1.AdmissionReview:
-		r := &admissionv1beta1.AdmissionResponse{
-			UID: k8stypes.UID(review.ID),
-			Result: &metav1.Status{
-				Message: err.Error(),
-				Status:  metav1.StatusFailure,
-			},
-		}
-
-		return json.Marshal(admissionv1beta1.AdmissionReview{
-			TypeMeta: v1beta1AdmissionReviewTypeMeta,
-			Response: r,
-		})
-	case *admissionv1.AdmissionReview:
-		r := &admissionv1.AdmissionResponse{
-			UID: k8stypes.UID(review.ID),
-			Result: &metav1.Status{
-				Message: err.Error(),
-				Status:  metav1.StatusFailure,
-			},
-		}
-
-		return json.Marshal(admissionv1.AdmissionReview{
-			TypeMeta: v1AdmissionReviewTypeMeta,
-			Response: r,
-		})
-	}
-
-	return nil, errors.New("invalid admission response type")
-}
-
-// sendErrorResponse handles error responses with proper logging and status codes
-func (a *ValidationWebhookAPI) sendErrorResponse(ctx context.Context, w http.ResponseWriter, r *http.Request, review *types.AdmissionReview, err error) {
-	log.Ctx(ctx).Err(err).Msg("could not marshal response to json")
-	errResp, err2 := a.errorToJSON(review, err)
-	if err2 != nil {
-		log.Ctx(ctx).Err(err2).Msg("could not marshal status error on admission response")
-		request.Reply(r, w, fmt.Sprintf("could not marshal status error on admission response: %v", err), http.StatusInternalServerError)
-		return
-	}
-	request.Reply(r, w, errResp, http.StatusInternalServerError)
 }
 
 func (a *ValidationWebhookAPI) marshallResponseToJSON(ctx context.Context, review *types.AdmissionReview, resp *types.AdmissionResponse) (data []byte, err error) {
