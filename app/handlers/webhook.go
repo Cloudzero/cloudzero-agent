@@ -170,15 +170,32 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 		return
 	}
 
+	sendAllowResponse := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		resp, err := a.marshallResponseToJSON(ctx, review, &types.AdmissionResponse{Allowed: true})
+		if err != nil {
+			log.Ctx(ctx).Err(err).Msg("could not map response to json")
+			errResp, err2 := a.errorToJSON(review, err)
+			if err2 != nil {
+				log.Ctx(ctx).Err(err2).Msg("could not marshall status error on admission response")
+				request.Reply(r, w, fmt.Sprintf("could not marshall status error on admission response: %v", err), http.StatusInternalServerError)
+				return
+			}
+			request.Reply(r, w, errResp, http.StatusInternalServerError)
+			return
+		}
+		_, _ = w.Write(resp)
+	}
+
 	log.Ctx(ctx).Trace().
 		Int("content_length", int(r.ContentLength)).
 		Str("operation", string(review.Operation)).
 		Msg("processing review request")
 
-	result, err := a.controller.Review(ctx, review)
-	if err != nil {
+	if _, err := a.controller.Review(ctx, review); err != nil {
 		log.Ctx(ctx).Error().Err(err).Send()
-		request.Reply(r, w, fmt.Sprintf("review failure: %v", err), http.StatusInternalServerError)
+		sendAllowResponse(w, r)
 		return
 	}
 
@@ -194,22 +211,7 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 		}
 	}
 
-	resp, err := a.marshallResponseToJSON(ctx, review, result)
-	if err != nil {
-		log.Ctx(ctx).Err(err).Msg("could no map response to json")
-		errResp, err2 := a.errorToJSON(review, err)
-		if err2 != nil {
-			log.Ctx(ctx).Err(err2).Msg("could not marshall status error on admission response")
-			request.Reply(r, w, fmt.Sprintf("could not marshall status error on admission response: %v", err), http.StatusInternalServerError)
-			return
-		}
-		request.Reply(r, w, errResp, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(resp)
+	sendAllowResponse(w, r)
 }
 
 // configReader is reads an HTTP request, imposing size restrictions aligned with Kubernetes limits.

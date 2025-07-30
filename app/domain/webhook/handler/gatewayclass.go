@@ -90,6 +90,9 @@ func NewGatewayClassHandler(
 	h.ObjectCreator = helper.NewStaticObjectCreator(objectType)
 	h.Handler.Store = store
 	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
+	h.Handler.Connect = h.Connect()
 	return &h.Handler
 }
 
@@ -107,6 +110,24 @@ func (h *GatewayClassHandler) Create() hook.AdmitFunc {
 			log.Warn().Msgf("unable to cast to object instance of type %T", obj)
 			return &types.AdmissionResponse{Allowed: true}, nil
 		}
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func (h *GatewayClassHandler) Update() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func (h *GatewayClassHandler) Delete() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
+}
+
+func (h *GatewayClassHandler) Connect() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
 }

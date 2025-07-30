@@ -44,6 +44,7 @@ func NewGenericHandler[T metav1.Object](
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Delete = h.Delete()
+	h.Handler.Connect = h.Connect()
 	h.Handler.Store = store
 	return &h.Handler
 }
@@ -58,6 +59,12 @@ func (h *GenericHandler[T]) Update() hook.AdmitFunc {
 
 func (h *GenericHandler[T]) Delete() hook.AdmitFunc {
 	return h.admitFunc("delete")
+}
+
+func (h *GenericHandler[T]) Connect() hook.AdmitFunc {
+	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
+		return &types.AdmissionResponse{Allowed: true}, nil
+	}
 }
 
 func (h *GenericHandler[T]) admitFunc(action string) hook.AdmitFunc {
