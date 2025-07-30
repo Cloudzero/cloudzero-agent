@@ -18,6 +18,7 @@ spec:
         {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
       {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
     spec:
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.validator.image) | nindent 6 }}
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       restartPolicy: OnFailure
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}

@@ -2736,6 +2736,7 @@ spec:
         app.kubernetes.io/instance: cz-agent
       
     spec:
+      
       serviceAccountName: cz-agent-cloudzero-agent-server
       restartPolicy: OnFailure
       
@@ -2846,6 +2847,7 @@ spec:
       
     spec:
       restartPolicy: OnFailure
+      
       
       
       containers:
