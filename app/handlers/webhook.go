@@ -37,6 +37,9 @@ import (
 // We allow an additional 2x buffer, as it is still fairly cheap (6mb)
 // Taken from https://github.com/istio/istio/commit/6ca5055a4db6695ef5504eabdfde3799f2ea91fd
 const (
+	// minimalAllowResponse is a fallback JSON response that always allows admission requests
+	// Used when normal JSON marshalling fails to ensure fail-open behavior
+	minimalAllowResponse = `{"response":{"allowed":true}}`
 	MaxRequestBodyBytes = int64(6 * 1024 * 1024)
 	DefaultTimeout      = 15 * time.Second
 	MinTimeout          = 5 * time.Second
@@ -171,20 +174,22 @@ func (a *ValidationWebhookAPI) PostAdmissionRequest(w http.ResponseWriter, r *ht
 	}
 
 	sendAllowResponse := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		resp, err := a.marshallResponseToJSON(ctx, review, &types.AdmissionResponse{Allowed: true})
+		allowResponse := &types.AdmissionResponse{Allowed: true}
+		resp, err := a.marshallResponseToJSON(ctx, review, allowResponse)
 		if err != nil {
-			log.Ctx(ctx).Err(err).Msg("could not map response to json")
-			errResp, err2 := a.errorToJSON(review, err)
-			if err2 != nil {
-				log.Ctx(ctx).Err(err2).Msg("could not marshall status error on admission response")
-				request.Reply(r, w, fmt.Sprintf("could not marshall status error on admission response: %v", err), http.StatusInternalServerError)
-				return
-			}
-			request.Reply(r, w, errResp, http.StatusInternalServerError)
+			// Log the error but still allow the request - fail-open behavior
+			log.Ctx(ctx).Err(err).Msg("could not marshal allow response to json, allowing request anyway")
+			
+			// Use minimal JSON response to ensure we always allow
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(minimalAllowResponse))
 			return
 		}
+		
+		// Only set headers when we know we'll succeed
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(resp)
 	}
 
@@ -262,6 +267,18 @@ func (a *ValidationWebhookAPI) errorToJSON(review *types.AdmissionReview, err er
 	}
 
 	return nil, errors.New("invalid admission response type")
+}
+
+// sendErrorResponse handles error responses with proper logging and status codes
+func (a *ValidationWebhookAPI) sendErrorResponse(ctx context.Context, w http.ResponseWriter, r *http.Request, review *types.AdmissionReview, err error) {
+	log.Ctx(ctx).Err(err).Msg("could not marshal response to json")
+	errResp, err2 := a.errorToJSON(review, err)
+	if err2 != nil {
+		log.Ctx(ctx).Err(err2).Msg("could not marshal status error on admission response")
+		request.Reply(r, w, fmt.Sprintf("could not marshal status error on admission response: %v", err), http.StatusInternalServerError)
+		return
+	}
+	request.Reply(r, w, errResp, http.StatusInternalServerError)
 }
 
 func (a *ValidationWebhookAPI) marshallResponseToJSON(ctx context.Context, review *types.AdmissionReview, resp *types.AdmissionResponse) (data []byte, err error) {
