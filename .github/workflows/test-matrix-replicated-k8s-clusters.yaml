@@ -325,7 +325,7 @@ jobs:
           touch ${{ runner.temp }}/cz-agent-values.yaml
           # Be aware that this logic could lead to some values duplication.
           cat <<EOF >> ${{ runner.temp }}/cz-agent-values.yaml
-          cloudAccountId: ID12345
+          cloudAccountId: "123456789012"
           clusterName: ${{ env.CLUSTER_NAME }}
           region: us-east-1
           apiKey: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
