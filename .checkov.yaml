@@ -7,11 +7,6 @@ skip-path:
 
 skip-check:
   # Rule:
-  #   Container images should have imagePullPolicy set to "Always" to ensure
-  #   latest image is pulled.
-  - CKV_K8S_15
-
-  # Rule:
   #   Containers should not be able to escalate privileges.
   - CKV_K8S_20
 

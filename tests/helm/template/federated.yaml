@@ -870,7 +870,7 @@ data:
       federation:
         enabled: true
       image:
-        pullPolicy: IfNotPresent
+        pullPolicy: Always
         pullSecrets: null
       labels: {}
       nodeSelector: {}
@@ -1086,7 +1086,7 @@ data:
         imageRegistry: ""
       hostNetwork: false
       image:
-        pullPolicy: IfNotPresent
+        pullPolicy: Always
         registry: registry.k8s.io
         repository: kube-state-metrics/kube-state-metrics
         tag: v2.16.0
@@ -2038,7 +2038,7 @@ spec:
         # processed file in the container.
         - name: config-subst
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           command:
             - /bin/sh
             - -c
@@ -2063,7 +2063,7 @@ spec:
       containers:
         - name: cloudzero-agent-server-configmap-reload
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
@@ -2104,7 +2104,7 @@ spec:
         - name: cloudzero-agent-server
           
           image: "quay.io/prometheus/prometheus:v2.55.1"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           env:
             - name: NODE_NAME
               valueFrom:
@@ -2232,7 +2232,7 @@ spec:
         args:
         - --port=8080
         - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0
         ports:
         - containerPort: 8080
@@ -2313,7 +2313,7 @@ spec:
       initContainers:
         - name: env-validator-copy
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           env:
             - name: K8S_NAMESPACE
               value: cz-agent
@@ -2344,7 +2344,7 @@ spec:
               mountPath: /checks/config/
         - name: env-validator-run
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           env:
             - name: K8S_NAMESPACE
               value: cz-agent
@@ -2377,7 +2377,7 @@ spec:
       containers:
         - name: cloudzero-agent-server-configmap-reload
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
@@ -2418,7 +2418,7 @@ spec:
         - name: cloudzero-agent-server
           
           image: "quay.io/prometheus/prometheus:v2.55.1"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           lifecycle:
             postStart:
               exec:
@@ -2554,7 +2554,7 @@ spec:
       containers:
         - name: cz-agent-aggregator-collector
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           ports:
             - name: port-collector
               containerPort: 8080
@@ -2596,7 +2596,7 @@ spec:
 
         - name: cz-agent-aggregator-shipper
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           ports:
             - name: port-shipper
               containerPort: 8081
@@ -2725,7 +2725,7 @@ spec:
       containers:
         - name: webhook-server
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           command:
             - /app/cloudzero-webhook
           args:
@@ -2815,7 +2815,7 @@ spec:
       containers:
         - name: init-scrape
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           command:
             - /app/cloudzero-webhook
           args:
@@ -2881,7 +2881,7 @@ spec:
       containers:
         - name: run-validator
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           env:
             - name: K8S_NAMESPACE
               value: cz-agent
@@ -2994,7 +2994,7 @@ spec:
       containers:
         - name: helmless
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           command:
             - /app/cloudzero-helmless
           args:
@@ -3054,7 +3054,7 @@ spec:
       containers:
         - name: init-cert
           image: "docker.io/bitnami/kubectl:1.33.3"
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
           resources:

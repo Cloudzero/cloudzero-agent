@@ -56,7 +56,7 @@ defaults:
   # though for the most part they are overridden by the component-specific
   # settings anyways.
   image:
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
     pullSecrets:
   # If set, these DNS settings will be attached to resources which support it.
   dns:
@@ -266,7 +266,7 @@ kubeStateMetrics:
     repository: kube-state-metrics/kube-state-metrics
     tag: "v2.16.0"
     sha:
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   imagePullSecrets: []
   nameOverride: "cloudzero-state-metrics"
   # Resource requirements and limits for kube-state-metrics.
