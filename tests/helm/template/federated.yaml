@@ -854,7 +854,13 @@ data:
           pullPolicy: null
           repository: null
           tag: null
-        resources: {}
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
     defaults:
       affinity: {}
       annotations: {}
@@ -873,6 +879,14 @@ data:
         minAvailable: 1
       priorityClassName: null
       tolerations: []
+    helmless:
+      resources:
+        limits:
+          cpu: 50m
+          memory: 32Mi
+        requests:
+          cpu: 5m
+          memory: 8Mi
     host: api.cloudzero.com
     imagePullSecrets: []
     initBackfillJob:
@@ -901,6 +915,13 @@ data:
         clusterRoleName: ""
         create: true
         serviceAccountName: ""
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
       tolerations: []
     initScrapeJob:
       annotations: null
@@ -944,7 +965,13 @@ data:
           statefulsets: false
       podAnnotations: {}
       podLabels: {}
-      resources: {}
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
       server:
         affinity: {}
         deploymentAnnotations: {}
@@ -1192,7 +1219,13 @@ data:
       releaseLabel: false
       releaseNamespace: false
       replicas: 1
-      resources: {}
+      resources:
+        limits:
+          cpu: 200m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 256Mi
       revisionHistoryLimit: 10
       securityContext:
         enabled: true
@@ -1332,6 +1365,7 @@ data:
       readinessProbeTimeout: null
       resources:
         limits:
+          cpu: 1000m
           memory: 1024Mi
         requests:
           cpu: 250m
@@ -1358,7 +1392,13 @@ data:
         repository: null
         tag: null
       name: env-validator
-      resources: {}
+      resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
       serviceEndpoints:
         kubeStateMetrics: null
 ---
@@ -2008,6 +2048,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: unprocessed-config-volume
               mountPath: /etc/config/prometheus/configmaps/unprocessed/
@@ -2043,6 +2090,13 @@ spec:
             timeoutSeconds: 4
             failureThreshold: 3
             successThreshold: 1
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: processed-config-volume
               mountPath: /etc/config
@@ -2086,6 +2140,7 @@ spec:
             successThreshold: 1
           resources:
             limits:
+              cpu: 1000m
               memory: 1024Mi
             requests:
               cpu: 250m
@@ -2205,7 +2260,12 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
         resources:
-          {}
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -2266,6 +2326,13 @@ spec:
             - install
             - --destination
             - /checks/bin/cloudzero-agent-validator
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2291,6 +2358,13 @@ spec:
             - pre-start
             - -f
             - /checks/config/validator.yml
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2330,6 +2404,13 @@ spec:
             timeoutSeconds: 4
             failureThreshold: 3
             successThreshold: 1
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -2387,6 +2468,7 @@ spec:
             successThreshold: 1
           resources:
             limits:
+              cpu: 1000m
               memory: 1024Mi
             requests:
               cpu: 250m
@@ -2652,7 +2734,12 @@ spec:
           ports:
             - containerPort: 8443
           resources:
-            {}
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2736,7 +2823,12 @@ spec:
             - "/etc/cloudzero-agent-insights/server-config.yaml"
             - -backfill
           resources:
-            {}
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2821,7 +2913,12 @@ spec:
             - --config-aggregator
             - /cloudzero/config/config.yml
           resources:
-            {}
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2905,6 +3002,13 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 5m
+              memory: 8Mi
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values
@@ -2953,6 +3057,13 @@ spec:
           imagePullPolicy: "IfNotPresent"
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           args:
             - |
               #!/bin/bash

@@ -7,23 +7,6 @@ skip-path:
 
 skip-check:
   # Rule:
-  #   Containers should have CPU requests defined for proper scheduling.
-  - CKV_K8S_10
-
-  # Rule:
-  #   Containers should have CPU limits defined to prevent resource exhaustion.
-  - CKV_K8S_11
-
-  # Rule:
-  #   Containers should have memory requests defined for proper scheduling.
-  - CKV_K8S_12
-
-  # Rule:
-  #   Containers should have memory limits defined to prevent resource
-  #   exhaustion.
-  - CKV_K8S_13
-
-  # Rule:
   #   Container images should have imagePullPolicy set to "Always" to ensure
   #   latest image is pulled.
   - CKV_K8S_15

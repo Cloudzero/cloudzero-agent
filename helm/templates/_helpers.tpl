@@ -829,6 +829,16 @@ spec:
 {{- end -}}
 
 {{/*
+Generate resources block
+Accepts a resources configuration object directly
+Example usage:
+{{- include "cloudzero-agent.generateResources" .Values.server.resources | nindent 12 }}
+*/}}
+{{- define "cloudzero-agent.generateResources" -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "resources" "value" .) -}}
+{{- end -}}
+
+{{/*
 Generate imagePullSecrets block
 Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
 Example usage:

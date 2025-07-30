@@ -269,6 +269,32 @@ kubeStateMetrics:
     pullPolicy: IfNotPresent
   imagePullSecrets: []
   nameOverride: "cloudzero-state-metrics"
+  # Resource requirements and limits for kube-state-metrics.
+  #
+  # https://github.com/kubernetes/kube-state-metrics/blob/main/README.md#scaling-kube-state-metrics:
+  #
+  #   Resource usage for kube-state-metrics changes with the Kubernetes objects
+  #   (Pods/Nodes/Deployments/Secrets etc.) size of the cluster. To some extent,
+  #   the Kubernetes objects in a cluster are in direct proportion to the node
+  #   number of the cluster.
+  #
+  #   As a general rule, you should allocate:
+  #
+  #   - 250MiB memory
+  #   - 0.1 cores
+  #
+  #   Note that if CPU limits are set too low, kube-state-metrics' internal
+  #   queues will not be able to be worked off quickly enough, resulting in
+  #   increased memory consumption as the queue length grows. If you experience
+  #   problems resulting from high memory allocation or CPU throttling, try
+  #   increasing the CPU limits.
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
   # Disable CloudZero KSM as a Scrape Target since the service endpoint is
   # explicitly defined by the Validators config file.
   prometheusScrape: false
@@ -363,6 +389,17 @@ initCertJob:
     pullPolicy:
     digest:
     tag:
+  # -- Resource requirements and limits for the init-cert job.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
   rbac:
     create: true
     serviceAccountName: ""
@@ -394,7 +431,16 @@ validator:
     pullPolicy:
     pullSecrets:
   # -- Resource requirements and limits for the validator.
-  resources: {}
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
 
 server:
   name: server
@@ -431,6 +477,7 @@ server:
       cpu: 250m
     limits:
       memory: 1024Mi
+      cpu: 1000m
   # Annotations to add to the server Deployment.
   deploymentAnnotations: {}
   # Annotations to add to the server pods.
@@ -716,7 +763,13 @@ insightsController:
   # Additional volumes to add to the insights controller pods.
   volumes: []
   # Resource requirements and limits for the insights controller.
-  resources: {}
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
   # Annotations to add to the insights controller pods.
   podAnnotations: {}
   # Labels to add to the insights controller pods.
@@ -783,7 +836,13 @@ configmapReload:
     #
     # For details, see the Kubernetes documentation on resource management:
     # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-    resources: {}
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 200m
 
 # The aggregator provides an intermediary between the CloudZero Agent and the
 # CloudZero API. It is composed of two applications, the collector and the
@@ -972,3 +1031,17 @@ nameOverride:
 forceNamespace:
 # -- Deprecated. Override the name of the main Prometheus ConfigMap.
 configMapNameOverride:
+
+# Configuration for the helmless job.
+helmless:
+  # Resource requirements and limits for the helmless job.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 8Mi
+      cpu: 5m
+    limits:
+      memory: 32Mi
+      cpu: 50m

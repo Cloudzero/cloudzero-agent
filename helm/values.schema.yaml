@@ -726,6 +726,10 @@ properties:
         description: |
           Container image configuration for the init-cert-job.
         $ref: "#/$defs/com.cloudzero.agent.image"
+      resources:
+        description: |
+          Resource requirements and limits for the init-cert-job.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
       rbac:
         description: |
           RBAC configuration for the init-cert-job.
@@ -1723,6 +1727,17 @@ properties:
       (see tests/helm/template/), so jobConfig ID provides a way to override
       this behavior and instead generate the same hash every time. It shouldn't
       really be used anywhere else.
+
+  helmless:
+    description: |
+      Configuration for the helmless job.
+    type: object
+    additionalProperties: false
+    properties:
+      resources:
+        description: |
+          Resource requirements and limits for the helmless job.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
   global:
     type: object

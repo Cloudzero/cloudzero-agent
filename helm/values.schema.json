@@ -3533,6 +3533,15 @@
       "additionalProperties": true,
       "type": "object"
     },
+    "helmless": {
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        }
+      },
+      "type": "object"
+    },
     "host": {
       "minLength": 1,
       "type": "string"
@@ -3631,6 +3640,9 @@
             }
           },
           "type": "object"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
         },
         "tolerations": {
           "$ref": "#/$defs/com.cloudzero.agent.tolerations"
