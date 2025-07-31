@@ -299,7 +299,7 @@ func (s *backfiller) Start(ctx context.Context) error {
 		g, v, k := task.g, task.v, task.k
 		cfg := s.controller.GetConfigurationAccessor(g, v, k)
 		if !((cfg.LabelsEnabled() && cfg.LabelsEnabledForType()) || (cfg.AnnotationsEnabled() && cfg.AnnotationsEnabledForType())) {
-			log.Info().
+			log.Debug().
 				Str("group", g).Str("version", v).Str("kind", k).
 				Bool("labelsEnabled", cfg.LabelsEnabled()).
 				Bool("labelsEnabledForType", cfg.LabelsEnabledForType()).
@@ -345,13 +345,14 @@ func (s *backfiller) Start(ctx context.Context) error {
 			nsRecord := ns.DeepCopy()
 			pool.Run(
 				func() error {
-					log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("discovered")
-					if ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "namespace"}, nsRecord); err2 == nil {
-						log.Info().Str("namespace", namespace).Str("group", "").Str("version", "v1").Str("kind", "namespace").Msg("published")
-						_, _ = s.controller.Review(context.Background(), ar)
-						return nil
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "namespace").Str("name", namespace).Msg("discovered")
+					ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "namespace"}, nsRecord)
+					if err2 != nil {
+						log.Error().Err(err2).Str("group", "").Str("version", "v1").Str("kind", "namespace").Str("name", namespace).Msg("failed to build admission review")
+						return nil // Don't return error, we are not going to retry
 					}
-					log.Err(err).Str("namespace", namespace).Msg("failed to post namespace review")
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "namespace").Str("name", namespace).Msg("published")
+					_, _ = s.controller.Review(context.Background(), ar)
 					return nil // Don't return error, we are not going to retry
 				},
 				waiter,
@@ -373,29 +374,30 @@ func (s *backfiller) Start(ctx context.Context) error {
 						for {
 							resources, err := task.List(namespace, metav1.ListOptions{Limit: limit, Continue: cursor})
 							if err != nil {
-								log.Err(err).
+								// Not really an error, but we can use this during
+								// debugging to tell us there are no resources of this type
+								log.Debug().
+									Err(err).
 									Str("namespace", namespace).
 									Str("group", g).Str("version", v).Str("kind", k).
-									Msg("error listing resources")
+									Msg("no resources of this type found")
 								break
 							}
 
 							items := reflect.ValueOf(resources).Elem().FieldByName("Items")
 							count := items.Len()
-							log.Info().
-								Str("group", g).Str("version", v).Str("kind", k).
-								Str("namespace", namespace).
-								Int("count", count).
-								Msg("discovered")
 
 							for i := range count {
 								obj := items.Index(i).Addr().Interface()
 								if resource := task.Convert(obj); resource != nil {
 									name := resource.GetName()
+									log.Info().Str("group", g).Str("version", v).Str("kind", k).Str("namespace", namespace).Str("name", name).Msg("discovered")
+
 									if ar, err := buildAdmissionReview(schema.GroupVersionKind{Group: g, Version: v, Kind: k}, resource); err == nil {
 										log.Info().Str("group", g).Str("version", v).Str("kind", k).Str("namespace", namespace).Str("name", name).Msg("published")
 										_, _ = s.controller.Review(context.Background(), ar) // Post the review
-										continue
+									} else {
+										log.Error().Err(err).Str("group", g).Str("version", v).Str("kind", k).Str("namespace", namespace).Str("name", name).Msg("failed to build admission review")
 									}
 								}
 							}
@@ -461,14 +463,17 @@ func (s *backfiller) enumerateNodes(ctx context.Context) {
 			nodeRecord := o.DeepCopy()
 			pool.Run(
 				func() error {
-					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", nodeRecord.GetName()).Msg("published")
+					name := nodeRecord.GetName()
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", name).Msg("discovered")
+
 					// Create an AdmissionReview for the node and post it to the controller
-					if ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "node"}, nodeRecord); err2 == nil {
-						_, _ = s.controller.Review(context.Background(), ar)
+					ar, err2 := buildAdmissionReview(schema.GroupVersionKind{Version: "v1", Kind: "node"}, nodeRecord)
+					if err2 != nil {
+						log.Error().Err(err2).Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", name).Msg("failed to build admission review")
 						return nil
 					}
-					// Log an error if the review fails, but do not retry
-					log.Err(err).Str("name", nodeRecord.GetName()).Msg("failed to post node review")
+					log.Info().Str("group", "").Str("version", "v1").Str("kind", "node").Str("name", name).Msg("published")
+					_, _ = s.controller.Review(context.Background(), ar)
 					return nil
 				},
 				waiter,

@@ -18,6 +18,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +52,8 @@ func RegisterSchemes(scheme *runtime.Scheme) error {
 		gatewayv1.Install,
 		networkingv1.AddToScheme,
 		networkingv1beta1.AddToScheme,
+		storagev1.AddToScheme,
+		storagev1beta1.AddToScheme,
 	}
 
 	// Register each scheme function
@@ -95,6 +99,8 @@ func EncodeRuntimeObject(runtimeObj runtime.Object) ([]byte, error) {
 		gatewayv1.SchemeGroupVersion,
 		networkingv1.SchemeGroupVersion,
 		networkingv1beta1.SchemeGroupVersion,
+		storagev1.SchemeGroupVersion,
+		storagev1beta1.SchemeGroupVersion,
 	)
 
 	// Encode the runtime object into raw bytes
