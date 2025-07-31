@@ -14,10 +14,7 @@
 
 name: Mirror Helm Chart
 
-on:
-  push:
-    branches:
-      - develop
+on: [] # Temporarily disabled for testing
 
 jobs:
   mirror-helm-chart:

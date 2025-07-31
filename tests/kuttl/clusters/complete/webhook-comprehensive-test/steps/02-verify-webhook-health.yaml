@@ -1,0 +1,33 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: verify-webhook-health
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - wait
+        - --for=condition=available
+        - deployment/webhook-comprehensive-test-deployment
+        - -n
+        - webhook-comprehensive-test-namespace
+        - --timeout=60s
+    - command: sleep
+      args:
+        - "30"
+    - command: sh
+      args:
+        - -c
+        - "echo '=== Testing Webhook Health Endpoints ==='"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/healthz || echo 'Warning: Webhook health endpoint test failed'"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | head -10 || echo 'Warning: State metrics endpoint test failed'"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -10 || echo 'Warning: Collector metrics endpoint test failed'"

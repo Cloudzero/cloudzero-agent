@@ -1,0 +1,23 @@
+# Default overrides for complete cluster testing
+# This file can be customized for specific test scenarios
+
+# Cluster configuration
+clusterName: "complete"
+
+# API key for testing (required by chart validation)
+apiKey: "test-api-key-for-local-testing"
+
+# Cloud account ID for testing (required by agent)
+cloudAccountId: "1234567890"
+
+# Region for testing (required by agent)
+region: "us-east-1"
+
+# Image configuration
+components:
+  agent:
+    image:
+      repository: ghcr.io/cloudzero/cloudzero-agent
+      # This tag is intentionally invalid to ensure the image is specified
+      # properly by the Makefile.
+      tag: "intentionally-invalid-tag"

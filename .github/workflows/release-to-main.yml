@@ -1,11 +1,6 @@
 name: Manual Prepare Release
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release."
-        required: true
+on: [] # Temporarily disabled for testing
 
 jobs:
   release-to-main:

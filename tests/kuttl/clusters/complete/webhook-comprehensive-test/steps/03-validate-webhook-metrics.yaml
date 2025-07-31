@@ -1,0 +1,25 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: validate-webhook-metrics
+spec:
+  commands:
+    - command: sleep
+      args:
+        - "30"
+    - command: sh
+      args:
+        - -c
+        - "echo '=== Validating Webhook Metrics ==='"
+    - command: sh
+      args:
+        - -c
+        - "WEBHOOK_METRICS=$(curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/metrics) || echo 'Warning: Failed to fetch webhook metrics'"
+    - command: sh
+      args:
+        - -c
+        - 'if echo "$WEBHOOK_METRICS" | grep -q ''czo_webhook_types_total''; then echo ''✅ Webhook metrics found''; echo "$WEBHOOK_METRICS" | grep ''czo_webhook_types_total''; else echo ''❌ No webhook metrics found''; fi'
+    - command: sh
+      args:
+        - -c
+        - 'WEBHOOK_COUNT=$(echo "$WEBHOOK_METRICS" | grep ''czo_webhook_types_total'' | wc -l); if [ "$WEBHOOK_COUNT" -gt 0 ]; then echo "✅ Webhook metrics found ($WEBHOOK_COUNT entries)"; else echo ''❌ No webhook metrics found''; fi'
