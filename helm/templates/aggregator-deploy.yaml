@@ -37,10 +37,18 @@ spec:
           ports:
             - name: port-collector
               containerPort: {{ .Values.aggregator.collector.port }}
+            {{- if .Values.components.aggregator.autoscale }}
+            - name: port-coll-tls
+              containerPort: {{ .Values.aggregator.collector.tls.port | default 8443 }}
+            {{- end }}
           command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
           env:
             - name: SERVER_PORT
               value: "{{ .Values.aggregator.collector.port }}"
+            {{- if .Values.components.aggregator.autoscale }}
+            - name: SERVER_TLS_PORT
+              value: "{{ .Values.aggregator.collector.tls.port | default 8443 }}"
+            {{- end }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume
@@ -48,10 +56,16 @@ spec:
               readOnly: true
             - name: aggregator-persistent-storage
               mountPath: {{ .Values.aggregator.mountRoot }}/data
+            {{- if .Values.components.aggregator.autoscale }}
+            - name: aggregator-tls-certs
+              mountPath: {{ .Values.aggregator.collector.tls.mountPath }}
+              readOnly: true
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /healthz
               port: {{ .Values.aggregator.collector.port }}
+              scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
@@ -59,6 +73,7 @@ spec:
             httpGet:
               path: /healthz
               port: {{ .Values.aggregator.collector.port }}
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
@@ -84,14 +99,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ .Values.aggregator.shipper.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ .Values.aggregator.shipper.port }}
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
@@ -149,6 +164,11 @@ spec:
         - name: aggregator-config-volume
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
+        {{- if .Values.components.aggregator.autoscale }}
+        - name: aggregator-tls-certs
+          secret:
+            secretName: {{ include "cloudzero-agent.aggregator.tlsSecretName" . }}
+        {{- end }}
         - name: aggregator-persistent-storage
         {{- if .Values.aggregator.database.emptyDir.enabled }}
           emptyDir:

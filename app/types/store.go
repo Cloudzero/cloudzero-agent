@@ -27,6 +27,10 @@ type WritableStore interface {
 	// Pending returns the number of rows currently buffered and not yet written to disk.
 	// This can be used to monitor when a flush may be needed.
 	Pending() int
+
+	// ElapsedTime returns the duration in milliseconds since the current buffer was started.
+	// This is used for time-based metric calculations.
+	ElapsedTime() int64
 }
 
 // ReadableStore is for performing read operations against the store

@@ -1,0 +1,50 @@
+{{- if .Values.components.aggregator.autoscale }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (deepCopy .Values.defaults.annotations)
+      .Values.aggregator.scaling.annotations
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "globals" .
+      "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
+      "component" "aggregator"
+    ) | nindent 2 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cloudzero-agent.aggregator.name" . }}
+  minReplicas: {{ .Values.aggregator.scaling.minReplicas }}
+  maxReplicas: {{ .Values.aggregator.scaling.maxReplicas }}
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: czo_cost_metrics_shipping_progress
+      target:
+        type: AverageValue
+        averageValue: {{ .Values.aggregator.scaling.targetValue | default "900m" }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.aggregator.scaling.behavior.scaleUp.stabilizationWindowSeconds | default 300 }}
+      policies:
+      {{- range .Values.aggregator.scaling.behavior.scaleUp.policies }}
+      - type: {{ .type }}
+        value: {{ .value }}
+        periodSeconds: {{ .periodSeconds }}
+      {{- end }}
+      selectPolicy: {{ .Values.aggregator.scaling.behavior.scaleUp.selectPolicy | default "Max" }}
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.aggregator.scaling.behavior.scaleDown.stabilizationWindowSeconds | default 300 }}
+      policies:
+      {{- range .Values.aggregator.scaling.behavior.scaleDown.policies }}
+      - type: {{ .type }}
+        value: {{ .value }}
+        periodSeconds: {{ .periodSeconds }}
+      {{- end }}
+      selectPolicy: {{ .Values.aggregator.scaling.behavior.scaleDown.selectPolicy | default "Min" }}
+{{- end }}

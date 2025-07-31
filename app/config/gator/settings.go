@@ -43,11 +43,12 @@ type Settings struct {
 	Region         string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
 	ClusterName    string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
 
-	Server    Server    `yaml:"server"`
-	Logging   Logging   `yaml:"logging"`
-	Database  Database  `yaml:"database"`
-	Cloudzero Cloudzero `yaml:"cloudzero"`
-	Metrics   Metrics   `yaml:"metrics"`
+	Server      Server      `yaml:"server"`
+	Logging     Logging     `yaml:"logging"`
+	Database    Database    `yaml:"database"`
+	Cloudzero   Cloudzero   `yaml:"cloudzero"`
+	Metrics     Metrics     `yaml:"metrics"`
+	Certificate Certificate `yaml:"certificate"`
 
 	mu sync.Mutex
 }
@@ -59,6 +60,11 @@ type Metrics struct {
 	ObservabilityLabels []filter.FilterEntry `yaml:"observability_labels"`
 }
 
+type Certificate struct {
+	Cert string `yaml:"cert" env:"CERT_PATH" env-description:"path to TLS certificate file"`
+	Key  string `yaml:"key" env:"KEY_PATH" env-description:"path to TLS key file"`
+}
+
 type Logging struct {
 	Level   string `yaml:"level" default:"info" env:"LOG_LEVEL" env-description:"logging level such as debug, info, error"`
 	Capture bool   `yaml:"capture" default:"true" env:"LOG_CAPTURE" env-description:"whether to persist logs to disk or not"`
@@ -66,9 +72,9 @@ type Logging struct {
 
 type Database struct {
 	StoragePath              string        `yaml:"storage_path" default:"/cloudzero/data" env:"DATABASE_STORAGE_PATH" env-description:"location where to write database"`
-	MaxRecords               int           `yaml:"max_records" default:"1000000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
+	MaxRecords               int           `yaml:"max_records" default:"1500000" env:"MAX_RECORDS_PER_FILE" env-description:"maximum records per file"`
 	CompressionLevel         int           `yaml:"compression_level" default:"8" env:"DATABASE_COMPRESS_LEVEL" env-description:"compression level for database files"`
-	CostMaxInterval          time.Duration `yaml:"cost_max_interval" default:"10m" env:"COST_MAX_INTERVAL" env-description:"maximum interval to wait before flushing cost metrics"`
+	CostMaxInterval          time.Duration `yaml:"cost_max_interval" default:"30m" env:"COST_MAX_INTERVAL" env-description:"maximum interval to wait before flushing cost metrics"`
 	ObservabilityMaxInterval time.Duration `yaml:"observability_max_interval" default:"10m" env:"OBSERVABILITY_MAX_INTERVAL" env-description:"maximum interval to wait before flushing observability metrics"`
 
 	PurgeRules       PurgeRules `yaml:"purge_rules"`
@@ -82,8 +88,9 @@ type PurgeRules struct {
 }
 
 type Server struct {
-	Mode               string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https"`
+	Mode               string `yaml:"mode" default:"http" env:"SERVER_MODE" env-description:"server mode such as http, https, dual"`
 	Port               uint   `yaml:"port" default:"8080" env:"SERVER_PORT" env-description:"server port"`
+	TLSPort            uint   `yaml:"tls_port" default:"8443" env:"SERVER_TLS_PORT" env-description:"server TLS port"`
 	Profiling          bool   `yaml:"profiling" default:"false" env:"SERVER_PROFILING" env-description:"enable profiling"`
 	ReconnectFrequency int    `yaml:"reconnect_frequency" default:"16" env:"SERVER_RECONNECT_FREQUENCY" env-description:"how frequently to close HTTP connections from clients, to distribute the load. 0=never, otherwise 1/N probability."`
 }

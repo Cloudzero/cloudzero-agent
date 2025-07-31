@@ -55,9 +55,20 @@ metrics:
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 2 }}
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 2 }}
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 2 }}
+{{- if .Values.components.aggregator.autoscale }}
+certificate:
+  key: {{ .Values.aggregator.collector.tls.mountPath }}/tls.key
+  cert: {{ .Values.aggregator.collector.tls.mountPath }}/tls.crt
+{{- end }}
 server:
+  {{- if .Values.components.aggregator.autoscale }}
+  mode: dual
+  port: {{ .Values.aggregator.collector.port }}
+  tls_port: {{ .Values.aggregator.collector.tls.port | default 8443 }}
+  {{- else }}
   mode: http
   port: {{ .Values.aggregator.collector.port }}
+  {{- end }}
   profiling: {{ .Values.aggregator.profiling }}
   reconnect_frequency: {{ .Values.aggregator.reconnectFrequency }}
 logging:
