@@ -147,10 +147,10 @@ func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clo
 		dispatch: make(map[string]map[string]map[string]*hook.Handler),
 		defaultHandler: &hook.Handler{
 			ObjectCreator: helper.NewDynamicObjectCreator(),
-			Create:        allowAlways,
-			Update:        allowAlways,
-			Delete:        allowAlways,
-			Connect:       allowAlways,
+			Create:        hook.AllowAlways,
+			Update:        hook.AllowAlways,
+			Delete:        hook.AllowAlways,
+			Connect:       hook.AllowAlways,
 			Store:         store,
 		},
 		enabled:  true,
@@ -254,11 +254,6 @@ func (wc *webhookController) Review(ctx context.Context, ar *types.AdmissionRevi
 
 	processor := wc.dispatch[g][v][k]
 	return processor.Execute(ctx, ar)
-}
-
-// allowAlways is a trivial AdmitFunc that always allows the admission request.
-func allowAlways(_ context.Context, _ *types.AdmissionReview, _ metav1.Object) (*types.AdmissionResponse, error) {
-	return &types.AdmissionResponse{Allowed: true}, nil
 }
 
 // register associates a resource-specific Handler with a given group, version,

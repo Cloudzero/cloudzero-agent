@@ -90,11 +90,14 @@ func NewStorageClassHandler(
 	h.ObjectType = objTemplate
 	h.ObjectCreator = helper.NewStaticObjectCreator(objTemplate)
 	h.Handler.Store = store
-	h.Handler.Create = h.createHandler()
+	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
+	h.Handler.Connect = h.Connect()
 	return &h.Handler
 }
 
-func (h *StorageClassHandler) createHandler() hook.AdmitFunc {
+func (h *StorageClassHandler) Create() hook.AdmitFunc {
 	return func(ctx context.Context, r *types.AdmissionReview, obj metav1.Object) (*types.AdmissionResponse, error) {
 		// Use a type assertion to handle both v1 and v1beta1 StorageClass
 		switch o := obj.(type) {
@@ -110,4 +113,16 @@ func (h *StorageClassHandler) createHandler() hook.AdmitFunc {
 		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
+}
+
+func (h *StorageClassHandler) Update() hook.AdmitFunc {
+	return hook.AllowAlways
+}
+
+func (h *StorageClassHandler) Delete() hook.AdmitFunc {
+	return hook.AllowAlways
+}
+
+func (h *StorageClassHandler) Connect() hook.AdmitFunc {
+	return hook.AllowAlways
 }

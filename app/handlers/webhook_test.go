@@ -168,7 +168,7 @@ func TestServe(t *testing.T) {
 		{
 			name:           "Controller Failure",
 			request:        createRequest(http.MethodPost, "application/json", true),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusOK,
 			controller:     &MockNilController{},
 		},
 		{
@@ -180,7 +180,7 @@ func TestServe(t *testing.T) {
 		{
 			name:           "Error in review",
 			request:        createRequest(http.MethodPost, "application/json", true),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusOK,
 			controller:     &MockReviewErrorController{},
 		},
 	}

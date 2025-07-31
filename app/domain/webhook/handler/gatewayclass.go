@@ -90,6 +90,9 @@ func NewGatewayClassHandler(
 	h.ObjectCreator = helper.NewStaticObjectCreator(objectType)
 	h.Handler.Store = store
 	h.Handler.Create = h.Create()
+	h.Handler.Update = h.Update()
+	h.Handler.Delete = h.Delete()
+	h.Handler.Connect = h.Connect()
 	return &h.Handler
 }
 
@@ -109,4 +112,16 @@ func (h *GatewayClassHandler) Create() hook.AdmitFunc {
 		}
 		return &types.AdmissionResponse{Allowed: true}, nil
 	}
+}
+
+func (h *GatewayClassHandler) Update() hook.AdmitFunc {
+	return hook.AllowAlways
+}
+
+func (h *GatewayClassHandler) Delete() hook.AdmitFunc {
+	return hook.AllowAlways
+}
+
+func (h *GatewayClassHandler) Connect() hook.AdmitFunc {
+	return hook.AllowAlways
 }
