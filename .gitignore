@@ -11,6 +11,7 @@ go.work.sum
 # app configuration
 /.cloudzero-insights-controller.yaml
 override-values.yaml
+values-override.yaml
 
 # helm charts dependency stamp
 /helm/charts/.stamp

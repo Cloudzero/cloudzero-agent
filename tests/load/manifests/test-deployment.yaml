@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-test-deployment
+  namespace: webhook-test
+  labels:
+    app: webhook-test-app
+    test: always-allow
+    team: cirrus
+    purpose: testing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: webhook-test-app
+  template:
+    metadata:
+      labels:
+        app: webhook-test-app
+        test: always-allow
+        team: cirrus
+        purpose: testing
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.21
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          env:
+            - name: TEST_ENV
+              value: "webhook-always-allow"
