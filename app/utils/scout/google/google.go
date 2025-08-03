@@ -19,7 +19,7 @@ import (
 const (
 	// GCP metadata service endpoints
 	metadataBaseURL     = "http://metadata.google.internal/computeMetadata/v1"
-	projectEndpoint     = metadataBaseURL + "/project/project-id"
+	projectEndpoint     = metadataBaseURL + "/project/numeric-project-id"
 	zoneEndpoint        = metadataBaseURL + "/instance/zone"
 	clusterNameEndpoint = metadataBaseURL + "/instance/attributes/cluster-name"
 
@@ -41,10 +41,10 @@ func NewScout() *Scout {
 
 // EnvironmentInfo retrieves GCP environment information from metadata service
 func (s *Scout) EnvironmentInfo(ctx context.Context) (*types.EnvironmentInfo, error) {
-	// Get project ID (equivalent to account ID)
-	projectID, err := s.getMetadata(ctx, projectEndpoint)
+	// Get project number (equivalent to account ID)
+	projectNumber, err := s.getMetadata(ctx, projectEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get project ID: %w", err)
+		return nil, fmt.Errorf("failed to get project number: %w", err)
 	}
 
 	// Get zone (to extract region)
@@ -67,7 +67,7 @@ func (s *Scout) EnvironmentInfo(ctx context.Context) (*types.EnvironmentInfo, er
 	return &types.EnvironmentInfo{
 		CloudProvider: types.CloudProviderGoogle,
 		Region:        strings.TrimSpace(region),
-		AccountID:     strings.TrimSpace(projectID),
+		AccountID:     strings.TrimSpace(projectNumber),
 		ClusterName:   strings.TrimSpace(clusterName),
 	}, nil
 }
