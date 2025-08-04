@@ -51,6 +51,29 @@ spec:
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
+            - --listen-address=:8080
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 3
+            successThreshold: 1
           {{- with .Values.configmapReload.prometheus.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
