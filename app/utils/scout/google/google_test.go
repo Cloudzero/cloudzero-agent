@@ -106,9 +106,9 @@ func TestEnvironmentInfo_Success(t *testing.T) {
 		}
 
 		switch r.URL.Path {
-		case "/computeMetadata/v1/project/project-id":
+		case "/computeMetadata/v1/project/numeric-project-id":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("test-project-123"))
+			w.Write([]byte("123456789"))
 
 		case "/computeMetadata/v1/instance/zone":
 			w.WriteHeader(http.StatusOK)
@@ -142,8 +142,8 @@ func TestEnvironmentInfo_Success(t *testing.T) {
 		t.Errorf("Expected region 'us-central1', got '%s'", info.Region)
 	}
 
-	if info.AccountID != "test-project-123" {
-		t.Errorf("Expected account ID 'test-project-123', got '%s'", info.AccountID)
+	if info.AccountID != "123456789" {
+		t.Errorf("Expected account ID '123456789', got '%s'", info.AccountID)
 	}
 
 	if info.ClusterName != "test-cluster-name" {
@@ -158,7 +158,7 @@ func TestEnvironmentInfo_ProjectIDFailure(t *testing.T) {
 			return
 		}
 
-		if r.URL.Path == "/computeMetadata/v1/project/project-id" {
+		if r.URL.Path == "/computeMetadata/v1/project/numeric-project-id" {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -173,11 +173,11 @@ func TestEnvironmentInfo_ProjectIDFailure(t *testing.T) {
 
 	_, err := scout.EnvironmentInfo(ctx)
 	if err == nil {
-		t.Error("Expected error for project ID failure")
+		t.Error("Expected error for project number failure")
 	}
 
-	if !strings.Contains(err.Error(), "failed to get project ID") {
-		t.Errorf("Expected project ID error, got: %v", err)
+	if !strings.Contains(err.Error(), "failed to get project number") {
+		t.Errorf("Expected project number error, got: %v", err)
 	}
 }
 
@@ -190,9 +190,9 @@ func TestEnvironmentInfo_ClusterNameNotAvailable(t *testing.T) {
 		}
 
 		switch r.URL.Path {
-		case "/computeMetadata/v1/project/project-id":
+		case "/computeMetadata/v1/project/numeric-project-id":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("test-project-123"))
+			w.Write([]byte("123456789"))
 
 		case "/computeMetadata/v1/instance/zone":
 			w.WriteHeader(http.StatusOK)
@@ -225,8 +225,8 @@ func TestEnvironmentInfo_ClusterNameNotAvailable(t *testing.T) {
 		t.Errorf("Expected region 'us-central1', got '%s'", info.Region)
 	}
 
-	if info.AccountID != "test-project-123" {
-		t.Errorf("Expected account ID 'test-project-123', got '%s'", info.AccountID)
+	if info.AccountID != "123456789" {
+		t.Errorf("Expected account ID '123456789', got '%s'", info.AccountID)
 	}
 
 	// Cluster name should be empty when not available
@@ -243,9 +243,9 @@ func TestEnvironmentInfo_ZoneFailure(t *testing.T) {
 		}
 
 		switch r.URL.Path {
-		case "/computeMetadata/v1/project/project-id":
+		case "/computeMetadata/v1/project/numeric-project-id":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("test-project-123"))
+			w.Write([]byte("123456789"))
 
 		case "/computeMetadata/v1/instance/zone":
 			w.WriteHeader(http.StatusInternalServerError)
@@ -291,7 +291,7 @@ func TestEnvironmentInfo_MissingMetadataHeader(t *testing.T) {
 	defer cancel()
 
 	// Make a request without the header (this tests our implementation sets it correctly)
-	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/computeMetadata/v1/project/project-id", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/computeMetadata/v1/project/numeric-project-id", nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
@@ -335,9 +335,9 @@ func TestEnvironmentInfo_WhitespaceHandling(t *testing.T) {
 		}
 
 		switch r.URL.Path {
-		case "/computeMetadata/v1/project/project-id":
+		case "/computeMetadata/v1/project/numeric-project-id":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("  test-project-123  ")) // Whitespace
+			w.Write([]byte("  123456789  ")) // Whitespace
 
 		case "/computeMetadata/v1/instance/zone":
 			w.WriteHeader(http.StatusOK)
@@ -364,8 +364,8 @@ func TestEnvironmentInfo_WhitespaceHandling(t *testing.T) {
 		t.Errorf("Expected region 'us-central1', got '%s'", info.Region)
 	}
 
-	if info.AccountID != "test-project-123" {
-		t.Errorf("Expected account ID 'test-project-123', got '%s'", info.AccountID)
+	if info.AccountID != "123456789" {
+		t.Errorf("Expected account ID '123456789', got '%s'", info.AccountID)
 	}
 }
 
@@ -490,7 +490,7 @@ func TestConstants(t *testing.T) {
 	}
 
 	// Verify endpoints are correctly constructed
-	expectedProjectEndpoint := metadataBaseURL + "/project/project-id"
+	expectedProjectEndpoint := metadataBaseURL + "/project/numeric-project-id"
 	if projectEndpoint != expectedProjectEndpoint {
 		t.Errorf("Expected projectEndpoint %q, got %q", expectedProjectEndpoint, projectEndpoint)
 	}
