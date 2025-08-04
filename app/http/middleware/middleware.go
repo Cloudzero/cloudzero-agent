@@ -6,10 +6,10 @@ package middleware
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -25,24 +25,53 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
-// PromHTTPMiddleware instruments HTTP requests with Prometheus metrics.
-func PromHTTPMiddleware(next http.Handler) http.Handler {
-	return promhttp.InstrumentHandlerDuration(
-		promauto.NewHistogramVec(
+var (
+	httpRequestDuration *prometheus.HistogramVec
+	httpRequestsTotal   *prometheus.CounterVec
+	metricsOnce         sync.Once
+)
+
+// getPrometheusMetrics returns initialized prometheus metrics, creating them only once
+func getPrometheusMetrics() (*prometheus.HistogramVec, *prometheus.CounterVec) {
+	metricsOnce.Do(func() {
+		httpRequestDuration = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name: "http_request_duration_seconds",
 				Help: "Duration of HTTP requests in seconds.",
 			},
 			[]string{"code", "method"},
-		),
+		)
+		httpRequestsTotal = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "http_requests_total",
+				Help: "Count of all HTTP requests processed, labeled by route, method and status code.",
+			},
+			[]string{"code", "method"},
+		)
+		// Register metrics with error handling to avoid panics on duplicate registration
+		if err := prometheus.Register(httpRequestDuration); err != nil {
+			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
+				// Only panic if it's not an AlreadyRegisteredError
+				panic(err)
+			}
+		}
+		if err := prometheus.Register(httpRequestsTotal); err != nil {
+			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
+				// Only panic if it's not an AlreadyRegisteredError
+				panic(err)
+			}
+		}
+	})
+	return httpRequestDuration, httpRequestsTotal
+}
+
+// PromHTTPMiddleware instruments HTTP requests with Prometheus metrics.
+func PromHTTPMiddleware(next http.Handler) http.Handler {
+	duration, counter := getPrometheusMetrics()
+	return promhttp.InstrumentHandlerDuration(
+		duration,
 		promhttp.InstrumentHandlerCounter(
-			promauto.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: "http_requests_total",
-					Help: "Count of all HTTP requests processed, labeled by route, method and status code.",
-				},
-				[]string{"code", "method"},
-			),
+			counter,
 			next,
 		),
 	)

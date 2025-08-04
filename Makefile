@@ -271,6 +271,8 @@ ifneq ($(REGENERATE),never)
 app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
 	$(HELM) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
 
+generate: app/functions/helmless/default-values.yaml
+
 bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
 # Add the embedded defaults file to dependencies

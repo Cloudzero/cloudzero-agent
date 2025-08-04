@@ -98,6 +98,7 @@ require (
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.30.1
 	helm.sh/helm/v3 v3.18.4
+	k8s.io/metrics v0.33.2
 	sigs.k8s.io/gateway-api v1.3.0
 )
 

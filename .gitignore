@@ -125,3 +125,7 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# AI files to temporarily ignore, until we're ready to commit them
+CLAUDE.md
+/.cursor

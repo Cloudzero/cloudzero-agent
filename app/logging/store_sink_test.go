@@ -88,6 +88,11 @@ func (ms *mockStore) GetLastError() error {
 	return ms.lastError
 }
 
+func (ms *mockStore) ElapsedTime() int64 {
+	// Return a mock elapsed time in milliseconds
+	return 1000
+}
+
 // TestUnit_Logging_StoreWriter_Write_Basic tests basic functionality of a single write.
 func TestUnit_Logging_StoreWriter_Write_Basic(t *testing.T) {
 	store := newMockStore()
