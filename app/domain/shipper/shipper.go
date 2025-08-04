@@ -318,8 +318,8 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 						return err
 					}
 
-					// if log file, remove it. we do not need to store these after upload
-					if strings.HasPrefix(req.File.UniqueID(), disk.LogsContentIdentifider) {
+					// if not a metric file, remove it. we do not need to store these after upload
+					if !strings.HasPrefix(req.File.UniqueID(), disk.CostContentIdentifier) {
 						if err := os.Remove(req.File.Location()); err != nil {
 							logger.Err(err).Str("file", req.File.UniqueID()).Msg("failed to remove log file")
 						}

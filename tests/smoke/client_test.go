@@ -77,7 +77,7 @@ func TestSmoke_ClientApplication_Runs(t *testing.T) {
 		// number of s3 files that are not logs
 		countUploaded := 0
 		for _, item := range response.Objects {
-			if !strings.HasPrefix(item.Key, "logs") {
+			if strings.HasPrefix(item.Key, "metrics") {
 				countUploaded++
 			}
 		}
