@@ -1,7 +1,5 @@
 name: CleanDaily
-on:
-  schedule:
-    - cron: "0 14 * * *"
+on: [] # Temporarily disabled for testing
 
 concurrency:
   # This concurrency group ensures that only one job in the group runs at a time.

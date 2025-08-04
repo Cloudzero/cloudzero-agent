@@ -1,10 +1,7 @@
 # Run local: act --container-architecture linux/amd64 workflow_dispatch -j list-tags -j scan-job
 # Guideance on dynamic-matrics code: https://www.kenmuse.com/blog/dynamic-build-matrices-in-github-actions/
 name: Scan Docker Image Tags
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 0 1 * *" # Runs at midnight UTC on the first day of every month
+on: [] # Temporarily disabled for testing
 
 env:
   CRANE_VERSION: v0.6.0

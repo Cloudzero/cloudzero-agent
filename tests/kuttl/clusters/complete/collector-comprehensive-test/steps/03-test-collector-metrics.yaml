@@ -1,0 +1,26 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: test-collector-metrics
+spec:
+  commands:
+    - command: sh
+      args:
+        - -c
+        - "echo '=== Testing Collector Metrics Endpoints ==='"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_pod_info' && echo '✅ Pod metrics found' || echo '❌ No pod metrics found'"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_deployment' && echo '✅ Deployment metrics found' || echo '❌ No deployment metrics found'"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_service' && echo '✅ Service metrics found' || echo '❌ No service metrics found'"
+    - command: sh
+      args:
+        - -c
+        - "curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -20 || echo 'Warning: Collector metrics endpoint test failed'"

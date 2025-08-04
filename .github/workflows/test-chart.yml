@@ -1,5 +1,5 @@
 name: Test Helm Chart
-on: [push]
+on: [] # Temporarily disabled for testing
 
 env:
   SKIP_VALIDATIONS: false

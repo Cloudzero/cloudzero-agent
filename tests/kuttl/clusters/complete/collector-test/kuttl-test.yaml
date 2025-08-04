@@ -1,0 +1,16 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+metadata:
+  name: collector-test
+  annotations:
+    kuttl.dev/type: "test"
+spec:
+  testDirs:
+    - ./steps
+  timeout: 300
+  parallel: 1
+  reportFormat: JSON
+  reportName: collector-test-report
+  deleteNamespace: true
+  namespaceLabels:
+    test: collector

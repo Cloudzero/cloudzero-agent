@@ -1,0 +1,203 @@
+name: chart-complete
+on:
+  workflow_dispatch:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
+  workflow_call:
+    inputs:
+      image-repo:
+        description: "The registry for the image"
+        default: "ghcr.io"
+        type: "string"
+      image-path:
+        description: "The path for the image (no registry, no tag)"
+        default: "cloudzero/cloudzero-agent/cloudzero-agent"
+        type: "string"
+      image-tag:
+        description: "The image tag"
+        default: "latest"
+        type: "string"
+    outputs:
+      version-test-status:
+        description: "The completion status of the chart complete job"
+        value: ${{ jobs.chart-complete.outputs.version-test-status }}
+
+concurrency:
+  # This concurrency group ensures that only one job in the group runs at a time.
+  # If a new job is triggered, the previous one will be canceled.
+  group: chart-complete-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chart-complete:
+    name: chart-complete-${{ matrix.kver.platform }}-${{ matrix.kver.k8s }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version-test-status: ${{ job.status }}
+    strategy:
+      fail-fast: false
+      matrix:
+        kver:
+          [
+            { k8s: v1.21.14, platform: linux/amd64 },
+            { k8s: v1.22.17, platform: linux/arm64 },
+            { k8s: v1.23.17, platform: linux/amd64 },
+            { k8s: v1.24.17, platform: linux/arm64 },
+            { k8s: v1.25.16, platform: linux/amd64 },
+            { k8s: v1.26.15, platform: linux/arm64 },
+            { k8s: v1.27.16, platform: linux/amd64 },
+            { k8s: v1.28.14, platform: linux/arm64 },
+            { k8s: v1.29.15, platform: linux/amd64 },
+            { k8s: v1.30.11, platform: linux/arm64 },
+            { k8s: v1.31.7, platform: linux/amd64 },
+            { k8s: v1.32.3, platform: linux/amd64 },
+          ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install kubectl
+        run: |
+          echo "Installing kubectl version ${{ matrix.kver.k8s }}..."
+          curl -LO "https://dl.k8s.io/release/${{ matrix.kver.k8s }}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          kubectl version --client
+
+      - name: Install Kind
+        run: |
+          echo "Installing Kind..."
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install Stern
+        run: |
+          echo "Installing Stern..."
+          curl -Lo ./stern.tar.gz https://github.com/stern/stern/releases/download/v1.32.0/stern_1.32.0_linux_amd64.tar.gz
+          tar -xzf ./stern.tar.gz
+          chmod +x ./stern
+          sudo mv ./stern /usr/local/bin/stern
+          echo "Stern installed at: $(which stern || echo 'stern not found in PATH')"
+          stern --version
+
+      - name: Set Image Variables
+        run: |
+          echo "Setting image variables for Makefile..."
+          echo "IMAGE_REPO=${{ inputs.image-repo }}" >> $GITHUB_ENV
+          echo "IMAGE_PATH=${{ inputs.image-path }}" >> $GITHUB_ENV
+          echo "TAG=${{ inputs.image-tag }}" >> $GITHUB_ENV
+
+      - name: Pull Docker Image
+        run: |
+          echo "Pulling Docker image for testing..."
+          docker pull ${{ inputs.image-repo }}/${{ inputs.image-path }}:${{ inputs.image-tag }}
+
+      - name: Install Dependencies
+        run: |
+          echo "Installing dependencies..."
+          make install-tools-go
+
+      - name: Install Krew and Plugins
+        run: |
+          echo "Installing Krew and plugins..."
+          (
+            set -x; cd "$(mktemp -d)" &&
+            OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+            ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+            KREW="krew-${OS}_${ARCH}" &&
+            curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+            tar zxvf "${KREW}.tar.gz" &&
+            ./"${KREW}" install krew
+          )
+          echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.krew/bin:$PATH"
+          kubectl krew install stern
+
+      # Install KUTTL into Cluster
+      - name: Install KUTTL
+        run: |
+          echo "Installing KUTTL..."
+          kubectl krew install kuttl
+          kubectl kuttl version
+
+      - name: Setup cluster using Makefile
+        run: |
+          echo "Setting up cluster using Makefile targets..."
+          # Install sudo if not available
+          if ! command -v sudo &> /dev/null; then
+            echo "Installing sudo..."
+            apt-get update && apt-get install -y sudo
+          fi
+          # Install kind if not available
+          if ! command -v kind &> /dev/null; then
+            echo "Installing kind..."
+            curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64
+            chmod +x ./kind
+            mv ./kind /usr/local/bin/kind
+          fi
+          # Create unique cluster name based on matrix (using valid characters only)
+          CLUSTER_NAME="complete-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
+          # Clean up any existing cluster
+          kind delete cluster --name $CLUSTER_NAME || true
+          # Create the cluster with unique name
+          make tests/kuttl/clusters/complete/kubeconfig CLUSTER_TYPE=kind TEST_K8S_VERSION=${{ matrix.kver.k8s }} TEST_CLUSTER_NAME=$CLUSTER_NAME
+          # Set up kubeconfig
+          mkdir -p $HOME/.kube
+          cp tests/kuttl/clusters/complete/kubeconfig $HOME/.kube/config
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
+      - name: Run Complete Chart Tests
+        run: |
+          make test-chart-complete
+
+      - name: Collect Logs
+        id: logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          rm -f ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          touch ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          echo "---Kubectl Events------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          kubectl events -A &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          echo "---Stern Logs (testkube)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          kubectl stern -n testkube --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          echo "---Stern Logs (cz-agent)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          echo "---Collector Logs--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+          kubectl logs deployment/cloudzero-collector -n cz-agent --since=5m &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log || echo "[ERROR] Collector logs command exited error." &>> ${{ runner.temp }}/${{ matrix.kver.k8s }}.log
+
+      - name: Upload Failure Logs
+        if: always() && steps.logs.conclusion == 'success'
+        run: |
+          echo "Uploading failure logs..."
+          # In ACT, we'll just copy the logs to a known location
+          mkdir -p /tmp/artifacts
+          cp ${{ runner.temp }}/${{ matrix.kver.k8s }}.log /tmp/artifacts/ || echo "No log file to upload"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up Kind cluster..."
+          CLUSTER_NAME="complete-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
+          kind delete cluster --name $CLUSTER_NAME || true

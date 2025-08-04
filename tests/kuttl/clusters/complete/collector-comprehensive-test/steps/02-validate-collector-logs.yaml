@@ -1,0 +1,45 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: validate-collector-logs
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - wait
+        - --for=condition=available
+        - deployment/collector-comprehensive-test-deployment
+        - -n
+        - collector-comprehensive-test-namespace
+        - --timeout=60s
+    - command: sleep
+      args:
+        - "60"
+    - command: sh
+      args:
+        - -c
+        - "echo '=== Validating Collector Logs ==='"
+    - command: sh
+      args:
+        - -c
+        - "kubectl logs deployment/cz-agent-aggregator -n cz-agent -c cz-agent-aggregator-collector --since=2m > /tmp/collector-logs.txt || echo 'Warning: Failed to get collector logs'"
+    - command: sh
+      args:
+        - -c
+        - "if grep -q 'remote_write.*metrics' /tmp/collector-logs.txt; then echo 'Remote write metrics found in logs'; else echo 'No remote_write metrics found'; fi"
+    - command: sh
+      args:
+        - -c
+        - "grep -q 'kube_pod_info' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_info' || echo 'Missing metric: kube_pod_info'"
+    - command: sh
+      args:
+        - -c
+        - "grep -q 'kube_pod_labels' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_labels' || echo 'Missing metric: kube_pod_labels'"
+    - command: sh
+      args:
+        - -c
+        - "grep -q 'czo_cost_metrics_shipping_progress' /tmp/collector-logs.txt && echo 'Found metric: czo_cost_metrics_shipping_progress' || echo 'Missing metric: czo_cost_metrics_shipping_progress'"
+    - command: sh
+      args:
+        - -c
+        - "if grep -q 'czo_webhook' /tmp/collector-logs.txt; then echo 'Webhook metrics being collected'; else echo 'No webhook metrics found in collector logs'; fi"

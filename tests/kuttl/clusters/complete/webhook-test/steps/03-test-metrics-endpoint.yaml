@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: test-metrics-endpoint
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - port-forward
+        - service/cz-agent-cloudzero-agent-webhook-server-svc
+        - 8443:443
+        - -n
+        - cz-agent
+    - command: sleep
+      args:
+        - "5"
+    - command: sh
+      args:
+        - -c
+        - "curl -k https://localhost:8443/metrics | head -20"

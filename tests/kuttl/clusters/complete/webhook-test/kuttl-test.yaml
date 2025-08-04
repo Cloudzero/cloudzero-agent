@@ -1,0 +1,16 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+metadata:
+  name: webhook-test
+  annotations:
+    kuttl.dev/type: "test"
+spec:
+  testDirs:
+    - ./steps
+  timeout: 300
+  parallel: 1
+  reportFormat: JSON
+  reportName: webhook-test-report
+  deleteNamespace: true
+  namespaceLabels:
+    test: webhook

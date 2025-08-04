@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metric-test-namespace
+  labels:
+    test: collector
+    environment: test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metric-test-deployment
+  namespace: metric-test-namespace
+  labels:
+    app: metric-test
+    test: collector
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: metric-test
+  template:
+    metadata:
+      labels:
+        app: metric-test
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metric-test-service
+  namespace: metric-test-namespace
+  labels:
+    app: metric-test
+    test: collector
+spec:
+  selector:
+    app: metric-test
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metric-test-statefulset
+  namespace: metric-test-namespace
+  labels:
+    app: metric-test-statefulset
+    test: collector
+spec:
+  serviceName: metric-test-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metric-test-statefulset
+  template:
+    metadata:
+      labels:
+        app: metric-test-statefulset
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: metric-test-job
+  namespace: metric-test-namespace
+  labels:
+    app: metric-test-job
+    test: collector
+spec:
+  template:
+    spec:
+      containers:
+        - name: job
+          image: busybox:latest
+          command: ["echo", "test job completed"]
+      restartPolicy: Never
+  backoffLimit: 4
