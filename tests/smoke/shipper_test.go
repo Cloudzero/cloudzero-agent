@@ -77,7 +77,8 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the uploaded directory")
 		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
-		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
+		// (divide by 2 since t.WriteTestMetrics creates half metric files half observability files)
+		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles/2)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true
@@ -218,7 +219,8 @@ func TestSmoke_Shipper_ReplayRequest_Invalid_Payload(t *testing.T) {
 		uploaded, err := filepath.Glob(filepath.Join(t.dataLocation, "uploaded", "*_*_*.json.br"))
 		require.NoError(t, err, "failed to read the uploaded directory")
 		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
-		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
+		// (divide by 2 since t.WriteTestMetrics creates half metric files half observability files)
+		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles/2)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
 		settings.Cloudzero.SendInterval = time.Second * 10
 		settings.Cloudzero.UseHTTP = true
