@@ -84,14 +84,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ .Values.aggregator.shipper.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.aggregator.collector.port }}
+              port: {{ .Values.aggregator.shipper.port }}
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
