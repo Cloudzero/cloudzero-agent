@@ -28,7 +28,7 @@ func TestWaitForCollectorShutdown_FileExistsImmediately(t *testing.T) {
 
 	// Test
 	start := time.Now()
-	result := waitForCollectorShutdown(ctx, shutdownFile, 5*time.Second)
+	result := waitForCollectorShutdown(ctx, shutdownFile, 10*time.Second)
 	elapsed := time.Since(start)
 
 	// Assertions

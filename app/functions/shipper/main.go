@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	ShutdownGracePeriod = 5 * time.Second
+	ShutdownGracePeriod = 10 * time.Second
 )
 
 func main() {
@@ -135,13 +135,25 @@ func main() {
 }
 
 func waitForCollectorShutdown(ctx context.Context, shutdownFile string, maxWait time.Duration) bool {
+	// Timeline example for 10s timeout:
+	// t=0ms:    deadline=10000ms, check file, sleep 100ms
+	// t=100ms:  compare 100ms < 10000ms ✓, check file, sleep 100ms
+	// t=200ms:  compare 200ms < 10000ms ✓, check file, sleep 100ms
+	// ...continues until...
+	// t=9900ms: compare 9900ms < 10000ms ✓, check file, sleep 100ms
+	// t=10000ms: compare 10000ms < 10000ms ✗, exit loop (no extra sleep)
 	deadline := time.Now().Add(maxWait)
 
-	for time.Now().Before(deadline) {
+	for {
 		if _, err := os.Stat(shutdownFile); err == nil {
 			log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("collector shutdown marker detected")
 			return true
 		}
+
+		if time.Now().After(deadline) {
+			break
+		}
+
 		time.Sleep(100 * time.Millisecond)
 	}
 
