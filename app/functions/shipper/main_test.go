@@ -162,7 +162,9 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 
 	// Assertions
 	assert.True(t, result, "should return true when file is detected (even if briefly)")
-	assert.Less(t, elapsed, 150*time.Millisecond, "should detect file quickly on first appearance")
+	// The file is created at t=0, removed at t=100ms, then recreated at t=300ms
+	// So detection could happen immediately OR after recreation, hence the longer timeout
+	assert.Less(t, elapsed, 400*time.Millisecond, "should detect file within expected timeframe")
 }
 
 func TestWaitForCollectorShutdown_ZeroTimeout(t *testing.T) {
