@@ -128,7 +128,7 @@ func TestWaitForCollectorShutdown_FileCreatedAfterDelay(t *testing.T) {
 		defer close(done)
 		// Wait then create the file
 		time.Sleep(200 * time.Millisecond)
-		
+
 		err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
 		if err != nil {
 			t.Errorf("Failed to create file: %v", err)
