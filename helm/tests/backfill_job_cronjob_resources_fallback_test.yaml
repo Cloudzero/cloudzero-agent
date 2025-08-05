@@ -1,0 +1,37 @@
+suite: test backfill CronJob resources fallback logic
+templates:
+  - templates/backfill-job.yaml
+tests:
+  - it: should use insightsController.resources when both are set
+    documentIndex: 0
+    set:
+      insightsController.enabled: true
+      components.webhookServer.backfill:
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
+      insightsController.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+  # Add more CronJob-specific fallback tests here as needed

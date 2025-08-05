@@ -854,6 +854,7 @@ data:
             requests:
               cpu: 100m
               memory: 128Mi
+          schedule: 0 */12 * * *
         podDisruptionBudget: null
         replicas: 3
         resources:
@@ -2615,7 +2616,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+  name: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA
   namespace: cz-agent
   
   labels:
@@ -2626,56 +2627,60 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+    job-type: backfill
+    job-category: onetime
 spec:
   template:
     metadata:
-      name: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+      name: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA
       namespace: cz-agent
       labels:
-        app.kubernetes.io/component: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
+        app.kubernetes.io/component: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/instance: cz-agent
+        job-type: backfill
+        job-category: onetime
       
     spec:
-      serviceAccountName: cz-agent-cloudzero-agent-server
-      restartPolicy: OnFailure
-      
-      
-      
-      containers:
-        - name: init-scrape
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - /app/cloudzero-webhook
-          args:
-            - -config
-            - "/etc/cloudzero-agent-insights/server-config.yaml"
-            - -backfill
-          resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
-            requests:
-              cpu: 100m
-              memory: 128Mi
-          volumeMounts:
+          serviceAccountName: cz-agent-cloudzero-agent-server
+          restartPolicy: OnFailure
+          
+          
+          
+          containers:
+            - name: init-scrape
+              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
+              imagePullPolicy: "IfNotPresent"
+              command:
+                - /app/cloudzero-webhook
+              args:
+                - -config
+                - "/etc/cloudzero-agent-insights/server-config.yaml"
+                - -backfill
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              volumeMounts:
+                - name: insights-server-config
+                  mountPath: /etc/cloudzero-agent-insights
+                - name: cloudzero-api-key
+                  mountPath: /etc/config/secrets/
+                  subPath: ""
+                  readOnly: true
+          volumes:
             - name: insights-server-config
-              mountPath: /etc/cloudzero-agent-insights
+              configMap:
+                name: cz-agent-webhook-configuration
+            - name: tls-certs
+              secret:
+                secretName: cz-agent-cloudzero-agent-webhook-server-tls
             - name: cloudzero-api-key
-              mountPath: /etc/config/secrets/
-              subPath: ""
-              readOnly: true
-      volumes:
-        - name: insights-server-config
-          configMap:
-            name: cz-agent-webhook-configuration
-        - name: tls-certs
-          secret:
-            secretName: cz-agent-cloudzero-agent-webhook-server-tls
-        - name: cloudzero-api-key
-          secret:
-            secretName: cz-agent-api-key
+              secret:
+                secretName: cz-agent-api-key
 ---
 # Source: cloudzero-agent/templates/config-loader-job.yaml
 apiVersion: batch/v1
@@ -2849,6 +2854,82 @@ spec:
         - name: helmless-cm
           configMap:
             name: cz-agent-helmless-cm
+---
+# Source: cloudzero-agent/templates/backfill-job.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cz-agent-backfill
+  namespace: cz-agent
+  
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+    job-type: backfill
+    job-category: cronjob
+spec:
+  schedule: "0 */12 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: cz-agent-backfill
+          namespace: cz-agent
+          labels:
+            app.kubernetes.io/component: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA
+            app.kubernetes.io/name: cloudzero-agent
+            app.kubernetes.io/instance: cz-agent
+            job-type: backfill
+            job-category: cronjob
+          
+        spec:
+          serviceAccountName: cz-agent-cloudzero-agent-server
+          restartPolicy: OnFailure
+          
+          
+          
+          containers:
+            - name: init-scrape
+              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.5"
+              imagePullPolicy: "IfNotPresent"
+              command:
+                - /app/cloudzero-webhook
+              args:
+                - -config
+                - "/etc/cloudzero-agent-insights/server-config.yaml"
+                - -backfill
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              volumeMounts:
+                - name: insights-server-config
+                  mountPath: /etc/cloudzero-agent-insights
+                - name: cloudzero-api-key
+                  mountPath: /etc/config/secrets/
+                  subPath: ""
+                  readOnly: true
+          volumes:
+            - name: insights-server-config
+              configMap:
+                name: cz-agent-webhook-configuration
+            - name: tls-certs
+              secret:
+                secretName: cz-agent-cloudzero-agent-webhook-server-tls
+            - name: cloudzero-api-key
+              secret:
+                secretName: cz-agent-api-key
 ---
 # Source: cloudzero-agent/templates/webhook-certificate.yaml
 apiVersion: cert-manager.io/v1

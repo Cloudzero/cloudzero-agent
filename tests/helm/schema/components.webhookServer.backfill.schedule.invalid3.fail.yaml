@@ -1,0 +1,5 @@
+# Test for invalid schedule field type (should be string, not object)
+components:
+  webhookServer:
+    backfill:
+      schedule: { cron: "0 */3 * * *" } # Should be string, not object

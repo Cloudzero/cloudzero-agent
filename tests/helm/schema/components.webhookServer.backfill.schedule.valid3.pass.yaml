@@ -1,0 +1,5 @@
+# Test for more valid cron schedule formats
+components:
+  webhookServer:
+    backfill:
+      schedule: "0 0 * * 0" # Weekly on Sunday

@@ -233,6 +233,267 @@
       },
       "type": "object"
     },
+    "io.k8s.api.batch.v1.CronJob": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["CronJob"],
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.CronJobSpec"
+        },
+        "status": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.CronJobStatus"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "batch",
+          "kind": "CronJob",
+          "version": "v1"
+        }
+      ]
+    },
+    "io.k8s.api.batch.v1.CronJobSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "concurrencyPolicy": {
+          "type": "string"
+        },
+        "failedJobsHistoryLimit": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "jobTemplate": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.JobTemplateSpec"
+        },
+        "schedule": {
+          "type": "string"
+        },
+        "startingDeadlineSeconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "successfulJobsHistoryLimit": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "suspend": {
+          "type": "boolean"
+        },
+        "timeZone": {
+          "type": "string"
+        }
+      },
+      "required": ["schedule", "jobTemplate"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.Job": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["Job"],
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.JobSpec"
+        },
+        "status": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.JobStatus"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "batch",
+          "kind": "Job",
+          "version": "v1"
+        }
+      ]
+    },
+    "io.k8s.api.batch.v1.JobSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "activeDeadlineSeconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "backoffLimit": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "backoffLimitPerIndex": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "completionMode": {
+          "type": "string"
+        },
+        "completions": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "managedBy": {
+          "type": "string"
+        },
+        "manualSelector": {
+          "type": "boolean"
+        },
+        "maxFailedIndexes": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "parallelism": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "podFailurePolicy": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.PodFailurePolicy"
+        },
+        "podReplacementPolicy": {
+          "type": "string"
+        },
+        "selector": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+        },
+        "successPolicy": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.SuccessPolicy"
+        },
+        "suspend": {
+          "type": "boolean"
+        },
+        "template": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodTemplateSpec"
+        },
+        "ttlSecondsAfterFinished": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": ["template"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.JobTemplateSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.JobSpec"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.PodFailurePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.batch.v1.PodFailurePolicyRule"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": ["rules"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.PodFailurePolicyOnExitCodesRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "containerName": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "set"
+        }
+      },
+      "required": ["operator", "values"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.PodFailurePolicyOnPodConditionsPattern": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.PodFailurePolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "onExitCodes": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.PodFailurePolicyOnExitCodesRequirement"
+        },
+        "onPodConditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.batch.v1.PodFailurePolicyOnPodConditionsPattern"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": ["action"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.SuccessPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.batch.v1.SuccessPolicyRule"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": ["rules"],
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.SuccessPolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "succeededCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "succeededIndexes": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -2014,6 +2275,44 @@
       "required": ["containers"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.PodTemplate": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["PodTemplate"],
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "template": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodTemplateSpec"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "",
+          "kind": "PodTemplate",
+          "version": "v1"
+        }
+      ]
+    },
+    "io.k8s.api.core.v1.PodTemplateSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PortworxVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -3524,6 +3823,10 @@
               "properties": {
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                },
+                "schedule": {
+                  "$ref": "#/$defs/io.k8s.api.batch.v1.CronJobSpec/properties/schedule",
+                  "default": "0 */3 * * *"
                 }
               },
               "type": "object"
