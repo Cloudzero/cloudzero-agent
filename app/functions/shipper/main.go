@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/go-obvious/server"
 	"github.com/rs/zerolog"
@@ -23,6 +25,10 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
+)
+
+const (
+	ShutdownGracePeriod = 10 * time.Second
 )
 
 func main() {
@@ -76,11 +82,6 @@ func main() {
 		return
 	}
 
-	go func() {
-		HandleShutdownEvents(ctx)
-		os.Exit(0)
-	}()
-
 	// Create the shipper and start in a thread
 	domain, err := shipper.NewMetricShipper(ctx, settings, store)
 	if err != nil {
@@ -89,10 +90,10 @@ func main() {
 		return
 	}
 
-	defer func() {
-		if err := domain.Shutdown(); err != nil {
-			logger.Err(err).Msg("failed to shutdown metric shipper")
-		}
+	// MUST BE AFTER DOMAIN
+	go func() {
+		HandleShutdownEvents(ctx, settings, domain)
+		os.Exit(0)
 	}()
 	go func() {
 		if err := domain.Run(); err != nil {
@@ -133,10 +134,52 @@ func main() {
 	}()
 }
 
-func HandleShutdownEvents(ctx context.Context) {
+func waitForCollectorShutdown(ctx context.Context, shutdownFile string, maxWait time.Duration) bool {
+	// Timeline example for 10s timeout:
+	// t=0ms:    deadline=10000ms, check file, sleep 100ms
+	// t=100ms:  compare 100ms < 10000ms ✓, check file, sleep 100ms
+	// t=200ms:  compare 200ms < 10000ms ✓, check file, sleep 100ms
+	// ...continues until...
+	// t=9900ms: compare 9900ms < 10000ms ✓, check file, sleep 100ms
+	// t=10000ms: compare 10000ms < 10000ms ✗, exit loop (no extra sleep)
+	deadline := time.Now().Add(maxWait)
+
+	for {
+		if _, err := os.Stat(shutdownFile); err == nil {
+			log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("collector shutdown marker detected")
+			return true
+		}
+
+		if time.Now().After(deadline) {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	log.Ctx(ctx).Warn().Str("file", shutdownFile).Dur("timeout", maxWait).Msg("collector shutdown marker not found within timeout")
+	return false
+}
+
+func HandleShutdownEvents(ctx context.Context, settings *config.Settings, domain *shipper.MetricShipper) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-signalChan
 
-	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
+	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, waiting for collector shutdown")
+
+	// Wait for collector to complete shutdown with timeout protection
+	shutdownFile := filepath.Join(settings.Database.StoragePath, config.ShutdownMarkerFilename)
+
+	if waitForCollectorShutdown(ctx, shutdownFile, ShutdownGracePeriod) {
+		log.Ctx(ctx).Info().Msg("collector shutdown confirmed, proceeding with shipper shutdown")
+	} else {
+		log.Ctx(ctx).Warn().Msg("proceeding with shipper shutdown without collector confirmation")
+	}
+
+	if err := domain.Shutdown(); err != nil {
+		log.Ctx(ctx).Err(err).Msg("failed to shutdown metric shipper")
+	}
+
+	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("shipper shutdown complete")
 }

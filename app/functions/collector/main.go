@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/go-obvious/server"
@@ -98,7 +99,7 @@ func main() {
 
 	// Handle shutdown events gracefully
 	go func() {
-		HandleShutdownEvents(ctx, costMetricStore, observabilityMetricStore)
+		HandleShutdownEvents(ctx, settings, costMetricStore, observabilityMetricStore)
 		os.Exit(0)
 	}()
 
@@ -134,7 +135,7 @@ func main() {
 	logger.Info().Msg("Service stopping")
 }
 
-func HandleShutdownEvents(ctx context.Context, appendables ...types.WritableStore) {
+func HandleShutdownEvents(ctx context.Context, settings *config.Settings, appendables ...types.WritableStore) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-signalChan
@@ -142,5 +143,13 @@ func HandleShutdownEvents(ctx context.Context, appendables ...types.WritableStor
 	log.Ctx(ctx).Info().Str("signal", sig.String()).Msg("Received signal, service stopping")
 	for _, appendable := range appendables {
 		appendable.Flush()
+	}
+
+	// Signal shutdown completion to shipper via file marker
+	shutdownFile := filepath.Join(settings.Database.StoragePath, config.ShutdownMarkerFilename)
+	if err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode); err != nil {
+		log.Ctx(ctx).Err(err).Str("file", shutdownFile).Msg("failed to write shutdown marker file")
+	} else {
+		log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("wrote shutdown completion marker")
 	}
 }

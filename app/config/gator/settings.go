@@ -35,6 +35,10 @@ const (
 	DefaultDatabaseObservabilityMaxInterval = 30 * time.Minute
 	DefaultServerPort                       = 8080
 	DefaultServerMode                       = "http"
+
+	// Shutdown coordination
+	ShutdownMarkerFilename = "collector-shutdown-complete"
+	ShutdownMarkerFileMode = 0o600
 )
 
 type Settings struct {
