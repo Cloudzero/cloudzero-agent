@@ -136,7 +136,7 @@ func main() {
 
 func waitForCollectorShutdown(ctx context.Context, shutdownFile string, maxWait time.Duration) bool {
 	deadline := time.Now().Add(maxWait)
-	
+
 	for time.Now().Before(deadline) {
 		if _, err := os.Stat(shutdownFile); err == nil {
 			log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("collector shutdown marker detected")
@@ -144,7 +144,7 @@ func waitForCollectorShutdown(ctx context.Context, shutdownFile string, maxWait 
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	
+
 	log.Ctx(ctx).Warn().Str("file", shutdownFile).Dur("timeout", maxWait).Msg("collector shutdown marker not found within timeout")
 	return false
 }
