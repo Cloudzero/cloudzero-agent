@@ -19,7 +19,7 @@ import (
 func TestWaitForCollectorShutdown_FileExistsImmediately(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
-	shutdownFile := filepath.Join(tempDir, "collector-shutdown-complete")
+	shutdownFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
 	ctx := context.Background()
 
 	// Create the file immediately
@@ -39,7 +39,7 @@ func TestWaitForCollectorShutdown_FileExistsImmediately(t *testing.T) {
 func TestWaitForCollectorShutdown_FileAppearsLater(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
-	shutdownFile := filepath.Join(tempDir, "collector-shutdown-complete")
+	shutdownFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
 	ctx := context.Background()
 
 	// Create file after a delay in a goroutine
@@ -117,15 +117,20 @@ func TestWaitForCollectorShutdown_InvalidPath(t *testing.T) {
 func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
-	shutdownFile := filepath.Join(tempDir, "collector-shutdown-complete")
+	shutdownFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
 	ctx := context.Background()
+
+	// Use a channel to coordinate the goroutine
+	done := make(chan struct{})
 
 	// Create file, then remove it, then recreate it
 	go func() {
+		defer close(done)
 		// Create initially
 		err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
 		if err != nil {
-			panic(err) // Will be caught by test harness
+			t.Errorf("Failed to create initial file: %v", err)
+			return
 		}
 
 		time.Sleep(100 * time.Millisecond)
@@ -133,7 +138,8 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 		// Remove it
 		err = os.Remove(shutdownFile)
 		if err != nil {
-			panic(err) // Will be caught by test harness
+			t.Errorf("Failed to remove file: %v", err)
+			return
 		}
 
 		time.Sleep(200 * time.Millisecond)
@@ -141,7 +147,8 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 		// Recreate it
 		err = os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
 		if err != nil {
-			panic(err) // Will be caught by test harness
+			t.Errorf("Failed to recreate file: %v", err)
+			return
 		}
 	}()
 
@@ -149,6 +156,9 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 	start := time.Now()
 	result := waitForCollectorShutdown(ctx, shutdownFile, 2*time.Second)
 	elapsed := time.Since(start)
+
+	// Wait for goroutine to complete
+	<-done
 
 	// Assertions
 	assert.True(t, result, "should return true when file is detected (even if briefly)")
@@ -174,7 +184,7 @@ func TestWaitForCollectorShutdown_ZeroTimeout(t *testing.T) {
 func TestWaitForCollectorShutdown_FilePermissions(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
-	shutdownFile := filepath.Join(tempDir, "collector-shutdown-complete")
+	shutdownFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
 	ctx := context.Background()
 
 	// Create file with different permissions
