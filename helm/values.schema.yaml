@@ -511,6 +511,11 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              schedule:
+                description: |
+                  Schedule for the backfill CronJob. Defaults to every 3 hours. Use standard cron format.
+                $ref: "#/$defs/io.k8s.api.batch.v1.CronJobSpec/properties/schedule"
+                default: "0 */3 * * *"
               resources:
                 description: |
                   Resource requirements and limits for the backfill job component.

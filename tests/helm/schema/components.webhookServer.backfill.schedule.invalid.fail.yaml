@@ -1,0 +1,5 @@
+# Test for invalid schedule field type (should be string, not number)
+components:
+  webhookServer:
+    backfill:
+      schedule: 123 # Should be string, not number

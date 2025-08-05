@@ -578,7 +578,14 @@ things when a ConfigMap changes.
 Name for the backfill job resource
 */}}
 {{- define "cloudzero-agent.initBackfillJobName" -}}
-{{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "backfill" "Version" .Chart.Version "Values" .Values) -}}
+{{- printf "%s-backfill-%s" .Release.Name (include "cloudzero-agent.configurationChecksum" .) | trunc 52 -}}
+{{- end }}
+
+{{/*
+Name for the backfill cronjob resource (without unique ID since it's persistent)
+*/}}
+{{- define "cloudzero-agent.initBackfillCronJobName" -}}
+{{- printf "%s-backfill" .Release.Name -}}
 {{- end }}
 
 {{/*

@@ -1,0 +1,5 @@
+# Test for daily cron schedule format
+components:
+  webhookServer:
+    backfill:
+      schedule: "0 0 * * *" # Daily at midnight

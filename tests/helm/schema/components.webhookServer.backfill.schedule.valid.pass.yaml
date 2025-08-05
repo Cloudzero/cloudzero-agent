@@ -1,0 +1,5 @@
+# Test for valid cron schedule formats
+components:
+  webhookServer:
+    backfill:
+      schedule: "0 */3 * * *" # Every 3 hours

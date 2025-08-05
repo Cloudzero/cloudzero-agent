@@ -368,6 +368,8 @@ components:
         cpu: "500m"
     # The backfill job component performs initial data backfilling.
     backfill:
+      # Schedule for the backfill CronJob. Defaults to every 12 hours. Use standard cron format.
+      schedule: "0 */12 * * *"
       # Resource requirements and limits for the backfill job component.
       #
       # For details, see the Kubernetes documentation on resource management:

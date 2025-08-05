@@ -1,0 +1,5 @@
+# Test for additional valid cron schedule formats
+components:
+  webhookServer:
+    backfill:
+      schedule: "*/5 * * * *" # Every 5 minutes

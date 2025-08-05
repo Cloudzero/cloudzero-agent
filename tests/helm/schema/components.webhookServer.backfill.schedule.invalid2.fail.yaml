@@ -1,0 +1,5 @@
+# Test for invalid schedule field type (should be string, not array)
+components:
+  webhookServer:
+    backfill:
+      schedule: ["0", "*/3", "*", "*", "*"] # Should be string, not array
