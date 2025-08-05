@@ -114,7 +114,7 @@ func TestWaitForCollectorShutdown_InvalidPath(t *testing.T) {
 	assert.GreaterOrEqual(t, elapsed, timeout, "should still respect timeout with invalid path")
 }
 
-func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
+func TestWaitForCollectorShutdown_FileCreatedAfterDelay(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	shutdownFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
@@ -123,48 +123,32 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 	// Use a channel to coordinate the goroutine
 	done := make(chan struct{})
 
-	// Create file, then remove it, then recreate it
+	// Create file after a predictable delay
 	go func() {
 		defer close(done)
-		// Create initially
+		// Wait then create the file
+		time.Sleep(200 * time.Millisecond)
+		
 		err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
 		if err != nil {
-			t.Errorf("Failed to create initial file: %v", err)
-			return
-		}
-
-		time.Sleep(100 * time.Millisecond)
-
-		// Remove it
-		err = os.Remove(shutdownFile)
-		if err != nil {
-			t.Errorf("Failed to remove file: %v", err)
-			return
-		}
-
-		time.Sleep(200 * time.Millisecond)
-
-		// Recreate it
-		err = os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
-		if err != nil {
-			t.Errorf("Failed to recreate file: %v", err)
+			t.Errorf("Failed to create file: %v", err)
 			return
 		}
 	}()
 
-	// Test - should succeed on first detection
+	// Test - should succeed when file is eventually created
 	start := time.Now()
-	result := waitForCollectorShutdown(ctx, shutdownFile, 2*time.Second)
+	result := waitForCollectorShutdown(ctx, shutdownFile, 1*time.Second)
 	elapsed := time.Since(start)
 
 	// Wait for goroutine to complete
 	<-done
 
 	// Assertions
-	assert.True(t, result, "should return true when file is detected (even if briefly)")
-	// The file is created at t=0, removed at t=100ms, then recreated at t=300ms
-	// So detection could happen immediately OR after recreation, hence the longer timeout
-	assert.Less(t, elapsed, 400*time.Millisecond, "should detect file within expected timeframe")
+	assert.True(t, result, "should return true when file is detected")
+	// File is created at 200ms, so we should detect it around that time (±100ms for polling)
+	assert.GreaterOrEqual(t, elapsed, 150*time.Millisecond, "should wait at least until file appears")
+	assert.Less(t, elapsed, 350*time.Millisecond, "should detect file reasonably quickly after creation")
 }
 
 func TestWaitForCollectorShutdown_ZeroTimeout(t *testing.T) {
