@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
 )
 
 func TestWaitForCollectorShutdown_FileExistsImmediately(t *testing.T) {
@@ -21,7 +23,7 @@ func TestWaitForCollectorShutdown_FileExistsImmediately(t *testing.T) {
 	ctx := context.Background()
 
 	// Create the file immediately
-	err := os.WriteFile(shutdownFile, []byte("done"), 0644)
+	err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
 	require.NoError(t, err)
 
 	// Test
@@ -43,8 +45,10 @@ func TestWaitForCollectorShutdown_FileAppearsLater(t *testing.T) {
 	// Create file after a delay in a goroutine
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		err := os.WriteFile(shutdownFile, []byte("done"), 0644)
-		require.NoError(t, err)
+		err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
+		if err != nil {
+			panic(err) // Will be caught by test harness
+		}
 	}()
 
 	// Test
@@ -119,20 +123,26 @@ func TestWaitForCollectorShutdown_FileRemovedAndRecreated(t *testing.T) {
 	// Create file, then remove it, then recreate it
 	go func() {
 		// Create initially
-		err := os.WriteFile(shutdownFile, []byte("done"), 0644)
-		require.NoError(t, err)
-		
+		err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
+		if err != nil {
+			panic(err) // Will be caught by test harness
+		}
+
 		time.Sleep(100 * time.Millisecond)
-		
+
 		// Remove it
 		err = os.Remove(shutdownFile)
-		require.NoError(t, err)
-		
+		if err != nil {
+			panic(err) // Will be caught by test harness
+		}
+
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Recreate it
-		err = os.WriteFile(shutdownFile, []byte("done"), 0644)
-		require.NoError(t, err)
+		err = os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode)
+		if err != nil {
+			panic(err) // Will be caught by test harness
+		}
 	}()
 
 	// Test - should succeed on first detection
@@ -168,12 +178,12 @@ func TestWaitForCollectorShutdown_FilePermissions(t *testing.T) {
 	ctx := context.Background()
 
 	// Create file with different permissions
-	err := os.WriteFile(shutdownFile, []byte("done"), 0000) // No permissions
+	err := os.WriteFile(shutdownFile, []byte("done"), 0o000) // No permissions
 	require.NoError(t, err)
-	
+
 	// Cleanup - restore permissions so test cleanup can remove the file
 	defer func() {
-		os.Chmod(shutdownFile, 0644)
+		os.Chmod(shutdownFile, 0o644)
 	}()
 
 	// Test

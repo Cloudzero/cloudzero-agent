@@ -147,7 +147,7 @@ func HandleShutdownEvents(ctx context.Context, settings *config.Settings, append
 
 	// Signal shutdown completion to shipper via file marker
 	shutdownFile := filepath.Join(settings.Database.StoragePath, config.ShutdownMarkerFilename)
-	if err := os.WriteFile(shutdownFile, []byte("done"), 0644); err != nil {
+	if err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode); err != nil {
 		log.Ctx(ctx).Err(err).Str("file", shutdownFile).Msg("failed to write shutdown marker file")
 	} else {
 		log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("wrote shutdown completion marker")

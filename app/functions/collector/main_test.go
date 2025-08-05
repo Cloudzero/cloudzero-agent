@@ -27,7 +27,7 @@ func performShutdownSequence(_ context.Context, settings *config.Settings, store
 
 	// Signal shutdown completion to shipper via file marker
 	shutdownFile := filepath.Join(settings.Database.StoragePath, config.ShutdownMarkerFilename)
-	if err := os.WriteFile(shutdownFile, []byte("done"), 0644); err != nil {
+	if err := os.WriteFile(shutdownFile, []byte("done"), config.ShutdownMarkerFileMode); err != nil {
 		// In real code this would log an error, for tests we can ignore
 		_ = err
 	}
@@ -42,13 +42,13 @@ func TestPerformShutdownSequence_FileCreation(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	mockStore1 := mocks.NewMockStore(ctrl)
 	mockStore2 := mocks.NewMockStore(ctrl)
-	
+
 	// Set expectations
 	mockStore1.EXPECT().Flush().Return(nil).Times(1)
 	mockStore2.EXPECT().Flush().Return(nil).Times(1)
@@ -58,10 +58,10 @@ func TestPerformShutdownSequence_FileCreation(t *testing.T) {
 
 	// Assertions
 	expectedFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
-	
+
 	// Check that shutdown marker file was created
 	assert.FileExists(t, expectedFile, "shutdown marker file should be created")
-	
+
 	// Check file contents
 	content, err := os.ReadFile(expectedFile)
 	require.NoError(t, err)
@@ -76,10 +76,10 @@ func TestPerformShutdownSequence_FileCreationWithInvalidPath(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	mockStore := mocks.NewMockStore(ctrl)
 	mockStore.EXPECT().Flush().Return(nil).Times(1)
 
@@ -88,7 +88,7 @@ func TestPerformShutdownSequence_FileCreationWithInvalidPath(t *testing.T) {
 
 	// Assertions
 	expectedFile := filepath.Join(settings.Database.StoragePath, config.ShutdownMarkerFilename)
-	
+
 	// File should not exist due to invalid path
 	assert.NoFileExists(t, expectedFile, "shutdown marker file should not be created with invalid path")
 }
@@ -102,10 +102,10 @@ func TestPerformShutdownSequence_StoreFlushError(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	mockStore := mocks.NewMockStore(ctrl)
 	mockStore.EXPECT().Flush().Return(assert.AnError).Times(1)
 
@@ -114,10 +114,10 @@ func TestPerformShutdownSequence_StoreFlushError(t *testing.T) {
 
 	// Assertions
 	expectedFile := filepath.Join(tempDir, config.ShutdownMarkerFilename)
-	
+
 	// Should still create marker file even if flush fails
 	assert.FileExists(t, expectedFile, "shutdown marker file should be created even if flush fails")
-	
+
 	content, err := os.ReadFile(expectedFile)
 	require.NoError(t, err)
 	assert.Equal(t, "done", string(content), "shutdown marker should contain 'done'")
@@ -150,10 +150,10 @@ func TestPerformShutdownSequence_MultipleStores(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	stores := make([]*mocks.MockStore, 5)
 	for i := range stores {
 		stores[i] = mocks.NewMockStore(ctrl)
