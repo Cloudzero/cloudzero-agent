@@ -196,7 +196,7 @@ jobs:
           export CLUSTERNAME="$(hostname)-$(date '+%Y%m%d%H%M%S')"
           echo $CLUSTERNAME
           make \
-            CLOUD_HELM_EXTRA_ARGS="--set 'imagePullSecrets[0].name=ghcr-registry' --set insightsController.server.replicaCount=1 --set components.agent.image.repository=${{ inputs.image-repo }}/${{ inputs.image-path }} --set components.agent.image.tag=${{ inputs.image-tag }}" \
+            CLOUD_HELM_EXTRA_ARGS="--set 'imagePullSecrets[0].name=ghcr-registry' --set insightsController.server.replicaCount=1 --set components.agent.image.repository=${{ inputs.image-repo }}/${{ inputs.image-path }} --set components.agent.image.tag=${{ inputs.image-tag }} --set components.aggregator.replicas=1" \
             CLOUDZERO_DEV_API_KEY="${{ secrets.CLOUDZERO_DEV_API_KEY }}" \
             CLUSTER_NAME="${CLUSTERNAME}" \
             helm-install

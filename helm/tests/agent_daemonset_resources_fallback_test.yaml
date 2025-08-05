@@ -1,0 +1,80 @@
+suite: test agent federated node resources configuration
+templates:
+  - templates/agent-daemonset.yaml
+tests:
+  # Test that components.agent.federatedNode.resources is used directly
+  - it: should use components.agent.federatedNode.resources when set
+    set:
+      defaults.federation.enabled: true
+      components.agent.federatedNode:
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "500m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "2048Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"
+
+  # Test that default federated node resources are used when not explicitly set
+  - it: should use default federated node resources when not explicitly set
+    set:
+      defaults.federation.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "1000m"
+
+  # Test that server.resources does not affect federated node resources
+  - it: should ignore server.resources for federated node
+    set:
+      defaults.federation.enabled: true
+      server.resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+      components.agent.federatedNode:
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "500m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "2048Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"

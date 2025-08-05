@@ -29,6 +29,7 @@ spec:
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 10 }}
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
+          {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.initCert.resources | nindent 10 }}
           args:
             - |
               #!/bin/bash

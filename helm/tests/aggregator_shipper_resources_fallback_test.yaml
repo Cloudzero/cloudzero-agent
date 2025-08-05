@@ -1,0 +1,115 @@
+suite: test aggregator shipper resources fallback logic
+templates:
+  - templates/aggregator-deploy.yaml
+tests:
+  # Test that aggregator.shipper.resources takes precedence over components.aggregator.shipper.resources
+  - it: should use aggregator.shipper.resources when both are set
+    set:
+      components.aggregator.shipper:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "200m"
+          limits:
+            memory: "2048Mi"
+            cpu: "4000m"
+      aggregator.shipper.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"
+
+  # Test that aggregator.shipper.resources is used when components.aggregator.shipper.resources is not set
+  - it: should use aggregator.shipper.resources when components.aggregator.shipper.resources is not set
+    set:
+      aggregator.shipper.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "1024Mi"
+          cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"
+
+  # Test that components.aggregator.shipper.resources is used when aggregator.shipper.resources is not set
+  - it: should use components.aggregator.shipper.resources when aggregator.shipper.resources is not set
+    set:
+      components.aggregator.shipper:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "200m"
+          limits:
+            memory: "2048Mi"
+            cpu: "4000m"
+      aggregator.shipper.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "2048Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "4000m"
+
+  # Test that default resources are used when both components and legacy resources are null
+  - it: should use default resources when both components and legacy resources are null
+    set:
+      aggregator.shipper.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"

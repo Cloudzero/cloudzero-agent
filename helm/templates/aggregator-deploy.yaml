@@ -62,8 +62,10 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
-          resources:
-            {{- toYaml .Values.aggregator.collector.resources | nindent 12 }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.aggregator.collector.resources | default (dict))
+              (.Values.aggregator.collector.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
@@ -95,27 +97,10 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
-          resources:
-            {{- toYaml .Values.aggregator.shipper.resources | nindent 12 }}
-        {{- if .Values.aggregator.debugContainer }}
-        - name: {{ include "cloudzero-agent.aggregator.name" . }}-debug
-          image: busybox:stable
-          command: ["sleep", "infinity"]
-          resources:
-            limits:
-              cpu: 100m
-              memory: 64Mi
-            requests:
-              cpu: 50m
-              memory: 32Mi
-          volumeMounts:
-            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            - name: aggregator-config-volume
-              mountPath: {{ .Values.aggregator.mountRoot }}/config
-              readOnly: true
-            - name: aggregator-persistent-storage
-              mountPath: {{ .Values.aggregator.mountRoot }}/data
-        {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.aggregator.shipper.resources | default (dict))
+              (.Values.aggregator.shipper.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
       securityContext:
         runAsUser: 65534
         runAsNonRoot: true

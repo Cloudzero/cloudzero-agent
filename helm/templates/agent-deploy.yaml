@@ -33,10 +33,10 @@ spec:
             - install
             - --destination
             - /checks/bin/cloudzero-agent-validator
-          {{- with .Values.validator.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.validator.resources | default (dict))
+              (.Values.validator.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -53,10 +53,10 @@ spec:
             - pre-start
             - -f
             - /checks/config/validator.yml
-          {{- with .Values.validator.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.validator.resources | default (dict))
+              (.Values.validator.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -93,10 +93,10 @@ spec:
             timeoutSeconds: 4
             failureThreshold: 3
             successThreshold: 1
-          {{- with .Values.configmapReload.prometheus.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.agent.reloader.resources | default (dict))
+              (.Values.configmapReload.prometheus.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -155,10 +155,10 @@ spec:
             timeoutSeconds: {{ default 10 .Values.server.livenessProbeTimeout }}
             failureThreshold: {{ default 3 .Values.server.livenessProbeFailureThreshold }}
             successThreshold: {{ default 1 .Values.server.livenessProbeSuccessThreshold }}
-          {{- with .Values.server.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.agent.resources | default (dict))
+              (.Values.server.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/

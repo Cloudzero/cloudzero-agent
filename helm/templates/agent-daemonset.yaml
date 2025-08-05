@@ -39,6 +39,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.agent.reloader.resources | default (dict))
+              (.Values.configmapReload.prometheus.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
             - name: unprocessed-config-volume
               mountPath: /etc/config/prometheus/configmaps/unprocessed/
@@ -74,10 +78,10 @@ spec:
             timeoutSeconds: 4
             failureThreshold: 3
             successThreshold: 1
-          {{- with .Values.configmapReload.prometheus.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+              (.Values.components.agent.reloader.resources | default (dict))
+              (.Values.configmapReload.prometheus.resources | default (dict))
+            ) | fromYaml) | nindent 10 }}
           volumeMounts:
             - name: processed-config-volume
               mountPath: /etc/config
@@ -122,10 +126,7 @@ spec:
             timeoutSeconds: 10
             failureThreshold: 3
             successThreshold: 1
-          {{- with .Values.server.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateResources" .Values.components.agent.federatedNode.resources | nindent 10 }}
           volumeMounts:
             - name: processed-config-volume
               mountPath: /etc/config/prometheus.yml

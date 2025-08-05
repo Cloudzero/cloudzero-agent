@@ -657,6 +657,45 @@ Otherwise, it will be the CloudZero API endpoint.
 'http://{{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local/collector'
 {{- end -}}
 
+{{/*
+Merge multiple dictionaries with string-aware overwrite logic.
+Similar to mergeOverwrite, but treats empty strings as "unset" values (like null).
+This is useful for merging resource configurations where empty strings indicate
+that a value should not be set, allowing fallback to other sources.
+
+Accepts a list of dictionaries to merge, with later dictionaries taking precedence
+over earlier ones, but only for non-empty string values.
+
+Example usage:
+{{- include "cloudzero-agent.mergeStringOverwrite" (list
+      .Values.components.aggregator.collector.resources
+      .Values.aggregator.collector.resources
+    ) }}
+
+This will merge the two resource configurations, with the second one taking
+precedence for any non-empty string values, but empty strings in the second
+configuration will not overwrite values from the first configuration.
+*/}}
+{{- define "cloudzero-agent.mergeStringOverwrite" -}}
+{{- $result := (dict) -}}
+{{- range $dict := . -}}
+  {{- if $dict -}}
+    {{- range $key, $value := $dict -}}
+      {{- if kindIs "map" $value -}}
+        {{- /* Recursively merge nested dictionaries */ -}}
+        {{- $existing := (get $result $key | default (dict)) -}}
+        {{- $merged := (include "cloudzero-agent.mergeStringOverwrite" (list $existing $value) | fromYaml) -}}
+        {{- $_ := set $result $key $merged -}}
+      {{- else if and $value (ne $value "") -}}
+        {{- /* Only set non-empty string values */ -}}
+        {{- $_ := set $result $key $value -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $result | toYaml -}}
+{{- end -}}
+
 {{- define "cloudzero-agent.maybeGenerateSection" -}}
 {{- if .value -}}
 {{- .name }}:
@@ -826,6 +865,46 @@ spec:
     matchLabels:
       {{- .matchLabels | nindent 6 }}
 {{- end }}
+{{- end -}}
+
+{{/*
+Generate resources block
+Accepts a resources configuration object directly
+Example usage:
+{{- include "cloudzero-agent.generateResources" .Values.server.resources | nindent 12 }}
+*/}}
+{{- define "cloudzero-agent.generateResources" -}}
+{{- if . -}}
+  {{- $resources := . -}}
+  {{- $cleanResources := dict -}}
+  {{- if $resources.requests -}}
+    {{- $cleanRequests := dict -}}
+    {{- if and $resources.requests.cpu (ne $resources.requests.cpu "") -}}
+      {{- $_ := set $cleanRequests "cpu" $resources.requests.cpu -}}
+    {{- end -}}
+    {{- if and $resources.requests.memory (ne $resources.requests.memory "") -}}
+      {{- $_ := set $cleanRequests "memory" $resources.requests.memory -}}
+    {{- end -}}
+    {{- if $cleanRequests -}}
+      {{- $_ := set $cleanResources "requests" $cleanRequests -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $resources.limits -}}
+    {{- $cleanLimits := dict -}}
+    {{- if and $resources.limits.cpu (ne $resources.limits.cpu "") -}}
+      {{- $_ := set $cleanLimits "cpu" $resources.limits.cpu -}}
+    {{- end -}}
+    {{- if and $resources.limits.memory (ne $resources.limits.memory "") -}}
+      {{- $_ := set $cleanLimits "memory" $resources.limits.memory -}}
+    {{- end -}}
+    {{- if $cleanLimits -}}
+      {{- $_ := set $cleanResources "limits" $cleanLimits -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $cleanResources -}}
+    {{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "resources" "value" $cleanResources) -}}
+  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

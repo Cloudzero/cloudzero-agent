@@ -1,0 +1,163 @@
+suite: test validator resources fallback logic
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test that validator.resources takes precedence over components.validator.resources
+  - it: should use validator.resources when both are set
+    set:
+      components.validator:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      validator.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.cpu
+          value: "200m"
+
+  # Test that validator.resources is used when components.validator.resources is not set
+  - it: should use validator.resources when components.validator.resources is not set
+    set:
+      validator.resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.cpu
+          value: "200m"
+
+  # Test that components.validator.resources is used when validator.resources is not set
+  - it: should use components.validator.resources when validator.resources is not set
+    set:
+      components.validator:
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      validator.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.cpu
+          value: "400m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.cpu
+          value: "400m"
+
+  # Test that default resources are used when both components and legacy resources are null
+  - it: should use default resources when both components and legacy resources are null
+    set:
+      validator.resources:
+        requests:
+          memory: ""
+          cpu: ""
+        limits:
+          memory: ""
+          cpu: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.cpu
+          value: "200m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.memory
+          value: "64Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.cpu
+          value: "200m"

@@ -278,6 +278,100 @@ properties:
               See the Kubernetes documentation for details:
               https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
             $ref: "#/$defs/com.cloudzero.agent.tolerations"
+          resources:
+            description: |
+              Resource requirements and limits for the agent component.
+
+              For details, see the Kubernetes documentation on resource management:
+              https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          federatedNode:
+            description: |
+              The agent federated node component runs on each node for federation.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the agent federated node component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          reloader:
+            description: |
+              The agent configmap reloader component watches for configuration changes.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the agent configmap reloader component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+
+      validator:
+        description: |
+          The validator component performs validation checks and notifies the platform
+          of installation status changes.
+        additionalProperties: false
+        type: object
+        properties:
+          resources:
+            description: |
+              Resource requirements and limits for the validator component.
+
+              For details, see the Kubernetes documentation on resource management:
+              https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+
+      miscellaneous:
+        description: |
+          Miscellaneous components that don't fit into other categories.
+        additionalProperties: false
+        type: object
+        properties:
+          configLoader:
+            description: |
+              The config loader job component loads configuration and validates settings.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the config loader job component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          helmless:
+            description: |
+              The helmless job component generates configuration without Helm.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the helmless job component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          initCert:
+            description: |
+              The init cert job component initializes TLS certificates.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the init cert job component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
       aggregator:
         description: |
@@ -292,6 +386,36 @@ properties:
             description: |
               Annotations to be added to the aggregator deployment.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          collector:
+            description: |
+              Configuration for the collector component of the aggregator.
+            oneOf:
+              - type: object
+                properties:
+                  resources:
+                    description: |
+                      Resource requirements and limits for the collector component.
+
+                      For details, see the Kubernetes documentation on resource management:
+                      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                additionalProperties: false
+              - type: "null"
+          shipper:
+            description: |
+              Configuration for the shipper component of the aggregator.
+            oneOf:
+              - type: object
+                properties:
+                  resources:
+                    description: |
+                      Resource requirements and limits for the shipper component.
+
+                      For details, see the Kubernetes documentation on resource management:
+                      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                additionalProperties: false
+              - type: "null"
           podDisruptionBudget:
             description: |
               Pod disruption budget configuration for the aggregator.
@@ -308,6 +432,7 @@ properties:
             type:
               - integer
               - "null"
+
           tolerations:
             description: |
               Tolerations configuration for the aggregator pods.
@@ -373,6 +498,26 @@ properties:
             type:
               - integer
               - "null"
+          resources:
+            description: |
+              Resource requirements and limits for the webhook server component.
+
+              For details, see the Kubernetes documentation on resource management:
+              https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+            $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          backfill:
+            description: |
+              The backfill job component performs initial data backfilling.
+            additionalProperties: false
+            type: object
+            properties:
+              resources:
+                description: |
+                  Resource requirements and limits for the backfill job component.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
   #######################################################################################
   #######################################################################################
@@ -413,8 +558,6 @@ properties:
       mountRoot:
         type: string
       profiling:
-        type: boolean
-      debugContainer:
         type: boolean
       reconnectFrequency:
         type: integer
@@ -506,7 +649,12 @@ properties:
         properties:
           port:
             type: integer
-          # Resource requirements for the collector
+          # Resource requirements for the shipper
+          #
+          # **DEPRECATED**: This field is deprecated. Please use `components.aggregator.shipper.resources` instead.
+          #
+          # For details, see the Kubernetes documentation on resource management:
+          # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           resources:
             $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
       # Node selector for the aggregator
@@ -729,6 +877,10 @@ properties:
         description: |
           Container image configuration for the init-cert-job.
         $ref: "#/$defs/com.cloudzero.agent.image"
+      resources:
+        description: |
+          Resource requirements and limits for the init-cert-job.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
       rbac:
         description: |
           RBAC configuration for the init-cert-job.
@@ -1169,6 +1321,11 @@ properties:
       resources:
         description: |
           Resource requirements and limits for the insights controller.
+
+          **DEPRECATED**: This field is deprecated. Please use `components.webhookServer.resources` instead.
+
+          For details, see the Kubernetes documentation on resource management:
+          https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
         $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
       podAnnotations:
         description: |
@@ -1335,6 +1492,8 @@ properties:
         $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
         description: |
           Resource requirements and limits for the server.
+
+          **DEPRECATED**: This field is deprecated. Please use `components.agent.resources` instead.
 
           For details, see the Kubernetes documentation on resource management:
           https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -1709,6 +1868,11 @@ properties:
       resources:
         description: |
           Resource requirements and limits for the validator.
+
+          **DEPRECATED**: This field is deprecated. Please use `components.validator.resources` instead.
+
+          For details, see the Kubernetes documentation on resource management:
+          https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
         $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
   jobConfigID:
@@ -1726,6 +1890,17 @@ properties:
       (see tests/helm/template/), so jobConfig ID provides a way to override
       this behavior and instead generate the same hash every time. It shouldn't
       really be used anywhere else.
+
+  helmless:
+    description: |
+      Configuration for the helmless job.
+    type: object
+    additionalProperties: false
+    properties:
+      resources:
+        description: |
+          Resource requirements and limits for the helmless job.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
   global:
     type: object
