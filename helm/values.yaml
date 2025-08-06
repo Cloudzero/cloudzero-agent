@@ -179,6 +179,16 @@ defaults:
   # Note that if you set this, you'll likely also want to set
   # kubeStateMetrics.priorityClassName.
   priorityClassName:
+  # Default security context for all pods. Component-specific security contexts
+  # will be merged with these defaults, with component settings taking precedence.
+  #
+  # For more information, see the Kubernetes documentation:
+  # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+  securityContext:
+    runAsUser: 65534
+    runAsNonRoot: true
+    runAsGroup: 65534
+    fsGroup: 65534
 
 # Component-specific configuration settings.
 components:
@@ -195,6 +205,11 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Security context for the agent pods.
+    #
+    # For details, see the Kubernetes documentation on security contexts:
+    # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    securityContext: {}
     # Resource requirements and limits for the agent component.
     #
     # For details, see the Kubernetes documentation on resource management:
@@ -208,6 +223,11 @@ components:
         cpu: "1000m"
     # The agent federated node component runs on each node for federation.
     federatedNode:
+      # Security context for the agent federated node pods.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
       # Resource requirements and limits for the agent federated node component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -221,6 +241,11 @@ components:
           cpu: "1000m"
     # The agent configmap reloader component watches for configuration changes.
     reloader:
+      # Security context for the agent configmap reloader container.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
       # Resource requirements and limits for the agent configmap reloader component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -263,6 +288,11 @@ components:
         limits:
           memory: "512Mi"
           cpu: "500m"
+      # Security context for the config loader job pods.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
     # The helmless job component generates configuration without Helm.
     helmless:
       # Resource requirements and limits for the helmless job component.
@@ -276,6 +306,11 @@ components:
         limits:
           memory: "256Mi"
           cpu: "200m"
+      # Security context for the helmless job pods.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
     # The init cert job component initializes TLS certificates.
     initCert:
       # Resource requirements and limits for the init cert job component.
@@ -289,6 +324,11 @@ components:
         limits:
           memory: "256Mi"
           cpu: "200m"
+      # Security context for the init cert job pods.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
 
   # kubectl contains details about where to find the kubectl image.  This chart
   # uses the kubectl image as part of the job to initialize certificates.
@@ -326,7 +366,17 @@ components:
       # maxUnavailable:
     tolerations: []
     annotations: {}
+    # Security context for the aggregator pods.
+    #
+    # For details, see the Kubernetes documentation on security contexts:
+    # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    securityContext: {}
     collector:
+      # Security context for the aggregator collector container.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
       resources:
         requests:
           memory: "64Mi"
@@ -336,6 +386,11 @@ components:
           cpu: "2000m"
     # Configuration for the shipper component of the aggregator.
     shipper:
+      # Security context for the aggregator shipper container.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
       # Resource requirements and limits for the shipper component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -355,6 +410,11 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Security context for the webhook server pods.
+    #
+    # For details, see the Kubernetes documentation on security contexts:
+    # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    securityContext: {}
     # Resource requirements and limits for the webhook server component.
     #
     # For details, see the Kubernetes documentation on resource management:
@@ -381,6 +441,11 @@ components:
         limits:
           memory: "512Mi"
           cpu: "500m"
+      # Security context for the backfill job pods.
+      #
+      # For details, see the Kubernetes documentation on security contexts:
+      # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      securityContext: {}
 
 # Due to limitations of Helm, we are unfortunately not able to automatically configure the
 # kube-state-metrics subchart using the configuration above, and instead need to configure

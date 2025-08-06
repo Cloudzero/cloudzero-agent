@@ -1,0 +1,100 @@
+suite: test daemonset security context logic
+templates:
+  - templates/agent-daemonset.yaml
+tests:
+  - it: should apply pod and container security contexts to daemonset
+    set:
+      defaults.federation.enabled: true
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        fsGroup: 65534
+      components.agent.federatedNode.securityContext:
+        runAsUser: 1500
+        runAsGroup: 2500
+    asserts:
+      # Test pod security context
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1500
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 2500
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 65534
+      # Pod security context should not have container-level properties
+      - isNull:
+          path: spec.template.spec.securityContext.readOnlyRootFilesystem
+      - isNull:
+          path: spec.template.spec.securityContext.capabilities
+      - isNull:
+          path: spec.template.spec.securityContext.allowPrivilegeEscalation
+
+      # Test config-subst initContainer security context (uses defaults, not federatedNode)
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsGroup
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      # InitContainer should not have pod-level properties
+      - isNull:
+          path: spec.template.spec.initContainers[0].securityContext.fsGroup
+
+      # Test main containers security context
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 1500
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsGroup
+          value: 2500
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsNonRoot
+          value: true
+      # Container should not have pod-level properties
+      - isNull:
+          path: spec.template.spec.containers[1].securityContext.fsGroup
+
+  - it: should use defaults when no component security context is set
+    set:
+      defaults.federation.enabled: true
+      defaults.securityContext:
+        runAsUser: 50000
+        runAsGroup: 60000
+        runAsNonRoot: true
+        fsGroup: 70000
+      # Using defaults only
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 50000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 60000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 70000
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 50000
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsGroup
+          value: 60000
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsNonRoot
+          value: true
+
+  - it: should only render security context when federation is enabled
+    set:
+      defaults.federation.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

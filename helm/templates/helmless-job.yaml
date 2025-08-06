@@ -17,6 +17,10 @@ spec:
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.agent.image) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+          (.Values.defaults.securityContext | default (dict))
+          (.Values.components.miscellaneous.helmless.securityContext | default (dict))
+        ) | nindent 6 }}
       containers:
         - name: helmless
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image) | nindent 10 }}
@@ -28,6 +32,10 @@ spec:
             - --output
             - "-"
           {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.helmless.resources | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+                (.Values.defaults.securityContext | default (dict))
+                (.Values.components.miscellaneous.helmless.securityContext | default (dict))
+              ) | nindent 10 }}
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values

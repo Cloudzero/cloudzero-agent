@@ -37,6 +37,10 @@ spec:
               (.Values.components.validator.resources | default (dict))
               (.Values.validator.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.validator.securityContext | default (dict))
+            ) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -57,6 +61,10 @@ spec:
               (.Values.components.validator.resources | default (dict))
               (.Values.validator.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.validator.securityContext | default (dict))
+            ) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: lifecycle-volume
@@ -97,6 +105,10 @@ spec:
               (.Values.components.agent.reloader.resources | default (dict))
               (.Values.configmapReload.prometheus.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.agent.reloader.securityContext | default (dict))
+            ) | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -159,6 +171,10 @@ spec:
               (.Values.components.agent.resources | default (dict))
               (.Values.server.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.agent.securityContext | default (dict))
+            ) | nindent 10 }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
@@ -170,11 +186,10 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/app/config/
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-      securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
-        fsGroup: 65534
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+          (.Values.defaults.securityContext | default (dict))
+          (.Values.components.agent.securityContext | default (dict))
+        ) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}

@@ -23,6 +23,10 @@ spec:
       restartPolicy: OnFailure
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+          (.Values.defaults.securityContext | default (dict))
+          (.Values.components.miscellaneous.configLoader.securityContext | default (dict))
+        ) | nindent 6 }}
       containers:
         - name: run-validator
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
@@ -52,9 +56,13 @@ spec:
             - --config-aggregator
             - {{ .Values.aggregator.mountRoot }}/config/config.yml
           {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
-              (.Values.components.miscellaneous.configLoader.resources | default (dict))
-              (.Values.insightsController.resources | default (dict))
-            ) | fromYaml) | nindent 10 }}
+                (.Values.components.miscellaneous.configLoader.resources | default (dict))
+                (.Values.insightsController.resources | default (dict))
+              ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+                (.Values.defaults.securityContext | default (dict))
+                (.Values.components.miscellaneous.configLoader.securityContext | default (dict))
+              ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: config-values

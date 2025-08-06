@@ -66,6 +66,10 @@ spec:
               (.Values.components.aggregator.collector.resources | default (dict))
               (.Values.aggregator.collector.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.aggregator.collector.securityContext | default (dict))
+            ) | nindent 10 }}
 
         - name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.aggregator.image) | nindent 10 }}
@@ -101,11 +105,14 @@ spec:
               (.Values.components.aggregator.shipper.resources | default (dict))
               (.Values.aggregator.shipper.resources | default (dict))
             ) | fromYaml) | nindent 10 }}
-      securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
-        fsGroup: 65534
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.aggregator.shipper.securityContext | default (dict))
+            ) | nindent 10 }}
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+          (.Values.defaults.securityContext | default (dict))
+          (.Values.components.aggregator.securityContext | default (dict))
+        ) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.aggregator.nodeSelector) | nindent 6 }}

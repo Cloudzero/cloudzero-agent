@@ -1,0 +1,74 @@
+suite: test job security context fallback logic
+templates:
+  - templates/config-loader-job.yaml
+  - templates/helmless-job.yaml
+  - templates/init-cert-job.yaml
+tests:
+  - it: should use component securityContext when both defaults and component are set
+    set:
+      defaults.securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 2000
+      components.miscellaneous.configLoader.securityContext:
+        runAsUser: 2000
+        runAsGroup: 3000
+        runAsNonRoot: false
+        fsGroup: 4000
+      components.miscellaneous.helmless.securityContext:
+        runAsUser: 5000
+        runAsGroup: 6000
+        fsGroup: 8000
+      components.miscellaneous.initCert.securityContext:
+        runAsUser: 7000
+        fsGroup: 8000
+    asserts:
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 2000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 3000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: false
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 4000
+      - template: templates/helmless-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 5000
+      - template: templates/helmless-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 6000
+      - template: templates/helmless-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - template: templates/helmless-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 8000
+      - template: templates/init-cert-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 7000
+      - template: templates/init-cert-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - template: templates/init-cert-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - template: templates/init-cert-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 8000

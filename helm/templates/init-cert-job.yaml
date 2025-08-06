@@ -24,12 +24,20 @@ spec:
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
       {{- include  "cloudzero-agent.initCertJob.imagePullSecrets" . | nindent 6 }}
       {{- include "cloudzero-agent.generatePriorityClassName" .Values.defaults.priorityClassName | nindent 6 }}
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+          (.Values.defaults.securityContext | default (dict))
+          (.Values.components.miscellaneous.initCert.securityContext | default (dict))
+        ) | nindent 6 }}
       containers:
         - name: init-cert
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 10 }}
           command: ["/bin/bash", "-c"]
           workingDir: /var/tmp
           {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.initCert.resources | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.miscellaneous.initCert.securityContext | default (dict))
+            ) | nindent 10 }}
           args:
             - |
               #!/bin/bash
