@@ -1,6 +1,28 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package types defines core data structures and interfaces for the CloudZero agent.
+//
+// This file specifically contains metric-related data structures and their serialization logic:
+//
+//   - Metric: Core metric structure with CloudZero metadata
+//   - ParquetMetric: Optimized structure for Parquet file storage
+//   - JSON serialization: Custom marshaling for API compatibility
+//   - Label management: Import/export of Prometheus label conventions
+//   - Time-based partitioning: Automatic date/time field extraction for storage
+//
+// Key design principles:
+//   - Prometheus compatibility: Supports standard Prometheus label conventions
+//   - Multiple storage formats: JSON for APIs, Parquet for efficient storage
+//   - CloudZero integration: Includes cluster and cloud account metadata
+//   - Time-based organization: Automatic partitioning by year/month/day/hour
+//
+// Label handling:
+//   Special Prometheus labels are hoisted to struct fields for efficiency:
+//   - "__name__" label becomes MetricName field
+//   - "node" label becomes NodeName field
+//   - Other labels remain in the Labels map
+//
 //coverage:ignore
 package types
 
@@ -35,16 +57,59 @@ type InputData struct {
 	TimeSeries []TimeSeries `json:"timeseries"` //nolint:tagliatelle // "time_series" might be right; does this need to match something else?
 }
 
+// Metric represents a single CloudZero metric data point with associated metadata.
+// This is the primary data structure used throughout the agent for storing and
+// processing metric information collected from Prometheus and Kubernetes.
+//
+// The structure includes both Prometheus-standard fields and CloudZero-specific
+// metadata required for cost attribution and analysis.
+//
+// Field purposes:
+//   - ID: Unique identifier for deduplication and tracking
+//   - ClusterName/CloudAccountID: CloudZero identifiers for cost attribution
+//   - MetricName/NodeName: Prometheus labels hoisted to fields for efficiency
+//   - CreatedAt: Agent processing timestamp for debugging and monitoring
+//   - TimeStamp: Original metric timestamp from Prometheus
+//   - Labels: Additional Prometheus labels (excluding hoisted ones)
+//   - Value: String representation of metric value for precision preservation
+//
+// Usage:
+//   metric := &Metric{
+//       ID: uuid.New(),
+//       ClusterName: "production",
+//       CloudAccountID: "123456789012",
+//       MetricName: "cpu_usage_percent",
+//       TimeStamp: time.Now(),
+//       Value: "85.5",
+//   }
+//   metric.ImportLabels(prometheusLabels)
 type Metric struct {
-	ID             uuid.UUID
-	ClusterName    string
+	// ID uniquely identifies this metric instance for deduplication and tracking
+	ID uuid.UUID
+	
+	// ClusterName identifies the Kubernetes cluster for CloudZero cost attribution
+	ClusterName string
+	
+	// CloudAccountID identifies the cloud provider account (AWS/Azure/GCP) for cost grouping
 	CloudAccountID string
-	MetricName     string
-	NodeName       string
-	CreatedAt      time.Time
-	TimeStamp      time.Time
-	Labels         map[string]string
-	Value          string
+	
+	// MetricName contains the Prometheus metric name (from __name__ label)
+	MetricName string
+	
+	// NodeName contains the Kubernetes node name (from node label)
+	NodeName string
+	
+	// CreatedAt records when this metric was processed by the agent
+	CreatedAt time.Time
+	
+	// TimeStamp is the original metric timestamp from Prometheus
+	TimeStamp time.Time
+	
+	// Labels contains all Prometheus labels except those hoisted to fields
+	Labels map[string]string
+	
+	// Value is the string representation of the metric value for precision preservation
+	Value string
 }
 
 type ParquetMetric struct {
