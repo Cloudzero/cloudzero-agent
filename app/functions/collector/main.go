@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package main implements the CloudZero metric collector service.
+//
+// The collector is responsible for receiving Prometheus remote write requests,
+// processing and filtering metrics, and persisting them to local storage for
+// later shipment to CloudZero. It serves as the primary ingestion point for
+// metrics data in the CloudZero agent architecture.
+//
+// Key responsibilities:
+//   - HTTP server hosting Prometheus remote write endpoints
+//   - Metric collection and filtering (cost vs observability metrics)
+//   - Local storage management using disk-based storage
+//   - Graceful shutdown coordination with shipper component
+//   - Prometheus metrics exposition for monitoring
+//   - Optional performance profiling endpoints
+//
+// Service lifecycle:
+//   1. Configuration loading and validation from YAML files
+//   2. Logger initialization with configurable levels
+//   3. Disk storage setup for cost and observability metrics
+//   4. MetricCollector domain service initialization
+//   5. HTTP server startup with middleware and API endpoints
+//   6. Signal handling for graceful shutdown
+//   7. Shutdown marker creation for shipper coordination
+//
+// Command-line usage:
+//   collector -config /path/to/config.yaml
+//
+// The collector creates a shutdown marker file upon graceful termination
+// to coordinate orderly shutdown with the shipper component, ensuring
+// all metrics are properly flushed before system shutdown.
 package main
 
 import (
@@ -135,6 +165,31 @@ func main() {
 	logger.Info().Msg("Service stopping")
 }
 
+// HandleShutdownEvents manages graceful shutdown of the collector service.
+// It listens for OS signals (SIGINT, SIGTERM) and performs orderly shutdown
+// including metric store flushing and shutdown coordination with the shipper.
+//
+// Parameters:
+//   - ctx: Context for logging and cancellation
+//   - settings: Configuration containing storage paths for shutdown coordination
+//   - appendables: Variable list of storage interfaces that need flushing
+//
+// Shutdown sequence:
+//   1. Wait for OS termination signal
+//   2. Log shutdown initiation with signal details
+//   3. Flush all provided storage interfaces to persist pending metrics
+//   4. Create shutdown marker file to signal completion to shipper
+//   5. Log successful shutdown coordination
+//
+// The shutdown marker file is critical for proper agent coordination - it tells
+// the shipper component that the collector has completed shutdown and flushed
+// all metrics, allowing the shipper to safely proceed with its own shutdown
+// and final metric upload operations.
+//
+// Error handling:
+//   - Storage flush errors are logged but don't prevent shutdown
+//   - Shutdown marker creation errors are logged for debugging
+//   - Process continues even if coordination mechanisms fail
 func HandleShutdownEvents(ctx context.Context, settings *config.Settings, appendables ...types.WritableStore) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)

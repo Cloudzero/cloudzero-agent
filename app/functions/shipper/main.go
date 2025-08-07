@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package main implements the CloudZero metric shipper service.
+//
+// The shipper is responsible for uploading stored metrics from local disk
+// to CloudZero servers via presigned URLs. It coordinates with the collector
+// component to ensure orderly shutdown and complete data transfer.
+//
+// Key responsibilities:
+//   - Periodic upload of stored metric files to CloudZero cloud storage
+//   - Coordination with collector for graceful shutdown sequencing
+//   - Secret monitoring for dynamic API key updates
+//   - File lifecycle management (upload, marking, cleanup)
+//   - HTTP server for metrics exposition and health checking
+//   - Optional performance profiling endpoints
+//
+// Service lifecycle:
+//   1. Configuration loading and validation from YAML files
+//   2. Logger initialization with field filtering for clean output
+//   3. Disk storage interface setup for reading metric files
+//   4. Secret monitor startup for dynamic credential management
+//   5. MetricShipper domain service creation and background startup
+//   6. HTTP server initialization for monitoring and profiling
+//   7. Signal handling with collector coordination for graceful shutdown
+//
+// Command-line usage:
+//   shipper -config /path/to/config.yaml
+//
+// Shutdown coordination:
+//   The shipper waits for the collector's shutdown marker file before
+//   proceeding with its own shutdown, ensuring no metrics are lost
+//   during the shutdown process.
 package main
 
 import (
@@ -27,7 +57,11 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 )
 
+// Shutdown coordination constants for collector-shipper synchronization
 const (
+	// ShutdownGracePeriod defines the maximum time to wait for collector shutdown confirmation.
+	// This prevents indefinite blocking if the collector fails to create its shutdown marker file.
+	// 10 seconds provides sufficient time for metric flushing while preventing hang scenarios.
 	ShutdownGracePeriod = 10 * time.Second
 )
 
@@ -134,6 +168,32 @@ func main() {
 	}()
 }
 
+// waitForCollectorShutdown monitors for the collector's shutdown completion marker file.
+// This function implements the coordination mechanism that ensures the shipper waits
+// for the collector to complete shutdown and flush all metrics before proceeding
+// with its own shutdown sequence.
+//
+// Parameters:
+//   - ctx: Context for logging
+//   - shutdownFile: Path to the collector's shutdown marker file
+//   - maxWait: Maximum duration to wait for the shutdown marker
+//
+// Returns:
+//   - bool: true if shutdown marker was detected, false if timeout occurred
+//
+// Implementation:
+//   The function polls for the shutdown marker file every 100ms until either:
+//   1. The file is detected (collector has completed shutdown)
+//   2. The timeout period expires (failsafe to prevent indefinite blocking)
+//
+// This coordination ensures proper shutdown sequencing where:
+//   1. Collector receives shutdown signal and begins flushing metrics
+//   2. Collector creates shutdown marker file when flush is complete
+//   3. Shipper detects marker and proceeds with its own shutdown
+//   4. Shipper performs final upload of any remaining metrics
+//
+// The timeout mechanism prevents shipper deadlock if collector fails to
+// create the shutdown marker due to crashes or other failures.
 func waitForCollectorShutdown(ctx context.Context, shutdownFile string, maxWait time.Duration) bool {
 	// Timeline example for 10s timeout:
 	// t=0ms:    deadline=10000ms, check file, sleep 100ms
