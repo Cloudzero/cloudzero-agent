@@ -1,0 +1,79 @@
+suite: test initContainer security context logic
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  - it: should apply security context to both initContainers using defaults only
+    set:
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        fsGroup: 65534
+    asserts:
+      # Test first initContainer (validator-copy) - uses defaults only
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsGroup
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      # InitContainer should not have pod-level properties
+      - isNull:
+          path: spec.template.spec.initContainers[0].securityContext.fsGroup
+
+      # Test second initContainer (validator-run) - uses defaults only
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsUser
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsGroup
+          value: 65534
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsNonRoot
+          value: true
+      # InitContainer should not have pod-level properties
+      - isNull:
+          path: spec.template.spec.initContainers[1].securityContext.fsGroup
+
+  - it: should apply security context to config reloader container
+    set:
+      configmapReload.prometheus.enabled: true
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+      components.agent.reloader.securityContext:
+        runAsUser: 9999
+    asserts:
+      # Test config reloader container (first container when enabled)
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 9999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      # Container should not have pod-level properties
+      - isNull:
+          path: spec.template.spec.containers[0].securityContext.fsGroup
+
+  - it: should fallback to defaults when component security context is not set
+    set:
+      defaults.securityContext:
+        runAsUser: 12345
+        runAsGroup: 67890
+        runAsNonRoot: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 12345
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsGroup
+          value: 67890
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsUser
+          value: 12345

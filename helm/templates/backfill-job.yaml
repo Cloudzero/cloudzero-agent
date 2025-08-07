@@ -74,6 +74,10 @@ spec:
           {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $.Values.defaults.dns) | nindent 10 }}
           {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" $ | nindent 10 }}
           {{- include "cloudzero-agent.generatePriorityClassName" $.Values.defaults.priorityClassName | nindent 10 }}
+          {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+              ($.Values.defaults.securityContext | default (dict))
+              ($.Values.components.webhookServer.backfill.securityContext | default (dict))
+            ) | nindent 10 }}
           containers:
             - name: init-scrape
               {{- include "cloudzero-agent.generateImage" (dict "defaults" $.Values.defaults.image "image" $.Values.components.agent.image "compat" $.Values.insightsController.server.image) | nindent 14 }}
@@ -84,9 +88,13 @@ spec:
                 - "{{ include "cloudzero-agent.insightsController.configurationMountPath" $ }}/server-config.yaml"
                 - -backfill
               {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
-                  ($.Values.components.webhookServer.backfill.resources | default (dict))
-                  ($.Values.insightsController.resources | default (dict))
-                ) | fromYaml) | nindent 14 }}
+                    ($.Values.components.webhookServer.backfill.resources | default (dict))
+                    ($.Values.insightsController.resources | default (dict))
+                  ) | fromYaml) | nindent 14 }}
+              {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+                    ($.Values.defaults.securityContext | default (dict))
+                    ($.Values.components.webhookServer.backfill.securityContext | default (dict))
+                  ) | nindent 14 }}
               volumeMounts:
                 - name: insights-server-config
                   mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" $ }}

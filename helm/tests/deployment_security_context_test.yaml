@@ -1,0 +1,129 @@
+suite: test deployment security context logic
+templates:
+  - templates/agent-deploy.yaml
+  - templates/aggregator-deploy.yaml
+  - templates/webhook-deploy.yaml
+tests:
+  - it: should apply pod and container security contexts to agent deployment
+    set:
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        fsGroup: 65534
+      components.agent.securityContext:
+        runAsUser: 1000
+    asserts:
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 65534
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 65534
+      - template: templates/agent-deploy.yaml
+        isNull:
+          path: spec.template.spec.securityContext.capabilities
+      - template: templates/agent-deploy.yaml
+        isNull:
+          path: spec.template.spec.securityContext.allowPrivilegeEscalation
+      # Test container security contexts
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 1000
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[1].securityContext.runAsGroup
+          value: 65534
+      - template: templates/agent-deploy.yaml
+        isNull:
+          path: spec.template.spec.containers[1].securityContext.allowPrivilegeEscalation
+      - template: templates/agent-deploy.yaml
+        isNull:
+          path: spec.template.spec.containers[1].securityContext.fsGroup
+
+  - it: should apply security contexts to aggregator deployment containers
+    set:
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+      components.aggregator.securityContext:
+        runAsUser: 2000
+      # Note: Legacy aggregator paths don't support securityContext in schema
+    asserts:
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 2000
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - template: templates/aggregator-deploy.yaml
+        isNull:
+          path: spec.template.spec.securityContext.readOnlyRootFilesystem
+      # Test both collector and shipper containers (containers get defaults, not pod overrides)
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 65534
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 65534
+
+  - it: should apply security context to webhook deployment
+    set:
+      defaults.securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      components.webhookServer.securityContext:
+        runAsUser: 3000
+        runAsGroup: 4000
+    asserts:
+      - template: templates/webhook-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 3000
+      - template: templates/webhook-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 4000
+      - template: templates/webhook-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 65534
+      - template: templates/webhook-deploy.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.privileged
+      - template: templates/webhook-deploy.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.fsGroup
+
+  - it: should fallback to defaults when component security context is not set
+    set:
+      defaults.securityContext:
+        runAsUser: 99999
+        runAsGroup: 88888
+        runAsNonRoot: true
+        fsGroup: 77777
+    asserts:
+      - template: templates/agent-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 99999
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 88888
+      - template: templates/webhook-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 77777

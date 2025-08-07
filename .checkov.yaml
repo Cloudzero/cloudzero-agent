@@ -7,23 +7,6 @@ skip-path:
 
 skip-check:
   # Rule:
-  #   Containers should have CPU requests defined for proper scheduling.
-  - CKV_K8S_10
-
-  # Rule:
-  #   Containers should have CPU limits defined to prevent resource exhaustion.
-  - CKV_K8S_11
-
-  # Rule:
-  #   Containers should have memory requests defined for proper scheduling.
-  - CKV_K8S_12
-
-  # Rule:
-  #   Containers should have memory limits defined to prevent resource
-  #   exhaustion.
-  - CKV_K8S_13
-
-  # Rule:
   #   Image pull policy is not set to Always
   #
   # Users can set defaults.image.pullPolicy to Always if they want to always
@@ -35,32 +18,13 @@ skip-check:
   - CKV_K8S_20
 
   # Rule:
-  #   The default namespace should not be used.
-  #
-  # The namespace is configurable, the default namespace is only used if that is
-  # the configuration the user chooses.
-  - CKV_K8S_21
-
-  # Rule:
   #   Container filesystems should be read-only when possible for security.
   - CKV_K8S_22
-
-  # Rule:
-  #   Containers should not run as root (UID 0).
-  - CKV_K8S_23
 
   # Rule:
   #   Minimize the admission of containers wishing to share the host process ID
   #   namespace.
   - CKV_K8S_28
-
-  # Rule:
-  #   Pods should have security context defined for proper isolation.
-  - CKV_K8S_29
-
-  # Rule:
-  #   Containers should have security context defined for proper isolation.
-  - CKV_K8S_30
 
   # Rule:
   #   Containers should use seccomp profiles for syscall filtering.
@@ -74,11 +38,6 @@ skip-check:
   #   Service account tokens should not be automatically mounted unless
   #   required.
   - CKV_K8S_38
-
-  # Rule:
-  #   Containers should run with user ID >= 10000 to avoid conflicts with host
-  #   users.
-  - CKV_K8S_40
 
   # Rule:
   #    Images should use immutable digest instead of mutable tags for security

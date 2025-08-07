@@ -704,7 +704,7 @@ configuration will not overwrite values from the first configuration.
 {{- end -}}
 
 {{- define "cloudzero-agent.maybeGenerateSection" -}}
-{{- if .value -}}
+{{- if and .value (not (empty .value)) -}}
 {{- .name }}:
   {{- toYaml .value | nindent 2 }}
 {{- end -}}
@@ -928,4 +928,127 @@ Example usage:
       "name" "imagePullSecrets"
       "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets)
     ) -}}
+{{- end -}}
+
+{{/*
+Generate securityContext block from a merged configuration dictionary.
+Accepts a dictionary containing the merged security context configuration.
+
+For merging with defaults fallback (null values fall back to defaults):
+{{- include "cloudzero-agent.generateSecurityContext" (mergeOverwrite
+      (.Values.defaults.securityContext | default (dict))
+      (.Values.components.miscellaneous.configLoader.securityContext | default (dict))
+    ) | nindent 6 }}
+*/}}
+{{- define "cloudzero-agent.generateSecurityContext" -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict "name" "securityContext" "value" .) -}}
+{{- end -}}
+
+{{/*
+Security Context Helper Functions
+
+Kubernetes has two distinct security context types with different schemas:
+
+1. Pod SecurityContext (spec.securityContext) - includes fsGroup,
+   supplementalGroups, etc.
+2. Container SecurityContext (spec.containers[].securityContext) - includes
+   allowPrivilegeEscalation, capabilities, etc.
+
+Rather than maintaining separate configuration properties for each type (which
+would be heavy-handed and prevent container-specific overrides), these helper
+functions filter a common security context object to include only properties
+valid for each level.
+
+This approach allows:
+
+- Single configuration source (defaults.securityContext +
+  components.*.securityContext)
+- Proper schema validation (no fsGroup in containers, no capabilities in pods)
+- Future flexibility for container-specific security contexts
+- Clean separation of concerns
+
+This is considered a temporary approach while we evaluate better patterns for
+container-specific security context configuration. We may eventually implement a
+system that allows per-container security context overrides.
+*/}}
+
+{{/*
+Filter a map to only include specified properties.
+Returns a JSON string containing only the properties that exist in the input map.
+*/}}
+{{- define "cloudzero-agent.filterProperties" -}}
+  {{- $input := .input -}}
+  {{- $properties := .properties -}}
+  {{- $result := dict -}}
+  {{- range $property := $properties -}}
+    {{- if hasKey $input $property -}}
+      {{- $_ := set $result $property (get $input $property) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $result | toJson -}}
+{{- end -}}
+
+{{/*
+Generate pod security context configuration.
+Filters the input to only include properties valid for pod-level security contexts.
+
+Pod-level security context properties (from k8s.json schema):
+- appArmorProfile, fsGroup, fsGroupChangePolicy, runAsGroup, runAsNonRoot, runAsUser
+- seLinuxChangePolicy, seLinuxOptions, seccompProfile, supplementalGroups
+- supplementalGroupsPolicy, sysctls, windowsOptions
+*/}}
+{{- define "cloudzero-agent.generatePodSecurityContext" -}}
+{{- if . -}}
+{{- $podProperties := list
+      "appArmorProfile"
+      "fsGroup"
+      "fsGroupChangePolicy"
+      "runAsGroup"
+      "runAsNonRoot"
+      "runAsUser"
+      "seLinuxChangePolicy"
+      "seLinuxOptions"
+      "seccompProfile"
+      "supplementalGroups"
+      "supplementalGroupsPolicy"
+      "sysctls"
+      "windowsOptions"
+-}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict
+      "name" "securityContext"
+      "value" ((include "cloudzero-agent.filterProperties" (dict "input" . "properties" $podProperties)) | fromJson)
+    ) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Generate container security context configuration.
+Filters the input to only include properties valid for container-level security contexts.
+
+Container-level security context properties (from k8s.json schema):
+- allowPrivilegeEscalation, appArmorProfile, capabilities, privileged, procMount
+- readOnlyRootFilesystem, runAsGroup, runAsNonRoot, runAsUser, seLinuxOptions
+- seccompProfile, windowsOptions
+*/}}
+{{- define "cloudzero-agent.generateContainerSecurityContext" -}}
+{{- if . -}}
+{{- $containerProperties := list
+      "allowPrivilegeEscalation"
+      "appArmorProfile"
+      "capabilities"
+      "privileged"
+      "procMount"
+      "readOnlyRootFilesystem"
+      "runAsGroup"
+      "runAsNonRoot"
+      "runAsUser"
+      "seLinuxOptions"
+      "seccompProfile"
+      "windowsOptions"
+  -}}
+{{- include "cloudzero-agent.maybeGenerateSection" (dict
+      "name" "securityContext"
+      "value" ((include "cloudzero-agent.filterProperties" (dict "input" . "properties" $containerProperties)) | fromJson)
+    ) -}}
+{{- end -}}
 {{- end -}}

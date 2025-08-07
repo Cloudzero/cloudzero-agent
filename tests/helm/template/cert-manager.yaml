@@ -760,6 +760,7 @@ data:
             requests:
               cpu: 250m
               memory: 512Mi
+          securityContext: {}
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.6
@@ -772,6 +773,7 @@ data:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext: {}
         resources:
           limits:
             cpu: 1000m
@@ -779,6 +781,7 @@ data:
           requests:
             cpu: 250m
             memory: 512Mi
+        securityContext: {}
       aggregator:
         annotations: {}
         collector:
@@ -789,8 +792,10 @@ data:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext: {}
         podDisruptionBudget: null
         replicas: 3
+        securityContext: {}
         shipper:
           resources:
             limits:
@@ -799,6 +804,7 @@ data:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext: {}
         tolerations: []
       kubectl:
         image:
@@ -813,6 +819,7 @@ data:
             requests:
               cpu: 100m
               memory: 128Mi
+          securityContext: {}
         helmless:
           resources:
             limits:
@@ -821,6 +828,7 @@ data:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext: {}
         initCert:
           resources:
             limits:
@@ -829,6 +837,7 @@ data:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext: {}
       prometheus:
         image:
           repository: quay.io/prometheus/prometheus
@@ -855,6 +864,7 @@ data:
               cpu: 100m
               memory: 128Mi
           schedule: 0 */12 * * *
+          securityContext: {}
         podDisruptionBudget: null
         replicas: 3
         resources:
@@ -864,6 +874,7 @@ data:
           requests:
             cpu: 100m
             memory: 128Mi
+        securityContext: {}
     configmapReload:
       prometheus:
         enabled: true
@@ -896,6 +907,11 @@ data:
         enabled: true
         minAvailable: 1
       priorityClassName: null
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       tolerations: []
     helmless:
       resources:
@@ -2164,6 +2180,10 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2196,6 +2216,10 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2242,6 +2266,10 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -2304,6 +2332,10 @@ spec:
             requests:
               cpu: 250m
               memory: 512Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config/prometheus/configmaps/
@@ -2319,10 +2351,10 @@ spec:
               subPath: ""
               readOnly: true
       securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
         fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       
       
       
@@ -2424,6 +2456,10 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
 
         - name: cz-agent-aggregator-shipper
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.6"
@@ -2466,11 +2502,15 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
       securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
         fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       
       
       
@@ -2535,10 +2575,10 @@ spec:
       serviceAccountName: cz-agent-cloudzero-agent-server
       
       securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
         fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       
       affinity:
         podAntiAffinity:
@@ -2571,6 +2611,10 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: insights-server-config
               mountPath: /etc/cloudzero-agent-insights
@@ -2647,6 +2691,11 @@ spec:
           
           
           
+          securityContext:
+            fsGroup: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           containers:
             - name: init-scrape
               image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.6"
@@ -2664,6 +2713,10 @@ spec:
                 requests:
                   cpu: 100m
                   memory: 128Mi
+              securityContext:
+                runAsGroup: 65534
+                runAsNonRoot: true
+                runAsUser: 65534
               volumeMounts:
                 - name: insights-server-config
                   mountPath: /etc/cloudzero-agent-insights
@@ -2714,6 +2767,11 @@ spec:
       restartPolicy: OnFailure
       
       
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       containers:
         - name: run-validator
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.6"
@@ -2755,6 +2813,10 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
@@ -2828,6 +2890,11 @@ spec:
       
       
       
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       containers:
         - name: helmless
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.6"
@@ -2846,6 +2913,10 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+          securityContext:
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           volumeMounts:
             - name: helmless-cm
               mountPath: /etc/config/values
@@ -2896,6 +2967,11 @@ spec:
           
           
           
+          securityContext:
+            fsGroup: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
           containers:
             - name: init-scrape
               image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.6"
@@ -2913,6 +2989,10 @@ spec:
                 requests:
                   cpu: 100m
                   memory: 128Mi
+              securityContext:
+                runAsGroup: 65534
+                runAsNonRoot: true
+                runAsUser: 65534
               volumeMounts:
                 - name: insights-server-config
                   mountPath: /etc/cloudzero-agent-insights

@@ -1,0 +1,136 @@
+suite: test security context property filtering logic
+templates:
+  - templates/config-loader-job.yaml
+  - templates/agent-deploy.yaml
+  - templates/aggregator-deploy.yaml
+tests:
+  - it: should properly filter pod-level vs container-level properties
+    set:
+      defaults.securityContext:
+        # Pod-level properties only (container properties moved to component level)
+        runAsUser: 1000
+        runAsGroup: 2000
+        runAsNonRoot: true
+        fsGroup: 3000
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups: [4000]
+      # Note: configLoader only supports PodSecurityContext properties
+    asserts:
+      # Pod security context should only have pod-level properties
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 2000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 3000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.securityContext.supplementalGroups[0]
+          value: 4000
+
+      # Pod security context should NOT have container-level properties
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.securityContext.allowPrivilegeEscalation
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.securityContext.privileged
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.securityContext.readOnlyRootFilesystem
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.securityContext.capabilities
+
+      # Container security context should inherit from pod-level defaults only
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 2000
+      - template: templates/config-loader-job.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      # Container-level properties should not be present without explicit component config
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.privileged
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.capabilities
+
+      # Container security context should NOT have pod-level properties
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.fsGroup
+      - template: templates/config-loader-job.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.supplementalGroups
+
+  - it: should handle mixed property types correctly in deployment
+    set:
+      defaults.securityContext:
+        # Common properties (valid at both levels) and pod-only properties
+        runAsUser: 5000
+        runAsGroup: 6000
+        runAsNonRoot: true
+        fsGroup: 7000
+      # Note: Legacy aggregator paths don't support securityContext in schema
+    asserts:
+      # Aggregator deployment pod context
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 5000
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 7000
+      - template: templates/aggregator-deploy.yaml
+        isNull:
+          path: spec.template.spec.securityContext.privileged
+      - template: templates/aggregator-deploy.yaml
+        isNull:
+          path: spec.template.spec.securityContext.capabilities
+
+      # Aggregator deployment collector container context (defaults only)
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 5000
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 6000
+      - template: templates/aggregator-deploy.yaml
+        equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - template: templates/aggregator-deploy.yaml
+        isNull:
+          path: spec.template.spec.containers[0].securityContext.fsGroup

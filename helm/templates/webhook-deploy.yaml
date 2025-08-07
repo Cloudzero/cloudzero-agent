@@ -32,11 +32,10 @@ spec:
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
       {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
-      securityContext:
-        runAsUser: 65534
-        runAsNonRoot: true
-        runAsGroup: 65534
-        fsGroup: 65534
+      {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
+            (.Values.defaults.securityContext | default (dict))
+            (.Values.components.webhookServer.securityContext | default (dict))
+          ) | nindent 6 }}
       {{ $podAntiAffinity := dict "podAntiAffinity" (dict "preferredDuringSchedulingIgnoredDuringExecution" (list (dict "weight" 100 "podAffinityTerm" (dict "labelSelector" (dict "matchLabels" (dict "app" "webhook-server")) "topologyKey" "kubernetes.io/hostname")))) }}
       {{- $userAffinity := deepCopy .Values.insightsController.server.affinity }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" (merge $userAffinity $podAntiAffinity)) | nindent 6 }}
@@ -55,9 +54,13 @@ spec:
           ports:
             - containerPort: 8443
           {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
-              (.Values.components.webhookServer.resources | default (dict))
-              (.Values.insightsController.resources | default (dict))
-            ) | fromYaml) | nindent 10 }}
+                (.Values.components.webhookServer.resources | default (dict))
+                (.Values.insightsController.resources | default (dict))
+              ) | fromYaml) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+                (.Values.defaults.securityContext | default (dict))
+                (.Values.components.webhookServer.securityContext | default (dict))
+              ) | nindent 10 }}
           volumeMounts:
             - name: insights-server-config
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}
