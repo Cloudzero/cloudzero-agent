@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package handlers implements HTTP request handlers for the CloudZero agent's APIs.
+//
+// This package provides the HTTP layer that exposes agent functionality through
+// REST endpoints. The handlers serve as the boundary between external HTTP clients
+// (Kubernetes API server, Prometheus, monitoring tools) and the internal domain logic.
+//
+// Key handler types:
+//   - ValidationWebhookAPI: Kubernetes admission controller webhook endpoints
+//   - Remote write handlers: Prometheus metrics ingestion endpoints
+//   - Monitoring handlers: Health checks and metrics exposure
+//   - Profiling handlers: Performance debugging endpoints
+//
+// Architecture:
+//   - HTTP routing via go-chi framework
+//   - Request validation and parameter parsing
+//   - Domain service delegation for business logic
+//   - Response marshalling and error handling
+//   - Timeout management and graceful degradation
+//
+// The handlers implement fail-open patterns for critical paths like admission
+// control, ensuring that Kubernetes operations continue even if the agent
+// experiences temporary issues.
+//
+// Integration points:
+//   - app/domain/webhook: Webhook processing business logic
+//   - app/domain: Metric collection and filtering services
+//   - Kubernetes API server: Admission review requests
+//   - Prometheus: Remote write protocol requests
 package handlers
 
 import (
@@ -31,36 +59,91 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
-// MaxRequestBodyBytes represents the max size of Kubernetes objects we read. Kubernetes allows a 2x
-// buffer on the max etcd size
-// (https://github.com/kubernetes/kubernetes/blob/0afa569499d480df4977568454a50790891860f5/staging/src/k8s.io/apiserver/pkg/server/config.go#L362).
-// We allow an additional 2x buffer, as it is still fairly cheap (6mb)
-// Taken from https://github.com/istio/istio/commit/6ca5055a4db6695ef5504eabdfde3799f2ea91fd
+// Webhook admission controller configuration constants and limits.
+//
+// These values are carefully chosen to balance security, performance, and reliability:
+//
+// MaxRequestBodyBytes represents the maximum size of Kubernetes objects we read.
+// Kubernetes allows a 2x buffer on the max etcd size (3MB default), and we allow
+// an additional 2x buffer since 6MB is still reasonable for memory usage.
+//
+// References:
+//   - Kubernetes API server config: https://github.com/kubernetes/kubernetes/blob/0afa569499d480df4977568454a50790891860f5/staging/src/k8s.io/apiserver/pkg/server/config.go#L362
+//   - Istio webhook implementation: https://github.com/istio/istio/commit/6ca5055a4db6695ef5504eabdfde3799f2ea91fd
+//
+// Timeout values are designed to prevent admission controller bottlenecks while
+// allowing sufficient time for complex validation operations.
 const (
-	// minimalAllowResponse is a fallback JSON response that always allows admission requests
-	// Used when normal JSON marshalling fails to ensure fail-open behavior
+	// minimalAllowResponse is a fail-safe JSON response that always allows admission requests.
+	// Used when normal JSON marshalling fails to ensure fail-open behavior that prevents
+	// blocking critical Kubernetes operations even during agent errors.
 	minimalAllowResponse = `{"response":{"allowed":true}}`
-	MaxRequestBodyBytes  = int64(6 * 1024 * 1024)
-	DefaultTimeout       = 15 * time.Second
-	MinTimeout           = 5 * time.Second
+	
+	// MaxRequestBodyBytes limits the size of admission review requests to prevent memory exhaustion.
+	// Set to 6MB based on Kubernetes and Istio best practices for admission controller safety.
+	MaxRequestBodyBytes = int64(6 * 1024 * 1024)
+	
+	// DefaultTimeout is the maximum time allowed for processing admission requests.
+	// Long enough for complex operations but short enough to avoid API server timeouts.
+	DefaultTimeout = 15 * time.Second
+	
+	// MinTimeout is the minimum allowed timeout for admission request processing.
+	// Prevents excessively short timeouts that could cause premature failures.
+	MinTimeout = 5 * time.Second
 )
 
+// Kubernetes API version metadata for admission review responses.
+// These type metadata objects ensure responses use the correct API version
+// that matches the original admission review request format.
 var (
+	// v1beta1AdmissionReviewTypeMeta provides metadata for legacy admission review responses.
+	// Used when responding to v1beta1 admission review requests from older Kubernetes versions.
 	v1beta1AdmissionReviewTypeMeta = metav1.TypeMeta{
 		Kind:       "AdmissionReview",
 		APIVersion: "admission.k8s.io/v1beta1",
 	}
 
+	// v1AdmissionReviewTypeMeta provides metadata for current admission review responses.
+	// Used when responding to v1 admission review requests from modern Kubernetes versions.
 	v1AdmissionReviewTypeMeta = metav1.TypeMeta{
 		Kind:       "AdmissionReview",
 		APIVersion: "admission.k8s.io/v1",
 	}
 )
 
+// ValidationWebhookAPI implements the HTTP API for Kubernetes admission controller webhooks.
+// It handles admission review requests from the Kubernetes API server, processes them
+// through the webhook controller, and returns admission responses.
+//
+// The API supports both v1 and v1beta1 admission review formats for compatibility
+// across different Kubernetes versions. It implements fail-open behavior to ensure
+// that webhook failures don't block critical Kubernetes operations.
+//
+// Key features:
+//   - Multi-version support: Handles both v1 and v1beta1 admission review formats
+//   - Fail-open safety: Always allows admission when webhook processing fails
+//   - Timeout management: Configurable request timeouts with sensible defaults
+//   - Load balancing: Implements connection rotation for HTTP/1.x traffic distribution
+//   - Security: Request size limits and content type validation
+//   - Monitoring: Comprehensive logging for debugging and audit trails
+//
+// Request flow:
+//   1. Kubernetes API server sends admission review request
+//   2. HTTP handler validates content type and size limits
+//   3. Request body is decoded to admission review object
+//   4. Domain webhook controller processes the admission request
+//   5. Response is marshalled and returned to API server
+//   6. Connection management for load distribution (HTTP/1.x only)
 type ValidationWebhookAPI struct {
+	// api.Service provides common HTTP service functionality
 	api.Service
+	
+	// controller handles the business logic for webhook admission processing
 	controller webhook.WebhookController
-	decoder    runtime.Decoder
+	
+	// decoder handles deserialization of Kubernetes admission review objects,
+	// supporting both v1 and v1beta1 formats for version compatibility
+	decoder runtime.Decoder
 }
 
 func NewValidationWebhookAPI(base string, controller webhook.WebhookController) server.API {
