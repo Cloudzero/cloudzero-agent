@@ -273,8 +273,6 @@ components:
         memory: "256Mi"
         cpu: "200m"
 
-
-
   # Miscellaneous components that don't fit into other categories.
   miscellaneous:
     # The config loader job component loads configuration and validates settings.
