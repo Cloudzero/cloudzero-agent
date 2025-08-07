@@ -1,7 +1,41 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package config contains the configuration for the application.
+// Package config implements configuration management for the CloudZero webhook component.
+//
+// This package provides configuration structures and validation logic specifically
+// for the webhook admission controller functionality. It handles:
+//
+//   - Webhook-specific settings and validation rules
+//   - Kubernetes admission controller configuration
+//   - Certificate and TLS configuration for secure webhook communication
+//   - Resource filtering rules (labels, annotations, namespaces)
+//   - Remote write endpoint configuration for metrics forwarding
+//   - Database settings for webhook event storage
+//
+// Key differences from gator config:
+//   - Focuses on webhook admission controller requirements
+//   - Includes Kubernetes-specific filtering and validation
+//   - Manages TLS certificate configuration for secure API server communication
+//   - Handles regex pattern compilation for resource filtering
+//   - Supports HTML sanitization policies for security
+//
+// Configuration workflow:
+//   1. NewSettings() loads configuration from files and environment
+//   2. Cloud environment auto-detection (AWS, Azure, GCP)
+//   3. API key validation and caching
+//   4. Regex pattern compilation for resource filtering
+//   5. TLS certificate and security policy initialization
+//
+// Usage:
+//   settings, err := NewSettings("/path/to/webhook-config.yaml")
+//   if err != nil {
+//       return fmt.Errorf("webhook configuration error: %w", err)
+//   }
+//
+// The webhook configuration system ensures secure, validated processing
+// of Kubernetes admission review requests with proper resource filtering
+// and CloudZero integration.
 package config
 
 import (
@@ -24,24 +58,85 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-// Settings represents the configuration settings for the application.
+// Settings represents the complete configuration for the CloudZero webhook admission controller.
+// It manages all aspects of webhook operation including Kubernetes integration, resource filtering,
+// TLS security, and CloudZero API communication.
+//
+// The webhook Settings differs from the main gator configuration by focusing specifically
+// on admission controller requirements:
+//   - Kubernetes API server integration and authentication
+//   - Resource filtering based on labels, annotations, and namespaces
+//   - TLS certificate management for secure webhook communication
+//   - Regex pattern compilation for efficient resource matching
+//   - HTML sanitization policies for security
+//
+// Configuration lifecycle:
+//   1. Load from YAML files and environment variables
+//   2. Auto-detect cloud environment (AWS, Azure, GCP)
+//   3. Validate and compile regex patterns for resource filtering
+//   4. Initialize TLS certificates and security policies
+//   5. Prepare CloudZero API endpoints for metric forwarding
+//
+// Thread safety:
+//   Includes mutex for safe concurrent access to runtime-mutable values
+//   like compiled regex patterns and API keys.
 type Settings struct {
-	CloudAccountID    string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
-	Region            string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
-	ClusterName       string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
-	Destination       string      `yaml:"destination" env:"DESTINATION" env-default:"https://api.cloudzero.com/v1/container-metrics" env-description:"location to send metrics to"`
-	APIKeyPath        string      `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
-	Server            Server      `yaml:"server"`
-	Certificate       Certificate `yaml:"certificate"`
-	Logging           Logging     `yaml:"logging"`
-	Database          Database    `yaml:"database"`
-	Filters           Filters     `yaml:"filters"`
-	RemoteWrite       RemoteWrite `yaml:"remote_write"`
-	K8sClient         K8sClient   `yaml:"k8s_client"`
-	LabelMatches      []regexp.Regexp
+	// Core cloud and cluster identification
+	
+	// CloudAccountID identifies the cloud provider account (AWS Account ID,
+	// Azure Subscription ID, GCP Project ID). Auto-detected if not specified.
+	CloudAccountID string `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
+	
+	// Region specifies the cloud provider region for cost attribution.
+	// Auto-detected from cloud metadata if not explicitly configured.
+	Region string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
+	
+	// ClusterName uniquely identifies this Kubernetes cluster within CloudZero.
+	// Auto-detected from cluster metadata if not explicitly configured.
+	ClusterName string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
+	
+	// Destination specifies the CloudZero API endpoint for metric uploads.
+	// Defaults to production CloudZero API if not specified.
+	Destination string `yaml:"destination" env:"DESTINATION" env-default:"https://api.cloudzero.com/v1/container-metrics" env-description:"location to send metrics to"`
+	
+	// APIKeyPath points to the file containing CloudZero API authentication key.
+	// Required for secure communication with CloudZero services.
+	APIKeyPath string `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
+	
+	// Service configuration sections
+	
+	// Server configures the webhook HTTP server that receives admission review requests
+	Server Server `yaml:"server"`
+	
+	// Certificate manages TLS certificates for secure webhook communication with API server
+	Certificate Certificate `yaml:"certificate"`
+	
+	// Logging controls webhook operation logging and debugging
+	Logging Logging `yaml:"logging"`
+	
+	// Database configures local storage for webhook events and metrics
+	Database Database `yaml:"database"`
+	
+	// Filters define rules for which Kubernetes resources to process
+	Filters Filters `yaml:"filters"`
+	
+	// RemoteWrite configures forwarding of metrics to CloudZero
+	RemoteWrite RemoteWrite `yaml:"remote_write"`
+	
+	// K8sClient configures Kubernetes API client for cluster interaction
+	K8sClient K8sClient `yaml:"k8s_client"`
+	
+	// Runtime compiled patterns for efficient resource filtering
+	
+	// LabelMatches contains compiled regex patterns for label-based filtering.
+	// Populated during configuration initialization from Filters.Labels.Patterns.
+	LabelMatches []regexp.Regexp
+	
+	// AnnotationMatches contains compiled regex patterns for annotation-based filtering.
+	// Populated during configuration initialization from Filters.Annotations.Patterns.
 	AnnotationMatches []regexp.Regexp
 
-	// control for dynamic reloading
+	// Thread safety mutex for runtime configuration updates
 	mu sync.Mutex
 }
 
@@ -54,6 +149,50 @@ type RemoteWrite struct {
 	MaxRetries      int           `yaml:"max_retries" default:"3" env:"MAX_RETRIES" env-description:"maximum number of retries"`
 }
 
+// NewSettings creates and initializes a new webhook Settings instance by loading
+// configuration from multiple sources and performing complete validation and setup.
+// This constructor is specifically designed for webhook admission controller requirements.
+//
+// Parameters:
+//   - configFiles: Variable list of YAML configuration file paths to load.
+//     Files are processed sequentially with later files overriding earlier ones.
+//     Empty strings are ignored for flexibility.
+//
+// Returns:
+//   - *Settings: Fully initialized webhook configuration ready for use
+//   - error: Configuration loading, validation, or setup error
+//
+// The webhook constructor performs these specialized operations:
+//   1. Load configuration from YAML files and environment variables
+//   2. Clean and validate cloud account ID using alphanumeric filtering
+//   3. Auto-detect cloud environment (AWS, Azure, GCP) using scout package
+//   4. Compile regex patterns for resource filtering (labels, annotations)
+//   5. Load and validate CloudZero API key from configured path
+//   6. Build CloudZero API endpoints with cluster parameters
+//   7. Initialize HTML sanitization policies for security
+//   8. Configure logging options for webhook operation
+//
+// Key webhook-specific features:
+//   - Regex pattern compilation for efficient Kubernetes resource filtering
+//   - HTML sanitization policy initialization for security
+//   - TLS certificate validation for secure API server communication
+//   - Kubernetes client configuration for cluster interaction
+//
+// Error conditions:
+//   - Missing or unreadable configuration files
+//   - Invalid regex patterns in filter configuration
+//   - Cloud environment auto-detection failures
+//   - Missing or invalid API key file
+//   - TLS certificate validation failures
+//
+// Example:
+//   settings, err := NewSettings("/etc/webhook/config.yaml", "/etc/webhook/filters.yaml")
+//   if err != nil {
+//       return fmt.Errorf("failed to initialize webhook config: %w", err)
+//   }
+//   
+//   log.Printf("Webhook monitoring cluster %s with %d label filters", 
+//       settings.ClusterName, len(settings.LabelMatches))
 func NewSettings(configFiles ...string) (*Settings, error) {
 	var cfg Settings
 
