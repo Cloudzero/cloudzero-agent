@@ -1,7 +1,38 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package parallel provides utilities for running tasks in parallel.
+// Package parallel provides utilities for concurrent task execution with controlled parallelism.
+//
+// This package implements a semaphore-based worker pool pattern that allows controlled
+// parallel execution of tasks while preventing resource exhaustion. It's specifically
+// designed for scenarios where you need to process many tasks concurrently but want
+// to limit the number of simultaneous operations.
+//
+// Key features:
+//   - Semaphore-based concurrency control to prevent resource exhaustion
+//   - Automatic worker count scaling based on CPU cores
+//   - Error aggregation across all parallel tasks
+//   - Graceful shutdown and cleanup of worker goroutines
+//   - Thread-safe operations with proper synchronization
+//
+// Architecture:
+//   - Manager: Controls the parallel execution with configurable worker limits
+//   - Task: Function type that can return errors for proper error handling
+//   - Waiter: Aggregates results and errors from all parallel tasks
+//   - Semaphore: Limits the number of concurrent goroutines
+//
+// Usage patterns:
+//   1. Create Manager with desired worker count
+//   2. Create Waiter for result aggregation
+//   3. Submit tasks to Manager with Run()
+//   4. Wait() blocks until all tasks complete
+//   5. Check Err() channel for any task failures
+//
+// This is particularly useful in the CloudZero agent for:
+//   - Parallel file uploads to cloud storage
+//   - Concurrent metric processing
+//   - Simultaneous API requests with rate limiting
+//   - Batch operations that need controlled parallelism
 package parallel
 
 import (

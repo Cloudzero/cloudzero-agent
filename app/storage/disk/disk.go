@@ -1,6 +1,44 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package disk implements a high-performance disk-based storage system for CloudZero metrics.
+//
+// This package provides a complete storage layer that handles metric persistence, compression,
+// batching, and file lifecycle management. It serves as the primary storage backend for
+// the CloudZero agent's metric collection and shipping workflows.
+//
+// Key features:
+//   - Brotli compression for efficient storage (typically 70-90% compression ratio)
+//   - Streaming JSON with automatic batching to prevent memory exhaustion
+//   - Time-based file naming for chronological organization
+//   - Configurable row limits and flush intervals for performance tuning
+//   - Thread-safe operations with fine-grained locking
+//   - Automatic directory creation and permissions management
+//   - Disk usage monitoring and quota enforcement
+//   - File search and discovery capabilities
+//
+// Storage architecture:
+//   - Active file: Currently being written (temporary name)
+//   - Finalized files: Timestamped, compressed, ready for shipment
+//   - Content identifiers: Separate streams (cost vs observability metrics)
+//   - Compression: Brotli with configurable compression levels
+//
+// File naming convention:
+//   [content_identifier]_[start_timestamp]_[stop_timestamp].json.br
+//   Example: metrics_1640995200000_1640995260000.json.br
+//
+// Usage patterns:
+//   1. Create store with configuration options
+//   2. Put() metrics in batches for efficiency
+//   3. Automatic flushing based on row limits or time intervals
+//   4. External shipper reads finalized files
+//   5. Files are cleaned up after successful upload
+//
+// Performance considerations:
+//   - Streaming JSON prevents memory exhaustion on large datasets
+//   - Brotli compression balances CPU usage with storage efficiency
+//   - Configurable batch sizes optimize for different workloads
+//   - Background ticker ensures timely data availability
 package disk
 
 import (
