@@ -1,7 +1,40 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package telemetry contains code for posting telemetry data to the CloudZero API.
+// Package telemetry provides functionality for collecting and transmitting operational
+// telemetry data from the CloudZero agent to the CloudZero API for monitoring and analytics.
+//
+// This package handles the complete telemetry pipeline:
+//
+//   - Status collection: Gathering cluster and agent operational status
+//   - Data serialization: Converting status to Protocol Buffer format
+//   - Compression: Optimizing payload size for transmission (currently disabled)
+//   - Secure transmission: HTTPS delivery with bearer token authentication
+//   - Configuration respect: Honors telemetry disable flags for privacy
+//
+// Telemetry data includes:
+//   - Agent health and performance metrics
+//   - Cluster discovery and configuration status
+//   - Error rates and operational statistics
+//   - Resource utilization and processing metrics
+//
+// The telemetry system is designed to be:
+//   - Privacy-aware: Can be completely disabled via configuration
+//   - Lightweight: Minimal impact on agent performance
+//   - Secure: Uses encrypted transmission with API key authentication
+//   - Reliable: Includes timeout handling and error recovery
+//
+// API integration:
+//   - Endpoint: /v1/container-metrics/status
+//   - Format: Protocol Buffer over HTTPS
+//   - Authentication: Bearer token with CloudZero API key
+//   - Timeout: 15 seconds to match AWS API Gateway limits
+//
+// Usage:
+//   err := telemetry.Post(ctx, httpClient, config, statusAccessor)
+//   if err != nil {
+//       log.Printf("Telemetry upload failed: %v", err)
+//   }
 package telemetry
 
 import (
@@ -22,18 +55,66 @@ import (
 )
 
 const (
+	// PostTimeout defines the maximum time allowed for individual HTTP request operations.
+	// This timeout is shorter than the overall Timeout to allow for retries and connection setup.
 	PostTimeout = 5 * time.Second
 )
 
 const (
+	// URLPath defines the API endpoint path for telemetry status uploads.
+	// This path is appended to the CloudZero host URL to form the complete endpoint.
 	URLPath = "/v1/container-metrics/status"
 )
 
 const (
-	// matches AWS API Gateway timeout
+	// Timeout defines the maximum duration for telemetry upload operations.
+	// This value matches AWS API Gateway timeout limits to prevent gateway-level
+	// timeouts that would result in unclear error conditions.
 	Timeout = 15 * time.Second
 )
 
+// Post uploads operational telemetry data to the CloudZero API for monitoring and analytics.
+//
+// This function handles the complete telemetry upload process:
+//   1. Validates configuration and required parameters
+//   2. Respects telemetry disable flags for privacy compliance
+//   3. Serializes cluster status data using Protocol Buffers
+//   4. Compresses data for efficient transmission (currently no-op)
+//   5. Transmits data securely via HTTPS with authentication
+//
+// The function is designed to be non-blocking and fault-tolerant - failures in
+// telemetry upload should not impact agent operations.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - client: HTTP client for API requests (uses default client if nil)
+//   - cfg: Agent configuration containing CloudZero API credentials and settings
+//   - accessor: Interface for accessing cluster status data to upload
+//
+// Returns:
+//   - nil: Telemetry successfully uploaded or telemetry disabled
+//   - error: Configuration errors, serialization failures, or network errors
+//
+// Configuration requirements:
+//   - cfg.Cloudzero.Host: CloudZero API base URL
+//   - cfg.Cloudzero.Credential: Valid API key for authentication
+//   - cfg.Deployment.AccountID: Account identifier for data routing
+//   - cfg.Deployment.Region: Region information for context
+//   - cfg.Deployment.ClusterName: Cluster identifier for data organization
+//
+// Privacy considerations:
+//   - Returns immediately without action if cfg.Cloudzero.DisableTelemetry is true
+//   - All data is transmitted over encrypted HTTPS connections
+//   - Authentication uses secure bearer token mechanism
+//
+// Example:
+//   ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//   defer cancel()
+//   
+//   err := telemetry.Post(ctx, nil, agentConfig, statusAccessor)
+//   if err != nil {
+//       log.Printf("Telemetry upload failed (non-critical): %v", err)
+//   }
 func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accessor pb.Accessor) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -99,6 +180,26 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	return err
 }
 
+// compress prepares telemetry data for transmission by applying compression algorithms.
+//
+// Currently, this function performs a no-op copy of the data without actual compression.
+// The original Snappy compression implementation was disabled because it was increasing
+// payload size rather than reducing it for typical telemetry data sizes.
+//
+// Future implementations may:
+//   - Re-enable compression for larger payloads
+//   - Use different compression algorithms (gzip, brotli)
+//   - Apply compression conditionally based on payload size
+//
+// Parameters:
+//   - data: Raw telemetry data to be compressed
+//
+// Returns:
+//   - bytes.Buffer: Buffer containing the processed data
+//   - error: Processing error (currently always nil)
+//
+// Note: The commented code shows the previous Snappy compression attempt
+// which was disabled due to size increase rather than reduction.
 func compress(data []byte) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 	if _, err := buf.Write(data); err != nil {

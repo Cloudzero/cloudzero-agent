@@ -1,6 +1,24 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package core provides error translation utilities that map GORM-specific errors
+// to application-level error types for consistent error handling across the CloudZero agent.
+//
+// Error translation ensures that:
+//   - Repository implementations return consistent error types
+//   - Business logic doesn't depend on ORM-specific error types
+//   - Error handling is predictable across different storage backends
+//   - Application errors can be properly categorized and handled
+//
+// The translation layer maps common database errors like:
+//   - Record not found errors for missing data
+//   - Constraint violations for data integrity issues
+//   - Transaction errors for concurrency problems
+//   - Validation errors for invalid data scenarios
+//
+// Usage:
+//   err := db.First(&user, id).Error
+//   return core.TranslateError(err)  // Returns types.ErrNotFound instead of gorm.ErrRecordNotFound
 package core
 
 import (
@@ -11,8 +29,41 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
-// TranslateError maps GORM errors to application-specific errors.
-// If the error does not match any known GORM errors, it returns the original error.
+// TranslateError converts GORM-specific database errors to application-level error types.
+//
+// This function provides a centralized error translation layer that maps GORM ORM errors
+// to consistent application error types defined in the types package. This abstraction
+// ensures that business logic doesn't depend on ORM implementation details and enables
+// consistent error handling across different storage backends.
+//
+// Error categories handled:
+//   - Data access errors: Record not found, invalid queries
+//   - Constraint violations: Duplicate keys, foreign key violations, check constraints
+//   - Transaction errors: Invalid transactions, concurrent access issues
+//   - Schema errors: Missing primary keys, invalid field access
+//   - Validation errors: Invalid data, missing required values
+//
+// Parameters:
+//   - err: GORM error to translate (may be nil)
+//
+// Returns:
+//   - error: Application-level error type or original error if no mapping exists
+//
+// Behavior:
+//   - Returns nil if input error is nil
+//   - Maps known GORM errors to types package error constants
+//   - Returns original error unchanged if no mapping is available
+//
+// Usage:
+//   var user User
+//   err := db.Where("email = ?", email).First(&user).Error
+//   return &user, core.TranslateError(err)
+//
+// This enables consistent error handling:
+//   user, err := repo.FindByEmail(ctx, email)
+//   if errors.Is(err, types.ErrNotFound) {
+//       // Handle missing user consistently across all repos
+//   }
 func TranslateError(err error) error {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return types.ErrNotFound
