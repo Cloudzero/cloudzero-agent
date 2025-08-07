@@ -1,6 +1,39 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package shipper implements the CloudZero agent's metric shipping functionality.
+//
+// This package is responsible for periodically uploading stored metrics to CloudZero's
+// servers via presigned URLs. It handles the complete upload workflow including:
+//
+//   - File discovery and batching from local storage
+//   - Presigned URL allocation from CloudZero API
+//   - Parallel file uploads to cloud storage (S3/equivalent)
+//   - File lifecycle management (marking as uploaded, cleanup)
+//   - Error handling and retry logic for failed uploads
+//   - Disk space management and old file purging
+//
+// Architecture:
+//   - MetricShipper: Main service that orchestrates the shipping process
+//   - Periodic execution: Runs on configurable intervals (typically every few minutes)
+//   - File locking: Prevents concurrent shipping operations
+//   - Parallel processing: Uses worker pools for efficient bulk uploads
+//   - Monitoring: Exposes Prometheus metrics for observability
+//
+// Key workflows:
+//   1. Periodic timer triggers shipping cycle
+//   2. Lock acquisition prevents concurrent operations
+//   3. File discovery finds new metrics to upload
+//   4. Presigned URL allocation from CloudZero API
+//   5. Parallel upload execution with retry logic
+//   6. File marking and cleanup after successful upload
+//   7. Disk usage monitoring and purging of old files
+//
+// Integration points:
+//   - types.ReadableStore: Interface to local metric storage
+//   - config.Settings: Shipping intervals, CloudZero endpoints, credentials
+//   - HTTP client: Configurable timeout and retry settings for API calls
+//   - File system: Direct file operations for upload and cleanup
 package shipper
 
 import (
@@ -29,21 +62,93 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// MetricShipper handles the periodic shipping of metrics to Cloudzero.
+// MetricShipper handles the periodic shipping of stored metrics to CloudZero servers.
+// It runs as a long-lived service that continuously processes local metric files,
+// uploads them to cloud storage via presigned URLs, and manages file lifecycle.
+//
+// The shipper implements several key patterns:
+//   - Periodic execution: Runs shipping cycles at configurable intervals
+//   - File locking: Prevents concurrent operations that could corrupt data
+//   - Parallel processing: Uses worker pools to upload multiple files simultaneously
+//   - Retry logic: Handles transient failures with exponential backoff
+//   - Resource management: Monitors disk usage and purges old files
+//   - Graceful shutdown: Responds to OS signals and context cancellation
+//
+// Lifecycle:
+//   1. NewMetricShipper() creates and configures the shipper
+//   2. Run() starts the main service loop with signal handling
+//   3. Periodic shipping cycles process files automatically
+//   4. Shutdown() or signal reception triggers graceful stop
+//
+// Error handling:
+//   - Individual file upload failures don't stop the shipping cycle
+//   - Persistent failures trigger abandon requests to CloudZero API
+//   - Critical errors (lock failures, storage issues) abort the cycle
+//   - All errors are logged and exposed via Prometheus metrics
 type MetricShipper struct {
+	// setting contains the agent configuration including CloudZero endpoints,
+	// shipping intervals, storage paths, and authentication credentials
 	setting *config.Settings
-	store   types.ReadableStore
+	
+	// store provides read access to the local metric storage system,
+	// typically a disk-based implementation that persists JSON metric files
+	store types.ReadableStore
 
-	// Internal fields
-	ctx          context.Context
-	cancel       context.CancelFunc
-	HTTPClient   *retryablehttp.Client
-	shippedFiles uint64 // Counter for shipped files
-	metrics      *instr.PrometheusMetrics
-	shipperID    string // unique id for the shipper
+	// Internal service management fields
+	
+	// ctx is the main context for the shipper service lifecycle
+	ctx context.Context
+	
+	// cancel function stops the shipper service and all background operations
+	cancel context.CancelFunc
+	
+	// HTTPClient handles all outbound HTTP requests with configured timeouts,
+	// retry policies, and authentication for CloudZero API calls
+	HTTPClient *retryablehttp.Client
+	
+	// shippedFiles tracks the total number of files successfully uploaded,
+	// used for monitoring and debugging shipping performance
+	shippedFiles uint64
+	
+	// metrics provides Prometheus monitoring for shipping operations,
+	// tracking success rates, error counts, and performance statistics
+	metrics *instr.PrometheusMetrics
+	
+	// shipperID is a unique identifier for this shipper instance, persisted
+	// to disk to maintain consistency across restarts and correlate uploaded files
+	shipperID string
 }
 
-// NewMetricShipper initializes a new MetricShipper.
+// NewMetricShipper creates and initializes a new MetricShipper instance with all
+// required dependencies and configurations. The shipper is ready to use immediately
+// after creation, but Run() must be called to start the periodic shipping service.
+//
+// Parameters:
+//   - ctx: Parent context for the shipper lifecycle, cancellation stops all operations
+//   - s: Configuration settings including CloudZero endpoints, intervals, and credentials
+//   - store: Local storage interface for reading metric files to upload
+//
+// Returns:
+//   - *MetricShipper: Configured shipper instance ready to run
+//   - error: Configuration or initialization error
+//
+// The constructor performs several setup operations:
+//   - Creates isolated context for service lifecycle management
+//   - Initializes HTTP client with retry policies and timeouts
+//   - Sets up Prometheus metrics for monitoring shipping operations
+//   - Validates configuration and logs settings in debug mode
+//
+// Example:
+//   shipper, err := NewMetricShipper(ctx, settings, diskStore)
+//   if err != nil {
+//       return fmt.Errorf("failed to create shipper: %w", err)
+//   }
+//   defer shipper.Shutdown()
+//   
+//   // Start the shipping service (blocks until context cancelled)
+//   if err := shipper.Run(); err != nil {
+//       log.Printf("shipper stopped: %v", err)
+//   }
 func NewMetricShipper(ctx context.Context, s *config.Settings, store types.ReadableStore) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
