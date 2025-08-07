@@ -1,7 +1,42 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package config implements the configuration for the aggregator..
+// Package config implements the configuration management system for the CloudZero agent.
+//
+// This package provides the main configuration structure (Settings) and validation
+// logic for the agent's core functionality. It handles:
+//
+//   - Configuration file parsing and environment variable binding
+//   - Cloud environment auto-detection (AWS, Azure, GCP)
+//   - API key management and validation
+//   - Service endpoint configuration and URL building
+//   - Resource limits and performance tuning settings
+//   - Database storage and purging configuration
+//
+// Configuration Sources:
+//   The Settings structure supports multiple configuration sources with precedence:
+//   1. Environment variables (highest priority)
+//   2. YAML configuration files
+//   3. Default values (lowest priority)
+//
+// Key Configuration Areas:
+//   - Core Settings: Cluster identification, cloud account details, region
+//   - Server Settings: HTTP server configuration, ports, profiling
+//   - Database Settings: Storage paths, compression, retention policies
+//   - CloudZero Settings: API endpoints, authentication, upload intervals
+//   - Metrics Settings: Cost/observability metric filtering rules
+//   - Logging Settings: Log levels, capture settings
+//
+// Usage:
+//   settings, err := NewSettings("/path/to/config.yaml")
+//   if err != nil {
+//       log.Fatal(err)
+//   }
+//   defer settings.Validate()
+//
+// The configuration system automatically detects cloud environment details
+// using the scout package, validates all settings, and prepares API endpoints
+// for CloudZero integration.
 package config
 
 import (
@@ -24,35 +59,123 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+// Configuration defaults and constants for the CloudZero agent.
+// These values provide sensible defaults that balance performance, reliability,
+// and resource usage across different deployment environments.
 const (
-	DefaultCZHost                           = "api.cloudzero.com"
-	DefaultCZSendInterval                   = 10 * time.Minute
-	DefaultCZSendTimeout                    = 10 * time.Second
-	DefaultCZRotateInterval                 = 10 * time.Minute
-	DefaultDatabaseMaxRecords               = 1_500_000
-	DefaultDatabaseCompressionLevel         = 8
-	DefaultDatabaseCostMaxInterval          = 10 * time.Minute
+	// CloudZero API configuration defaults
+	
+	// DefaultCZHost is the production CloudZero API hostname for metric uploads
+	DefaultCZHost = "api.cloudzero.com"
+	
+	// DefaultCZSendInterval controls how frequently metrics are uploaded to CloudZero.
+	// 10 minutes provides a good balance between data freshness and API load.
+	DefaultCZSendInterval = 10 * time.Minute
+	
+	// DefaultCZSendTimeout is the maximum time allowed for individual upload requests.
+	// Short enough to prevent hanging connections, long enough for large payloads.
+	DefaultCZSendTimeout = 10 * time.Second
+	
+	// DefaultCZRotateInterval controls API key refresh frequency.
+	// Matches send interval to ensure fresh authentication for uploads.
+	DefaultCZRotateInterval = 10 * time.Minute
+	
+	// Database and storage configuration defaults
+	
+	// DefaultDatabaseMaxRecords limits the number of metrics per file to optimize
+	// memory usage and upload performance. 1.5M records ≈ 100-200MB files.
+	DefaultDatabaseMaxRecords = 1_500_000
+	
+	// DefaultDatabaseCompressionLevel balances compression ratio vs CPU usage.
+	// Level 8 provides good compression without excessive CPU overhead.
+	DefaultDatabaseCompressionLevel = 8
+	
+	// DefaultDatabaseCostMaxInterval controls how frequently cost metrics are flushed
+	// to storage. Shorter interval ensures cost data is captured quickly.
+	DefaultDatabaseCostMaxInterval = 10 * time.Minute
+	
+	// DefaultDatabaseObservabilityMaxInterval controls observability metric flushing.
+	// Longer interval acceptable as these metrics are less time-critical.
 	DefaultDatabaseObservabilityMaxInterval = 30 * time.Minute
-	DefaultServerPort                       = 8080
-	DefaultServerMode                       = "http"
+	
+	// HTTP server configuration defaults
+	
+	// DefaultServerPort is the standard HTTP port for agent API endpoints
+	DefaultServerPort = 8080
+	
+	// DefaultServerMode specifies HTTP (not HTTPS) for internal cluster communication
+	DefaultServerMode = "http"
 
-	// Shutdown coordination
+	// Shutdown coordination constants
+	
+	// ShutdownMarkerFilename is created when the collector completes graceful shutdown.
+	// Used to coordinate shutdown sequencing between agent components.
 	ShutdownMarkerFilename = "collector-shutdown-complete"
+	
+	// ShutdownMarkerFileMode sets restrictive permissions on the shutdown marker file
 	ShutdownMarkerFileMode = 0o600
 )
 
+// Settings represents the complete configuration structure for the CloudZero agent.
+// It aggregates all configuration sections and provides centralized management
+// of agent behavior, API integration, storage, and metric processing.
+//
+// The Settings struct supports configuration from multiple sources:
+//   - YAML configuration files (via yaml tags)
+//   - Environment variables (via env tags)
+//   - Programmatic defaults during validation
+//
+// Thread safety:
+//   The Settings struct includes a mutex for thread-safe access to mutable
+//   configuration values like API keys that may be refreshed at runtime.
+//
+// Configuration lifecycle:
+//   1. NewSettings() creates and loads configuration from files/environment
+//   2. Validate() performs validation and auto-detection
+//   3. SetAPIKey() loads and caches authentication credentials
+//   4. SetRemoteUploadAPI() prepares CloudZero endpoint URLs
+//
+// Usage:
+//   settings, err := NewSettings("/path/to/config.yaml")
+//   if err != nil {
+//       return fmt.Errorf("configuration error: %w", err)
+//   }
+//   
+//   // Settings is now ready for use by agent components
+//   collector := NewMetricCollector(settings, ...)
 type Settings struct {
-	// Core Settings
+	// Core identification settings for CloudZero integration
+	
+	// CloudAccountID identifies the cloud provider account (AWS Account ID, 
+	// Azure Subscription ID, GCP Project ID). Auto-detected if not specified.
 	CloudAccountID string `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
-	Region         string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
-	ClusterName    string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
+	
+	// Region specifies the cloud provider region where the cluster is deployed.
+	// Used for cost attribution and resource organization. Auto-detected if not specified.
+	Region string `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
+	
+	// ClusterName uniquely identifies this Kubernetes cluster within the cloud account.
+	// Must be unique across all clusters monitored by CloudZero. Auto-detected if not specified.
+	ClusterName string `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
 
-	Server    Server    `yaml:"server"`
-	Logging   Logging   `yaml:"logging"`
-	Database  Database  `yaml:"database"`
+	// Service configuration sections
+	
+	// Server configures the HTTP server that exposes agent APIs
+	Server Server `yaml:"server"`
+	
+	// Logging controls log output, levels, and persistence settings
+	Logging Logging `yaml:"logging"`
+	
+	// Database configures local storage for metrics before upload
+	Database Database `yaml:"database"`
+	
+	// Cloudzero configures integration with CloudZero APIs and services
 	Cloudzero Cloudzero `yaml:"cloudzero"`
-	Metrics   Metrics   `yaml:"metrics"`
+	
+	// Metrics defines filtering rules for cost vs observability metrics
+	Metrics Metrics `yaml:"metrics"`
 
+	// Thread safety mutex for runtime configuration updates
 	mu sync.Mutex
 }
 
@@ -106,6 +229,41 @@ type Cloudzero struct {
 	_host string // cached value of `Host` since it is overridden in initialization
 }
 
+// NewSettings creates a new Settings instance by loading configuration from
+// multiple sources in order of precedence: environment variables, configuration
+// files, and defaults. It performs full initialization including validation,
+// cloud environment detection, and API endpoint preparation.
+//
+// Parameters:
+//   - configFiles: Variable list of YAML configuration file paths to load.
+//     Files are processed in order, with later files potentially overriding
+//     earlier ones. Empty strings are ignored.
+//
+// Returns:
+//   - *Settings: Fully initialized and validated configuration ready for use
+//   - error: Configuration, validation, or initialization error
+//
+// The constructor performs these operations in sequence:
+//   1. Load configuration from each file using cleanenv
+//   2. Validate all configuration values and apply defaults
+//   3. Auto-detect cloud environment details (account ID, region, cluster name)
+//   4. Load and validate API key from configured path
+//   5. Build CloudZero API endpoints with proper parameters
+//
+// Error conditions:
+//   - Missing or unreadable configuration files
+//   - Invalid configuration values or missing required fields
+//   - Cloud environment auto-detection failures
+//   - Missing or invalid API key file
+//   - Invalid CloudZero API endpoint configuration
+//
+// Example:
+//   settings, err := NewSettings("/etc/agent/config.yaml", "/etc/agent/secrets.yaml")
+//   if err != nil {
+//       return fmt.Errorf("failed to load configuration: %w", err)
+//   }
+//   
+//   log.Printf("Monitoring cluster %s in %s", settings.ClusterName, settings.Region)
 func NewSettings(configFiles ...string) (*Settings, error) {
 	var cfg Settings
 
