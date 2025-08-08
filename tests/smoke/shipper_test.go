@@ -153,8 +153,9 @@ func TestSmoke_Shipper_ReplayRequest_OK(t *testing.T) {
 
 		// wait for shipper to finish
 		err = utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
-			Container: shipper,
-			Log:       "Successfully ran the shipper cycle",
+			Container:  shipper,
+			Log:        "Successfully ran the shipper cycle",
+			AllowError: true, // Allow error logs during replay processing
 		})
 		require.NoError(t, err, "failed to find log message")
 

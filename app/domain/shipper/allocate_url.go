@@ -137,15 +137,22 @@ func (m *MetricShipper) AllocatePresignedURLs(ctx context.Context, files []types
 		// check for a replay request
 		rrh := resp.Header.Get(ReplayRequestHeader)
 		if rrh != "" {
-			log.Ctx(ctx).Debug().Msg("Recieved replay request")
+			log.Ctx(ctx).Debug().Str("raw_replay_header", rrh).Msg("Recieved replay request")
 
 			var rr []replayRequestHeaderValue
 			if err := json.Unmarshal([]byte(rrh), &rr); err == nil {
-				for _, item := range rr {
+				log.Ctx(ctx).Debug().Int("replay_items_count", len(rr)).Msg("Successfully unmarshaled replay items")
+				for i, item := range rr {
+					log.Ctx(ctx).Debug().
+						Int("item_index", i).
+						Str("parsed_refid", item.RefID).
+						Str("parsed_url", item.URL).
+						Msg("Processing replay item")
 					response.Replay[item.RefID] = item.URL
 				}
+				log.Ctx(ctx).Debug().Interface("final_replay_map", response.Replay).Msg("Final replay map created")
 			} else {
-				logger.Err(err).Msg("Failed to parse the replay request into an object")
+				logger.Err(err).Str("raw_replay_header", rrh).Msg("Failed to parse the replay request into an object")
 			}
 		}
 
