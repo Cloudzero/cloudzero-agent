@@ -94,7 +94,12 @@ func (m *MetricShipper) AbandonFiles(ctx context.Context, payload []*AbandonAPIP
 
 		defer resp.Body.Close()
 
-		logger.Debug().Msg("Successfully abandoned files")
+		for _, file := range payload {
+			logger.Debug().
+				Str("reference_id", file.ReferenceID).
+				Str("reason", file.Reason).
+				Msg("Successfully abandoned file")
+		}
 
 		// success
 		return nil

@@ -281,7 +281,7 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 
 			// search the file tree for the replay request files
 			for k, v := range urlResponse.Replay {
-				if paths, err := m.store.Find(ctx, GetRootFileID(k), ".json.br"); err != nil {
+				if paths, err := m.store.Find(ctx, GetRootFileID(k), ".json.br"); err == nil {
 					for _, path := range paths {
 						if file, err := disk.NewMetricFile(path); err == nil {
 							requests = append(requests, &UploadFileRequest{
