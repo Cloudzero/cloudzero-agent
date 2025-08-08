@@ -280,13 +280,13 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			}
 
 			// search the file tree for the replay request files
-			for k, v := range urlResponse.Replay {
-				if paths, err := m.store.Find(ctx, GetRootFileID(k), ".json.br"); err == nil {
+			for replayRefID, replayURL := range urlResponse.Replay {
+				if paths, err := m.store.Find(ctx, GetRootFileID(replayRefID), ".json.br"); err == nil {
 					for _, path := range paths {
 						if file, err := disk.NewMetricFile(path); err == nil {
 							requests = append(requests, &UploadFileRequest{
 								File:         file,
-								PresignedURL: v,
+								PresignedURL: replayURL,
 							})
 						}
 					}
@@ -298,10 +298,10 @@ func (m *MetricShipper) HandleRequest(ctx context.Context, files []types.File) e
 			for _, item := range requests {
 				requestSet.Add(GetRemoteFileID(item.File))
 			}
-			for _, item := range urlResponse.Replay {
-				if !requestSet.Contains(item) {
+			for replayRefID := range urlResponse.Replay {
+				if !requestSet.Contains(replayRefID) {
 					abandonRequests = append(abandonRequests, &AbandonAPIPayloadFile{
-						ReferenceID: item,
+						ReferenceID: replayRefID,
 						Reason:      "failed to find this file locally",
 					})
 				}
