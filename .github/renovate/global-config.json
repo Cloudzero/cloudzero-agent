@@ -1,0 +1,4 @@
+{
+  "repositories": ["Cloudzero/cloudzero-agent"],
+  "allowedPostUpgradeCommands": ["^make "]
+}
