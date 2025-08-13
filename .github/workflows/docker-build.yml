@@ -53,7 +53,7 @@ jobs:
       # Checkout the repository code
       - name: SETUP - Checkout
         id: checkout_code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Prepare environment for current platform
         id: prepare
