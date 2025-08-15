@@ -334,8 +334,8 @@ components:
   # uses the kubectl image as part of the job to initialize certificates.
   kubectl:
     image:
-      repository: docker.io/bitnami/kubectl
-      tag: "1.33.3"
+      repository: docker.io/d3fk/kubectl
+      tag: "v1.30"
 
   # prometheus contains details about where to find the Prometheus image.
   # Prometheus is critical to the functionality of this chart, and is used to
