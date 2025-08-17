@@ -1,0 +1,2 @@
+# Test that unbalanced quotes at the end fail validation
+cloudAccountId: "123456789012'"

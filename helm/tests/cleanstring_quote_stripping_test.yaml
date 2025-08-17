@@ -1,0 +1,33 @@
+suite: test cleanString quote stripping functionality
+templates:
+  - templates/config-loader-job.yaml
+tests:
+  # Test that quoted numeric cloudAccountId values are stripped of quotes in config-loader job command
+  - it: should strip quotes from quoted numeric cloudAccountId in config-loader job command
+    set:
+      cloudAccountId: "'123456789012'"
+      apiKey: "fake-key"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].command
+          content: "123456789012"
+
+  # Test that quoted UUID cloudAccountId values are stripped of quotes in config-loader job command
+  - it: should strip quotes from quoted UUID cloudAccountId in config-loader job command
+    set:
+      cloudAccountId: "'123e4567-e89b-12d3-a456-426614174000'"
+      apiKey: "fake-key"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].command
+          content: "123e4567-e89b-12d3-a456-426614174000"
+
+  # Test that unquoted cloudAccountId values remain unchanged in config-loader job command
+  - it: should preserve unquoted numeric cloudAccountId in config-loader job command
+    set:
+      cloudAccountId: "123456789012"
+      apiKey: "fake-key"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].command
+          content: "123456789012"
