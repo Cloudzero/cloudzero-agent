@@ -1,0 +1,2 @@
+# Test that quoted numeric strings pass validation (AWS account ID or Google Cloud project number)
+cloudAccountId: "'123456789012'"

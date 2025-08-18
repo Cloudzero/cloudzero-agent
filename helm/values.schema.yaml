@@ -117,22 +117,33 @@ properties:
   cloudAccountId:
     type: "string"
     # Empty string or numeric string or UUID
-    pattern: "^$|^[0-9]+$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    pattern: "^$|^[0-9]+$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^'[0-9]+'$|^'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'$"
     description: |
+      *WARNING*: use of this property is generally discouraged as in most cases
+      it can be detected automatically.
+
       The cloud account ID. Must be either:
         - Empty string (use auto-detected value)
         - Numeric string (AWS account ID or Google Cloud project number)
         - UUID (Azure subscription ID)
+        - Any of the above enclosed in balanced single quotes (e.g., '1234567890')
   clusterName:
     type: string
     pattern: ^(|[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,251}[a-zA-Z0-9])?)$
     description: |
+      *NOTE*: use of this property on Google Cloud is generally discouraged as
+      in most cases it can be detected automatically. However, on AWS and Azure
+      it is required.
+
       The name of the Kubernetes cluster.
   region:
     type:
       - string
       - "null"
     description: |
+      *WARNING*: use of this property is generally discouraged as in most cases
+      it can be detected automatically.
+
       The cloud provider region.
   apiKey:
     type:

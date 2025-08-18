@@ -1,0 +1,2 @@
+# Test that empty quotes fail validation
+cloudAccountId: "''"

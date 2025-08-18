@@ -1,2 +1,0 @@
-# Test that invalid values fail validation
-cloudAccountId: "invalid-value"
