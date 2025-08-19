@@ -1,0 +1,6 @@
+insightsController:
+  tls:
+    certificate:
+      algorithm: "ecdsa"
+      keySize: 256
+      validityDuration: "876000h"

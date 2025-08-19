@@ -51,15 +51,15 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250305212735-054e65f0b394 // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools v0.34.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1
@@ -83,7 +83,7 @@ require (
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/homeport/dyff v1.10.2
+	github.com/homeport/dyff v1.10.1
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/parquet-go/parquet-go v0.25.1
@@ -97,7 +97,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.30.1
-	helm.sh/helm/v3 v3.18.5
+	helm.sh/helm/v3 v3.18.4
 	sigs.k8s.io/gateway-api v1.3.0
 )
 
@@ -253,6 +253,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/virtuald/go-ordered-json v0.0.0-20170621173500-b18e6e673d74 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
+	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
@@ -279,8 +282,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
-	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
+	golang.org/x/crypto v0.39.0 // indirect
 	google.golang.org/api v0.238.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/grpc v1.73.0 // indirect

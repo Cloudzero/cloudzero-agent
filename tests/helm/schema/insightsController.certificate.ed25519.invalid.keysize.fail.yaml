@@ -1,0 +1,6 @@
+insightsController:
+  tls:
+    certificate:
+      algorithm: "ed25519"
+      keySize: 256 # Should fail - Ed25519 doesn't support custom key sizes
+      validityDuration: "876000h"

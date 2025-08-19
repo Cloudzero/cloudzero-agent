@@ -51,3 +51,63 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.cpu
           value: "200m"
+
+  # Test that correct arguments are passed to cloudzero-certifik8s
+  - it: should pass correct arguments to cloudzero-certifik8s
+    set:
+      insightsController.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      initCertJob.enabled: true
+      insightsController.labels.enabled: true
+      insightsController.annotations.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args[0]
+          value: "generate"
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[1]
+          pattern: "--secret-name=.*"
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[2]
+          pattern: "--namespace=.*"
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[3]
+          pattern: "--service-name=.*"
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[4]
+          pattern: "--webhook-name=.*"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-labels"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-annotations"
+
+  # Test that job is not created when cert-manager is enabled
+  - it: should not create job when cert-manager is enabled
+    set:
+      insightsController.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: true
+      initCertJob.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Test that init-cert job uses the same image as the webhook server
+  - it: should use the same image as the webhook server
+    set:
+      insightsController.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      initCertJob.enabled: true
+      components:
+        agent:
+          image:
+            repository: "ghcr.io/cloudzero/cloudzero-agent"
+            tag: "test-tag"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/cloudzero/cloudzero-agent:test-tag"

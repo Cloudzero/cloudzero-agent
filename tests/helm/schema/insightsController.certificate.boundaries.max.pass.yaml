@@ -1,0 +1,13 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    certificate:
+      # Test maximum reasonable values
+      keySize: 8192
+      validityDuration: "876000h"
+
+initCertJob:
+  enabled: true
