@@ -1,0 +1,14 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    certificate:
+      # keySize cannot be zero
+      keySize: 0
+      # validityDuration should be a valid duration format
+      validityDuration: "invalid-duration"
+
+initCertJob:
+  enabled: true

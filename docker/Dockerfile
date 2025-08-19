@@ -78,6 +78,8 @@ FROM gcr.io/distroless/static-debian12:debug@sha256:072204b513ba56f418d58f9d771d
 # This is what the `package-debug` and `package-build-debug` Make targets do.
 FROM ${DEPLOY_IMAGE}
 
+
+
 # Ensure we have certs for HTTPS requests
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
@@ -109,6 +111,7 @@ COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
 COPY --from=builder /go/bin/cloudzero-cluster-config /app/cloudzero-cluster-config
 COPY --from=builder /go/bin/cloudzero-helmless /app/cloudzero-helmless
 COPY --from=builder /go/bin/cloudzero-scout /app/cloudzero-scout
+COPY --from=builder /go/bin/cloudzero-certifik8s /app/cloudzero-certifik8s
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

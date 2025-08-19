@@ -1,0 +1,10 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    # Omit certificate section to test defaults
+
+initCertJob:
+  enabled: true
