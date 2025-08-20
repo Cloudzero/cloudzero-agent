@@ -16,7 +16,7 @@ require (
 	google.golang.org/protobuf v1.36.7
 	honnef.co/go/tools v0.6.1
 	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
+	k8s.io/apimachinery v0.33.4
 	k8s.io/client-go v0.33.3
 	mvdan.cc/gofumpt v0.8.0
 )
