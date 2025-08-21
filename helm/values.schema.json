@@ -3224,6 +3224,100 @@
       },
       "type": "object"
     },
+    "io.k8s.api.networking.v1.IPBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "cidr": {
+          "type": "string"
+        },
+        "except": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": ["cidr"],
+      "type": "object"
+    },
+    "io.k8s.api.networking.v1.NetworkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["NetworkPolicy"],
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+        },
+        "spec": {
+          "$ref": "#/$defs/io.k8s.api.networking.v1.NetworkPolicySpec"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "networking.k8s.io",
+          "kind": "NetworkPolicy",
+          "version": "v1"
+        }
+      ]
+    },
+    "io.k8s.api.networking.v1.NetworkPolicyIngressRule": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.networking.v1.NetworkPolicyPeer"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.networking.v1.NetworkPolicyPort"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.networking.v1.NetworkPolicyPeer": {
+      "additionalProperties": false,
+      "properties": {
+        "ipBlock": {
+          "$ref": "#/$defs/io.k8s.api.networking.v1.IPBlock"
+        },
+        "namespaceSelector": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+        },
+        "podSelector": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.networking.v1.NetworkPolicyPort": {
+      "additionalProperties": false,
+      "properties": {
+        "endPort": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "port": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.util.intstr.IntOrString"
+        },
+        "protocol": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.policy.v1.PodDisruptionBudget": {
       "additionalProperties": false,
       "properties": {
@@ -3721,6 +3815,24 @@
                   "type": "null"
                 }
               ]
+            },
+            "networkPolicy": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "ingress": {
+                  "default": [],
+                  "items": {
+                    "$ref": "#/$defs/io.k8s.api.networking.v1.NetworkPolicyIngressRule"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": ["enabled"],
+              "type": "object"
             },
             "podDisruptionBudget": {
               "oneOf": [

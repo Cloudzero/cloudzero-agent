@@ -1,0 +1,109 @@
+{{- /*
+  Aggregator Network Policy
+
+  This template creates a Kubernetes NetworkPolicy that controls network access
+  to the CloudZero Agent aggregator component. The network policy provides
+  network segmentation and security by restricting which pods can communicate
+  with the aggregator.
+
+  FUNCTIONALITY:
+
+  * Restricts inbound access to the aggregator
+  * Only allows authorized CloudZero components to send metrics to the aggregator
+  * Provides configurable ingress rules for custom network policies
+  * Defaults to disabled for backward compatibility
+
+  AUTHORIZED INGRESS TRAFFIC:
+
+  * CloudZero Agent (server component) - for Prometheus metrics collection (port 8080)
+  * CloudZero Agent (server component) - for shipper metrics scraping (port 8081)
+  * CloudZero Webhook Server - for insights controller metrics (port 8080)
+  * Custom ingress rules (when specified in values)
+
+  NETWORK POLICY BEHAVIOR:
+
+  * Ingress: Always enabled with default rules + custom rules
+  * Egress: No restrictions (all outbound traffic allowed)
+  * Policy Types: Ingress only
+
+  HELM CHART INTEGRATION:
+
+  * Controlled by: components.aggregator.networkPolicy.enabled
+  * Port configuration: Uses aggregator.collector.port and aggregator.shipper.port values
+  * Label selectors: Uses standard CloudZero Agent label patterns
+  * Custom rules: Supports additional ingress rules via values
+
+  USAGE EXAMPLES:
+
+  # Enable with defaults
+  components:
+    aggregator:
+      networkPolicy:
+        enabled: true
+
+  # Enable with custom ingress rules
+  components:
+    aggregator:
+      networkPolicy:
+        enabled: true
+        ingress:
+          - from:
+            - namespaceSelector:
+                matchLabels:
+                  name: monitoring
+            ports:
+            - protocol: TCP
+              port: 8080
+            - protocol: TCP
+              port: 8081
+*/ -}}
+
+{{- if .Values.components.aggregator.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-network-policy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+spec:
+  # Target the Aggregator pods
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: aggregator
+      app.kubernetes.io/name: {{ include "cloudzero-agent.aggregator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  # CloudZero Agent -> collector and shipper
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: server
+          app.kubernetes.io/name: {{ include "cloudzero-agent.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.aggregator.collector.port }}
+    - protocol: TCP
+      port: {{ .Values.aggregator.shipper.port }}
+
+  # CloudZero Webhook Server -> collector
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: {{ .Values.insightsController.server.name }}
+          app.kubernetes.io/name: {{ include "cloudzero-agent.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.aggregator.collector.port }}
+
+  {{- if .Values.components.aggregator.networkPolicy.ingress }}
+  # Custom ingress rules
+  {{- toYaml .Values.components.aggregator.networkPolicy.ingress | nindent 2 }}
+  {{- end }}
+{{- end }}

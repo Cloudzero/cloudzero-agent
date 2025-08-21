@@ -489,6 +489,7 @@ properties:
                       For details, see the Kubernetes documentation on security contexts:
                       https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                     $ref: "#/$defs/io.k8s.api.core.v1.SecurityContext"
+
                 additionalProperties: false
               - type: "null"
           podDisruptionBudget:
@@ -500,6 +501,39 @@ properties:
             oneOf:
               - $ref: "#/$defs/com.cloudzero.agent.PodDisruptionBudgetSpec"
               - type: "null"
+
+          networkPolicy:
+            description: |
+              Network policy configuration for the aggregator.
+
+              When enabled, restricts network access to the aggregator pods
+              to only allow traffic from CloudZero Agent (Prometheus) and
+              CloudZero Webhook Server components. Also protects the shipper
+              port from unauthorized access.
+            additionalProperties: false
+            type: object
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the network policy for the aggregator.
+                  When enabled, only CloudZero Agent and Webhook Server
+                  components can access the aggregator collector service (port 8080)
+                  and shipper metrics endpoint (port 8081).
+                type: boolean
+                default: false
+
+              ingress:
+                description: |
+                  Additional ingress rules to append to the default policy.
+                  These will be merged with the default CloudZero Agent and Webhook Server rules.
+                  Each rule should follow the Kubernetes NetworkPolicy ingress rule format.
+                items:
+                  $ref: "#/definitions/io.k8s.api.networking.v1.NetworkPolicyIngressRule"
+                type: array
+                default: []
+
+            required:
+              - enabled
           replicas:
             description: |
               Number of replicas to deploy.

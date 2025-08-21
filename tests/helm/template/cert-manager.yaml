@@ -793,6 +793,9 @@ data:
               cpu: 100m
               memory: 64Mi
           securityContext: {}
+        networkPolicy:
+          enabled: false
+          ingress: []
         podDisruptionBudget: null
         replicas: 3
         securityContext: {}

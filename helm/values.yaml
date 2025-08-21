@@ -364,6 +364,16 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Network policy configuration for the aggregator.
+    #
+    # When enabled, restricts network access to the aggregator pods to only
+    # allow traffic (by default) from CloudZero Agent (Prometheus) and CloudZero
+    # Webhook Server components.
+    networkPolicy:
+      enabled: false
+      # Additional ingress rules to append to the default policy.
+      # These will be merged with the default CloudZero Agent and Webhook Server rules.
+      ingress: []
     tolerations: []
     annotations: {}
     # Security context for the aggregator pods.

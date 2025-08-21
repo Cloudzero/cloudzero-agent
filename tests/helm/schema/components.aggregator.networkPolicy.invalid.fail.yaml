@@ -1,0 +1,10 @@
+components:
+  aggregator:
+    networkPolicy:
+      enabled: true
+      ingress:
+        - invalidField: "this should cause validation to fail"
+          from:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/component: monitoring

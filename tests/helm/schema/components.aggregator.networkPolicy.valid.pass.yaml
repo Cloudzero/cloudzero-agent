@@ -1,0 +1,13 @@
+components:
+  aggregator:
+    networkPolicy:
+      enabled: true
+
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/component: monitoring
+          ports:
+            - protocol: TCP
+              port: 8080
