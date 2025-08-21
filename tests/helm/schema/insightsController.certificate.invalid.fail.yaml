@@ -1,0 +1,14 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    certificate:
+      # keySize should be a positive integer, not a string
+      keySize: "2048"
+      # validityDuration should be a valid duration, not a negative number
+validityDuration: "-1h"
+
+initCertJob:
+  enabled: true

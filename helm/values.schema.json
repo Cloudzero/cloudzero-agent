@@ -4402,6 +4402,26 @@
               "default": "",
               "type": "string"
             },
+            "certificate": {
+              "additionalProperties": false,
+              "properties": {
+                "algorithm": {
+                  "default": "rsa",
+                  "enum": ["rsa", "ecdsa", "ed25519"],
+                  "type": "string"
+                },
+                "keySize": {
+                  "default": 2048,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "validityDuration": {
+                  "$ref": "#/$defs/com.cloudzero.agent.duration",
+                  "default": "8760h"
+                }
+              },
+              "type": "object"
+            },
             "crt": {
               "default": "",
               "type": "string"

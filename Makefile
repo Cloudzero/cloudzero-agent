@@ -275,6 +275,8 @@ bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
 # Add the embedded defaults file to dependencies
 $(OUTPUT_BIN_DIR)/cloudzero-helmless: app/functions/helmless/default-values.yaml
+
+generate: app/functions/helmless/default-values.yaml
 endif
 
 MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
@@ -625,6 +627,8 @@ MOCK_FILES := \
 	app/types/mocks/store_mock.go \
 	app/utils/scout/types/mocks/scout_mock.go \
 	app/types/mocks/storage_mock.go \
+	app/domain/certificate/mocks/kubernetes_client_mock.go \
+	app/domain/k8s/mocks/certificate_client_mock.go \
 	$(NULL)
 
 .PHONY: generate-mocks

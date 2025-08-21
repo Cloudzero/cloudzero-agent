@@ -1254,6 +1254,35 @@ properties:
               Configuration for cert-manager issuer spec when useCertManager is true.
             type: object
             additionalProperties: true
+          certificate:
+            description: |
+              Configuration for self-signed certificate generation when useCertManager is false.
+            type: object
+            additionalProperties: false
+            properties:
+              keySize:
+                description: |
+                  Key size in bits for the generated certificate. Must be a non-negative integer.
+                  For RSA: common values are 2048 (default), 4096, or 8192 for stronger security.
+                  For ECDSA: use 256, 384, or 521.
+                  For Ed25519: use 0 as key size is not configurable.
+                type: integer
+                minimum: 0
+                default: 2048
+              validityDuration:
+                description: |
+                  Certificate validity period in Go's time.ParseDuration format. Valid formats include:
+                  "300ms", "1.5h", "2h45m", etc. Valid time units are: "ns", "us" (or "µs"),
+                  "ms", "s", "m", "h". Default is "8760h" (1 year).
+                $ref: "#/$defs/com.cloudzero.agent.duration"
+                default: "8760h"
+              algorithm:
+                description: |
+                  Cryptographic algorithm for certificate generation. Must be one of: rsa, ecdsa, or ed25519.
+                  Default is rsa.
+                type: string
+                enum: ["rsa", "ecdsa", "ed25519"]
+                default: "rsa"
 
       server:
         description: |

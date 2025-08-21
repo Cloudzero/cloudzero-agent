@@ -1,0 +1,13 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    certificate:
+      # Test minimum valid values
+      keySize: 1
+      validityDuration: "24h"
+
+initCertJob:
+  enabled: true

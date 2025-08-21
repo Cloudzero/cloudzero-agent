@@ -172,8 +172,10 @@ Create the name of the ClusterRoleBinding to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.clusterRoleBindingName" -}}
 {{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
-{{ .Values.initCertJob.rbac.clusterRoleBinding | default $defaultName }}
+{{ .Values.initCertJob.rbac.clusterRoleBindingName | default $defaultName }}
 {{- end -}}
+
+
 
 {{/*
 init-cert Job annotations

@@ -1,0 +1,6 @@
+insightsController:
+  tls:
+    certificate:
+      algorithm: "rsa"
+      keySize: 2048
+      validityDuration: "876000h"

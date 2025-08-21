@@ -1,0 +1,12 @@
+insightsController:
+  enabled: true
+  tls:
+    secret:
+      create: true
+    useCertManager: false
+    certificate:
+      keySize: 2048
+      validityDuration: "876000h"
+
+initCertJob:
+  enabled: true
