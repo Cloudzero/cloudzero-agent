@@ -1,0 +1,25 @@
+{
+  "packageRules": [
+    {
+      "matchPackageNames": ["*"],
+      "postUpgradeTasks": {
+        "commands": ["make install-tools generate format"],
+        "fileFilters": ["tests/helm/template/*.yaml"]
+      }
+    }
+  ],
+  "baseBranches": ["develop"],
+  "rebaseWhen": "conflicted",
+  "labels": ["dependencies"],
+  "prHourlyLimit": 0,
+  "commitMessagePrefix": "CP-29639: ",
+  "ignorePaths": [
+    ".github/workflows/*.yml",
+    ".github/workflows/*.yaml",
+    "**/go.mod",
+    "**/Dockerfile",
+    "**/Dockerfile.*",
+    ".tools/package.json"
+  ],
+  "onboarding": false
+}
