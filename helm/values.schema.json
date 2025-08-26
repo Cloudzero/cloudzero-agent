@@ -3766,6 +3766,7 @@
         },
         "kubectl": {
           "additionalProperties": false,
+          "deprecated": true,
           "properties": {
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"

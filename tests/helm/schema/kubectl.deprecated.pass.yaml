@@ -1,0 +1,10 @@
+# Test that deprecated kubectl section continues to work without validation
+# errors. This ensures backward compatibility for existing configurations,
+# though it should be noted that setting these values has no impact on the chart
+# as the image is no longer used.
+
+components:
+  kubectl:
+    image:
+      repository: "docker.io/bitnamilegacy/kubectl"
+      tag: "1.33.3"
