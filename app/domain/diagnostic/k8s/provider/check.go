@@ -8,32 +8,29 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path/filepath"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
-	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/common"
 	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 )
 
 const DiagnosticK8sProvider = config.DiagnosticK8sProvider
 
 type checker struct {
-	cfg    *config.Settings
-	logger *logrus.Entry
+	cfg            *config.Settings
+	logger         *logrus.Entry
+	configProvider k8s.ConfigProvider
 }
 
 func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider {
 	return &checker{
-		cfg: cfg,
+		cfg:            cfg,
+		configProvider: k8s.NewConfigProvider(),
 		logger: logging.NewLogger().
 			WithContext(ctx).WithField(logging.OpField, "k8s_provider"),
 	}
@@ -68,7 +65,7 @@ func (c *checker) getProviderID(ctx context.Context) (string, error) {
 	}
 
 	// create the k8s client
-	cfg, err := c.getConfig()
+	cfg, err := c.configProvider.GetConfig()
 	if err != nil {
 		return "", fmt.Errorf("failed to get the k8s client config: %w", err)
 	}
@@ -90,16 +87,4 @@ func (c *checker) getProviderID(ctx context.Context) (string, error) {
 	}
 
 	return node.Spec.ProviderID, nil
-}
-
-// getConfig returns a k8s config based on the environment
-// detecting if we are on the prometheus pod or running
-// on a machine with a kubeconfig file
-func (c *checker) getConfig() (*rest.Config, error) {
-	if common.InPod() {
-		return rest.InClusterConfig()
-	}
-
-	kubeconfig := filepath.Join(homedir.HomeDir(), ".kube", "config")
-	return clientcmd.BuildConfigFromFlags("", kubeconfig)
 }

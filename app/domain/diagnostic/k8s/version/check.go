@@ -8,18 +8,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
-	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/common"
+	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	logging "github.com/cloudzero/cloudzero-agent/app/logging/validator"
 	"github.com/cloudzero/cloudzero-agent/app/types/status"
 )
@@ -27,13 +23,15 @@ import (
 const DiagnosticK8sVersion = config.DiagnosticK8sVersion
 
 type checker struct {
-	cfg    *config.Settings
-	logger *logrus.Entry
+	cfg            *config.Settings
+	logger         *logrus.Entry
+	configProvider k8s.ConfigProvider
 }
 
 func NewProvider(ctx context.Context, cfg *config.Settings) diagnostic.Provider {
 	return &checker{
-		cfg: cfg,
+		cfg:            cfg,
+		configProvider: k8s.NewConfigProvider(),
 		logger: logging.NewLogger().
 			WithContext(ctx).WithField(logging.OpField, "k8s_version"),
 	}
@@ -59,7 +57,7 @@ func (c *checker) Check(_ context.Context, client *http.Client, accessor status.
 
 // getK8sVersion returns the k8s version of the cluster
 func (c *checker) getK8sVersion(_ *http.Client) ([]byte, error) {
-	cfg, err := c.getConfig()
+	cfg, err := c.configProvider.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "read config")
 	}
@@ -78,16 +76,4 @@ func (c *checker) getK8sVersion(_ *http.Client) ([]byte, error) {
 	}
 
 	return []byte(fmt.Sprintf("%s.%s", information.Major, information.Minor)), nil
-}
-
-// getConfig returns a k8s config based on the environment
-// detecting if we are on the prometheus pod or running
-// on a machine with a kubeconfig file
-func (c *checker) getConfig() (*rest.Config, error) {
-	if common.InPod() {
-		return rest.InClusterConfig()
-	}
-
-	kubeconfig := filepath.Join(homedir.HomeDir(), ".kube", "config")
-	return clientcmd.BuildConfigFromFlags("", kubeconfig)
 }
