@@ -1,0 +1,35 @@
+name: Renovate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * FRI"
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v41.0.22
+        env:
+          LOG_LEVEL: debug
+        with:
+          # The entrypoint script is used to install some dependencies for our
+          # postUpgradeTasks, and shouldn't be necessary for repositories which
+          # don't require such custom tasks.
+          docker-cmd-file: .github/renovate/entrypoint.sh
+          # So we can use apt to install stuff. Then we run renovate as 'ubuntu'
+          # in the entrypoint script.
+          docker-user: root
+          # Self-Hosted Configuration File
+          #
+          # This is where options that are only available in the self-hosted
+          # version go; most things can/should go in a normal configuration
+          # file. For details, see:
+          #
+          # https://docs.renovatebot.com/self-hosted-configuration/
+          # https://docs.renovatebot.com/configuration-options/
+          configurationFile: .github/renovate/global-config.json
+          token: ${{ secrets.RENOVATE_TOKEN }}
