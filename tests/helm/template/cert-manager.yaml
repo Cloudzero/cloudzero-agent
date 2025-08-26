@@ -806,10 +806,6 @@ data:
               memory: 64Mi
           securityContext: {}
         tolerations: []
-      kubectl:
-        image:
-          repository: docker.io/bitnami/kubectl
-          tag: 1.33.3
       miscellaneous:
         configLoader:
           resources:

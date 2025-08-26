@@ -330,13 +330,6 @@ components:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
 
-  # kubectl contains details about where to find the kubectl image.  This chart
-  # uses the kubectl image as part of the job to initialize certificates.
-  kubectl:
-    image:
-      repository: docker.io/bitnami/kubectl
-      tag: "1.33.3"
-
   # prometheus contains details about where to find the Prometheus image.
   # Prometheus is critical to the functionality of this chart, and is used to
   # scrape metrics.

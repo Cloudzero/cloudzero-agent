@@ -525,9 +525,14 @@ properties:
 
       kubectl:
         description: |
+          **DEPRECATED**: This section is deprecated and will be removed in a future version.
+          The kubectl image is no longer used as certificate management has been replaced
+          with the cloudzero-certifik8s Go executable.
+
           A container which includes the `kubectl` executable. This is used
           mostly to gather information about the cluster during an
           initialization phase.
+        deprecated: true
         additionalProperties: false
         type: object
         properties:
