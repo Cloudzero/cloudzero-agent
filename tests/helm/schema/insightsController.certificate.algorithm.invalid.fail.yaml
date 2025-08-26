@@ -1,0 +1,4 @@
+insightsController:
+  tls:
+    certificate:
+      algorithm: "invalid-algorithm"

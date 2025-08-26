@@ -30,8 +30,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: init-cert
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.kubectl.image "compat" .Values.initCertJob.image) | nindent 10 }}
-          command: ["/bin/bash", "-c"]
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.initCertJob.image) | nindent 10 }}
+          command: ["/app/cloudzero-certifik8s"]
           workingDir: /var/tmp
           {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.initCert.resources | nindent 10 }}
           {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
@@ -39,87 +39,17 @@ spec:
               (.Values.components.miscellaneous.initCert.securityContext | default (dict))
             ) | nindent 10 }}
           args:
-            - |
-              #!/bin/bash
-              set -e
+            - "generate"
+            - "--secret-name={{ include "cloudzero-agent.tlsSecretName" . }}"
+            - "--namespace={{ .Release.Namespace }}"
+            - "--service-name={{ include "cloudzero-agent.serviceName" . }}"
+            - "--webhook-name={{ include "cloudzero-agent.validatingWebhookConfigName" . }}"
+            {{- if .Values.insightsController.labels.enabled }}
+            - "--enable-labels"
+            {{- end }}
+            {{- if .Values.insightsController.annotations.enabled }}
+            - "--enable-annotations"
+            {{- end }}
 
-              {{- if not .Values.insightsController.tls.useCertManager }}
-              GENERATE_CERTIFICATE=false
-
-              # Check if the caBundle in the ValidatingWebhookConfiguration is the same for all webhooks
-              caBundles=()
-              {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
-              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
-              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
-              {{- if or $labelsEnabled $annotationEnabled }}
-              wh_caBundle=($(kubectl get validatingwebhookconfiguration {{ $webhookName }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}'))
-              caBundles+=("${wh_caBundle:-missing }")
-              {{- end }}
-
-              CA_BUNDLE=${caBundles[0]}
-              for caBundle in "${caBundles[@]}"; do
-                  if [[ "$caBundle" == "missing" ]]; then
-                      echo "Empty caBundle found in ValidatingWebhookConfiguration."
-                      GENERATE_CERTIFICATE=true
-                  fi
-                  if [[ "$caBundle" != "$CA_BUNDLE" ]]; then
-                      echo "Mismatch found between ValidatingWebhookConfiguration caBundle values."
-                        GENERATE_CERTIFICATE=true
-                  fi
-              done
-
-              SECRET_NAME={{ include "cloudzero-agent.tlsSecretName" . }}
-              NAMESPACE={{ .Release.Namespace }}
-
-              EXISTING_TLS_CRT=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.crt}')
-              EXISTING_TLS_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.tls\.key}')
-
-              if [[ -n "$EXISTING_TLS_CRT" ]]; then
-                  # Check if the SANs in the certificate match the service name
-                  SAN=$(echo "$EXISTING_TLS_CRT" | base64 -d | openssl x509 -text -noout | grep DNS | sed 's/.*DNS://')
-                  if [[ "$SAN" != "{{ include "cloudzero-agent.serviceName" . }}.{{ .Release.Namespace }}.svc" ]]; then
-                      echo "The SANs in the certificate do not match the service name."
-                      GENERATE_CERTIFICATE=true
-                  fi
-                  # Check that caBundle and tls.crt are the same
-                  if [[ "$CA_BUNDLE" != $EXISTING_TLS_CRT ]]; then
-                      echo "The caBundle in the ValidatingWebhookConfiguration does not match the tls.crt in the TLS Secret."
-                      GENERATE_CERTIFICATE=true
-                  fi
-              fi
-
-              # Check if the TLS Secret already has certificate information
-              if [[ -z "$EXISTING_TLS_CRT" ]] || [[ -z "$EXISTING_TLS_KEY" ]] || [[ $GENERATE_CERTIFICATE == "true" ]] ; then
-                  echo "The TLS Secret and/or at least one webhook configuration contains empty certificate information, or the certificate is invalid/expired. Creating a new certificate..."
-              else
-                  echo "The TLS Secret and all webhook configurations contain non-empty certificate information. Will not create a new certificate and will not patch resources."
-                  exit 0
-              fi
-
-              # Generate self-signed certificate and private key
-              openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 36500 -nodes -subj "/CN={{ include "cloudzero-agent.serviceName" . }}" -addext "subjectAltName = DNS:{{ include "cloudzero-agent.serviceName" . }}.{{ .Release.Namespace }}.svc"
-
-              # Base64 encode the certificate
-              export CA_BUNDLE=$(cat tls.crt | base64 | tr -d '\n')
-              export TLS_CRT=$(cat tls.crt | base64 | tr -d '\n')
-              export TLS_KEY=$(cat tls.key | base64 | tr -d '\n')
-
-              # Update the TLS Secret with the certificate and key
-              kubectl patch secret $SECRET_NAME \
-                  -p '{"data": {"ca.crt": "'"$TLS_CRT"'", "tls.crt": "'"$TLS_CRT"'", "tls.key": "'"$TLS_KEY"'"}}'
-
-              {{- $webhookName := printf "%s" (include "cloudzero-agent.validatingWebhookConfigName" $) }}
-              {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
-              {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
-              {{- if or $labelsEnabled $annotationEnabled }}
-              # Patch the ValidatingWebhookConfiguration {{ $webhookName }} with the caBundle
-              kubectl patch validatingwebhookconfiguration  {{ $webhookName }} \
-                --type='json' \
-                -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]"
-              {{- end }}
-              {{- else }}
-              echo "The useCertManager flag is set to true. Skipping certificate generation and patching of resources."
-              {{- end }}
-              exit 0
 {{- end }}
 {{- end }}

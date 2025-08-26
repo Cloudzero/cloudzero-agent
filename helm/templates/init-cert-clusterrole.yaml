@@ -1,40 +1,46 @@
 {{- if .Values.initCertJob.rbac.create }}
+# ClusterRole for the init-cert Job
+#
+# This ClusterRole grants the init-cert job (which runs during
+# deployment/upgrade) permission to manage TLS certificates and update the
+# ValidatingWebhookConfiguration.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "init-cert") | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (mergeOverwrite
+      (.Values.defaults.annotations | default (dict))
+      (dict "checkov.io/skip_1" "CKV_K8S_155")
+    ) | nindent 2 }}
   name: {{ include "cloudzero-agent.initCertJob.clusterRoleName" . }}
-  namespace: {{ include "cloudzero-agent.namespace" . }}
+
 rules:
-  - apiGroups:
-      - "apps"
-    resources:
-      - "deployments"
-    resourceNames:
-      - {{ include "cloudzero-agent.insightsController.deploymentName" . }}
-    verbs:
-      - "get"
-      - "list"
-  - apiGroups:
-      - ""
-    resources:
-      - "secrets"
-    resourceNames:
-      - {{ include "cloudzero-agent.tlsSecretName" . }}
-    verbs:
-      - get
-      - list
-      - patch
-  - apiGroups:
-      - "admissionregistration.k8s.io"
-    resources:
-      - "validatingwebhookconfigurations"
-    resourceNames:
+  # Read/Update access to Kubernetes secret containing the TLS certificate for
+  # the webhook server.
+  - apiGroups: [""]  # Empty string means "core" API group (v1) - contains
+    resources: ["secrets"]
+    resourceNames: [{{ include "cloudzero-agent.tlsSecretName" . }}]
+    verbs: [
+      # "get" - Read existing TLS certificate to determine if regeneration is needed
+      "get",
+      # "patch" - Update TLS secret with newly generated certificate data
+      "patch"
+    ]
+
+  # Read/Update the Validating Webhook Configuration
+  #
+  # When regenerating the TLS certificate, the init-cert job updates the
+  # ValidatingWebhookConfiguration to use the CA bundle. This allows us to use
+  # our own self-signed certificate in the CloudZero Webhook Server, but only
+  # with this specific ValidatingWebhookConfiguration.
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    resourceNames: 
       - {{ include "cloudzero-agent.validatingWebhookConfigName" $ }}
-    verbs:
-      - get
-      - list
-      - patch
+    verbs: [
+      # "get" - Read current webhook configuration to check if caBundle updates are needed
+      "get",
+      # "patch" - Update caBundle field with new certificate data for webhook trust
+      "patch"
+    ]
 {{- end }}
