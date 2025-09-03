@@ -1,5 +1,7 @@
 {
+  "type": "module",
   "dependencies": {
-    "prettier": "^3.5.3"
+    "@mermaid-js/mermaid-cli": "^11.9.0",
+    "prettier": "3.5.3"
   }
 }

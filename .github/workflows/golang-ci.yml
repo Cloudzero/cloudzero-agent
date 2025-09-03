@@ -40,7 +40,7 @@ jobs:
           go-version-file: go.mod
       - name: Install golangci-lint
         run: make install-tools-golangci-lint
-      - name: Install prettier
+      - name: Install Node.js linters
         run: make install-tools-node
       - name: Run linters
         run: make lint
