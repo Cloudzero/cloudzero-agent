@@ -60,11 +60,11 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/zig,id=zig-$TARGETPLATFORM \
     make build OUTPUT_BIN_DIR=/go/bin \
     REGENERATE=never \
-    TARGET_OS=$TARGETOS TARGET_ARCH=$TARGETARCH \
+    TARGET_OS="$TARGETOS" TARGET_ARCH="$TARGETARCH" \
     ENABLE_ZIG=true \
-    REVISION=${REVISION} \
-    TAG=${TAG} \
-    BUILD_TIME=${BUILD_TIME}
+    REVISION="${REVISION}" \
+    TAG="${TAG}" \
+    BUILD_TIME="${BUILD_TIME}"
 
 # Stage 4: Access current certs
 FROM gcr.io/distroless/static-debian12:debug@sha256:072204b513ba56f418d58f9d771de54ffe4fddd22fe5cf891697e6129bd8fb6e AS certs

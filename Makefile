@@ -28,6 +28,7 @@ HELM          ?= $(abspath .tools/bin/helm)
 KUBECONFORM   ?= $(abspath .tools/bin/kubeconform)
 MOCKGEN       ?= $(abspath .tools/bin/mockgen)
 PRETTIER      ?= $(abspath .tools/node_modules/.bin/prettier)
+MMDC          ?= $(abspath .tools/node_modules/.bin/mmdc)
 STATICCHECK   ?= $(abspath .tools/bin/staticcheck)
 
 # Build configuration
@@ -170,16 +171,29 @@ PRETTIER_TARGET       ?= .
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	which $(PRETTIER)
 	$(PRETTIER) --write $(PRETTIER_TARGET)
 
 .PHONY: lint-go
 lint-go:
 	$(GOLANGCI_LINT) run ./...
 
+.PHONY: %.md-lint-mermaid
+%.md-lint-mermaid: %.md
+	@if grep -q '```mermaid' "$<" 2>/dev/null; then \
+		echo "$(INFO_COLOR)Validating Mermaid diagrams in $<$(NO_COLOR)"; \
+		sed -n '/```mermaid/,/```/p' "$<" | sed '1d;$$d' | $(MMDC) -i - -e svg -o - --quiet --puppeteerConfigFile .tools/puppeteer-config.json >/dev/null || { \
+			echo "$(ERROR_COLOR)Mermaid diagram validation failed in $<$(NO_COLOR)"; \
+			exit 1; \
+		}; \
+	fi
+
+.PHONY: lint-mermaid
+lint-mermaid: ## Run Mermaid diagram validation on all Markdown files
+lint-mermaid: $(patsubst %.md,%.md-lint-mermaid,$(shell find . -name '*.md' -not -exec git check-ignore -q {} \; -print 2>/dev/null | sort -u | xargs grep -l '```mermaid' 2>/dev/null))
+
 .PHONY: lint
 lint: ## Run the linter
-lint: lint-go
+lint: lint-go lint-mermaid
 
 .PHONY: analyze-go
 analyze-go:
