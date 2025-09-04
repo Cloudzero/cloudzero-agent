@@ -162,6 +162,8 @@ format: format-go
 format-go:
 	$(GOFUMPT) -w $(GOFUMPT_TARGET)
 	$(GO) mod tidy
+	$(GO) -C .tools/ mod tidy
+	$(GO) -C tests/ mod tidy
 
 PRETTIER_TARGET       ?= .
 
