@@ -6,7 +6,7 @@ require (
 	github.com/homeport/dyff v1.10.2
 	github.com/itchyny/gojq v0.12.17
 	github.com/yannh/kubeconform v0.7.0
-	go.uber.org/mock v0.5.2
+	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.8
 	helm.sh/helm/v3 v3.18.6
 	honnef.co/go/tools v0.6.1
