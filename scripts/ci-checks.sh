@@ -29,6 +29,8 @@ function check_go_version() {
     # go.mod
     for GO_MOD in \
             go.mod \
+            .tools/go.mod \
+            tests/go.mod \
             tests/integration/test_server/go.mod; do
         git grep -q "^go ${DESIRED_GO_VERSION}\$" ${GO_MOD} || {
             echo "${GO_MOD} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2

@@ -204,6 +204,9 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
+      - name: Install dependencies in tests directory
+        run: go -C tests mod tidy
+
       # smoke tests hit alfa.
       - name: Run smoke tests
         run: sudo -E make test-smoke
