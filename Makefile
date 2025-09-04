@@ -109,7 +109,7 @@ install-tools: ## Install development tools
 .PHONY: install-tools-go
 install-tools: install-tools-go
 install-tools-go:
-	@$(GREP) -E '^	_' tools.go | $(AWK) '{print $$2}' | GOBIN=$(PWD)/.tools/bin $(XARGS) $(GO) install
+	@$(GREP) -E '^	_' .tools/tools.go | $(AWK) '{print $$2}' | GOBIN=$(PWD)/.tools/bin $(XARGS) $(GO) -C .tools install
 
 .PHONY: install-tools-node
 install-tools: install-tools-node
@@ -320,7 +320,7 @@ test-smoke: ## Run the smoke tests
 	CLOUD_ACCOUNT_ID=$(CLOUD_ACCOUNT_ID) \
 	CSP_REGION=$(CSP_REGION) \
 	CLUSTER_NAME=$(CLUSTER_NAME) \
-	$(GO) test -run Smoke -v -timeout 10m ./tests/smoke/...
+	$(GO) -C tests test -run Smoke -v -timeout 10m ./smoke/...
 
 # ----------- DOCKER IMAGE ------------
 

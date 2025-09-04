@@ -12,6 +12,28 @@ updates:
     commit-message:
       prefix: "CP-29639: "
 
+  - package-ecosystem: gomod
+    directory: "/.tools/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "CP-29639: "
+
+  - package-ecosystem: gomod
+    directory: "/tests/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "CP-29639: "
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
