@@ -82,7 +82,7 @@ require (
 	github.com/prometheus/client_golang v1.23.0
 	github.com/prometheus/prometheus v0.305.0
 	github.com/shirou/gopsutil/v4 v4.25.7
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	gorm.io/driver/sqlite v1.6.0
