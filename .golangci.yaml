@@ -1,158 +1,117 @@
+version: "2"
 run:
   concurrency: 4
-  timeout: 5m
   issues-exit-code: 2
   tests: false
-
 output:
-  print-issued-lines: false
-  print-linter-name: true
   path-prefix: ""
-  sort-results: true
-
 linters:
-  disable-all: true
-
+  default: none
   enable:
-    # Bugs & Errors
-    - copyloopvar # Detects places where loop variables are copied unnecessarily (in Go 1.22+)
-    - dupword # Check for duplicate words that might indicate copy-paste errors
-    - dupl # Detects duplicate code
-    - errcheck # Check for unexamined errors
-    - gosec # Check for security issues
-    - govet # Check for common Go mistakes
-    - nilnil # Detects return of nil errors and an invalid value
-    - paralleltest # Detects missing t.Parallel() calls in tests
-    - promlinter # Check Prometheus metrics names
-    - revive # Framework with many sub-linters
-    - sqlclosecheck # Check that SQL rows/statements are closed
-    - staticcheck # Subset of checks from the stand-along staticcheck tool
-    - testifylint # Check for common testify usage mistakes
-    - tparallel # Finds incorrect usage of t.Parallel()
-    - zerologlint # Check for correct usage of zerolog
-
-    # Performance
-    - gocritic # An opinionated linter to enforce best practices
-    - prealloc # Find slice declarations that could be preallocated
-    - perfsprint # Check for usage of fmt.Sprintf that could be implemented with more efficient alternatives
-
-    # Style & Formatting
-    - goconst # Find repeated strings that could be replaced by constants
-    - gofumpt # Aggressive formatter Go code
-    - goheader # Check for correct headers in source files
-    - intrange # Look for loops that could use the Go 1.22+ integer range syntax
-    - nolintlint # Ensure proper usage of nolint directives
-    - stylecheck # Check for style issues
-    - tagliatelle # Check for correct usage formatting of struct tags
-
-linters-settings:
-  #
-  # Bugs & Errors
-  #
-
-  dupl:
-    # Tokens count to trigger issue, Default: 150
-    threshold: 100
-
-  errcheck:
-    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-    # Such cases aren't reported by default.
-    # Default: false
-    check-type-assertions: true
-
-  govet:
-    enable:
-      - shadow
-
-  nolintlint:
-    require-specific: true
-    require-explanation: true
-
-  # For a full list of Revive linters, see https://github.com/mgechev/revive
-  revive:
-    rules:
-      # Check for common mistaken usages of the sync/atomic package
-      - name: atomic
-      # Suggests using constant for magic numbers and string literals
-      - name: add-constant
-        arguments:
-          - maxLitCount: "3"
-            allowStrs: '""'
-            allowInts: "0,1,2,3,10,8,16,32,64,100,128,192,256,512,1024,2048,4096,8192,16384,32768,65536"
-            allowFloats: "0.0,0.,1.0,1.,2.0,2.,3.0,3."
-      # Check for common mistaken usages of the sync/atomic package
-      - name: atomic
-      # Warns on malformed comments
-      - name: comment-spacings
-      # Warns on methods with names that differ only by capitalization
-      - name: confusing-naming
-      # Suggests to name potentially confusing function results
-      - name: confusing-results
-      # Warns on constant logical expressions
-      - name: constant-logical-expr
-      # context.Context should be the first argument of a function.
-      - name: context-as-argument
-      # Disallows the usage of basic types in context.WithValue.
-      - name: context-keys-type
-      # Spots potential dataraces
-      - name: datarace
-      # Looks for program exits in funcs other than main() or init()
-      - name: deep-exit
-      # Naming and commenting conventions on exported symbols.
-      - name: exported
-        arguments:
-          - "checkPrivateReceivers"
-          - "disableStutteringCheck"
-          - "checkPublicInterface"
-          - "disableChecksOnFunctions"
-
-  #
-  # Performance
-  #
-
-  #
-  # Style & Formatting
-  #
-
-  gofumpt:
-    # Apply the rewrite rules to the source before reformatting.
-    # https://github.com/mvdan/gofumpt
-    # Default: []
-    rewrite-rules:
-      - pattern: "interface{}"
-        replacement: "any"
-      - pattern: "a[b:len(a)]"
-        replacement: "a[b:]"
-
-  goheader:
-    template: |-
-      SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
-      SPDX-License-Identifier: Apache-2.0
-
-  tagliatelle:
-    case:
-      use-field-name: true
+    - copyloopvar
+    - dupl
+    - dupword
+    - errcheck
+    - goconst
+    - gocritic
+    - goheader
+    - gosec
+    - govet
+    - intrange
+    - nilnil
+    - nolintlint
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - promlinter
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - tagliatelle
+    - testifylint
+    - tparallel
+    - zerologlint
+  settings:
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+    goheader:
+      template: |-
+        SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
+        SPDX-License-Identifier: Apache-2.0
+    govet:
+      enable:
+        - shadow
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
       rules:
-        # Any struct tag type can be used.
-        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`.
-        yaml: snake
-
-  testifylint:
-    # Enable all checkers (default)
-    enable-all: true
-    # The useless-assert checker will catch reflect.DeepEqual with identical arguments
-
+        - name: atomic
+        - name: add-constant
+          arguments:
+            - allowFloats: 0.0,0.,1.0,1.,2.0,2.,3.0,3.
+              allowInts: 0,1,2,3,10,8,16,32,64,100,128,192,256,512,1024,2048,4096,8192,16384,32768,65536
+              allowStrs: '""'
+              maxLitCount: "3"
+        - name: atomic
+        - name: comment-spacings
+        - name: confusing-naming
+        - name: confusing-results
+        - name: constant-logical-expr
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: datarace
+        - name: deep-exit
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+            - checkPublicInterface
+            - disableChecksOnFunctions
+    tagliatelle:
+      case:
+        rules:
+          yaml: snake
+        use-field-name: true
+    staticcheck:
+      checks:
+        - "-QF1001" # Disable De Morgan's law suggestions
+        - "-QF1011" # Disable type inference suggestions
+    testifylint:
+      enable-all: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - goheader
+        path: app/types/mocks
+    paths:
+      - app/types/status/cluster_status.pb.go
+      - app/types/mocks
+      - mock/
+      - tests/
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   uniq-by-line: false
-  exclude-dirs:
-    # Generated files
-    - app/types/status/cluster_status.pb.go
-    - app/types/mocks
-
-    # These should not be excluded, but that's a tomorrow problem.
-    - mock/
-    - tests/
-  exclude-rules:
-    - path: app/types/mocks
-      linters:
-        - goheader
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - app/types/status/cluster_status.pb.go
+      - app/types/mocks
+      - mock/
+      - tests/
+      - third_party$
+      - builtin$
+      - examples$

@@ -227,7 +227,7 @@ func (f *PlainTextFormatter) appendValue(b *bytes.Buffer, value interface{}) {
 	if !f.needsQuoting(stringVal) {
 		b.WriteString(stringVal)
 	} else {
-		b.WriteString(fmt.Sprintf("%q", stringVal))
+		fmt.Fprintf(b, "%q", stringVal)
 	}
 }
 

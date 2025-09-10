@@ -88,7 +88,7 @@ func NewIngressClassHandler(
 	h.Accessor = NewIngressClassConfigAccessor(settings)
 	h.ObjectType = objectType
 	h.ObjectCreator = helper.NewStaticObjectCreator(objectType)
-	h.Handler.Store = store
+	h.Store = store
 	h.Handler.Create = h.Create()
 	h.Handler.Update = h.Update()
 	h.Handler.Delete = h.Delete()

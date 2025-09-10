@@ -23,7 +23,7 @@ func NewPromMetricsAPI(base string) *PromMetricsAPI {
 			Mounts:  map[string]*chi.Mux{},
 		},
 	}
-	a.Service.Mounts[base] = a.Routes()
+	a.Mounts[base] = a.Routes()
 	return a
 }
 

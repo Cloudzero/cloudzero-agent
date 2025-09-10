@@ -81,7 +81,7 @@ func (f *MetricFile) Size() (int64, error) {
 
 func (f *MetricFile) Read(p []byte) (int, error) {
 	if f.reader == nil {
-		_, err := f.File.Seek(0, io.SeekStart)
+		_, err := f.Seek(0, io.SeekStart)
 		if err != nil {
 			return 0, fmt.Errorf("failed to seek to beginning of file: %w", err)
 		}
