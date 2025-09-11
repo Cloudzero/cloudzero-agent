@@ -7,7 +7,7 @@ require (
 	github.com/itchyny/gojq v0.12.17
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
-	google.golang.org/protobuf v1.36.8
+	google.golang.org/protobuf v1.36.9
 	helm.sh/helm/v3 v3.18.6
 	honnef.co/go/tools v0.6.1
 	mvdan.cc/gofumpt v0.9.1
