@@ -209,4 +209,4 @@ jobs:
 
       # smoke tests hit alfa.
       - name: Run smoke tests
-        run: sudo -E make test-smoke
+        run: GO="$(which go)" sudo -E make test-smoke

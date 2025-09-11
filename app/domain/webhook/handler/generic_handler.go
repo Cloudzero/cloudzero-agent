@@ -45,7 +45,7 @@ func NewGenericHandler[T metav1.Object](
 	h.Handler.Update = h.Update()
 	h.Handler.Delete = h.Delete()
 	h.Handler.Connect = h.Connect()
-	h.Handler.Store = store
+	h.Store = store
 	return &h.Handler
 }
 
