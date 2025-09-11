@@ -10,7 +10,7 @@ require (
 	google.golang.org/protobuf v1.36.8
 	helm.sh/helm/v3 v3.18.6
 	honnef.co/go/tools v0.6.1
-	mvdan.cc/gofumpt v0.9.0
+	mvdan.cc/gofumpt v0.9.1
 )
 
 require (
