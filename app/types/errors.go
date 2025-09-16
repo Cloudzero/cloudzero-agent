@@ -108,4 +108,7 @@ var (
 
 	// ErrCheckConstraintViolated is returned when a check constraint is violated.
 	ErrCheckConstraintViolated = errors.New("check constraint violated")
+
+	// ErrTableMissing is returned when a required database table does not exist.
+	ErrTableMissing = errors.New("required database table missing")
 )

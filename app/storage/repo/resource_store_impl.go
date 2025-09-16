@@ -10,6 +10,7 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/storage/sqlite"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,6 +38,15 @@ var (
 		[]string{"resource_type", "namespace", "resource_name", "action"},
 	)
 )
+
+// createDBErrorEvent returns a logger event with the appropriate level based on the error type.
+// Fatal errors (like missing tables) will cause the application to exit.
+func createDBErrorEvent(logger *zerolog.Logger, translatedErr error) *zerolog.Event {
+	if errors.Is(translatedErr, types.ErrTableMissing) {
+		return logger.Fatal() //nolint:zerologlint // Caller will dispatch the event
+	}
+	return logger.Warn() //nolint:zerologlint // Caller will dispatch the event
+}
 
 // NewInMemoryResourceRepository creates a new in-memory resource repository.
 func NewInMemoryResourceRepository(clock types.TimeProvider) (types.ResourceStore, error) {
@@ -100,14 +111,18 @@ func (r *resourceRepoImpl) Create(ctx context.Context, it *types.ResourceTags) e
 			DoNothing: true,
 		}).Create(it).Error
 	if err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("storage write create failure")
+		translatedErr := core.TranslateError(err)
+
+		// Create log entry with appropriate level
+		createDBErrorEvent(log.Ctx(ctx), translatedErr).Msg("storage write create failure")
+
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "create",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
 			"resource_name": it.Name,
 		}).Inc()
-		return core.TranslateError(err)
+		return translatedErr
 	}
 	return nil
 }
@@ -179,14 +194,18 @@ func (r *resourceRepoImpl) Update(ctx context.Context, it *types.ResourceTags) e
 	if err := r.DB(ctx).Model(it).
 		Where("id = ?", it.ID).
 		Updates(updates).Error; err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("storage write update failure")
+		translatedErr := core.TranslateError(err)
+
+		// Create log entry with appropriate level
+		createDBErrorEvent(log.Ctx(ctx), translatedErr).Msg("storage write update failure")
+
 		StorageWriteFailures.With(prometheus.Labels{
 			"action":        "update",
 			"resource_type": fmt.Sprintf("%d", it.Type),
 			"namespace":     *it.Namespace,
 			"resource_name": it.Name,
 		}).Inc()
-		return core.TranslateError(err)
+		return translatedErr
 	}
 	return nil
 }
