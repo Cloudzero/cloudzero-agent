@@ -1,0 +1,3 @@
+kubeConfig: tests/kuttl/kubeconfig
+namespace: im-a-namespace
+release: im-a-release

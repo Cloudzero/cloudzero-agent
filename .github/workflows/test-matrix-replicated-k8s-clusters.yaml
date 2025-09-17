@@ -166,86 +166,51 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ steps.create-cluster.outputs.cluster-kubeconfig }}" > ~/.kube/config
 
-      - name: Add TestKube Tolerations for GKE/ARM64
-        if: matrix.cluster.distribution == 'gke' && matrix.cluster.arch == 'arm64'
+      - name: Create cluster configuration files
         run: |
-          cat <<EOF > ${{ runner.temp }}/testkube-values.yaml
-          nats:
-            podTemplate:
-              merge:
-                spec:
-                  tolerations:
-                    - key: kubernetes.io/arch
-                      operator: Equal
-                      value: arm64
-                      effect: NoSchedule
-          mongodb:
-            tolerations:
-              - key: kubernetes.io/arch
-                operator: Equal
-                value: arm64
-                effect: NoSchedule
-          preUpgradeHook:
-            tolerations:
-              - key: kubernetes.io/arch
-                operator: Equal
-                value: arm64
-                effect: NoSchedule
-          preUpgradeHookNATS:
-            tolerations:
-              - key: kubernetes.io/arch
-                operator: Equal
-                value: arm64
-                effect: NoSchedule
-          testkube-api:
-            minio:
-              tolerations:
-                - key: kubernetes.io/arch
-                  operator: Equal
-                  value: arm64
-                  effect: NoSchedule
-            testConnection:
-              tolerations:
-                - key: kubernetes.io/arch
-                  operator: Equal
-                  value: arm64
-                  effect: NoSchedule
-            tolerations:
-              - key: kubernetes.io/arch
-                operator: Equal
-                value: arm64
-                effect: NoSchedule
-          testkube-operator:
-            preUpgrade:
-              tolerations:
-                - key: kubernetes.io/arch
-                  operator: Equal
-                  value: arm64
-                  effect: NoSchedule
-            testConnection:
-              tolerations:
-                - key: kubernetes.io/arch
-                  operator: Equal
-                  value: arm64
-                  effect: NoSchedule
-            tolerations:
-              - key: kubernetes.io/arch
-                operator: Equal
-                value: arm64
-                effect: NoSchedule
-            webhook:
-              patch:
-                tolerations:
-                  - key: kubernetes.io/arch
-                    operator: Equal
-                    value: arm64
-                    effect: NoSchedule
+          # Create cluster configuration for this test run
+          cat <<EOF > clusters/${{ env.CLUSTER_NAME }}.yaml
+          # Cluster configuration for '${{ env.CLUSTER_NAME }}' cluster
+          context: ""
+          kubeConfig: ""
+          namespace: cz-agent
+          release: cz-agent
+          EOF
+
+          # Create overrides file with test-specific values
+          cat <<EOF > clusters/${{ env.CLUSTER_NAME }}-overrides.yaml
+          # Test image configuration
+          components:
+            agent:
+              image:
+                repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
+                tag: ${{ inputs.image-tag }}
+
+          # Test API configuration  
+          cloudAccountId: "123456789012"
+          clusterName: "${{ env.CLUSTER_NAME }}"
+          region: us-east-1
+          host: dev-api.cloudzero.com
+          apiKey: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+
+          # Image pull secrets
+          imagePullSecrets:
+            - name: ghcr-registry
+
+          # Test-specific settings
+          insightsController:
+            server:
+              replicaCount: 1
+          components:
+            aggregator:
+              replicas: 1
           EOF
 
       - name: Add CloudZero Agent Tolerations for GKE/ARM64
         if: matrix.cluster.distribution == 'gke' && matrix.cluster.arch == 'arm64'
         run: |
-          cat <<EOF > ${{ runner.temp }}/cz-agent-values.yaml
+          # Add tolerations to the overrides file for ARM64 GKE clusters
+          cat <<EOF >> clusters/${{ env.CLUSTER_NAME }}-overrides.yaml
           defaults:
             tolerations:
               - key: kubernetes.io/arch
@@ -265,39 +230,6 @@ jobs:
         run: |
           kubectl patch storageclass gp2 -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 
-      # Note: When adding OpenShift support someday, both TestKube and the
-      # CloudZero Agent will likely need additional manifests due to the
-      # security setup in OpenShift.
-      # see: https://docs.testkube.io/articles/install/standalone-agent#deploying-on-openshift
-
-      # Install TestKube into Cluster
-      - name: Install TestKube
-        run: |
-          echo "Applying TestKube Helm Chart"
-          touch ${{ runner.temp }}/testkube-values.yaml
-          if [[ -f ${{ runner.temp }}/testkube-k8s-manifests.yaml ]]; then
-            kubectl apply -f ${{ runner.temp }}/testkube-k8s-manifests.yaml
-          else
-            kubectl create namespace testkube
-          fi
-          .tools/bin/helm repo add kubeshop https://kubeshop.github.io/helm-charts
-          .tools/bin/helm install testkube kubeshop/testkube \
-            --version=v2.1.137 \
-            -n testkube \
-            --values ${{ runner.temp }}/testkube-values.yaml
-          echo "Wait for testkube deployments"
-          kubectl wait deployment \
-            -n testkube \
-            --all \
-            --for condition=Available=True \
-            --timeout=600s
-
-      # Install Testkube CLI
-      - uses: kubeshop/setup-testkube@v1
-        with:
-          namespace: testkube
-          version: 2.1.137
-
       - name: Setup imagePullSecrets
         run: |
           kubectl create ns cz-agent
@@ -309,57 +241,32 @@ jobs:
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare for helm install
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 4
-          command: |
-            .tools/bin/helm repo add prom https://prometheus-community.github.io/helm-charts
-            .tools/bin/helm dependency build ./helm
-
-      # Install CloudZero Agent into Cluster
-      - name: Install CloudZero Agent
+      - name: Debug Makefile Variables
         run: |
-          echo "Applying CloudZero Agent Helm Chart"
-          touch ${{ runner.temp }}/cz-agent-values.yaml
-          # Be aware that this logic could lead to some values duplication.
-          cat <<EOF >> ${{ runner.temp }}/cz-agent-values.yaml
-          cloudAccountId: "123456789012"
-          clusterName: ${{ env.CLUSTER_NAME }}
-          region: us-east-1
-          apiKey: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
-          host: dev-api.cloudzero.com
-          imagePullSecrets:
-            - name: ghcr-registry
-          insightsController:
-            server:
-              replicaCount: 1
-          components:
-            agent:
-              image:
-                repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
-                tag: ${{ inputs.image-tag }}
-            aggregator:
-              replicas: 1
-          EOF
-          .tools/bin/helm install cz-agent ./helm \
-            -n cz-agent \
-            --values ${{ runner.temp }}/cz-agent-values.yaml
-          echo "Wait for CloudZero Agent deployments"
-          kubectl wait deployment \
-            -n cz-agent \
-            --all \
-            --for condition=Available=True \
-            --timeout=600s
+          echo "=== Debugging Makefile Variables ==="
+          echo "CLUSTER_NAME: ${{ env.CLUSTER_NAME }}"
+          echo "CLUSTER_CONFIG_FILE: clusters/${{ env.CLUSTER_NAME }}.yaml"
+          echo "CLUSTER_OVERRIDES_FILE: clusters/${{ env.CLUSTER_NAME }}-overrides.yaml"
+          echo "=== Cluster Config File Contents ==="
+          cat clusters/${{ env.CLUSTER_NAME }}.yaml
+          echo "=== Cluster Overrides File Contents ==="
+          cat clusters/${{ env.CLUSTER_NAME }}-overrides.yaml
+          echo "=== Testing Makefile Functions ==="
+          make -n helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }}
 
-      - name: Apply and Run TestKube Tests
+      - name: Install CloudZero Agent using Makefile
+        env:
+          CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
         run: |
-          kubectl apply -f ./tests/testkube/tests.yaml
-          testkube run testworkflow agent-basic-test -f
+          make helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }}
 
-      # Many more testkube based tests could be added in here as desired.
-      # Testkube support Postman, K6, simple scripts and much more.
+      - name: Wait for CloudZero Agent to be ready
+        run: |
+          make helm-wait CLUSTER_NAME=${{ env.CLUSTER_NAME }}
+
+      - name: Run KUTTL Tests
+        run: |
+          make helm-test-kuttl CLUSTER_NAME=${{ env.CLUSTER_NAME }}
 
       - name: Collect Logs
         id: logs
@@ -368,26 +275,78 @@ jobs:
         run: |
           rm -f ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
           touch ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #echo "---Kubectl Nodes-------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #kubectl get nodes -o json &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get nodes command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #echo "---Kubectl Storage Info------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #kubectl get storageclasses &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get storageclasses command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #kubectl describe pv -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pv command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          #kubectl describe pvc -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pvc command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Cluster Information------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "Cluster: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          echo "Instance Type: ${{ matrix.cluster.instance-type }}" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Nodes-------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get nodes -o wide &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get nodes command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Storage Info------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get storageclasses &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get storageclasses command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get pv -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pv command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get pvc -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pvc command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
           echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
           kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "---Kubectl Describe Pods (testkube)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl describe pods -n testkube &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe pods (testkube) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Describe All Resources (cloudzero-agent)-------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl describe all -l app.kubernetes.io/part-of=cloudzero-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe all (cloudzero-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
           echo "---Kubectl Describe Pods (cz-agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
           kubectl describe pods -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe pods (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "---Kubectl Events------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Describe Deployments (cz-agent)----------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl describe deployments -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe deployments (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Describe ReplicaSets (cz-agent)---------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl describe replicasets -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe replicasets (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Events (All)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
           kubectl events -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "---Stern Logs (testkube)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl stern -n testkube --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Events (CloudZero Agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl events -n cz-agent --sort-by='.lastTimestamp' | grep -E "(cz-agent|cloudzero)" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl events (cloudzero-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Kubectl Secrets (cz-agent)-------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get secrets -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get secrets (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
           echo "---Stern Logs (cz-agent)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
           kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "---Testkube Logs--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          testkube get testworkflowexecution $(testkube get testworkflowexecution --limit 1 -o yaml | yq e .[0].id) &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Testkube log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Container Logs (cz-agent)--------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read pod_name; do
+            pod_name=$(echo $pod_name | cut -d'/' -f2)
+            echo "---Logs for pod: $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            kubectl logs -n cz-agent $pod_name --all-containers=true --previous=false --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get logs for pod $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          done
+
+          echo "---Previous Container Logs (cz-agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read pod_name; do
+            pod_name=$(echo $pod_name | cut -d'/' -f2)
+            echo "---Previous logs for pod: $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            kubectl logs -n cz-agent $pod_name --all-containers=true --previous=true --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get previous logs for pod $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          done
+
+          echo "---Container Logs (ALL NAMESPACES)---------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          kubectl get pods -A --no-headers -o name 2>/dev/null | while read pod_name; do
+            namespace=$(echo $pod_name | cut -d'/' -f1)
+            pod_name=$(echo $pod_name | cut -d'/' -f2)
+            echo "---Logs for pod: $namespace/$pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            kubectl logs -n $namespace $pod_name --all-containers=true --previous=false --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get logs for pod $namespace/$pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          done
+
+          echo "---Helm Status--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          helm status cz-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Helm status command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+          echo "---Helm Values--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          helm get values cz-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Helm get values command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+
+      - name: Uninstall CloudZero Agent
+        if: always()
+        run: |
+          make helm-uninstall CLUSTER_NAME=${{ env.CLUSTER_NAME }} || true
 
       # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
       # potential secret it detected, since they will be publicly available if uploaded.

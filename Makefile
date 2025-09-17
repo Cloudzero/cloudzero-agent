@@ -14,22 +14,25 @@ CHECKOV     ?= checkov
 CURL        ?= curl
 DOCKER      ?= docker
 GREP        ?= grep
+KUBECTL     ?= kubectl
 NPM         ?= npm
 PROTOC      ?= protoc
 RM          ?= rm
 XARGS       ?= xargs
 
 # Dependencies we install via `make install-tools`
-DYFF          ?= $(abspath .tools/bin/dyff)
-GOFUMPT       ?= $(abspath .tools/bin/gofumpt)
-GOJQ          ?= $(abspath .tools/bin/gojq)
-GOLANGCI_LINT ?= $(abspath .tools/bin/golangci-lint)
-HELM          ?= $(abspath .tools/bin/helm)
-KUBECONFORM   ?= $(abspath .tools/bin/kubeconform)
-MOCKGEN       ?= $(abspath .tools/bin/mockgen)
-PRETTIER      ?= $(abspath .tools/node_modules/.bin/prettier)
-MMDC          ?= $(abspath .tools/node_modules/.bin/mmdc)
-STATICCHECK   ?= $(abspath .tools/bin/staticcheck)
+DYFF          ?= .tools/bin/dyff
+GOFUMPT       ?= .tools/bin/gofumpt
+GOJQ          ?= .tools/bin/gojq
+GOLANGCI_LINT ?= .tools/bin/golangci-lint
+HELM          ?= .tools/bin/helm
+KIND          ?= .tools/bin/kind
+KUBECONFORM   ?= .tools/bin/kubeconform
+KUTTL         ?= .tools/bin/kubectl-kuttl
+MOCKGEN       ?= .tools/bin/mockgen
+PRETTIER      ?= .tools/node_modules/.bin/prettier
+MMDC          ?= .tools/node_modules/.bin/mmdc
+STATICCHECK   ?= .tools/bin/staticcheck
 
 # Build configuration
 GO_MODULE      ?= $(shell $(GO) list -m)
@@ -46,9 +49,6 @@ REGENERATE     ?= auto
 CLOUDZERO_HOST        ?= dev-api.cloudzero.com
 CLOUD_ACCOUNT_ID      ?= "123456789012"
 CSP_REGION            ?= "us-east-1"
-CLUSTER_NAME          ?= "insights-controller-integration-test"
-# This is intentional empty (without quotes, etc.)
-CLOUD_HELM_EXTRA_ARGS ?=
 
 # Colors
 ERROR_COLOR ?= \033[1;31m
@@ -338,6 +338,83 @@ test-smoke: ## Run the smoke tests
 	CLUSTER_NAME=$(CLUSTER_NAME) \
 	$(GO) -C tests test -run Smoke -v -timeout 10m ./smoke/...
 
+# ----------- LOCAL TESTING INFRASTRUCTURE ------------
+
+# Generic testing configuration
+TEST_K8S_VERSION          ?= v1.32.3
+TEST_KIND_IMAGE_VERSION   ?= v1.33.2
+TEST_PLATFORM             ?= linux/amd64
+CLUSTER_NAME              ?= kind
+
+# New unified test cluster system
+
+.PHONY: kind-up
+kind-up: # Create kind cluster for testing
+kind-up: tests/kuttl/kubeconfig
+
+.PHONY: kind-down
+kind-down: ## Delete kind cluster and cleanup
+	$(KIND) delete cluster --name $(CLUSTER_NAME) || true
+	$(RM) -f tests/kuttl/kubeconfig
+
+# Complete KUTTL test workflow
+.PHONY: kind-test
+kind-test: ## Set up Kind cluster, install chart, run tests, unistall, delete cluster
+kind-test: kind-up helm-install-current helm-test-kuttl helm-uninstall kind-down
+
+
+# Kind cluster kubeconfig for testing
+tests/kuttl/kubeconfig: ## Create kind cluster kubeconfig for testing
+	$(KIND) create cluster --name $(CLUSTER_NAME) --image kindest/node:$(TEST_KIND_IMAGE_VERSION)
+	$(KIND) get kubeconfig --name $(CLUSTER_NAME) > $@
+	chmod 600 $@
+	KUBECONFIG="$@" $(KUBECTL) wait --for=condition=Ready nodes --all --timeout=4m
+	KUBECONFIG="$@" $(KUBECTL) wait --for=condition=Available deployment/coredns --namespace kube-system --timeout=4m
+
+# ----------- CI TESTING ------------
+
+# Generate the secrets file used by the `act` tool for local GitHub Action development.
+.github/workflows/.secrets:
+	@if [[ "$(CLOUDZERO_DEV_API_KEY)" == "" ]] || [[ "$(GITHUB_TOKEN)" == "" ]]; then echo "CLOUDZERO_DEV_API_KEY and GITHUB_TOKEN are required to generate the .github/workflows/.secrets file, but at least one of them is not set. Consider adding to local-config.mk."; exit 1; fi
+	@echo "CLOUDZERO_DEV_API_KEY=$(CLOUDZERO_DEV_API_KEY)" > $@
+	@echo "GITHUB_TOKEN=$(GITHUB_TOKEN)" >> $@
+
+# Use ACT to run the chart-complete.yaml workflow (new unified system)
+.PHONY: test-ci-chart-kuttl
+test-ci-chart-kuttl: .github/workflows/.secrets ## Use ACT to run chart-complete.yaml workflow
+	$(ECHO) "Running chart-complete workflow with ACT..."
+	$(ACT) workflow_dispatch -W .github/workflows/chart-complete.yaml \
+		--artifact-server-path /tmp/artifacts \
+		--env-file .github/workflows/.secrets \
+		--platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-latest \
+		--container-architecture linux/amd64 \
+		--env ACTIONS_RUNNER_DEBUG=1 \
+		--input image-repo=$(IMAGE_REPO) \
+		--input image-path=$(IMAGE_PATH) \
+		--input image-tag=$(TAG) \
+		--pull=false \
+		$(NULL)
+
+# Use ACT to run the docker-build.yml workflow
+.PHONY: test-ci-docker-build
+test-ci-docker-build: .github/workflows/.secrets ## Use ACT to run docker-build.yml workflow
+	$(ECHO) "Running docker-build workflow with ACT..."
+	$(ECHO) "Note: docker-build.yml doesn't have workflow_dispatch trigger, testing syntax only..."
+	$(ACT) push -W .github/workflows/docker-build.yml \
+		--artifact-server-path /tmp/artifacts \
+		--env-file .github/workflows/.secrets \
+		--platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-latest \
+		--container-architecture linux/amd64 \
+		--pull=false \
+		--list \
+		$(NULL)
+
+# Main CI test target that runs all CI test suites
+.PHONY: test-ci
+test-ci: test-ci-chart-kuttl test-ci-docker-build
+test-ci: ## Run all CI test suites
+	$(ECHO) "✅ All CI test suites completed successfully"
+
 # ----------- DOCKER IMAGE ------------
 
 DEBUG_IMAGE ?= busybox:stable-uclibc
@@ -378,19 +455,105 @@ $(eval $(call generate-container-build-target,package-build-debug,load,true))
 
 # ----------- HELM CHART ------------
 
-PROMETHEUS_COMMUNITY_REPO ?= https://prometheus-community.github.io/helm-charts
-HELM_TARGET_NAMESPACE     ?= cz-agent
-HELM_TARGET               ?= cz-agent
-KUBE_VERSION              ?= 1.33.0
+PROMETHEUS_COMMUNITY_REPO  ?= https://prometheus-community.github.io/helm-charts
+HELM_SCHEMA_TEST_NAMESPACE ?= cz-agent
+HELM_SCHEMA_TEST_TARGET    ?= cz-agent
+KUBE_VERSION               ?= 1.33.0
 
-HELM_ARGS = \
-	--namespace "$(HELM_TARGET_NAMESPACE)" \
-	--set-string cloudAccountId=$(CLOUD_ACCOUNT_ID) \
-	--set clusterName=$(CLUSTER_NAME) \
-	--set region=$(CSP_REGION) \
-	--set apiKey="$(CLOUDZERO_DEV_API_KEY)" \
-	--set host=$(CLOUDZERO_HOST) \
-	$(CLOUD_HELM_EXTRA_ARGS) \
+# Cluster configuration system
+CLUSTER_CONFIG_NAME       ?= $(CLUSTER_NAME)
+CLUSTER_CONFIG_FILE       ?= clusters/$(CLUSTER_CONFIG_NAME).yaml
+CLUSTER_OVERRIDES_FILE    ?= clusters/$(CLUSTER_CONFIG_NAME)-overrides.yaml
+
+# =============================================================================
+# CLUSTER CONFIGURATION HELPER FUNCTIONS
+# =============================================================================
+# These functions provide a unified interface for extracting properties from
+# cluster configuration files and generating appropriate command-line arguments
+# for Kubernetes tools (kubectl, helm, kuttl).
+
+# -----------------------------------------------------------------------------
+# Core Property Extraction Functions
+# -----------------------------------------------------------------------------
+
+# get-cluster-property - Extract a property from the cluster configuration file
+#
+# This runs <property> as a gojq query and returns the result.
+#
+# Usage: $(call get-cluster-property,<query>,<default>)
+#
+# Arguments:
+#   $1: Query (e.g., '.namespace', '.release', '.kubeConfig')
+#   $2: Default value if property is missing or null (e.g., '""', '""')
+# Returns: the result of the query
+#
+# Examples:
+#   $(call get-cluster-property,.namespace) -> "cza"
+define get-cluster-property
+$(strip $(shell $(GOJQ) --raw-output --yaml-input '$(1)$(if $(2), // $(2),)' $(CLUSTER_CONFIG_FILE)))
+endef
+
+# get-kubeconfig-path - Get the kubeconfig file path from cluster config
+#
+# Usage: $(call get-kubeconfig-path)
+#
+# Returns: Path to kubeconfig file or empty string if not specified.  Note that
+#   an empty string means use system KUBECONFIG environment variable, falling back
+#   on the default (~/.kube/config)
+define get-kubeconfig-path
+$(call get-cluster-property,.kubeConfig,"$(KUBECONFIG)")
+endef
+
+# get-kubeconfig-env - Get KUBECONFIG environment variable setting
+#
+# Usage: $(call get-kubeconfig-env)
+#
+# Returns: KUBECONFIG="<path>" if kubeConfig is set in cluster config, empty if null
+define get-kubeconfig-env
+$(shell $(GOJQ) --raw-output --yaml-input 'if .kubeConfig and .kubeConfig != null then "KUBECONFIG=\"\(.kubeConfig)\"" else "" end' < $(CLUSTER_CONFIG_FILE))
+endef
+
+# get-kubectx-arg - Get Kubernetes context flag with value
+#
+# Usage: $(call get-kubectx-arg,--context)
+# Usage: $(call get-kubectx-arg,--kube-context)
+#
+# Returns: --context <value> or --kube-context <value> if context is set, empty if not
+define get-kubectx-arg
+$(shell $(GOJQ) --raw-output --yaml-input 'if .context and .context != null then "$(1) " + (.context | @json) else "" end' < $(CLUSTER_CONFIG_FILE))
+endef
+
+# -----------------------------------------------------------------------------
+# Tool Invocation Helper Functions
+# -----------------------------------------------------------------------------
+# These functions generate complete command invocations for Kubernetes tools
+# with appropriate environment variables and global arguments. They
+# automatically handle kubeconfig, context, and namespace based on the cluster
+# configuration.
+
+# invoke-kubectl - Generate kubectl command with kubeconfig and context
+#
+# Usage: $(call invoke-kubectl) get pods
+# Returns: KUBECONFIG=<path> kubectl --context <context> [additional args]
+define invoke-kubectl
+$(call get-kubeconfig-env) $(KUBECTL) $(call get-kubectx-arg,--context)
+endef
+
+# invoke-helm - Generate helm command with kubeconfig, context, and namespace
+# Returns: KUBECONFIG=<path> helm --kube-context <context> --namespace <namespace> [additional args]
+# Usage: $(call invoke-helm) install my-release ./chart
+# Note: Uses --kube-context (not --context) as required by helm
+define invoke-helm
+$(call get-kubeconfig-env) $(HELM) $(call get-kubectx-arg,--kube-context) --namespace "$(call get-cluster-property,.namespace)"
+endef
+
+# invoke-kuttl - Generate kuttl command with kubeconfig only
+# Returns: KUBECONFIG=<path> kuttl [additional args]
+# Usage: $(call invoke-kuttl) test
+# Note: KUTTL only supports KUBECONFIG, not --context
+define invoke-kuttl
+$(call get-kubeconfig-env) $(KUTTL)
+endef
 
 # Use a timestamp file to track helm dependency installation
 helm/charts/.stamp: helm/Chart.yaml
@@ -403,23 +566,41 @@ helm/charts/.stamp: helm/Chart.yaml
 helm-install-deps: helm/charts/.stamp
 
 .PHONY: helm-install
-helm-install: api-tests-check-env helm-install-deps
-helm-install: ## Install the Helm chart
-	@$(HELM) upgrade --install "$(HELM_TARGET)" ./helm --create-namespace $(HELM_ARGS)
+helm-install: api-tests-check-env helm-install-deps $(CLUSTER_CONFIG_FILE) $(CLUSTER_OVERRIDES_FILE)
+helm-install: ## Install the Helm chart (uses CLUSTER_CONFIG_NAME)
+	$(call invoke-helm) upgrade --install "$(call get-cluster-property,.release)" \
+		./helm \
+		--create-namespace \
+		--values $(CLUSTER_OVERRIDES_FILE) \
+		$(NULL)
+
+# helm-install-current is the same as helm-install, except that it
+# will set the tag for the agent image to dev-$(git rev-parse HEAD).
+.PHONY: helm-install-current
+helm-install-current: api-tests-check-env helm-install-deps $(CLUSTER_CONFIG_FILE) $(CLUSTER_OVERRIDES_FILE)
+helm-install-current: ## Install chart with test image
+	$(call invoke-helm) upgrade --install "$(call get-cluster-property,.release)" \
+		./helm \
+		--create-namespace \
+		--values $(CLUSTER_OVERRIDES_FILE) \
+		--set components.agent.image.tag=dev-$(shell git rev-parse HEAD) \
+		$(NULL)
+
+.PHONY: helm-wait
+helm-wait: ## Wait for chart to be ready after installation
+	$(call invoke-kubectl) wait --for=condition=Available deployment/$(call get-cluster-property,.release)-cloudzero-agent-server --namespace $(call get-cluster-property,.namespace) --timeout=5m
 
 .PHONY: helm-uninstall
-helm-uninstall: ## Uninstall the Helm chart
-	$(HELM) uninstall -n "$(HELM_TARGET_NAMESPACE)" "$(HELM_TARGET)"
-
-.PHONY: helm-template
-helm-template: api-tests-check-env helm-install-deps helm/values.schema.json
-helm-template: ## Generate the Helm chart templates
-	@$(HELM) template --kube-version $(KUBE_VERSION) "$(HELM_TARGET)" ./helm $(HELM_ARGS)
+helm-uninstall: $(CLUSTER_CONFIG_FILE) ## Uninstall the Helm chart (uses CLUSTER_CONFIG_NAME)
+	$(call invoke-helm) uninstall "$(call get-cluster-property,.release)" \
+		$(NULL)
 
 .PHONY: helm-lint
-helm-lint: helm/values.schema.json
-helm-lint: ## Lint the Helm chart
-	@$(HELM) lint ./helm $(HELM_ARGS)
+helm-lint: helm/values.schema.json $(CLUSTER_CONFIG_FILE) $(CLUSTER_OVERRIDES_FILE)
+helm-lint: ## Lint the Helm chart (uses CLUSTER_CONFIG_NAME)
+	$(call invoke-helm) lint ./helm \
+		--values $(CLUSTER_OVERRIDES_FILE) \
+		$(NULL)
 
 # Generate list of all schema test targets (file paths without .yaml extension)
 SCHEMA_TEST_FILES := $(wildcard tests/helm/schema/*.yaml)
@@ -438,7 +619,7 @@ $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-	output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>&1); \
+	output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>&1); \
 	if [ $$? -eq 0 ]; then \
 		result="pass"; \
 	else \
@@ -455,7 +636,7 @@ tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/v
 # Pattern rule for kubeconform validation (only for .pass tests)
 tests/helm/schema/%-kubeconform: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
-	kubeconform_output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" ./helm -f "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
+	kubeconform_output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
 		-kubernetes-version "$(KUBE_VERSION)" \
 		-schema-location default \
 		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
@@ -526,7 +707,7 @@ helm-test-subchart: helm/values.schema.json
 	done
 
 helm/tests/%.yaml-unittest: helm/tests/%.yaml
-	@$(HELM) unittest ./helm --values helm/tests/values.yaml -f 'tests/$*.yaml'
+	@$(HELM) unittest ./helm --values helm/tests/values.yaml --file 'tests/$*.yaml'
 
 .PHONY: helm-test-unittest
 helm-test-unittest: ## Run Helm unittest tests
@@ -538,10 +719,19 @@ helm-test: ## Run all Helm validation tests
 helm-test: helm-test-schema helm-test-subchart helm-test-unittest helm-test-template
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
-	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_TARGET)" -n "$(HELM_TARGET_NAMESPACE)" ./helm -f $< > $@
+	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" --namespace "$(HELM_SCHEMA_TEST_NAMESPACE)" ./helm --values $< > $@
 
 helm-test-template: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
 generate: helm-test-template
+
+.PHONY: tests/kuttl/%/run
+tests/kuttl/%/run: tests/kuttl/%/kuttl-test.yaml
+	$(call invoke-kuttl) test --config $< -v 1 $(dir $<)
+
+.PHONY: helm-test-kuttl
+helm-test-kuttl: ## Run KUTTL tests. Note that this assumes the infra is in place; see the kind-test target
+helm-test-kuttl: $(patsubst tests/kuttl/%/kuttl-test.yaml,tests/kuttl/%/run,$(wildcard tests/kuttl/*/kuttl-test.yaml))
+
 
 lint: helm-lint
 
@@ -626,7 +816,12 @@ generate: generate-protobuf
 
 # Pattern rule for generating protobuf files
 %.pb.go: %.proto
-	@$(PROTOC) --proto_path=$(dir $@) --go_out=$(dir $<) $<
+	@$(PROTOC) \
+	  --plugin=.tools/bin/protoc-gen-go \
+	  --proto_path=$(dir $@) \
+	  --go_out=$(dir $<) \
+	  $< \
+	  $(NULL)
 
 .PHONY: protobuf-clean
 protobuf-clean:
