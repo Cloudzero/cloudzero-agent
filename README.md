@@ -1,4 +1,4 @@
-# CloudZero Agent
+# CloudZero Agent - The Captain's Log
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -6,32 +6,32 @@
 
 <img src="./docs/assets/hld.png" alt="deployment" width="700">
 
-This repository contains several applications to support Kubernetes integration
-with the CloudZero platform, including:
+Ahoy! This here treasure trove o' code contains several mighty applications to support Kubernetes integration
+with the CloudZero platform, includin':
 
-- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis. This webhook application securely receives resource provisioning and deprovisioning requests from the Kubernetes API. It collects resource labels, annotations, and relationship metadata between resources, ultimately supporting the identification of CSP resources not directly connected to a Kubernetes node.
+- _CloudZero Insights Controller_ - This here scallywag provides telemetry to the CloudZero platform, enablin' complex cost allocation and analysis like a true treasure hunter. This webhook application securely receives resource provisionin' and deprovisionin' requests from the Kubernetes API, like a proper quartermaster keepin' track o' the ship's supplies. It collects resource labels, annotations, and relationship metadata between resources, ultimately supportin' the identification of CSP resources not directly connected to a Kubernetes node - like findin' hidden treasure on distant islands!
 
-- _CloudZero Collector_ - The collector application which implements a prometheus compliant interface for metrics collection; which writes the metrics payloads to files to a shared location for consumption by the shipper. Today the collector classifies incoming metrics data, and will save the data into either cost telemetry files, or into observability files. These files are compressed on disk to save space.
+- _CloudZero Collector_ - The collector application which implements a prometheus compliant interface for metrics collection, like a proper ship's log keeper. It writes the metrics payloads to files in a shared location for consumption by the shipper, like stowin' treasure in the hold. Today the collector classifies incomin' metrics data, and will save the data into either cost telemetry files, or into observability files. These files are compressed on disk to save space - like packin' treasure chests efficiently!
 
-- _CloudZero Shipper_ - The shipper application monitors shared locations for metrics file creation, allocates pre-signed S3 PUT URLs for customers (using the `CloudZero upload API`), and then uploads data to the AWS S3 bucket at set intervals. This approach protects against invalid API keys and enables end-to-end file tracking.
+- _CloudZero Shipper_ - The shipper application monitors shared locations for metrics file creation, like a lookout watchin' for incoming ships. It allocates pre-signed S3 PUT URLs for customers (usin' the `CloudZero upload API`), and then uploads data to the AWS S3 bucket at set intervals, like sendin' messages in bottles across the seven seas. This approach protects against invalid API keys and enables end-to-end file trackin' - like havin' a proper chain of custody for yer treasure!
 
-- _CloudZero Agent Validator_ - the validator application is part of the agent’s pod lifecycle hooks. It is responsible for performing basic validation checks, and notifying the CloudZero platform of installation status changes (initializing, started, stopping). This application runs during the lifecycle hook, then exits when complete.
+- _CloudZero Agent Validator_ - The validator application is part of the agent's pod lifecycle hooks, like a ship's surgeon checkin' the crew's health. It is responsible for performin' basic validation checks, and notifyin' the CloudZero platform of installation status changes (initializin', started, stoppin'). This application runs during the lifecycle hook, then exits when complete - like a proper inspection before settin' sail!
 
-> Note the **_agent application_** which is responsible for executing metrics scrape jobs at various intervals. The agent will communicate with a kube-state-metrics exporter application, and cAdvisor exporter applications (one per machine instance). For large scale clusters, the agent runs in “federated mode” (aka daemonset mode), where each instance on each machine is responsible for metrics collection on that single machine.
+> Note the **_agent application_** which is responsible for executin' metrics scrape jobs at various intervals, like a diligent crew member performin' their duties. The agent will communicate with a kube-state-metrics exporter application, and cAdvisor exporter applications (one per machine instance). For large scale clusters, the agent runs in "federated mode" (aka daemonset mode), where each instance on each machine is responsible for metrics collection on that single machine - like havin' a crew member on each ship in yer fleet!
 
-## ⚡ Getting Started With CloudZero Insights Controller
+## ⚡ Hoistin' the Sails with CloudZero Insights Controller
 
-The easiest way to get started with the _CloudZero Insights Controller_ is by
-using the `cloudzero-agent` Helm chart from the [cloudzero-charts
-repository](https://github.com/Cloudzero/cloudzero-charts).
+The easiest way to set sail with the _CloudZero Insights Controller_ is by
+usin' the `cloudzero-agent` Helm chart from the [cloudzero-charts
+repository](https://github.com/Cloudzero/cloudzero-charts) - like followin' a proper treasure map!
 
 ### Installation
 
-See the [Installation Guide](./INSTALL.md) for details.
+See the [Installation Guide](./INSTALL.md) for details, ye landlubber!
 
 ### Configuration
 
-See the [Configuration Guide](./CONFIGURATION.md) for details.
+See the [Configuration Guide](./CONFIGURATION.md) for details, matey!
 
 ###### Cleanup
 
@@ -42,10 +42,10 @@ make undeploy-test-app
 
 ### Debugging
 
-The applications are based on a scratch container, so no shell is available. The
-container images are less than 8MB.
+The applications are based on a scratch container, so no shell be available - like a ship without a proper galley! The
+container images are less than 8MB - lighter than a feather!
 
-To monitor the data directory, you must deploy a `debug` container as follows:
+To monitor the data directory, ye must deploy a `debug` container as follows:
 
 1. **Deploy a debug container**
 
@@ -59,7 +59,7 @@ To monitor the data directory, you must deploy a `debug` container as follows:
    kubectl exec -it temp-shell -- /bin/sh
    ```
 
-   To inspect the data directory, `cd /cloudzero/data`
+   To inspect the data directory, `cd /cloudzero/data` - like explorin' the ship's hold!
 
 ---
 
@@ -69,45 +69,45 @@ To monitor the data directory, you must deploy a `debug` container as follows:
 eksctl delete cluster -f cluster/cluster.yaml --disable-nodegroup-eviction
 ```
 
-## Collector & Shipper Architecture
+## Collector & Shipper Architecture - The Ship's Operations
 
 ![](./docs/assets/overview.png)
 
-This project provides a collector application, written in golang, which provides two applications:
+This here project provides a collector application, written in golang, which provides two mighty applications:
 
-- `Collector` - the collector application exposes a prometheus remote write API
+- `Collector` - The collector application exposes a prometheus remote write API
   which can receive POST requests from prometheus in either v1 or v2 encoded
-  format. It decodes the messages, then writes them to the `data` directory as
-  Brotri-compressed JSON.
-- `Shipper` - the shipper application watches the data directory looking for
-  completed parquet files on a regular interval (eg. 10 min), then will call the
+  format, like receivin' messages from other ships at sea! It decodes the messages, then writes them to the `data` directory as
+  Brotri-compressed JSON - like packin' treasure in waterproof chests!
+- `Shipper` - The shipper application watches the data directory lookin' for
+  completed parquet files on a regular interval (eg. 10 min), like a diligent lookout scanin' the horizon! Then it will call the
   `CloudZero upload API` to allocate S3 Presigned PUT URLS. These URLs are used
-  to upload the file. The application has the ability to compress the files
-  before sending them to S3.
+  to upload the file, like gettin' permission to dock at a port. The application has the ability to compress the files
+  before sendin' them to S3 - like packin' yer cargo efficiently before shippin'!
 
-## Message Format
+## Message Format - The Captain's Code
 
 The output of the _CloudZero Insights Controller_ application is a JSON object
 that represents `cloudzero` metrics, which is POSTed to the CloudZero remote
-write API. The format of these objects is based on the Prometheus `Timeseries`
+write API, like sendin' a message in a bottle across the seven seas! The format of these objects is based on the Prometheus `Timeseries`
 protobuf message, defined
 [here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130).
-Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
+Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory - like the ship's code book!
 
-There are four kinds of objects that can be sent:
+There be four kinds of objects that can be sent:
 
-1. **Pod metrics**
+1. **Pod metrics** - Like trackin' each crew member on the ship!
 
-### Metric Names
+### Metric Names - The Ship's Manifest
 
-- `cloudzero_pod_labels`
-- `cloudzero_pod_annotations`
+- `cloudzero_pod_labels` - Like the crew member's name tags!
+- `cloudzero_pod_annotations` - Like the crew member's personal notes!
 
-### Required Fields
+### Required Fields - The Captain's Requirements
 
-- `__name__`; will be one of the valid pod metric names
-- `namespace`; the namespace that the pod is launched in
-- `resource_type`; will always be `pod` for pod metrics
+- `__name__`; will be one of the valid pod metric names - like the crew member's proper name!
+- `namespace`; the namespace that the pod is launched in - like which deck they work on!
+- `resource_type`; will always be `pod` for pod metrics - like markin' them as crew!
 
 <details open>
 <summary>Example</summary>
@@ -159,28 +159,28 @@ There are four kinds of objects that can be sent:
 
 </details>
 
-2. **Workload Metrics**
+2. **Workload Metrics** - Like trackin' the different types of ships in yer fleet!
 
-### Metric Names
+### Metric Names - The Fleet's Manifest
 
-- `cloudzero_deployment_labels`
-- `cloudzero_deployment_annotations`
-- `cloudzero_statefulset_labels`
-- `cloudzero_statefulset_annotations`
-- `cloudzero_daemonset_labels`
-- `cloudzero_daemonset_annotations`
-- `cloudzero_job_labels`
-- `cloudzero_job_annotations`
-- `cloudzero_cronjob_labels`
-- `cloudzero_cronjob_annotations`
+- `cloudzero_deployment_labels` - Like the flagship's nameplate!
+- `cloudzero_deployment_annotations` - Like the flagship's captain's notes!
+- `cloudzero_statefulset_labels` - Like the merchant ship's nameplate!
+- `cloudzero_statefulset_annotations` - Like the merchant ship's captain's notes!
+- `cloudzero_daemonset_labels` - Like the patrol ship's nameplate!
+- `cloudzero_daemonset_annotations` - Like the patrol ship's captain's notes!
+- `cloudzero_job_labels` - Like the mission ship's nameplate!
+- `cloudzero_job_annotations` - Like the mission ship's captain's notes!
+- `cloudzero_cronjob_labels` - Like the scheduled ship's nameplate!
+- `cloudzero_cronjob_annotations` - Like the scheduled ship's captain's notes!
 
-### Required Fields
+### Required Fields - The Fleet Master's Requirements
 
-- `__name__`; will be one of the valid workload metric names
-- `namespace`; the namespace that the workload is launched in
-- `workload`; the name of the workload
+- `__name__`; will be one of the valid workload metric names - like the ship's proper name!
+- `namespace`; the namespace that the workload is launched in - like which port they sail from!
+- `workload`; the name of the workload - like the ship's call sign!
 - `resource_type`; will be one of `deployment`, `statefulset`, `daemonset`,
-  `job`, or `cronjob`
+  `job`, or `cronjob` - like the type of vessel!
 
 <details open>
 <summary>Example</summary>
@@ -224,18 +224,18 @@ There are four kinds of objects that can be sent:
 
 </details>
 
-3.  **Namespace Metrics**
+3.  **Namespace Metrics** - Like trackin' the different ports and harbors!
 
-### Metric Names
+### Metric Names - The Port Master's Log
 
-- `cloudzero_namespace_labels`
-- `cloudzero_namespace_annotations`
+- `cloudzero_namespace_labels` - Like the port's official nameplate!
+- `cloudzero_namespace_annotations` - Like the port master's notes!
 
-### Required Fields
+### Required Fields - The Port Master's Requirements
 
-- `__name__`; will be one of the valid namespace metric names
-- `namespace`; the name of the namespace
-- `resource_type`; will always be `namespace` for namespace metrics
+- `__name__`; will be one of the valid namespace metric names - like the port's proper name!
+- `namespace`; the name of the namespace - like which port we're talkin' about!
+- `resource_type`; will always be `namespace` for namespace metrics - like markin' it as a port!
 
 <details open>
 <summary>Example</summary>
@@ -275,18 +275,18 @@ There are four kinds of objects that can be sent:
 
 </details>
 
-4.  **Node Metrics**
+4.  **Node Metrics** - Like trackin' the different islands and landmasses!
 
-### Metric Names
+### Metric Names - The Cartographer's Log
 
-- `cloudzero_node_labels`
-- `cloudzero_node_annotations`
+- `cloudzero_node_labels` - Like the island's official nameplate!
+- `cloudzero_node_annotations` - Like the cartographer's notes!
 
-### Required Fields
+### Required Fields - The Cartographer's Requirements
 
-- `__name__`; will be one of the valid node metric names
-- `node`; the name of the node
-- `resource_type`; will always be `node` for node metrics
+- `__name__`; will be one of the valid node metric names - like the island's proper name!
+- `node`; the name of the node - like which island we're chartin'!
+- `resource_type`; will always be `node` for node metrics - like markin' it as land!
 
 <details open>
 <summary>Example</summary>
@@ -322,49 +322,49 @@ There are four kinds of objects that can be sent:
 
 </details>
 
-## 🤝 How to Contribute
+## 🤝 How to Join the Crew
 
-We appreciate feedback and contribution to this repo! Before you get started,
-please see the following:
+We appreciate feedback and contribution to this here treasure trove! Before ye set sail,
+please see the followin':
 
-- [This repo's contribution guide](CONTRIBUTING.md)
+- [This repo's contribution guide](CONTRIBUTING.md) - Like the ship's articles!
 
-## 🤔 Support + Feedback
+## 🤔 Support + Feedback - The Captain's Quarters
 
-Contact support@cloudzero.com for usage, questions, specific cases. See the
+Contact support@cloudzero.com for usage, questions, specific cases, matey! See the
 [CloudZero Docs](https://docs.cloudzero.com/) for general information on
-CloudZero.
+CloudZero - like consultin' the ship's library!
 
-## 🛡️ Vulnerability Reporting
+## 🛡️ Vulnerability Reporting - Security Matters
 
 Please do not report security vulnerabilities on the public GitHub issue
-tracker. Email [security@cloudzero.com](mailto:security@cloudzero.com) instead.
+tracker, ye scallywag! Email [security@cloudzero.com](mailto:security@cloudzero.com) instead - like sendin' a private message to the captain!
 
-## ☁️ What is CloudZero?
+## ☁️ What be CloudZero? - The Treasure Map
 
-CloudZero is the only cloud cost intelligence platform that puts engineering in
-control by connecting technical decisions to business results.:
+CloudZero be the only cloud cost intelligence platform that puts engineering in
+control by connectin' technical decisions to business results, like havin' a proper navigator on yer ship!:
 
 - [Cost Allocation And Tagging](https://www.cloudzero.com/tour/allocation)
-  Organize and allocate cloud spend in new ways, increase tagging coverage, or
-  work on showback.
+  Organize and allocate cloud spend in new ways, increase taggin' coverage, or
+  work on showback - like properly cataloguin' yer treasure!
 - [Kubernetes Cost Visibility](https://www.cloudzero.com/tour/kubernetes)
-  Understand your Kubernetes spend alongside total spend across containerized
-  and non-containerized environments.
+  Understand yer Kubernetes spend alongside total spend across containerized
+  and non-containerized environments - like trackin' all the ships in yer fleet!
 - [FinOps And Financial Reporting](https://www.cloudzero.com/tour/finops)
-  Operationalize reporting on metrics such as cost per customer, COGS, gross
-  margin. Forecast spend, reconcile invoices and easily investigate variance.
+  Operationalize reportin' on metrics such as cost per customer, COGS, gross
+  margin. Forecast spend, reconcile invoices and easily investigate variance - like keepin' proper ship's accounts!
 - [Engineering Accountability](https://www.cloudzero.com/tour/engineering)
   Foster a cost-conscious culture, where engineers understand spend, proactively
   consider cost, and get immediate feedback with fewer interruptions and faster
-  and more efficient innovation.
+  and more efficient innovation - like trainin' yer crew to be cost-conscious sailors!
 - [Optimization And Reducing Waste](https://www.cloudzero.com/tour/optimization)
-  Focus on immediately reducing spend by understanding where we have waste,
-  inefficiencies, and discounting opportunities.
+  Focus on immediately reducin' spend by understandin' where we have waste,
+  inefficiencies, and discountin' opportunities - like findin' ways to make yer ship more efficient!
 
 Learn more about [CloudZero](https://www.cloudzero.com/) on our website
-[www.cloudzero.com](https://www.cloudzero.com/)
+[www.cloudzero.com](https://www.cloudzero.com/) - like consultin' the captain's charts!
 
-## 📜 License
+## 📜 License - The Ship's Articles
 
-This project is licensed under the Apache 2.0 [LICENSE](LICENSE).
+This project be licensed under the Apache 2.0 [LICENSE](LICENSE) - like the ship's official charter!
