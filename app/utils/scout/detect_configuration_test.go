@@ -145,7 +145,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 			inputAccountID:   stringPtr(""),
 			inputClusterName: stringPtr(""),
 			envInfoError:     errors.New("environment info failed"),
-			expectedErrorMsg: "failed to detect cloud provider: environment info failed. Manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required",
+			expectedErrorMsg: "failed to detect cloud provider: environment info failed. Manual configuration (setting cloudAccountId, region, and clusterName in the Helm chart) may be required",
 		},
 		{
 			name:             "cloud provider unknown after detection",
@@ -157,7 +157,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				Region:        "us-west-2",
 				ClusterName:   "test-cluster",
 			},
-			expectedErrorMsg: "cloud provider could not be auto-detected, manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required",
+			expectedErrorMsg: "cloud provider could not be auto-detected, manual configuration (setting cloudAccountId, region, and clusterName in the Helm chart) may be required",
 		},
 		{
 			name:             "region detection fails when required",
@@ -183,7 +183,7 @@ func TestDetectConfiguration_DetectionFailures(t *testing.T) {
 				AccountID:     "", // Empty account ID should cause error
 				ClusterName:   "test-cluster",
 			},
-			expectedErrorMsg: "account ID could not be auto-detected, manual configuration (setting cloudAccountID in the Helm chart) may be required",
+			expectedErrorMsg: "account ID could not be auto-detected, manual configuration (setting cloudAccountId in the Helm chart) may be required",
 		},
 		{
 			name:             "cluster name detection fails when required",
@@ -1025,7 +1025,7 @@ func TestDetectConfiguration_AWSTokenMethodNotAllowed(t *testing.T) {
 	}
 
 	// Verify the full error chain is preserved (without the settings validation wrapper)
-	expectedFullError := "failed to detect cloud provider: failed to get IMDSv2 token: IMDSv2 token endpoint does not support PUT method (status: 405). This may indicate an IMDSv1-only environment or misconfigured metadata service. Manual configuration (setting cloudAccountID, region, and clusterName in the Helm chart) may be required"
+	expectedFullError := "failed to detect cloud provider: failed to get IMDSv2 token: IMDSv2 token endpoint does not support PUT method (status: 405). This may indicate an IMDSv1-only environment or misconfigured metadata service. Manual configuration (setting cloudAccountId, region, and clusterName in the Helm chart) may be required"
 	if err.Error() != expectedFullError {
 		t.Errorf("Expected error %q, got %q", expectedFullError, err.Error())
 	}
