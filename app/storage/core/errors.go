@@ -5,13 +5,15 @@ package core
 
 import (
 	"errors"
+	"strings"
 
+	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
-// TranslateError maps GORM errors to application-specific errors.
+// TranslateError maps GORM / SQLite errors to application-specific errors.
 // If the error does not match any known GORM errors, it returns the original error.
 func TranslateError(err error) error {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,5 +64,18 @@ func TranslateError(err error) error {
 	case errors.Is(err, gorm.ErrCheckConstraintViolated):
 		return types.ErrCheckConstraintViolated
 	}
+
+	// Check for SQLite-specific "no such table" errors
+	// This is a fatal error that should cause the application to exit
+	var sqliteErr sqlite3.Error
+	if errors.As(err, &sqliteErr) {
+		// SQLITE_ERROR (1) with "no such table" message indicates missing table
+		if sqliteErr.Code == sqlite3.ErrError {
+			if strings.HasPrefix(sqliteErr.Error(), "no such table: ") {
+				return types.ErrTableMissing
+			}
+		}
+	}
+
 	return err
 }
