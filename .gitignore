@@ -1,5 +1,6 @@
 # local development tailoring
 /scratch/
+
 # Used by the `act` CLI tool for local testing
 /.github/workflows/.secrets
 go.work
@@ -7,6 +8,10 @@ go.work.sum
 .tool-versions
 
 /local-config.mk
+
+# kuttl generates a kubeconfig file when running the tests, even when you pass
+# it an existing one.
+/kubeconfig
 
 # app configuration
 /.cloudzero-insights-controller.yaml

@@ -1,0 +1,10 @@
+clusterName: kind
+apiKey: "test-api-key-for-local-testing"
+cloudAccountId: "1234567890"
+region: "us-east-1"
+
+components:
+  agent:
+    image:
+      repository: ghcr.io/cloudzero/cloudzero-agent
+      tag: "intentionally-invalid-tag"

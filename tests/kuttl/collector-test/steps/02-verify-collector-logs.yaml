@@ -1,0 +1,27 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: verify-collector-logs
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - wait
+        - --for=condition=available
+        - deployment/metric-test-deployment
+        - -n
+        - metric-test-namespace
+        - --timeout=60s
+    - command: sleep
+      args:
+        - "30"
+    - command: kubectl
+      args:
+        - logs
+        - deployment/cz-agent-aggregator
+        - -n
+        - cz-agent
+        - -c
+        - cz-agent-aggregator-collector
+        - --since=2m
+        - --tail=20

@@ -1,0 +1,33 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: verify-webhook-events
+spec:
+  commands:
+    - command: kubectl
+      args:
+        - wait
+        - --for=condition=available
+        - deployment/webhook-test-deployment
+        - -n
+        - webhook-test-namespace
+        - --timeout=60s
+    - command: sleep
+      args:
+        - "10"
+    - command: kubectl
+      args:
+        - get
+        - pods
+        - -n
+        - webhook-test-namespace
+        - -o
+        - wide
+    - command: kubectl
+      args:
+        - logs
+        - deployment/cz-agent-cloudzero-agent-webhook-server
+        - -n
+        - cz-agent
+        - --since=2m
+        - --tail=10
