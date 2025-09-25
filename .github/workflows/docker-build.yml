@@ -259,7 +259,7 @@ jobs:
           docker buildx imagetools inspect '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}'
 
       - name: SECURITY - Grype Docker Image Scan
-        uses: anchore/scan-action@v6
+        uses: anchore/scan-action@v7
         with:
           image: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           fail-build: true
