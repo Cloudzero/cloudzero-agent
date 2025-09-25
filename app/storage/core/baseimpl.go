@@ -1,10 +1,38 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package core provides core functionalities for database repository implementations.
-// This package includes base implementations for repositories that can be extended
-// to fit specific use cases. It supports transaction management and context-based
-// database operations.
+// Package core provides foundational database repository infrastructure for CloudZero Agent storage operations.
+// This package implements the Secondary Adapter layer in the hexagonal architecture, providing consistent
+// database access patterns and transaction management across all CloudZero Agent data persistence operations.
+//
+// The core storage infrastructure enables:
+//   - Consistent transaction management: Context-based transaction propagation and nesting
+//   - Repository pattern implementation: Base implementations for CRUD operations and common patterns
+//   - Database abstraction: GORM-based ORM abstraction with error translation and context handling
+//   - Resource metadata storage: Foundation for storing Kubernetes resource cost allocation data
+//   - Operational data persistence: Storage for agent configuration, status, and audit information
+//
+// Architecture:
+//   - RawBaseRepoImpl: Low-level database access with transaction context management
+//   - BaseRepoImpl: Higher-level repository base with model-specific operations
+//   - Context management: Thread-safe transaction context propagation for nested operations
+//   - Error translation: Consistent error handling and mapping from database errors to domain errors
+//
+// The storage core enables CloudZero Agent components to persist and retrieve data using consistent
+// patterns while maintaining transactional integrity across complex operations involving multiple
+// tables and entities. This is essential for accurate cost allocation data and operational reliability.
+//
+// Key design principles:
+//   - Transaction safety: All operations support transactional contexts with proper rollback
+//   - Context propagation: Database connections and transactions flow through Go contexts
+//   - Type safety: Generic repository patterns with compile-time type checking
+//   - Performance optimization: Connection pooling, prepared statements, and efficient queries
+//
+// Integration points:
+//   - Resource repositories: Store Kubernetes resource metadata for cost allocation
+//   - Configuration storage: Persist agent settings and dynamic configuration updates
+//   - Audit logging: Store operational events and cost allocation decisions
+//   - Status tracking: Maintain agent health and operational state information
 package core
 
 import (
@@ -13,9 +41,36 @@ import (
 	"gorm.io/gorm"
 )
 
-// RawBaseRepoImpl adds core behaviors applicable to any database repository implementation
-// and does not assume a simple table model.
+// RawBaseRepoImpl provides low-level database access infrastructure for CloudZero Agent repositories.
+// This struct implements the foundational database operations required by all repository implementations,
+// including transaction management, context propagation, and connection pooling without assuming
+// specific table models or entity structures.
+//
+// The "Raw" designation indicates that this implementation provides direct database access without
+// model-specific assumptions, making it suitable for repositories that need custom query logic
+// or work with multiple tables/models within a single repository interface.
+//
+// Key capabilities:
+//   - Transaction context management: Automatic detection and propagation of transaction contexts
+//   - Connection pooling: Efficient reuse of database connections across operations
+//   - Context cancellation: Proper handling of request cancellation and timeouts
+//   - Error translation: Consistent error mapping from GORM to domain-specific errors
+//
+// Usage pattern:
+//
+//	Raw base repositories are used when repositories need custom query logic that doesn't fit
+//	the standard single-model pattern, such as repositories that join multiple tables or
+//	perform complex analytical queries for cost allocation reporting.
 type RawBaseRepoImpl struct {
+	// db provides the root GORM database connection for repository operations.
+	// This connection is used as the default when no transaction context is present,
+	// and serves as the parent for transaction creation and connection pooling.
+	//
+	// The database connection includes:
+	//   - Connection pool configuration for performance optimization
+	//   - Prepared statement caching for query efficiency
+	//   - Schema migration support for operational flexibility
+	//   - Logging and metrics collection for operational monitoring
 	db *gorm.DB
 }
 
@@ -26,10 +81,30 @@ func NewRawBaseRepoImpl(db *gorm.DB) RawBaseRepoImpl {
 	}
 }
 
-// DB returns a *gorm.DB for use in any database calls. It first looks for any *gorm.DB
-// in the context, which allows ongoing transactions to be used. Otherwise, it uses the
-// default *gorm.DB passed into NewRawBaseRepoImpl. In both cases, the found *gorm.DB
-// is augmented using WithContext(ctx).
+// DB provides context-aware database access with automatic transaction detection and propagation.
+// This method implements the core pattern used throughout CloudZero Agent storage operations
+// to ensure consistent transaction behavior and proper context handling across all database operations.
+//
+// Transaction detection logic:
+//  1. Check if the context contains an active transaction (via FromContext)
+//  2. If transaction found, return the transaction-scoped database connection
+//  3. If no transaction, return the default connection with context propagation
+//  4. Always augment the connection with the current context for cancellation support
+//
+// Context propagation ensures:
+//   - Request cancellation is properly handled during long-running queries
+//   - Database timeouts are respected according to context deadlines
+//   - Tracing and logging metadata flows through database operations
+//   - Consistent behavior across transactional and non-transactional operations
+//
+// Usage patterns:
+//   - All repository methods should use r.DB(ctx) instead of direct database access
+//   - Enables seamless transaction support without changing repository method signatures
+//   - Provides consistent error handling and context cancellation behavior
+//   - Supports nested transactions through context propagation
+//
+// This method is the foundation that enables CloudZero Agent repositories to participate
+// in complex transactional operations while maintaining clean, context-aware interfaces.
 func (b *RawBaseRepoImpl) DB(ctx context.Context) *gorm.DB {
 	if tx, found := FromContext(ctx); found {
 		return tx.WithContext(ctx)
@@ -38,11 +113,43 @@ func (b *RawBaseRepoImpl) DB(ctx context.Context) *gorm.DB {
 	return b.db.WithContext(ctx)
 }
 
-// Tx starts a new database transaction and saves it in a new context, ctxTx. This context is
-// passed into the block function. Any calls to repository methods that take this context and
-// are built on this RawBaseRepoImpl will operate in the context of this transaction. If the
-// block returns an error, the transaction is rolled back. If no error is returned, the
-// transaction is committed. Note: this mechanism allows for nesting of transactions.
+// Tx executes a function within a database transaction, providing atomic operations for CloudZero Agent data consistency.
+// This method enables complex multi-table operations to be performed atomically, ensuring data integrity
+// for critical cost allocation operations and resource metadata management.
+//
+// Transaction lifecycle:
+//  1. Creates a new database transaction using GORM's transaction support
+//  2. Embeds the transaction connection into a new context (ctxTx)
+//  3. Executes the provided block function with the transaction context
+//  4. Automatically commits on successful block completion (no error returned)
+//  5. Automatically rolls back if the block returns any error
+//  6. Supports nested transactions through context layering
+//
+// Atomic operation examples:
+//   - Resource metadata updates: Ensure webhook processing and storage are consistent
+//   - Configuration changes: Update multiple configuration tables atomically
+//   - Audit logging: Ensure operation and audit records are written together
+//   - Batch operations: Process multiple resource updates with rollback capability
+//
+// Context propagation:
+//
+//	The ctxTx context passed to the block contains the transaction connection,
+//	enabling all repository operations within the block to automatically participate
+//	in the transaction without explicit transaction parameter passing.
+//
+// Nested transaction support:
+//
+//	If the current context already contains a transaction, GORM handles nested
+//	transactions appropriately using savepoints, enabling complex operation composition.
+//
+// Error handling:
+//   - Any error returned by the block function triggers automatic rollback
+//   - Database-level errors during commit/rollback are propagated to the caller
+//   - Context cancellation during the transaction triggers rollback
+//   - Panic recovery within GORM ensures transaction cleanup
+//
+// This method is essential for maintaining data consistency in CloudZero Agent operations
+// where resource metadata, configuration, and audit information must be kept synchronized.
 func (b *RawBaseRepoImpl) Tx(ctx context.Context, block func(ctxTx context.Context) error) error {
 	db := b.DB(ctx)
 	err := db.Transaction(func(tx *gorm.DB) error {

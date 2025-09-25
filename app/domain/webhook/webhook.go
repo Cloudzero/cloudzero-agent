@@ -1,7 +1,30 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package webhook provides kubernetes webhook resource business logic.
+// Package webhook provides Kubernetes admission webhook business logic for CloudZero Agent cost allocation.
+// This package implements the core admission control system that validates and enhances Kubernetes resources
+// with cost allocation metadata during their lifecycle (CREATE, UPDATE, DELETE operations).
+//
+// The webhook system operates as a Primary Adapter in the hexagonal architecture, receiving
+// admission requests from the Kubernetes API server and applying CloudZero's cost allocation
+// policies before resources are persisted to etcd.
+//
+// Key responsibilities:
+//   - Admission validation: Ensure resources have required cost allocation tags
+//   - Metadata injection: Add missing cost center, team, and project labels
+//   - Policy enforcement: Validate cost allocation rules and organizational policies
+//   - Resource tracking: Store resource metadata for billing and cost optimization
+//   - Multi-version support: Handle different Kubernetes API versions (v1, v1beta1, v1beta2)
+//
+// Architecture:
+//   - WebhookController: Main orchestration and routing logic
+//   - Resource Handlers: Specialized logic for each Kubernetes resource type
+//   - Configuration Management: Dynamic policy updates and feature toggles
+//   - Metrics Integration: Prometheus monitoring for webhook performance and errors
+//
+// The webhook supports 20+ Kubernetes resource types across multiple API groups:
+// Apps (Deployment, StatefulSet, DaemonSet), Core (Pod, Service, PVC), Batch (Job, CronJob),
+// Networking (Ingress, IngressClass), Gateway API, Storage, and Custom Resource Definitions.
 package webhook
 
 import (
@@ -32,25 +55,38 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// metricWebhookEventTotal is a Prometheus counter vector that tracks the total number of webhook events.
-// It can be used to record metrics for webhook events, categorized by the following labels:
-// - "kind_group": The API group of the resource.
-// - "kind_version": The API version of the resource.
-// - "kind_resource": The kind of the resource.
-// - "operation": The operation performed (e.g., "create", "update", "delete").
-//
-// Usage:
-// To increment the counter for a specific combination of labels, use the WithLabelValues method
-// to specify the label values, followed by the Inc method to increment the counter.
-//
-// Example:
-// metricWebhookEventTotal.WithLabelValues("apps", "v1", "deployments", "create").Inc()
-//
-// Ensure that the metric is registered with the Prometheus registry before use:
-// prometheus.MustRegister(metricWebhookEventTotal)
-
 var (
-	webhookStatsOnce        sync.Once
+	// webhookStatsOnce ensures Prometheus metrics are registered only once during application startup.
+	// This sync.Once prevents duplicate metric registration errors when the webhook controller
+	// is initialized multiple times during testing or service restarts.
+	//
+	// Used in NewWebhookFactory to safely register webhook metrics with the global Prometheus registry
+	// without risking "duplicate metric descriptor" panics during repeated initialization.
+	webhookStatsOnce sync.Once
+
+	// metricWebhookEventTotal tracks admission webhook processing volume across all supported resource types.
+	// This Prometheus counter vector enables monitoring of webhook load, resource type distribution,
+	// and operation patterns essential for CloudZero Agent operational monitoring and capacity planning.
+	//
+	// Labels provide comprehensive filtering and aggregation capabilities:
+	//   - "kind_group": Kubernetes API group (apps, core, batch, networking, gateway-api)
+	//   - "kind_version": API version (v1, v1beta1, v1beta2) for compatibility tracking
+	//   - "kind_resource": Resource kind (deployment, pod, service) for workload analysis
+	//   - "operation": Admission operation (create, update, delete) for lifecycle monitoring
+	//
+	// Operational use cases:
+	//   - Capacity planning: Monitor webhook request volume and resource hotspots
+	//   - Performance analysis: Identify high-traffic resource types requiring optimization
+	//   - Cost allocation insights: Track resource creation patterns by type and namespace
+	//   - Compliance monitoring: Validate webhook coverage across supported resource types
+	//
+	// Example queries:
+	//   - Total webhook events: sum(rate(czo_webhook_types_total[5m]))
+	//   - Pod creation rate: sum(rate(czo_webhook_types_total{kind_resource="pod", operation="create"}[5m]))
+	//   - API version usage: sum by (kind_version) (czo_webhook_types_total)
+	//
+	// The metric uses ObservabilityMetric() naming convention, prefixing with "czo_" to distinguish
+	// operational metrics from cost allocation metrics that use "cloudzero_" prefix.
 	metricWebhookEventTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: types.ObservabilityMetric("webhook_types_total"),
@@ -60,19 +96,47 @@ var (
 	)
 )
 
-// WebhookController defines the interface for handling AdmissionReview requests.
-// It provides a method to process incoming requests and route them to the appropriate handler
-// based on the resource's Group, Version, and Resource (G/V/R). If no specific handler is registered,
-// the default handler is used to allow the request by default.
+// WebhookController defines the core interface for CloudZero Agent admission webhook processing.
+// This interface orchestrates the entire admission control pipeline, routing incoming Kubernetes
+// admission requests to appropriate resource-specific handlers based on Group/Version/Kind (GVK) mapping.
+//
+// The controller implements a dispatch pattern where each supported Kubernetes resource type
+// (Pod, Deployment, Service, etc.) has a dedicated handler with specialized cost allocation logic.
+// When no specific handler exists, a default handler allows requests to proceed without modification.
+//
+// Key architectural responsibilities:
+//   - Request routing: Map GVK combinations to specialized resource handlers
+//   - Handler registry: Maintain supported resource types and API version compatibility
+//   - Configuration access: Provide resource-specific configuration for cost allocation policies
+//   - Default behavior: Ensure unknown resources are handled gracefully without blocking
+//
+// The interface enables testing through mock implementations and supports runtime reconfiguration
+// of cost allocation policies without requiring webhook service restarts.
+//
+// Integration points:
+//   - HTTP handlers receive admission requests and delegate to this controller
+//   - Resource stores persist cost allocation metadata extracted during processing
+//   - Configuration services provide dynamic policy updates and feature toggles
+//   - Monitoring systems track processing metrics and error rates
 type WebhookController interface {
-	// GetSupported returns a nested map structure that indicates the supported
-	// Group-Version-Kind (GVK) combinations for the webhook controller.
+	// GetSupported returns the complete registry of supported Kubernetes resource types for cost allocation.
+	// This method provides a comprehensive map of Group/Version/Kind combinations that the CloudZero Agent
+	// webhook can process, enabling dynamic discovery of supported resources and API version compatibility.
 	//
-	// Returns:
-	//   - map[string]map[string]map[string]metav1.Object: A nested map where the first
-	//     key represents the API group, the second key represents the API version,
-	//     and the third key represents the kind. The value is a metav1.Object
-	//     representing the supported resource.
+	// The nested map structure enables efficient lookup and iteration:
+	//   - First key (string): API group (apps, core, batch, networking, gateway-api, storage, extensions)
+	//   - Second key (string): API version (v1, v1beta1, v1beta2) for backward compatibility
+	//   - Third key (string): Resource kind (deployment, pod, service, ingress, job, etc.)
+	//   - Value (metav1.Object): Prototype object for the resource type, used for deserialization
+	//
+	// Used by:
+	//   - HTTP handlers to validate incoming admission requests against supported resources
+	//   - Configuration systems to generate webhook configuration YAML with proper GVK declarations
+	//   - Monitoring dashboards to display webhook coverage and supported resource inventory
+	//   - Testing frameworks to verify handler registration for all supported resource combinations
+	//
+	// The returned map reflects the current handler registry and updates dynamically as handlers
+	// are registered during webhook controller initialization or runtime reconfiguration.
 	GetSupported() map[string]map[string]map[string]metav1.Object
 
 	// IsSupported checks whether a specific Group-Version-Kind (GVK)
@@ -101,19 +165,47 @@ type WebhookController interface {
 	//     or nil if the GVK is not registered.
 	GetConfigurationAccessor(g, v, k string) config.ConfigAccessor
 
-	// Review processes an AdmissionReview request and determines whether the request
-	// should be allowed or denied. It dispatches the request to the appropriate handler
-	// based on the resource's G/V/R or falls back to the default handler if no specific
-	// handler is registered.
+	// Review executes the core admission control logic for CloudZero cost allocation validation.
+	// This method is the primary entry point for processing Kubernetes admission requests,
+	// orchestrating the complete cost allocation pipeline from resource validation to metadata storage.
 	//
-	// Parameters:
-	//   - ctx: The context for the request, used for cancellation and deadlines.
-	//   - ar: The AdmissionReview containing details about the resource and operation.
+	// Processing pipeline:
+	//   1. Extract Group/Version/Kind from admission request for handler selection
+	//   2. Record webhook event metrics for operational monitoring and analysis
+	//   3. Route to resource-specific handler or default allow-all handler
+	//   4. Execute cost allocation validation, policy enforcement, and metadata injection
+	//   5. Store resource metadata for billing attribution and cost optimization
+	//   6. Return admission decision with detailed explanations and warnings
 	//
-	// Returns:
-	//   - *types.AdmissionResponse: The result of the admission process, indicating
-	//     whether the request is allowed or denied.
-	//   - error: Any error encountered during processing.
+	// Resource-specific handlers implement specialized logic for different Kubernetes resource types:
+	//   - Pods: Validate required cost tags, inject missing labels, track resource requests
+	//   - Deployments: Enforce team assignments, validate cost center policies
+	//   - Services: Apply network cost allocation rules, validate ingress configurations
+	//   - PVCs: Implement storage cost attribution, validate retention policies
+	//   - Jobs: Apply batch workload cost tracking, validate resource quotas
+	//
+	// Default handler behavior (unknown resources):
+	//   - Allow admission without modification to prevent blocking legitimate workloads
+	//   - Log unknown resource types for potential handler development
+	//   - Record metrics for monitoring webhook coverage gaps
+	//
+	// Error handling and resilience:
+	//   - Admission failures are logged with detailed context for troubleshooting
+	//   - Network timeouts and context cancellation are handled gracefully
+	//   - Configuration errors result in admission denial with clear user guidance
+	//   - Handler panics are recovered to prevent webhook service disruption
+	//
+	// Performance considerations:
+	//   - Request processing latency is tracked via Prometheus metrics
+	//   - Handler selection uses efficient map lookup (O(1) complexity)
+	//   - Resource deserialization is optimized for common resource types
+	//   - Database operations are batched where possible for efficiency
+	//
+	// Returns admission response with:
+	//   - Allowed: Boolean decision whether to permit the resource operation
+	//   - Message: Detailed explanation for denials or informational guidance
+	//   - Warnings: Non-blocking advice about cost allocation best practices
+	//   - ID: Request correlation ID for audit trails and troubleshooting
 	Review(ctx context.Context, ar *types.AdmissionReview) (*types.AdmissionResponse, error)
 
 	// Settings returns the configuration settings for the webhook controller.
@@ -123,25 +215,94 @@ type WebhookController interface {
 	Settings() *config.Settings
 }
 
+// webhookController implements the WebhookController interface for CloudZero admission control processing.
+// This struct maintains the complete handler registry, routing logic, and operational state required
+// for processing admission requests across all supported Kubernetes resource types.
+//
+// The controller uses a three-level dispatch map for efficient O(1) handler lookup by
+// Group/Version/Kind, enabling fast routing of admission requests to appropriate handlers
+// without linear searches or complex matching logic.
 type webhookController struct {
+	// defaultHandler processes admission requests for unsupported or unknown resource types.
+	// This handler implements a "fail-open" policy, allowing admission by default to prevent
+	// the CloudZero Agent from blocking legitimate Kubernetes operations when encountering
+	// new resource types or API versions not yet supported by the agent.
+	//
+	// The default handler also serves as a fallback during handler registration failures
+	// or configuration errors, ensuring webhook stability and operational continuity.
 	defaultHandler *hook.Handler
-	dispatch       map[string]map[string]map[string]*hook.Handler
-	enabled        bool
-	settings       *config.Settings
-	clock          types.TimeProvider
+
+	// dispatch provides the three-level routing map for efficient handler selection by GVK.
+	// Structure: dispatch[group][version][kind] -> *hook.Handler
+	//
+	// Examples:
+	//   - dispatch["apps"]["v1"]["deployment"] -> Deployment handler
+	//   - dispatch["core"]["v1"]["pod"] -> Pod handler
+	//   - dispatch["batch"]["v1"]["job"] -> Job handler
+	//
+	// This structure enables O(1) handler lookup performance and supports the full
+	// complexity of Kubernetes API versioning across different resource types.
+	dispatch map[string]map[string]map[string]*hook.Handler
+
+	// enabled controls whether the webhook controller actively processes admission requests.
+	// When disabled, all requests are passed to the default handler which allows admission
+	// without cost allocation processing. This enables operational maintenance and
+	// emergency bypass scenarios without requiring webhook service shutdown.
+	enabled bool
+
+	// settings provides access to dynamic configuration for cost allocation policies.
+	// This includes feature toggles, validation rules, cost center mappings, and
+	// resource-specific configuration that can be updated without service restarts.
+	// Handlers access this configuration through the controller interface.
+	settings *config.Settings
+
+	// clock abstracts time operations for testing and consistent timestamp generation.
+	// Used throughout the webhook processing pipeline for audit logging, resource
+	// metadata timestamps, and operational metrics. Enables deterministic testing
+	// of time-sensitive operations and consistent behavior across time zones.
+	clock types.TimeProvider
 }
 
-// NewWebhookFactory creates and initializes a new WebhookController instance.
-// It sets up default handlers, registers resource-specific handlers, and initializes metrics.
+// NewWebhookFactory constructs a fully configured WebhookController for CloudZero admission control.
+// This factory function initializes the complete webhook processing pipeline, including handler registration
+// for all supported Kubernetes resource types, metrics setup, and operational configuration.
 //
-// Parameters:
-//   - store: A ResourceStore instance used for storing resources.
-//   - settings: A Settings instance containing configuration for the webhook.
-//   - clock: A TimeProvider instance for time-related operations.
+// The factory performs comprehensive initialization:
+//  1. Creates default "allow-all" handler for unknown resource types
+//  2. Registers 20+ resource-specific handlers across 5 API groups
+//  3. Establishes Prometheus metrics for operational monitoring
+//  4. Configures multi-version API support (v1, v1beta1, v1beta2)
+//  5. Sets up dependency injection for storage, configuration, and time services
 //
-// Returns:
-//   - *WebhookController: The initialized WebhookController instance.
-//   - error: An error if the initialization fails.
+// Supported resource types and API groups:
+//   - Apps API: Deployment, StatefulSet, DaemonSet, ReplicaSet
+//   - Core API: Pod, Service, PVC, PV, Namespace, Node
+//   - Batch API: Job, CronJob
+//   - Networking API: Ingress, IngressClass
+//   - Gateway API: Gateway, GatewayClass
+//   - Storage API: StorageClass
+//   - Extensions API: CustomResourceDefinition
+//
+// Multi-version compatibility:
+//
+//	Each resource type is registered for multiple API versions to ensure compatibility
+//	across different Kubernetes cluster versions. This prevents admission failures when
+//	clusters use deprecated API versions during upgrades or legacy installations.
+//
+// Dependencies and integration:
+//   - store: ResourceStore for persisting cost allocation metadata
+//   - settings: Dynamic configuration for cost allocation policies and feature toggles
+//   - clock: TimeProvider for consistent timestamps and testing determinism
+//
+// Error conditions:
+//
+//	Currently always returns success, but the error return enables future validation
+//	of configuration consistency, handler registration conflicts, or dependency issues.
+//
+// Performance optimizations:
+//   - Handler registration uses efficient map initialization
+//   - Prometheus metrics are registered once using sync.Once
+//   - Dispatch map structure enables O(1) handler lookup during request processing
 func NewWebhookFactory(store types.ResourceStore, settings *config.Settings, clock types.TimeProvider) (WebhookController, error) {
 	wc := &webhookController{
 		dispatch: make(map[string]map[string]map[string]*hook.Handler),

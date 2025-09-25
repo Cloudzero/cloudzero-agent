@@ -1,10 +1,36 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package repo provides implementations for resource repository interfaces.
-// This package includes implementations for repositories that can be extended
-// to fit specific use cases. It supports transaction management and context-based
-// database operations.
+// Package repo provides concrete repository implementations for CloudZero Agent resource metadata storage.
+// This package implements the Secondary Adapter layer in the hexagonal architecture, providing
+// persistent storage for Kubernetes resource metadata essential for cost allocation and billing operations.
+//
+// The repository implementations bridge the gap between domain services and database storage,
+// handling the persistence of resource metadata collected during webhook admission processing
+// and enabling cost allocation analysis across the CloudZero platform.
+//
+// Key responsibilities:
+//   - Resource metadata persistence: Store Kubernetes resource cost allocation information
+//   - CRUD operations: Complete Create, Read, Update, Delete operations for resource data
+//   - Query support: Flexible querying capabilities for resource discovery and analysis
+//   - Transaction management: Atomic operations for data consistency during complex workflows
+//   - Error handling: Comprehensive error translation and operational monitoring
+//
+// Architecture:
+//   - resourceRepoImpl: Concrete implementation of ResourceStore interface
+//   - In-memory repositories: SQLite-based storage for testing and lightweight deployments
+//   - Metrics integration: Prometheus monitoring for storage operation tracking
+//   - Database abstraction: GORM-based implementation supporting multiple database backends
+//
+// The repository layer is essential for CloudZero Agent cost allocation functionality,
+// persisting resource metadata that enables billing attribution and cost optimization
+// analysis across Kubernetes deployments.
+//
+// Integration points:
+//   - Webhook handlers: Store resource metadata during admission processing
+//   - Cost allocation services: Query resource data for billing calculations
+//   - Monitoring systems: Track resource metadata volume and storage health
+//   - Configuration management: Support dynamic policy updates and resource classification
 package repo
 
 import (
@@ -25,11 +51,35 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// remoteWriteStatsOnce is used to ensure that the initialization of remote write statistics
-// happens only once. This is useful to avoid race conditions and ensure thread-safe initialization
-// of metrics or other related resources.
 var (
+	// remoteWriteStatsOnce ensures that Prometheus metrics are registered only once during initialization.
+	// This sync.Once prevents duplicate metric registration errors when repository instances
+	// are created multiple times during application startup, testing, or service restarts.
+	//
+	// Thread-safe initialization is critical for proper Prometheus metrics collection
+	// in environments where multiple repository instances may be created concurrently.
 	remoteWriteStatsOnce sync.Once
+
+	// StorageWriteFailures tracks repository operation failures across all resource types and operations.
+	// This Prometheus counter vector enables operational monitoring of storage layer health
+	// and provides detailed failure analysis for troubleshooting and capacity planning.
+	//
+	// Labels provide comprehensive failure analysis:
+	//   - "resource_type": Kubernetes resource type ID for failure categorization
+	//   - "namespace": Resource namespace for scope-based analysis
+	//   - "resource_name": Specific resource name for detailed troubleshooting
+	//   - "action": Operation type (create, update, delete) for failure pattern analysis
+	//
+	// Operational use cases:
+	//   - Alerting: Trigger alerts when failure rates exceed acceptable thresholds
+	//   - Troubleshooting: Identify specific resources or operations causing storage issues
+	//   - Capacity planning: Monitor storage load and failure patterns over time
+	//   - Cost allocation impact: Track storage failures that may affect billing accuracy
+	//
+	// Example queries:
+	//   - Total failure rate: rate(storage_write_failure_total[5m])
+	//   - Failures by namespace: sum by (namespace) (storage_write_failure_total)
+	//   - Create operation failures: storage_write_failure_total{action="create"}
 	StorageWriteFailures = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "storage_write_failure_total",

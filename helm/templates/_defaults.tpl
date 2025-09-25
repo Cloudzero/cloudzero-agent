@@ -1,15 +1,59 @@
 {{/*
-Internal default values.
+CloudZero Agent Default Configuration Template
 
-You can think of this as similar to `.Values`, but without allowing people
-installing the Helm chart to override the values easily.  This is used in places
-where we want to reuse values instead of hardcode them, but at the same time the
-values shouldn't really be changed.
+This template defines immutable default values for CloudZero Agent operations that are essential
+for proper cost allocation and monitoring functionality. Unlike user-configurable values in
+`.Values`, these defaults represent core operational requirements that should not be modified
+without understanding the impact on CloudZero platform integration.
+
+The template provides:
+- Essential metric lists required for CloudZero cost allocation analysis
+- Metric filtering configuration for cost vs observability data classification
+- Default operational parameters that ensure reliable CloudZero Agent functionality
+
+Modifying these defaults may result in:
+- Incomplete cost allocation data in the CloudZero platform
+- Missing operational metrics for monitoring and alerting
+- Degraded performance or functionality of CloudZero Agent components
+
+Use Cases:
+- Template reusability: Share common configuration across multiple chart templates
+- Consistency: Ensure identical metric lists and filters across different deployments
+- Maintainability: Centralize critical configuration that should remain stable
+- Documentation: Provide clear reference for required CloudZero metrics and filters
+*/}}
+{{/*
+Defines the complete set of default values for CloudZero Agent operations.
+This template returns a YAML structure containing all essential configuration
+for metric collection, filtering, and CloudZero platform integration.
+
+Structure:
+- kubeMetrics: Kubernetes state metrics required for resource cost allocation
+- containerMetrics: Container runtime metrics for resource usage tracking
+- insightsMetrics: CloudZero Agent operational metrics for monitoring and debugging
+- prometheusMetrics: Prometheus server metrics for integration health monitoring
+- metricFilters: Classification rules for cost vs observability metric separation
+
+Usage in templates:
+{{- $defaults := include "cloudzero-agent.defaults" . | fromYaml -}}
+{{- range $defaults.kubeMetrics }}
+  - {{ . }}
+{{- end }}
 */}}
 {{- define "cloudzero-agent.defaults" -}}
 
-# -- The following lists of metrics are required for CloudZero to function.
-# -- Modifications made to these lists may cause issues with the processing of cluster data
+# Essential Metric Collections for CloudZero Cost Allocation
+#
+# These metric lists are critical for CloudZero platform functionality and should not be modified
+# without consulting CloudZero support. Each category serves a specific purpose in the cost
+# allocation and monitoring pipeline.
+#
+# WARNING: Removing or modifying these metrics may result in incomplete cost data,
+# missing operational insights, or degraded CloudZero platform functionality.
+
+# Kubernetes State Metrics - Essential for Resource Cost Allocation
+# These metrics provide the foundational data for attributing costs to specific Kubernetes
+# resources, namespaces, and workloads. Required for accurate cost allocation analysis.
 kubeMetrics:
   - kube_node_info
   - kube_node_status_capacity
@@ -17,11 +61,17 @@ kubeMetrics:
   - kube_pod_container_resource_requests
   - kube_pod_labels
   - kube_pod_info
+# Container Runtime Metrics - Essential for Resource Usage Tracking
+# These metrics capture actual resource consumption by containers, enabling CloudZero
+# to correlate resource requests/limits with actual usage for cost optimization insights.
 containerMetrics:
   - container_cpu_usage_seconds_total
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
+# CloudZero Agent Operational Metrics - Essential for Agent Health Monitoring
+# These metrics track CloudZero Agent performance, resource usage, and operational health,
+# enabling monitoring, alerting, and troubleshooting of the cost allocation pipeline.
 insightsMetrics:
   - go_memstats_alloc_bytes
   - go_memstats_heap_alloc_bytes
@@ -118,6 +168,39 @@ prometheusMetrics:
   - prometheus_target_sync_failed_total
   - prometheus_target_sync_length_seconds
 
+# Metric Filtering Configuration - Controls Data Classification and Transmission
+#
+# This configuration determines which metrics are sent to CloudZero and how they are classified
+# for cost allocation vs observability analysis. The filtering system provides fine-grained
+# control over metric selection and label inclusion based on multiple matching strategies.
+#
+# Filter Structure:
+# - cost: Metrics used for cost allocation and resource attribution analysis
+# - observability: Metrics used for operational monitoring and system health tracking
+#
+# Each filter type (cost/observability) contains:
+# - name: Filters applied to metric names to determine inclusion
+# - labels: Filters applied to metric labels to determine which labels to include
+#
+# Matching Strategies:
+# - exact: Exact string matches for precise metric selection
+# - prefix: Prefix-based matching for metric family grouping
+# - suffix: Suffix-based matching for metric type identification
+# - contains: Substring matching for flexible metric selection
+# - regex: Regular expression matching for complex pattern-based selection
+#
+# Filter Behavior:
+# - Empty filters: All subjects match (inclusive by default)
+# - Multiple filters: Any matching filter includes the subject (OR logic)
+# - Label filtering: Applied only to metrics that pass name filtering
+#
+# Extension Mechanism:
+# Each filter type supports "additional..." properties for extending default filters
+# without overriding core CloudZero requirements. Use additional properties in
+# values override files to customize filtering for specific environments.
+#
+# IMPORTANT: Modifying core filters may impact CloudZero cost allocation accuracy.
+# Use additional filters for environment-specific customization.
 # metricFilters is used to determine which metrics are sent to CloudZero, as
 # well as whether they are considered to be cost metrics or observability
 # metrics.

@@ -118,6 +118,8 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 
 ### Webhook Integration Test (Requires API Key)
 
+**IMPORTANT**: These tests are NOT automatically run by the main project make targets due to the separate go.mod in the tests/ directory.
+
 This test deploys the actual Helm chart and validates real webhook invocations:
 
 ```bash
@@ -129,6 +131,10 @@ export CZ_DEV_API_TOKEN="your-api-key"
 # Run webhook test
 cd tests/webhook
 make test-webhook
+
+# Or run manually with go test (requires integration build tag)
+cd tests
+go test -tags=integration -v ./webhook/...
 ```
 
 ### Debug Mode (keeps cluster running)

@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package disk implements the secondary adapter for persistent storage in hexagonal architecture.
+// This package provides high-performance disk-based storage with Brotli compression and JSON streaming
+// for the CloudZero Agent's metric collection and processing pipeline.
 package disk
 
 import (
@@ -26,17 +29,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Storage operation constants for performance optimization and directory management.
 const (
-	directoryMode     = 0o755
-	batchSize         = 1000
-	fileReadBatchSize = 1000
-	jsonBufferSize    = 1024
+	// directoryMode sets POSIX permissions for created directories (755 - rwxr-xr-x).
+	directoryMode = 0o755
+
+	// jsonBufferSize sets the initial buffer size for JSON streaming operations.
+	jsonBufferSize = 1024
 )
 
+// Content type identifiers for metric classification and storage routing.
+// These constants determine the storage path and processing logic for different metric categories.
 const (
-	CostContentIdentifier          = "metrics"
+	// CostContentIdentifier marks metrics as cost-related for CloudZero billing analysis.
+	CostContentIdentifier = "metrics"
+
+	// ObservabilityContentIdentifier marks metrics as observability-focused rather than cost-related.
 	ObservabilityContentIdentifier = "observability"
-	LogsContentIdentifider         = "logs"
+
+	// LogsContentIdentifider marks log data for separate processing and storage.
+	LogsContentIdentifider = "logs"
 )
 
 type DiskStoreOpt = func(d *DiskStore) error

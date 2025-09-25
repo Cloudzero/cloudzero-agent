@@ -1,0 +1,4 @@
+# Ignore all cluster configuration files except the example kuttl-testing files
+*.yaml
+!/kind.yaml
+!/kind-overrides.yaml

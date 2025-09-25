@@ -1,3 +1,28 @@
+{{/*
+CloudZero Agent Validating Webhook Configuration
+
+This template creates the Kubernetes ValidatingWebhookConfiguration that registers
+CloudZero Agent with the Kubernetes API server for admission control. The webhook
+configuration defines which resources and operations trigger CloudZero metadata
+collection for cost allocation analysis.
+
+Webhook Registration Features:
+- Resource coverage: Monitors 20+ Kubernetes resource types for complete cost visibility
+- Operation scope: Captures CREATE, UPDATE, DELETE operations for lifecycle tracking
+- Namespace filtering: Configurable namespace inclusion/exclusion patterns
+- Fail-open policy: Never blocks cluster operations, ensuring high availability
+- TLS configuration: Automatic certificate injection via cert-manager integration
+
+Supported Resources (see app/types/k8s_object.go):
+- Workload resources: Deployments, StatefulSets, DaemonSets, ReplicaSets, Pods
+- Infrastructure: Nodes, Services, StorageClasses, PersistentVolumes/Claims
+- Networking: Ingresses, IngressClasses, Gateways (service mesh)
+- Batch workloads: Jobs, CronJobs
+- Custom resources: CRDs and custom resource instances
+
+This configuration is essential for CloudZero cost allocation completeness,
+ensuring no Kubernetes resources are missed in cost attribution analysis.
+*/}}
 {{- if .Values.insightsController.enabled }}
 {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
 {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
@@ -9,6 +34,8 @@ metadata:
   namespace: {{ $.Release.Namespace }}
   labels:
     {{- include "cloudzero-agent.insightsController.labels" $ | nindent 4 }}
+  # Certificate management annotations for automatic TLS certificate injection
+  # When cert-manager is enabled, automatically injects CA bundle for webhook TLS validation
   {{- $certManagerAnnotations := dict -}}
   {{- if $.Values.insightsController.tls.useCertManager -}}
   {{- $certManagerAnnotations = dict "cert-manager.io/inject-ca-from" ($.Values.insightsController.webhooks.caInjection | default (printf "%s/%s" $.Release.Namespace (include "cloudzero-agent.certificateName" $))) -}}
@@ -16,7 +43,11 @@ metadata:
   {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy $.Values.defaults.annotations) $certManagerAnnotations) | nindent 2 }}
 webhooks:
   - name: {{ include "cloudzero-agent.validatingWebhookName" $ }}
+    # Namespace selector: Controls which namespaces trigger webhook processing
+    # Supports inclusion/exclusion patterns for fine-grained resource selection
     namespaceSelector: {{ toYaml $.Values.insightsController.webhooks.namespaceSelector | nindent 6 }}
+    # Failure policy: 'Ignore' ensures fail-open behavior - never blocks cluster operations
+    # Critical for production stability: webhook failures don't impact workload deployments
     failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE", "DELETE" ]

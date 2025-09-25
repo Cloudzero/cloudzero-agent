@@ -2384,7 +2384,11 @@ kind: Deployment
 metadata:
   name: cz-agent-aggregator
   namespace: cz-agent
+  # Annotations: Merge default annotations with aggregator-specific annotations
+  # Enables custom metadata for monitoring, backup policies, and operational tooling
   
+  # Labels: Combine standard aggregator labels with user-defined metadata labels
+  # Provides consistent labeling for service discovery, monitoring, and resource management
   labels:
     app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
@@ -2543,6 +2547,7 @@ kind: Deployment
 metadata:
   name: cz-agent-cloudzero-agent-webhook-server
   namespace: cz-agent
+  # Standard webhook server labels for consistent resource identification
   labels:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
@@ -2551,6 +2556,8 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  # Deployment annotations: Merge defaults with webhook-specific annotations
+  # Supports monitoring, backup policies, and operational tooling integration
   
 spec:
   replicas: 3
@@ -3082,12 +3089,18 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  # Certificate management annotations for automatic TLS certificate injection
+  # When cert-manager is enabled, automatically injects CA bundle for webhook TLS validation
   annotations:
     cert-manager.io/inject-ca-from: cz-agent/cz-agent-cloudzero-agent-webhook-server-certificate
 webhooks:
   - name: cz-agent-cloudzero-agent-webhook-server-webhook.cz-agent.svc
+    # Namespace selector: Controls which namespaces trigger webhook processing
+    # Supports inclusion/exclusion patterns for fine-grained resource selection
     namespaceSelector: 
       {}
+    # Failure policy: 'Ignore' ensures fail-open behavior - never blocks cluster operations
+    # Critical for production stability: webhook failures don't impact workload deployments
     failurePolicy: Ignore
     rules:
       - operations: [ "CREATE", "UPDATE", "DELETE" ]

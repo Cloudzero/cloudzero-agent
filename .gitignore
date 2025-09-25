@@ -135,4 +135,3 @@ terraform.rc
 #
 # We intend to add these, but need a bit more time for development
 /.cursor/
-CLAUDE.md
