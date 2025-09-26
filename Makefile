@@ -342,6 +342,10 @@ test-smoke: ## Run the smoke tests
 	CLUSTER_NAME=$(CLUSTER_NAME) \
 	$(GO) -C tests test -run Smoke -v -timeout 10m ./smoke/...
 
+.PHONY: test-all
+test-all: ## Run all tests
+test-all: helm-test test test-integration kind-test test-smoke
+
 # ----------- LOCAL TESTING INFRASTRUCTURE ------------
 
 # Generic testing configuration
@@ -364,7 +368,29 @@ kind-down: ## Delete kind cluster and cleanup
 # Complete KUTTL test workflow
 .PHONY: kind-test
 kind-test: ## Set up Kind cluster, install chart, run tests, unistall, delete cluster
-kind-test: kind-up helm-install-current helm-test-kuttl helm-uninstall kind-down
+kind-test:
+	@set -e; \
+	kind_up_success=0; \
+	helm_install_success=0; \
+	helm_test_success=0; \
+	\
+	$(MAKE) kind-up && kind_up_success=1; \
+	if [ "$$kind_up_success" = "1" ]; then \
+		$(MAKE) helm-install-current && helm_install_success=1; \
+		if [ "$$helm_install_success" = "1" ]; then \
+			$(MAKE) helm-test-kuttl && helm_test_success=1; \
+		fi; \
+	fi; \
+	\
+	if [ "$$helm_install_success" = "1" ]; then \
+		$(MAKE) helm-uninstall || true; \
+	fi; \
+	if [ "$$kind_up_success" = "1" ]; then \
+		$(MAKE) kind-down || true; \
+	fi; \
+	if [ "$$helm_test_success" = "0" ]; then \
+		exit 1; \
+	fi
 
 
 # Kind cluster kubeconfig for testing
