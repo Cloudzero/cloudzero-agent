@@ -181,10 +181,14 @@ lint-go:
 %.md-lint-mermaid: %.md
 	@if grep -q '```mermaid' "$<" 2>/dev/null; then \
 		echo "$(INFO_COLOR)Validating Mermaid diagrams in $<$(NO_COLOR)"; \
-		sed -n '/```mermaid/,/```/p' "$<" | sed '1d;$$d' | $(MMDC) -i - -e svg -o - --quiet --puppeteerConfigFile .tools/puppeteer-config.json >/dev/null || { \
-			echo "$(ERROR_COLOR)Mermaid diagram validation failed in $<$(NO_COLOR)"; \
-			exit 1; \
-		}; \
+		awk '/```mermaid/,/```/' "$<" | awk 'BEGIN{RS="```mermaid"; FS="```"} NR>1 {print $$1}' | while read -r diagram; do \
+			if [ -n "$$diagram" ]; then \
+				echo "$$diagram" | $(MMDC) -i - -e svg -o - --quiet --puppeteerConfigFile .tools/puppeteer-config.json >/dev/null || { \
+					echo "$(ERROR_COLOR)Mermaid diagram validation failed in $<$(NO_COLOR)"; \
+					exit 1; \
+				}; \
+			fi; \
+		done; \
 	fi
 
 .PHONY: lint-mermaid

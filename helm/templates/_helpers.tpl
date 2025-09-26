@@ -1,5 +1,12 @@
 {{/*
 Expand the name of the chart.
+
+This template provides the base name for all Kubernetes resources created by the chart.
+Uses Values.nameOverride if provided, otherwise defaults to Chart.Name.
+Ensures compatibility with Kubernetes naming constraints (63 char limit, no trailing hyphens).
+
+Usage: {{ include "cloudzero-agent.name" . }}
+Returns: string (e.g., "cloudzero-agent")
 */}}
 {{- define "cloudzero-agent.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
@@ -7,6 +14,12 @@ Expand the name of the chart.
 
 {{/*
 The version number of the chart.
+
+This template embeds the software version that corresponds to the chart version.
+Used for resource annotations and compatibility tracking between chart and application versions.
+
+Usage: {{ include "cloudzero-agent.versionNumber" . }}
+Returns: string with version annotation
 */}}
 {{- define "cloudzero-agent.versionNumber" -}}
 version: 1.2.7  # <- Software release corresponding to this chart version.
@@ -14,23 +27,55 @@ version: 1.2.7  # <- Software release corresponding to this chart version.
 
 {{/*
 Create chart name and version as used by the chart label.
+
+This template generates the standard chart label value combining name and version.
+Used in the app.kubernetes.io/version label for all resources to track deployments.
+Replaces '+' with '_' for Kubernetes label compatibility.
+
+Usage: {{ include "cloudzero-agent.chart" . }}
+Returns: string (e.g., "cloudzero-agent-1.2.7")
 */}}
 {{- define "cloudzero-agent.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{/* Define the secret name which holds the CloudZero API key */}}
+{{/*
+Define the secret name which holds the CloudZero API key.
+
+This template determines the Kubernetes Secret name containing the CloudZero API key.
+Supports using an existing secret via Values.existingSecretName or creates a default name.
+Used by all components that need API access for data upload and authentication.
+
+Usage: {{ include "cloudzero-agent.secretName" . }}
+Returns: string (e.g., "my-release-api-key" or custom existing secret name)
+*/}}
 {{ define "cloudzero-agent.secretName" -}}
 {{ .Values.existingSecretName | default (printf "%s-api-key" .Release.Name) }}
 {{- end}}
 
-{{/* Define the path and filename on the container filesystem which holds the CloudZero API key */}}
+{{/*
+Define the path and filename on the container filesystem which holds the CloudZero API key.
+
+This template constructs the complete file path where the API key is mounted inside containers.
+Combines the mount path with the filename from serverConfig values.
+Used by collector and shipper components to read API credentials.
+
+Usage: {{ include "cloudzero-agent.secretFileFullPath" . }}
+Returns: string (e.g., "/secrets/api-key")
+*/}}
 {{ define "cloudzero-agent.secretFileFullPath" -}}
 {{ printf "%s%s" .Values.serverConfig.containerSecretFilePath .Values.serverConfig.containerSecretFileName }}
 {{- end}}
 
 {{/*
-imagePullSecrets for the agent server
+imagePullSecrets for the agent server.
+
+This template generates imagePullSecrets configuration for private container registries.
+Only renders the imagePullSecrets section if Values.imagePullSecrets is defined.
+Applied to all Deployments and Jobs that need to pull CloudZero Agent images.
+
+Usage: {{ include "cloudzero-agent.server.imagePullSecrets" . }}
+Returns: YAML imagePullSecrets section or empty string
 */}}
 {{- define "cloudzero-agent.server.imagePullSecrets" -}}
 {{- if .Values.imagePullSecrets -}}
@@ -40,7 +85,14 @@ imagePullSecrets:
 {{- end }}
 
 {{/*
-Name for the validating webhook
+Name for the validating webhook.
+
+This template generates the webhook service DNS name for admission controller registration.
+Constructs the FQDN using the webhook config name and release namespace.
+Used in ValidatingAdmissionWebhook clientConfig to specify the webhook endpoint.
+
+Usage: {{ include "cloudzero-agent.validatingWebhookName" . }}
+Returns: string (e.g., "cloudzero-webhook.default.svc")
 */}}
 {{- define "cloudzero-agent.validatingWebhookName" -}}
 {{- printf "%s.%s.svc" (include "cloudzero-agent.validatingWebhookConfigName" .) .Release.Namespace }}

@@ -1,11 +1,39 @@
+{{/*
+CloudZero Agent Webhook Server Deployment
+
+This deployment template creates the CloudZero Agent Webhook Server (Insights Controller),
+which implements Kubernetes admission webhooks for cost allocation metadata extraction
+and resource lifecycle tracking. The webhook server intercepts Kubernetes resource
+creation and modification events to collect cost allocation metadata.
+
+Key features:
+- Kubernetes admission control: Validates and enriches resources with cost metadata
+- High availability: Multiple replicas with anti-affinity for fault tolerance
+- TLS security: Automatic certificate management for secure webhook endpoints
+- Fail-open design: Never blocks cluster operations, always allows resources
+- Comprehensive monitoring: Metrics and logging for operational visibility
+
+Operational characteristics:
+- HTTPS-only: All webhook traffic encrypted using TLS certificates
+- Service mesh compatibility: Configurable Istio sidecar injection
+- Resource constraints: CPU/memory limits for predictable resource usage
+- Pod disruption budgets: Maintains availability during cluster maintenance
+- Configuration management: Checksum-based rolling updates
+
+The webhook server is essential for CloudZero cost allocation accuracy,
+ensuring complete resource metadata collection across all Kubernetes workloads.
+*/}}
 {{- if .Values.insightsController.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
   namespace: {{ .Release.Namespace }}
+  # Standard webhook server labels for consistent resource identification
   labels:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  # Deployment annotations: Merge defaults with webhook-specific annotations
+  # Supports monitoring, backup policies, and operational tooling integration
   {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.insightsController.server.deploymentAnnotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas }}

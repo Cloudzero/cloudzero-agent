@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package types contains types and errors used throughout the application.
+// Package types provides foundational data structures, interfaces, and error definitions for the CloudZero Agent.
+//
+// This package serves as the Application Core in hexagonal architecture, defining the domain model
+// and contracts that all other layers depend upon. It includes metric data structures, storage interfaces,
+// Kubernetes resource definitions, and comprehensive error classifications for the entire agent system.
 package types
 
 import (

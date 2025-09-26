@@ -90,6 +90,8 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 
 ## Running the Tests
 
+**IMPORTANT**: These tests are NOT automatically run by the main project make targets due to the separate go.mod in the tests/ directory.
+
 ### Quick Test
 
 ```bash

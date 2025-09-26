@@ -1,12 +1,37 @@
+{{/*
+CloudZero Agent Aggregator Deployment
+
+This deployment template creates the CloudZero Agent Aggregator, the core component responsible
+for high-throughput metric ingestion from Prometheus instances, intelligent data filtering,
+and reliable transmission to the CloudZero platform for cost allocation analysis.
+
+The aggregator operates as a multi-container deployment consisting of:
+1. Collector container: Receives Prometheus remote_write data via HTTP endpoint
+2. Shipper container: Processes, compresses, and uploads data to CloudZero platform
+
+Key operational characteristics:
+- High availability: Multiple replicas for resilience and load distribution
+- Persistent storage: Reliable data buffering for transmission failures
+- Configuration management: Checksum-based rolling updates for zero-downtime changes
+- Resource management: CPU/memory limits and requests for predictable performance
+- Security: Service account-based RBAC and secret management integration
+
+The aggregator is designed to handle production-scale Prometheus data volumes while
+maintaining data integrity and providing comprehensive operational monitoring.
+*/}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   namespace: {{ .Release.Namespace }}
+  # Annotations: Merge default annotations with aggregator-specific annotations
+  # Enables custom metadata for monitoring, backup policies, and operational tooling
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
       .Values.components.aggregator.annotations
     ) | nindent 2 }}
+  # Labels: Combine standard aggregator labels with user-defined metadata labels
+  # Provides consistent labeling for service discovery, monitoring, and resource management
   {{- include "cloudzero-agent.generateLabels" (dict
       "globals" .
       "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)

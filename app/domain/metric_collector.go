@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package domain provides domain logic.
+// Package domain contains the Application Core business logic for the CloudZero Agent.
+//
+// This package implements the domain layer of hexagonal architecture, containing
+// metric collection, filtering, and processing services. It orchestrates the flow
+// from Prometheus remote_write ingestion through classification and storage preparation
+// for the CloudZero cost allocation platform.
 package domain
 
 import (
@@ -28,22 +33,41 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
+// Domain-level errors for metric collection operations.
 var (
-	ErrJSONUnmarshal    = errors.New("failed to parse metric from request body")
+	// ErrJSONUnmarshal indicates failure to parse metric data from request body.
+	// This error occurs when Prometheus remote_write data is malformed or incompatible.
+	ErrJSONUnmarshal = errors.New("failed to parse metric from request body")
+
+	// ErrMetricIDMismatch indicates inconsistency between URL path and request body identifiers.
+	// This error prevents data corruption in metric processing operations.
 	ErrMetricIDMismatch = errors.New("metric ID in path does not match product ID in body")
 )
 
+// Protocol and encoding constants for Prometheus remote_write integration.
 const (
+	// SnappyBlockCompression identifies snappy compression used in Prometheus remote_write protocol.
 	SnappyBlockCompression = "snappy"
-	appProtoContentType    = "application/x-protobuf"
+
+	// appProtoContentType is the default content type for protobuf-encoded metric data.
+	appProtoContentType = "application/x-protobuf"
 )
 
+// Prometheus remote_write protocol version content types.
+// These correspond to the official Prometheus remote_write specification.
 var (
+	// v1ContentType identifies Prometheus remote_write v1 protocol format.
 	v1ContentType = string(prom.RemoteWriteProtoMsgV1)
+
+	// v2ContentType identifies Prometheus remote_write v2 protocol format.
 	v2ContentType = string(prom.RemoteWriteProtoMsgV2)
 )
 
+// Prometheus metrics for monitoring the collector's ingestion and classification performance.
+// These counters provide visibility into the volume and categorization of incoming metrics.
 var (
+	// metricsReceived tracks the total number of metrics ingested from all Prometheus remote_write requests.
+	// This counter helps monitor the overall collection volume and detect ingestion issues.
 	metricsReceived = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "metrics_received_total",
@@ -51,6 +75,9 @@ var (
 		},
 		[]string{},
 	)
+
+	// metricsReceivedCost tracks metrics classified as cost-related and sent to the cost storage pipeline.
+	// These metrics support CloudZero's core cost allocation and billing analysis functionality.
 	metricsReceivedCost = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "metrics_received_cost_total",
@@ -58,6 +85,9 @@ var (
 		},
 		[]string{},
 	)
+
+	// metricsReceivedObservability tracks metrics classified as observability-focused rather than cost-related.
+	// These metrics are processed separately from cost data to optimize storage and processing efficiency.
 	metricsReceivedObservability = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "metrics_received_observability_total",
@@ -67,22 +97,41 @@ var (
 	)
 )
 
-// MetricCollector is responsible for collecting and flushing metrics.
+// MetricCollector orchestrates the core metric collection and classification pipeline.
+// This service receives Prometheus remote_write requests, classifies metrics into cost vs observability
+// categories, and routes them to appropriate storage backends for the CloudZero platform.
 type MetricCollector struct {
-	settings           *config.Settings
-	costStore          types.WritableStore
+	// settings contains collector configuration including metric filtering rules and storage parameters.
+	settings *config.Settings
+
+	// costStore handles storage of metrics classified as cost-related for billing analysis.
+	costStore types.WritableStore
+
+	// observabilityStore handles storage of metrics classified as observability-focused.
 	observabilityStore types.WritableStore
-	filter             *MetricFilter
-	clock              types.TimeProvider
-	cancelFunc         context.CancelFunc
-	initialFlush       bool
+
+	// filter implements metric classification logic to separate cost from observability metrics.
+	filter *MetricFilter
+
+	// clock provides time abstraction for testing and consistent timestamping.
+	clock types.TimeProvider
+
+	// cancelFunc enables graceful shutdown of background processing goroutines.
+	cancelFunc context.CancelFunc
+
+	// initialFlush indicates whether the first automatic flush cycle has completed.
+	initialFlush bool
 }
 
+// Settings returns the collector configuration for external inspection and validation.
+// This method provides read-only access to the collector's operational parameters.
 func (d *MetricCollector) Settings() *config.Settings {
 	return d.settings
 }
 
-// NewMetricCollector creates a new MetricCollector and starts the flushing goroutine.
+// NewMetricCollector creates a MetricCollector and initializes the background flush cycle.
+// The collector starts accepting Prometheus remote_write requests immediately and begins
+// periodic flushing of buffered metrics to storage backends based on configuration.
 func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore types.WritableStore, observabilityStore types.WritableStore) (*MetricCollector, error) {
 	filter, err := NewMetricFilter(&s.Metrics)
 	if err != nil {
@@ -102,7 +151,9 @@ func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore 
 	return collector, nil
 }
 
-// PutMetrics appends metrics and returns write response stats.
+// PutMetrics processes a Prometheus remote_write request and stores classified metrics.
+// This method handles decompression, protocol version detection, metric classification,
+// and routing to appropriate storage backends while maintaining compatibility statistics.
 func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*remote.WriteResponseStats, error) {
 	var (
 		metrics      []types.Metric

@@ -1,6 +1,33 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package shipper provides metric upload and transmission services for the CloudZero Agent.
+// This package implements the critical Secondary Adapter responsible for delivering collected
+// and processed metrics to the CloudZero cost optimization platform for billing analysis.
+//
+// The shipper service operates as the final stage in the CloudZero Agent metric processing pipeline:
+//  1. Periodic file discovery and processing from local storage
+//  2. Presigned URL allocation from CloudZero platform for secure S3 upload
+//  3. Parallel file upload with retry logic and error handling
+//  4. File lifecycle management (marking uploaded, cleanup, replay handling)
+//  5. Disk space management and purging of old metric files
+//
+// Key architectural responsibilities:
+//   - Reliable metric delivery: Ensure all collected metrics reach CloudZero platform
+//   - Batched processing: Handle file uploads in chunks for optimal performance
+//   - Replay mechanisms: Reprocess files that failed upload due to transient errors
+//   - Resource management: Monitor disk usage and enforce retention policies
+//   - Operational monitoring: Provide comprehensive metrics for shipper health
+//
+// The service implements robust error handling and recovery mechanisms essential for
+// production environments where network connectivity and platform availability may vary.
+// All operations are instrumented with detailed metrics and logging for operational visibility.
+//
+// Integration points:
+//   - Storage layer: Reads processed metric files from disk storage
+//   - CloudZero API: Requests presigned URLs and uploads data
+//   - Prometheus metrics: Provides operational monitoring and alerting data
+//   - Configuration service: Receives upload intervals and retention policies
 package shipper
 
 import (
@@ -29,21 +56,96 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// MetricShipper handles the periodic shipping of metrics to Cloudzero.
+// MetricShipper orchestrates the complete metric upload pipeline for CloudZero Agent data transmission.
+// This struct manages the periodic discovery, processing, and upload of metric files from local storage
+// to the CloudZero platform using secure presigned URLs and parallel processing for optimal performance.
+//
+// The shipper implements a robust upload workflow designed for production reliability:
+//   - Periodic scheduling: Configurable intervals for batch processing
+//   - File locking: Prevents concurrent access during processing
+//   - Chunked uploads: Processes files in manageable batches
+//   - Parallel workers: Concurrent upload for throughput optimization
+//   - Retry logic: Handles transient network failures gracefully
+//   - Replay support: Reprocesses failed uploads automatically
+//   - Disk management: Enforces retention policies and cleanup
+//
+// Operational characteristics:
+//   - Signal handling: Graceful shutdown on SIGINT/SIGTERM
+//   - Context cancellation: Proper resource cleanup and timeout handling
+//   - Comprehensive metrics: Detailed observability for monitoring and alerting
+//   - Error recovery: Panic handling and operation resilience
+//   - Configuration reload: Dynamic settings updates without restart
 type MetricShipper struct {
+	// setting provides dynamic configuration for upload intervals, retention policies,
+	// CloudZero API endpoints, authentication credentials, and operational parameters.
+	// Configuration changes are applied during the next processing cycle.
 	setting *config.Settings
-	store   types.ReadableStore
 
-	// Internal fields
-	ctx          context.Context
-	cancel       context.CancelFunc
-	HTTPClient   *retryablehttp.Client
-	shippedFiles uint64 // Counter for shipped files
-	metrics      *instr.PrometheusMetrics
-	shipperID    string // unique id for the shipper
+	// store provides access to metric files stored locally by the collector and storage services.
+	// The shipper reads compressed metric files, uploads them to CloudZero, and manages
+	// file lifecycle including marking files as uploaded and cleaning up old data.
+	store types.ReadableStore
+
+	// ctx provides the root context for all shipper operations, enabling graceful shutdown
+	// and operation cancellation. Derived contexts are created for individual operations
+	// with appropriate timeouts and span tracking for observability.
+	ctx context.Context
+
+	// cancel enables graceful shutdown of the shipper service by cancelling all ongoing
+	// operations and triggering cleanup procedures. Called during SIGINT/SIGTERM handling
+	// or explicit shutdown requests from the application lifecycle manager.
+	cancel context.CancelFunc
+
+	// HTTPClient provides the configured HTTP client for CloudZero API communication.
+	// Includes retry logic, timeout configuration, authentication, and connection pooling
+	// optimized for reliable metric upload operations in production environments.
+	HTTPClient *retryablehttp.Client
+
+	// shippedFiles tracks the total number of successfully uploaded files for operational monitoring.
+	// Updated atomically during concurrent upload operations and exposed via Prometheus metrics
+	// for capacity planning, performance analysis, and billing correlation.
+	shippedFiles uint64
+
+	// metrics provides comprehensive Prometheus instrumentation for shipper operations.
+	// Tracks upload rates, error rates, processing latency, disk usage, and operational health
+	// essential for production monitoring, alerting, and performance optimization.
+	metrics *instr.PrometheusMetrics
+
+	// shipperID provides a unique identifier for this shipper instance, persisted to filesystem
+	// and used for correlating uploaded files with their origin. Enables tracking and debugging
+	// in multi-instance deployments and provides audit trails for billing reconciliation.
+	// Uses hostname if available, otherwise generates a UUID for unique identification.
+	shipperID string
 }
 
-// NewMetricShipper initializes a new MetricShipper.
+// NewMetricShipper creates a fully configured MetricShipper instance for CloudZero metric upload operations.
+// This constructor initializes all necessary components for reliable metric transmission including
+// HTTP clients, metrics instrumentation, and operational configuration validation.
+//
+// Initialization sequence:
+//  1. Creates cancellable context for graceful shutdown support
+//  2. Configures HTTP client with retry logic, timeouts, and authentication
+//  3. Initializes Prometheus metrics for operational monitoring
+//  4. Validates configuration settings and logs debug information
+//  5. Sets up all internal state for immediate operation
+//
+// The constructor performs comprehensive validation and setup to ensure the shipper
+// is ready for production operation, including proper error handling and resource cleanup
+// if initialization fails at any stage.
+//
+// Dependencies:
+//   - ctx: Parent context for operation lifecycle and cancellation
+//   - s: Configuration settings for API endpoints, credentials, and operational parameters
+//   - store: Storage interface for reading processed metric files
+//
+// Configuration validation includes:
+//   - CloudZero API endpoint accessibility and authentication
+//   - Upload interval and batch size validation
+//   - Disk space and retention policy verification
+//   - HTTP client timeout and retry configuration
+//
+// Returns a ready-to-use MetricShipper instance or an error if initialization fails.
+// The returned shipper must have its Run() method called to begin processing operations.
 func NewMetricShipper(ctx context.Context, s *config.Settings, store types.ReadableStore) (*MetricShipper, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -81,7 +183,36 @@ func (m *MetricShipper) GetMetricHandler() http.Handler {
 	return m.metrics.Handler()
 }
 
-// Run starts the MetricShipper service and blocks until a shutdown signal is received.
+// Run executes the main MetricShipper service loop with periodic metric upload processing.
+// This method implements the primary operational lifecycle of the shipper, handling
+// scheduled uploads, signal-based shutdown, and comprehensive error recovery.
+//
+// Service lifecycle:
+//  1. Directory initialization: Creates required upload directories with proper permissions
+//  2. Signal handling setup: Configures SIGINT/SIGTERM for graceful shutdown
+//  3. Initial upload run: Processes any pending files immediately on startup
+//  4. Periodic processing: Executes upload cycles based on configured intervals
+//  5. Graceful shutdown: Completes in-flight operations and cleanup on termination
+//
+// The service runs continuously until:
+//   - Context cancellation from parent service
+//   - OS signal reception (SIGINT, SIGTERM)
+//   - Unrecoverable error during processing
+//
+// Error handling strategy:
+//   - Individual upload failures are logged but don't stop service operation
+//   - Panic recovery prevents service crashes during upload processing
+//   - Metrics tracking enables monitoring and alerting for operational issues
+//   - Directory creation failures are fatal as they prevent basic operation
+//
+// Operational characteristics:
+//   - Non-blocking: Individual upload failures don't block subsequent processing
+//   - Resource cleanup: Proper directory and signal handler cleanup on exit
+//   - Timeout handling: 30-second shutdown timeout for graceful termination
+//   - Comprehensive logging: Detailed operation tracking for troubleshooting
+//
+// The method blocks until shutdown is requested, making it suitable for use as
+// the main execution path for shipper-focused services or containers.
 func (m *MetricShipper) Run() error {
 	// create the required directories for this application
 	if err := os.MkdirAll(m.GetUploadedDir(), filePermissions); err != nil {

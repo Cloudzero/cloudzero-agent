@@ -1,5 +1,25 @@
 {{/*
-Configuration for the webhook-server Deployment. Configuration is defined in this tpl so that we can roll Deployment pods based on a checksum of these values
+CloudZero Agent Insights Controller Configuration Template
+
+Generates the complete configuration for the CloudZero Agent Insights Controller (webhook server)
+deployment. This template centralizes all configuration parameters needed for Kubernetes admission
+webhook operations, cost allocation metadata processing, and CloudZero platform integration.
+
+Configuration includes:
+- CloudZero platform integration settings (cloud account, region, cluster identification)
+- Kubernetes admission webhook server configuration (TLS, timeouts, networking)
+- Metric collection and filtering for cost allocation analysis
+- Database settings for resource metadata persistence
+- Logging and monitoring configuration for operational observability
+
+The configuration is defined as a template to enable:
+- Configuration drift detection through checksum-based pod rolling updates
+- Centralized configuration management across multiple chart templates
+- Consistent parameter validation and default value application
+- Environment-specific customization through values.yaml overrides
+
+Usage: This template is consumed by ConfigMap and Deployment templates to ensure
+consistent configuration across all Insights Controller components.
 */}}
 {{ define "cloudzero-agent.insightsController.configuration" -}}
 cloud_account_id: {{ .Values.cloudAccountId }}
@@ -43,7 +63,29 @@ filters:
 
 
 {{/*
-Configuration for the aggregator Deployment. Configuration is defined in this tpl so that we can roll Deployment pods based on a checksum of these values
+CloudZero Agent Aggregator Configuration Template
+
+Generates the complete configuration for the CloudZero Agent Aggregator deployment, which handles
+Prometheus remote_write metric ingestion, data processing, filtering, and transmission to the
+CloudZero platform for cost allocation analysis.
+
+Configuration includes:
+- CloudZero platform integration (API keys, endpoints, retry policies)
+- Metric filtering rules for cost vs observability data classification
+- Database configuration for metric storage, retention, and compression
+- HTTP server settings for Prometheus remote_write endpoint
+- Data processing parameters (batch sizes, intervals, compression levels)
+- Monitoring and logging configuration for operational visibility
+
+The aggregator processes high-volume metric streams from Prometheus instances across
+Kubernetes clusters, applying intelligent filtering to identify cost-relevant metrics
+while maintaining operational observability data for monitoring and troubleshooting.
+
+Template benefits:
+- Configuration checksum-based deployment updates for zero-downtime changes
+- Centralized parameter management with validation and defaults
+- Environment-specific customization through values.yaml inheritance
+- Consistent configuration across aggregator components (collector, shipper)
 */}}
 {{ define "cloudzero-agent.aggregator.configuration" -}}
 cloud_account_id: {{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}
@@ -86,7 +128,28 @@ cloudzero:
   http_max_wait: {{ .Values.aggregator.cloudzero.httpMaxWait }}
 {{- end}}
 
-{{/* Define remote_write configuration for Prometheus */}}
+{{/*
+Prometheus Remote Write Configuration Template
+
+Generates Prometheus remote_write configuration for sending metrics to CloudZero Agent.
+This template creates the YAML configuration block that Prometheus instances use to
+forward metrics to the CloudZero Agent aggregator for cost allocation processing.
+
+Configuration features:
+- Target URL: CloudZero Agent aggregator remote_write endpoint
+- Authentication: CloudZero API key-based authorization
+- Metric filtering: Write-time filtering using relabel configs
+- Metadata handling: Disabled to reduce overhead and focus on metric data
+
+The remote_write configuration enables:
+- High-throughput metric transmission from Prometheus to CloudZero Agent
+- Intelligent metric selection to reduce bandwidth and processing overhead
+- Secure authentication using CloudZero platform credentials
+- Reliable delivery with Prometheus built-in retry mechanisms
+
+This template is used by Prometheus configuration templates to establish
+the integration between existing Prometheus deployments and CloudZero cost allocation.
+*/}}
 {{- define "cloudzero-agent.aggregator.remoteWrite" -}}
 remote_write:
   - url: {{ include "cloudzero-agent.metricsDestination" . }}
@@ -100,7 +163,28 @@ remote_write:
       send: false
 {{- end -}}
 
-{{/* Define static-prometheus scrape job configuration */}}
+{{/*
+Prometheus Self-Monitoring Scrape Job Configuration Template
+
+Generates Prometheus scrape job configuration for collecting operational metrics from
+the embedded Prometheus instance itself. This enables monitoring of Prometheus health,
+performance, and integration status within the CloudZero cost allocation pipeline.
+
+Metrics collected include:
+- Prometheus server performance: Query latency, storage usage, rule evaluation
+- Remote storage integration: CloudZero Agent connectivity and throughput metrics
+- Service discovery: Target discovery and scraping success rates
+- Resource utilization: Memory usage, goroutine counts, and system metrics
+
+Scrape job features:
+- Local target: Scrapes localhost:9090 for embedded Prometheus metrics
+- Metric filtering: Includes only CloudZero-relevant Prometheus operational metrics
+- Configurable intervals: Balances monitoring granularity with resource usage
+- Label preservation: Maintains essential labels for operational correlation
+
+This configuration ensures CloudZero platform visibility into Prometheus integration
+health and enables proactive monitoring of the cost allocation data pipeline.
+*/}}
 {{- define "cloudzero-agent.prometheus.scrapePrometheus" -}}
 - job_name: static-prometheus
   scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
@@ -113,7 +197,31 @@ remote_write:
       action: keep
 {{- end -}}
 
-{{/* Define cloudzero-aggregator-job scrape job configuration */}}
+{{/*
+CloudZero Aggregator Monitoring Scrape Job Configuration Template
+
+Generates Prometheus scrape job configuration for monitoring CloudZero Agent aggregator
+components. This enables comprehensive operational monitoring of the cost allocation
+data processing pipeline, including metric ingestion, filtering, storage, and transmission.
+
+Monitoring targets:
+- Aggregator collector: Prometheus remote_write ingestion performance
+- Aggregator shipper: CloudZero platform transmission metrics and status
+- Storage subsystem: Database performance, retention, and health metrics
+- Processing pipeline: Throughput, error rates, and data quality metrics
+
+Service discovery features:
+- Kubernetes endpoint discovery: Automatically discovers aggregator instances
+- Namespace scoping: Restricts discovery to CloudZero Agent deployment namespace
+- Port filtering: Targets specific aggregator monitoring ports (collector, shipper)
+- Label enrichment: Adds Kubernetes metadata for operational correlation
+
+This configuration provides essential operational visibility for:
+- Performance monitoring and capacity planning
+- Error detection and troubleshooting
+- Data quality assurance and cost allocation accuracy
+- Integration health monitoring with CloudZero platform
+*/}}
 {{- define "cloudzero-agent.prometheus.scrapeAggregator" -}}
 - job_name: cloudzero-aggregator-job
   scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
@@ -136,7 +244,34 @@ remote_write:
       action: keep
 {{- end -}}
 
-{{/* Define static-kube-state-metrics scrape job configuration */}}
+{{/*
+Kube State Metrics Scrape Job Configuration Template
+
+Generates comprehensive Prometheus scrape job configuration for collecting Kubernetes
+cluster state metrics essential for CloudZero cost allocation analysis. Kube State Metrics
+provides the foundational data about Kubernetes resources, their configuration, and
+relationships required for accurate cost attribution.
+
+Essential metrics collected:
+- Node information: Instance types, capacity, availability zones for cost correlation
+- Pod specifications: Resource requests, limits, and actual placement for usage analysis
+- Workload metadata: Labels, annotations, and ownership for cost allocation grouping
+- Resource states: Running, pending, failed states for operational cost tracking
+
+Label processing and enrichment:
+- Kubernetes metadata extraction: Service names, namespaces, node assignments
+- Label mapping: Preserves application and infrastructure labels for cost grouping
+- Namespace attribution: Enables namespace-level cost allocation and chargeback
+- Resource hierarchy: Maintains pod-to-node relationships for infrastructure cost mapping
+
+Metric filtering:
+- Selective metric inclusion: Only cost-relevant Kubernetes state metrics
+- Label filtering: Preserves essential labels while removing noise
+- Performance optimization: Reduces data volume while maintaining cost accuracy
+
+This configuration is critical for CloudZero's Kubernetes cost allocation accuracy,
+providing the cluster state foundation for all downstream cost analysis and optimization.
+*/}}
 {{- define "cloudzero-agent.prometheus.scrapeKubeStateMetrics" -}}
 # Kube State Metrics Scrape Job
 # static-kube-state-metrics
@@ -205,7 +340,32 @@ remote_write:
       - {{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
 {{- end -}}
 
-{{/* Define cloudzero-webhook-job scrape job configuration */}}
+{{/*
+CloudZero Webhook Monitoring Scrape Job Configuration Template
+
+Generates Prometheus scrape job configuration for monitoring CloudZero Agent webhook
+operations and Kubernetes admission control performance. This enables comprehensive
+visibility into webhook processing latency, admission request volumes, and integration
+health with Kubernetes API servers.
+
+Webhook monitoring metrics:
+- Admission request processing: Latency, throughput, and success rates
+- Resource type distribution: Admission patterns by Kubernetes resource types
+- Error tracking: Failed admissions, parsing errors, and integration failures
+- Performance metrics: Memory usage, goroutine counts, and HTTP connection health
+
+Scraping configuration:
+- HTTPS endpoint: Secure connection to webhook service using TLS
+- Service discovery: Kubernetes endpoint discovery for webhook service instances
+- Certificate handling: Bypasses certificate validation for internal webhook certificates
+- Metric filtering: Focuses on CloudZero-specific operational and business metrics
+
+This monitoring is essential for:
+- Ensuring webhook performance doesn't impact cluster operations
+- Tracking cost allocation metadata collection completeness
+- Detecting integration issues with Kubernetes API servers
+- Monitoring webhook contribution to overall cost allocation accuracy
+*/}}
 {{- define "cloudzero-agent.prometheus.scrapeWebhookJob" -}}
 - job_name: cloudzero-webhook-job
   scheme: https
@@ -229,7 +389,35 @@ remote_write:
       action: keep
 {{- end -}}
 
-{{/* Define cloudzero-nodes-cAdvisor scrape job configuration */}}
+{{/*
+Container Advisor (cAdvisor) Scrape Job Configuration Template
+
+Generates Prometheus scrape job configuration for collecting container resource usage
+metrics from Kubernetes nodes via cAdvisor. These metrics provide the actual resource
+consumption data essential for CloudZero cost allocation accuracy and optimization insights.
+
+Container metrics collected:
+- CPU usage: Actual CPU consumption by containers for cost allocation
+- Memory utilization: Working set memory usage for memory-based cost attribution
+- Network I/O: Container network traffic for network cost correlation
+- Storage usage: Container filesystem usage for storage cost analysis
+
+Scraping modes supported:
+- Local node scraping: DaemonSet mode scraping only the local node's cAdvisor
+- Cluster-wide scraping: Central scraping of all nodes via Kubernetes API proxy
+- Authentication: ServiceAccount token-based authentication for secure access
+- TLS configuration: Proper certificate handling for secure cAdvisor endpoints
+
+Configuration features:
+- Node filtering: Supports both single-node and cluster-wide collection patterns
+- Label processing: Enriches metrics with Kubernetes node and container metadata
+- Metric filtering: Selects only cost-relevant container resource metrics
+- Security: Uses Kubernetes RBAC for secure cAdvisor endpoint access
+
+This configuration is fundamental to CloudZero's container cost allocation,
+providing the actual resource usage data needed for accurate cost attribution
+and optimization recommendations across Kubernetes workloads.
+*/}}
 {{- define "cloudzero-agent.prometheus.scrapeCAdvisor" -}}
 {{- $scrapeLocal := .scrapeLocalNodeOnly | default false -}}
 # cAdvisor Scrape Job cloudzero-nodes-cadvisor

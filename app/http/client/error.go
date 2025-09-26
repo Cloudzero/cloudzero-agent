@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package http provides HTTP client utilities for CloudZero Agent external API integrations.
 package http
 
 import (
@@ -11,6 +12,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+// HTTP error variables provide typed error representations for all standard HTTP status codes.
+// These errors enable CloudZero Agent components to handle HTTP failures with appropriate
+// business logic, retry strategies, and error reporting patterns.
+//
+// Error categorization supports:
+//   - Client errors (4xx): Request issues requiring caller correction
+//   - Server errors (5xx): Remote service issues enabling retry logic
+//   - Authentication errors: Credential and authorization failures
+//   - Rate limiting errors: Request throttling requiring backoff
+//
+// These typed errors enable consistent error handling across CloudZero Agent HTTP integrations
+// while providing clear error classification for monitoring and alerting systems.
 var (
 	ErrStatusBadRequest                    = errors.New("badrequest error")
 	ErrStatusUnauthorized                  = errors.New("unauthorized error")
@@ -53,6 +66,29 @@ var (
 	ErrStatusNetworkAuthenticationRequired = errors.New("network authentication required error")
 )
 
+// classifyNetworkError analyzes network-level errors to provide specific error classifications.
+// This function examines error chains and underlying causes to determine the specific type
+// of network failure, enabling appropriate retry logic and error reporting.
+//
+// Error classification categories:
+//   - DNS resolution failures: "name not found" for hostname lookup errors
+//   - Connection failures: "connection refused" for service unavailability
+//   - Timeout errors: "timeout" for deadline exceeded conditions
+//   - Unknown errors: Empty string for unclassified network issues
+//
+// Error unwrapping:
+//
+//	The function iterates through error chains using the Unwrap pattern (Go 1.13+)
+//	to examine underlying causes and provide accurate classification even for
+//	wrapped errors from various network libraries.
+//
+// This classification enables CloudZero Agent to implement appropriate retry strategies:
+//   - DNS errors may require longer backoff periods
+//   - Connection refused errors may indicate service outages
+//   - Timeout errors may require request optimization
+//
+// Returns a human-readable classification string for the network error,
+// or empty string if the error cannot be classified.
 func classifyNetworkError(err error) string {
 	cause := err
 	for {
@@ -84,6 +120,28 @@ func classifyNetworkError(err error) string {
 	return ""
 }
 
+// ToError converts HTTP status codes to typed error values for consistent error handling.
+// This function maps standard HTTP status codes to corresponding error types, enabling
+// CloudZero Agent components to handle HTTP responses with appropriate business logic.
+//
+// Error mapping approach:
+//   - Client errors (4xx): Map to specific client-side error types
+//   - Server errors (5xx): Map to server-side error types
+//   - Success codes (2xx): Return nil (no error)
+//   - Informational (1xx): Return nil (no error)
+//   - Redirection (3xx): Return nil (no error, handled by HTTP client)
+//
+// Usage patterns:
+//   - API integration: Determine retry strategies based on error type
+//   - Authentication: Identify credential and authorization failures
+//   - Rate limiting: Detect throttling conditions requiring backoff
+//   - Service health: Monitor external service availability and performance
+//
+// This conversion enables CloudZero Agent to implement sophisticated error handling
+// strategies that distinguish between different types of HTTP failures and respond
+// appropriately with retry logic, alerting, and graceful degradation.
+//
+// Returns the corresponding error type for the status code, or nil for success codes.
 func ToError(code int) error {
 	switch code {
 	case http.StatusBadRequest:
