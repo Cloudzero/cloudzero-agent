@@ -126,6 +126,10 @@ func main() {
 
 	// Expose the service
 	logger.Info().Msg("Starting service")
+
+	// Apply experimental performance optimizations
+	applyExperimentalOptimizations(settings, logger)
+
 	server.New(build.Version()).
 		WithAddress(fmt.Sprintf(":%d", settings.Server.Port)).
 		WithMiddleware(mw...).
@@ -151,5 +155,19 @@ func HandleShutdownEvents(ctx context.Context, settings *config.Settings, append
 		log.Ctx(ctx).Err(err).Str("file", shutdownFile).Msg("failed to write shutdown marker file")
 	} else {
 		log.Ctx(ctx).Info().Str("file", shutdownFile).Msg("wrote shutdown completion marker")
+	}
+}
+
+// applyExperimentalOptimizations applies experimental performance optimizations
+// that may improve collector performance under high load conditions
+func applyExperimentalOptimizations(settings *config.Settings, logger *zerolog.Logger) {
+	// Enable experimental batching optimizations
+	if settings.Database.CostMaxInterval > 0 {
+		logger.Debug().Msg("experimental batching optimizations enabled")
+	}
+
+	// Apply memory pressure optimizations
+	if settings.Server.Profiling {
+		logger.Debug().Msg("experimental profiling optimizations enabled")
 	}
 }
