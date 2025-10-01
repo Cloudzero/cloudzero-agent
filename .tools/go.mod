@@ -12,7 +12,7 @@ require (
 	helm.sh/helm/v3 v3.19.0
 	honnef.co/go/tools v0.6.1
 	mvdan.cc/gofumpt v0.9.1
-	sigs.k8s.io/kind v0.27.0
+	sigs.k8s.io/kind v0.30.0
 )
 
 require (
@@ -72,7 +72,6 @@ require (
 	github.com/google/cel-go v0.26.0 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
