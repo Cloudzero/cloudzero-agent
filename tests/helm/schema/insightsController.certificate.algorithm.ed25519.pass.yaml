@@ -1,6 +1,0 @@
-insightsController:
-  tls:
-    certificate:
-      algorithm: "ed25519"
-      keySize: 0
-      validityDuration: "876000h"

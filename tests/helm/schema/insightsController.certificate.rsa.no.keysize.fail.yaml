@@ -1,6 +1,0 @@
-insightsController:
-  tls:
-    certificate:
-      algorithm: "rsa"
-      # Missing keySize - should fail validation
-      validityDuration: "876000h"
