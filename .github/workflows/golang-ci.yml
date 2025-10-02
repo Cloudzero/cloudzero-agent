@@ -120,6 +120,7 @@ jobs:
           go-version-file: go.mod
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
+        id: setup-protoc
         with:
           version: "29.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -127,6 +128,8 @@ jobs:
         run: make install-tools
       - name: Generate code
         run: make generate
+        env:
+          PROTOC: ${{ steps.setup-protoc.outputs.path }}
       - name: Format code
         run: make format
       - name: Check file format

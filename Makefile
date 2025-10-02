@@ -851,7 +851,7 @@ generate: generate-protobuf
 
 # Pattern rule for generating protobuf files
 %.pb.go: %.proto
-	@$(PROTOC) \
+	$(PROTOC) \
 	  --plugin=.tools/bin/protoc-gen-go \
 	  --proto_path=$(dir $@) \
 	  --go_out=$(dir $<) \
