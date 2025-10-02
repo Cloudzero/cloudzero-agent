@@ -20,7 +20,7 @@ Each cluster configuration consists of two files:
 
 **Example files:**
 
-```
+```text
 clusters/
 ├── kind.yaml                 # KIND cluster connection config
 ├── kind-overrides.yaml       # KIND cluster Helm overrides

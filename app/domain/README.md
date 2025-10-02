@@ -4,9 +4,11 @@ The domain layer implements the Application Core in CloudZero Agent's hexagonal 
 
 ## Architecture Overview
 
-```
-Primary Adapters → Domain Services → Secondary Adapters
-   (HTTP/CLI)     →  (Business Logic) →  (Storage/APIs)
+```mermaid
+graph LR
+    A["Primary Adapters<br/>(HTTP/CLI)"] -->
+    B["Domain Services<br/>(Business Logic)"] -->
+    C["Secondary Adapters<br/>(Storage/APIs)"]
 ```
 
 ## Core Services
@@ -166,7 +168,7 @@ func NewWebhookController(
 4. Consider performance impact on existing operations
 5. Validate error handling and edge cases
 
-### Integration Patterns
+### Service Integration Guidelines
 
 1. Use interfaces defined in `app/types/` for all dependencies
 2. Accept dependencies through constructor injection

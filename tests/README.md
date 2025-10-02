@@ -202,7 +202,7 @@ make test-smoke
 cd tests && go test ./smoke/...
 ```
 
-### Kubernetes Tests
+### Running Kubernetes Tests
 
 ```bash
 # Run KIND-based tests

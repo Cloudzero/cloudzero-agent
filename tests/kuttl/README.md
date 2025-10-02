@@ -194,7 +194,7 @@ CLUSTER_NAME=${CI_PIPELINE_ID}-test make helm-test-kuttl
 
 ### Collector Test Structure
 
-```
+```text
 tests/kuttl/collector-test/
 ├── kuttl-test.yaml              # Test configuration
 └── steps/
@@ -205,7 +205,7 @@ tests/kuttl/collector-test/
 
 ### Webhook Test Structure
 
-```
+```text
 tests/kuttl/webhook-test/
 ├── kuttl-test.yaml              # Test configuration
 └── steps/
@@ -362,7 +362,7 @@ kubectl apply -f tests/kuttl/collector-test/steps/01-create-resources.yaml
 
 1. **Create directory structure**:
 
-   ```
+   ```text
    tests/kuttl/my-new-test/
    ├── kuttl-test.yaml
    └── steps/

@@ -210,7 +210,7 @@ The test generates detailed console output showing:
 
 Example output:
 
-```
+```text
 === COMPLETE SUPPORTED RESOURCES MAP ===
 Group: apps
   Version: v1
@@ -306,7 +306,7 @@ To extend these tests:
 
 ## Files Structure
 
-```
+```text
 tests/webhook/
 ├── README.md                          # This file
 ├── Makefile                           # Test automation

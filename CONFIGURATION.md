@@ -81,5 +81,5 @@ The following table describes the available checkers:
 To see an example, run the application with the following parameters:
 
 ```sh
-$ cloudzero-agent-validator config generate -account 1234 -cluster foo -region us-east-1
+cloudzero-agent-validator config generate -account 1234 -cluster foo -region us-east-1
 ```

@@ -252,7 +252,7 @@ To extend these tests:
 
 ## Files Structure
 
-```
+```text
 tests/backfiller/
 ├── README.md                          # This file
 ├── Makefile                           # Test automation

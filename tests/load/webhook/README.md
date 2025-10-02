@@ -177,7 +177,7 @@ Choose optimal parameters based on your test scale and cluster capacity:
 
 If you see throttling messages in the output like:
 
-```
+```text
 I0731 00:59:17.077231   86610 request.go:752] "Waited before sending request" delay="1.048016916s" reason="client-side throttling, not priority and fairness" verb="POST" URL="https://..."
 I0731 00:59:27.155697   86610 request.go:752] "Waited before sending request" delay="1.947236667s" reason="client-side throttling, not priority and fairness" verb="DELETE" URL="https://..."
 ```
@@ -225,7 +225,7 @@ All created resources include these labels:
 
 For 100 namespaces with batch-size=25:
 
-```
+```text
 🔄 Batch 1/4: Processing namespaces 1-25 (25 namespaces)
   Phase 1: Creating 25 namespaces...
   Phase 2: Creating 50 pods... (25 namespaces × 2 pods each)

@@ -192,7 +192,7 @@ KIND clusters are primarily used to run KUTTL (Kubernetes Test Tool) tests:
 - Resource lifecycle testing
 - Multi-step test workflows
 
-### Helm Chart Testing
+### Helm Chart Integration Testing
 
 KIND provides the cluster for Helm chart integration testing:
 
@@ -332,7 +332,7 @@ kubectl --kubeconfig tests/kuttl/kubeconfig describe pod <pod-name>
 - Use port-forwarding for debugging
 - Save logs and configs for troubleshooting
 
-### CI/CD Integration
+### CI/CD Best Practices
 
 - Use complete `make kind-test` cycle
 - Ensure proper cleanup in all scenarios

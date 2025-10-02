@@ -6,7 +6,7 @@ This repository contains several GitHub Action workflows that enable functional 
 
 GitHub Actions is a powerful tool that allows developers to automate, customize, and execute their software development workflows directly in the GitHub repository. This guide will help you understand how to write and test GitHub Action workflows and use [docker](https://docs.docker.com/desktop/install/mac-install/) and the [act utility](https://github.com/nektos/act) for local development and testing.
 
-## List All Workflows:
+## List All Workflows
 
 To list all available workflows, run the following command:
 
@@ -23,7 +23,7 @@ Stage  Job ID                   Job name                 Workflow name          
 0      lint                     lint                     Test Chart               test-chart.yml               push,pull_request
 ```
 
-## Verify a Specific Workflow (DRY-RUN mode):
+## Verify a Specific Workflow (DRY-RUN mode)
 
 To verify a specific workflow in DRY-RUN mode, use the following command:
 
@@ -33,7 +33,7 @@ act --dry-run -j install -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret 
 
 Please note that adding the `-n` or `--dry-run` flag only validates that the jobs are syntactically correct.
 
-## Run a Specific Workflow:
+## Run a Specific Workflow
 
 To run a specific workflow, use the following command:
 
@@ -45,9 +45,9 @@ act --dry-run -j install -s CZ_API_TOKEN=$CZ_API_TOKEN -a $GITHUB_USER --secret 
 
 # Special Topics
 
-### Repository Secrets & Permissions
+## Repository Secrets & Permissions
 
-<img src="./assets/permissions.png" alt="Permissions" width="900" height="500">
+![Permissions](./assets/permissions.png)
 
 GitHub Actions `Secrets` are a protected resource. In the open-source development model, it is common to fork a repository, make changes, and then submit a `Pull Request` back to the original repository.
 

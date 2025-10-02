@@ -150,7 +150,7 @@ There are several mandatory values that must be specified for the chart to insta
 ### Labels and Annotations
 
 > ⚠️ CloudZero supports a maximum of **300 labels** for Kubernetes resources. Ensure you configure regex patterns to gather only the necessary labels/annotations. Additional labels after the first 300 are discarded.
-
+>
 > ⚠️ Note that this configuration, and support for annotations and labels on resources other than pods, is only supported in versions post-1.0.0.
 
 **By default**, this chart exports pod and namespace labels with keys matching `app.kubernetes.io/component`, and no annotations. You can configure what labels and/or annotations are exported by following the steps in this section.
@@ -227,7 +227,7 @@ It's important to note that CloudZero has taken great care to ensure that the se
 
 ### Secret Management
 
-The chart requires a CloudZero API key to send metric data. Admins can retrieve API keys [here](https://app.cloudzero.com/organization/api-keys).
+The chart requires a CloudZero API key to send metric data. Admins can retrieve API keys from the [CloudZero API keys page](https://app.cloudzero.com/organization/api-keys).
 
 The API key is typically stored in a Secret in the cluster. The `cloudzero-agent` chart will create a Secret if the API key is provided via the `apiKey` argument. Alternatively, the API key can be stored in a Secret external to the chart; this Secret name would then be set as the `existingSecretName` argument. If creating a Secret external to the chart, ensure the Secret is in the same namespace as the chart and follows this format:
 

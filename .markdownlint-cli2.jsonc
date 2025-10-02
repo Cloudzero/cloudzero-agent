@@ -1,0 +1,21 @@
+{
+  // Configuration for markdownlint-cli2
+  "config": {
+    "default": true,
+    "line-length": false, // MD013 - allow long lines for documentation
+    "no-bare-urls": false, // MD034 - allow bare URLs
+    "single-h1": false, // MD025 - allow multiple H1s for documentation structure
+    "blanks-around-fences": false, // MD031 - don't require blank lines around fences
+    "blanks-around-lists": false, // MD032 - don't require blank lines around lists
+    "no-emphasis-as-heading": false, // MD036 - allow emphasis instead of headings
+    "no-alt-text": false, // MD045 - allow images without alt text
+  },
+  // Only lint markdown files, ignore generated content and templates
+  "globs": [
+    "**/*.md",
+    "!.tools/node_modules/**",
+    "!scratch/**",
+    "!docs/releases/**",
+    "!helm/docs/releases/**",
+  ],
+}
