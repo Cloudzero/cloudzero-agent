@@ -25,6 +25,7 @@ DYFF          ?= .tools/bin/dyff
 GOFUMPT       ?= .tools/bin/gofumpt
 GOJQ          ?= .tools/bin/gojq
 GOLANGCI_LINT ?= .tools/bin/golangci-lint
+ACTIONLINT    ?= .tools/bin/actionlint
 HELM          ?= .tools/bin/helm
 KIND          ?= .tools/bin/kind
 KUBECONFORM   ?= .tools/bin/kubeconform
@@ -200,9 +201,13 @@ lint-mermaid: $(patsubst %.md,%.md-lint-mermaid,$(shell find . -name '*.md' -not
 lint-markdown: ## Run markdownlint on all Markdown files
 	$(MARKDOWNLINT)
 
+.PHONY: lint-action
+lint-action: ## Run actionlint on GitHub Actions workflows
+	$(ACTIONLINT) -verbose
+
 .PHONY: lint
 lint: ## Run the linter
-lint: lint-go lint-mermaid lint-markdown
+lint: lint-go lint-mermaid lint-markdown lint-action
 
 .PHONY: analyze-go
 analyze-go:

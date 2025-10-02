@@ -55,22 +55,34 @@ jobs:
         # Test against various Kubernetes versions using Kind
         # NOTE: We also switch up the platforms, just to try and catch any image build issues early.
         kver:
-          [
-            { k8s: v1.21.14, platform: linux/amd64 },
-            { k8s: v1.22.17, platform: linux/arm64 },
-            { k8s: v1.23.17, platform: linux/amd64 },
-            { k8s: v1.24.17, platform: linux/arm64 },
-            { k8s: v1.25.16, platform: linux/amd64 },
-            { k8s: v1.26.15, platform: linux/arm64 },
-            { k8s: v1.27.16, platform: linux/amd64 },
-            { k8s: v1.28.14, platform: linux/arm64 },
-            { k8s: v1.29.15, platform: linux/amd64 },
-            { k8s: v1.30.11, platform: linux/arm64 },
-            { k8s: v1.31.7, platform: linux/amd64 },
-            { k8s: v1.32.3, platform: linux/arm64 },
-            { k8s: v1.33.5, platform: linux/arm64 },
-            { k8s: v1.34.1, platform: linux/arm64 },
-          ]
+          - k8s: v1.21.14
+            platform: linux/amd64
+          - k8s: v1.22.17
+            platform: linux/arm64
+          - k8s: v1.23.17
+            platform: linux/amd64
+          - k8s: v1.24.17
+            platform: linux/arm64
+          - k8s: v1.25.16
+            platform: linux/amd64
+          - k8s: v1.26.15
+            platform: linux/arm64
+          - k8s: v1.27.16
+            platform: linux/amd64
+          - k8s: v1.28.14
+            platform: linux/arm64
+          - k8s: v1.29.15
+            platform: linux/amd64
+          - k8s: v1.30.11
+            platform: linux/arm64
+          - k8s: v1.31.7
+            platform: linux/amd64
+          - k8s: v1.32.3
+            platform: linux/arm64
+          - k8s: v1.33.5
+            platform: linux/amd64
+          - k8s: v1.34.1
+            platform: linux/arm64
 
     steps:
       - uses: actions/checkout@v5
@@ -110,22 +122,6 @@ jobs:
           command: |
             make install-tools
 
-      - name: Install yq
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 4
-          command: |
-            sudo snap install yq --channel=v4/stable
-
-      - name: Install Kind
-        run: |
-          echo "Installing Kind..."
-          ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-${ARCH}
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-
       - name: Run Complete Chart Tests
         env:
           CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
@@ -133,21 +129,23 @@ jobs:
           echo "Running complete chart tests using Kind..."
           # Create unique cluster name based on matrix (using valid characters only)
           CLUSTER_NAME="kind-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
-          # Clean up any existing cluster
-          kind delete cluster --name $CLUSTER_NAME || true
+          # Clean up any existing cluster using Make target
+          make kind-down "CLUSTER_NAME=$CLUSTER_NAME" || true
           # Create cluster configuration files for this test run
-          cp clusters/kind.yaml clusters/$CLUSTER_NAME.yaml
-          cp clusters/kind-overrides.yaml clusters/$CLUSTER_NAME-overrides.yaml
+          cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
+          cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
           # Run the complete test workflow using Kind
-          make kind-test CLUSTER_NAME=$CLUSTER_NAME
+          make kind-test "CLUSTER_NAME=$CLUSTER_NAME"
 
       - name: Set version output
         id: set-output
         run: |
-          echo "kubeconfig=tests/kuttl/kubeconfig" >> $GITHUB_OUTPUT
-          echo "k8s-version=${{ matrix.kver.k8s }}" >> $GITHUB_OUTPUT
-          echo "kubectl-version=$(kubectl version --client | grep Client | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
-          echo "helm-version=$(helm version --short | sed 's/\([^+]*\).*/\1/')" >> $GITHUB_OUTPUT
+          {
+            echo "kubeconfig=tests/kuttl/kubeconfig"
+            echo "k8s-version=${{ matrix.kver.k8s }}"
+            echo "kubectl-version=$(kubectl version --client | grep Client | cut -d ' ' -f 3)"
+            echo "helm-version=$(helm version --short | sed 's/\([^+]*\).*/\1/')"
+          } >> "$GITHUB_OUTPUT"
 
       # kind-test handles all the installation and testing
 
@@ -179,5 +177,5 @@ jobs:
         run: |
           echo "Cleaning up Kind cluster..."
           CLUSTER_NAME="kind-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
-          # kind-test handles its own cleanup, but ensure cluster is deleted
-          kind delete cluster --name $CLUSTER_NAME || true
+          # kind-test handles its own cleanup, but ensure cluster is deleted using Make target
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true

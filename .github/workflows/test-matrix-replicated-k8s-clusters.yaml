@@ -138,9 +138,9 @@ jobs:
 
       - name: Generate Valid Cluster Name
         run: |
-          CNAME=${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}
+          CNAME="${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}"
           CLUSTER_NAME="${CNAME//\//-}"
-          echo "CLUSTER_NAME=${CLUSTER_NAME}" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=${CLUSTER_NAME}" >> "$GITHUB_ENV"
 
       - name: Create Cluster
         id: create-cluster
@@ -274,80 +274,83 @@ jobs:
         if: failure()
         continue-on-error: true
         run: |
-          rm -f ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          touch ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          LOG_FILE="${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log"
+          rm -f "$LOG_FILE"
 
-          echo "---Cluster Information------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "Cluster: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          echo "Instance Type: ${{ matrix.cluster.instance-type }}" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          # All log output consolidated into single block to avoid SC2129 warnings
+          {
+            echo "---Cluster Information------------------------------------------------"
+            echo "Cluster: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}"
+            echo "Instance Type: ${{ matrix.cluster.instance-type }}"
 
-          echo "---Kubectl Nodes-------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get nodes -o wide &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get nodes command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Nodes-------------------------------------------------------"
+            kubectl get nodes -o wide || echo "[ERROR] Kubectl get nodes command exited error."
 
-          echo "---Kubectl Storage Info------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get storageclasses &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get storageclasses command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get pv -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pv command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get pvc -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get pvc command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Storage Info------------------------------------------------"
+            kubectl get storageclasses || echo "[ERROR] Kubectl get storageclasses command exited error."
+            kubectl get pv -A || echo "[ERROR] Kubectl get pv command exited error."
+            kubectl get pvc -A || echo "[ERROR] Kubectl get pvc command exited error."
 
-          echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Get All-----------------------------------------------------"
+            kubectl get all -A || echo "[ERROR] Kubectl get all command exited error."
 
-          echo "---Kubectl Describe All Resources (cloudzero-agent)-------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl describe all -l app.kubernetes.io/part-of=cloudzero-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe all (cloudzero-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Describe All Resources (cloudzero-agent)-------------------"
+            kubectl describe all -l app.kubernetes.io/part-of=cloudzero-agent -n cz-agent || echo "[ERROR] Kubectl describe all (cloudzero-agent) command exited error."
 
-          echo "---Kubectl Describe Pods (cz-agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl describe pods -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe pods (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Describe Pods (cz-agent)------------------------------------"
+            kubectl describe pods -n cz-agent || echo "[ERROR] Kubectl describe pods (cz-agent) command exited error."
 
-          echo "---Kubectl Describe Deployments (cz-agent)----------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl describe deployments -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe deployments (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Describe Deployments (cz-agent)----------------------------"
+            kubectl describe deployments -n cz-agent || echo "[ERROR] Kubectl describe deployments (cz-agent) command exited error."
 
-          echo "---Kubectl Describe ReplicaSets (cz-agent)---------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl describe replicasets -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl describe replicasets (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Describe ReplicaSets (cz-agent)---------------------------"
+            kubectl describe replicasets -n cz-agent || echo "[ERROR] Kubectl describe replicasets (cz-agent) command exited error."
 
-          echo "---Kubectl Events (All)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl events -A &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Events (All)------------------------------------------------"
+            kubectl events -A || echo "[ERROR] Kubectl events command exited error."
 
-          echo "---Kubectl Events (CloudZero Agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl events -n cz-agent --sort-by='.lastTimestamp' | grep -E "(cz-agent|cloudzero)" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl events (cloudzero-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Events (CloudZero Agent)------------------------------------"
+            kubectl events -n cz-agent --sort-by='.lastTimestamp' | grep -E "(cz-agent|cloudzero)" || echo "[ERROR] Kubectl events (cloudzero-agent) command exited error."
 
-          echo "---Kubectl Secrets (cz-agent)-------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get secrets -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Kubectl get secrets (cz-agent) command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Kubectl Secrets (cz-agent)-------------------------------------------"
+            kubectl get secrets -n cz-agent || echo "[ERROR] Kubectl get secrets (cz-agent) command exited error."
 
-          echo "---Stern Logs (cz-agent)------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Stern Logs (cz-agent)------------------------------------------------"
+            kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 || echo "[ERROR] Stern log command exited error."
 
-          echo "---Container Logs (cz-agent)--------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read pod_name; do
-            pod_name=$(echo $pod_name | cut -d'/' -f2)
-            echo "---Logs for pod: $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-            kubectl logs -n cz-agent $pod_name --all-containers=true --previous=false --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get logs for pod $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          done
+            echo "---Container Logs (cz-agent)--------------------------------------------"
+            kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read -r pod_name; do
+              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
+              echo "---Logs for pod: $pod_name"
+              kubectl logs -n cz-agent "$pod_name" --all-containers=true --previous=false --since=5m 2>&1 || echo "[ERROR] Failed to get logs for pod $pod_name"
+            done
 
-          echo "---Previous Container Logs (cz-agent)------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read pod_name; do
-            pod_name=$(echo $pod_name | cut -d'/' -f2)
-            echo "---Previous logs for pod: $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-            kubectl logs -n cz-agent $pod_name --all-containers=true --previous=true --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get previous logs for pod $pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          done
+            echo "---Previous Container Logs (cz-agent)------------------------------------"
+            kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read -r pod_name; do
+              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
+              echo "---Previous logs for pod: $pod_name"
+              kubectl logs -n cz-agent "$pod_name" --all-containers=true --previous=true --since=5m 2>&1 || echo "[ERROR] Failed to get previous logs for pod $pod_name"
+            done
 
-          echo "---Container Logs (ALL NAMESPACES)---------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          kubectl get pods -A --no-headers -o name 2>/dev/null | while read pod_name; do
-            namespace=$(echo $pod_name | cut -d'/' -f1)
-            pod_name=$(echo $pod_name | cut -d'/' -f2)
-            echo "---Logs for pod: $namespace/$pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-            kubectl logs -n $namespace $pod_name --all-containers=true --previous=false --since=5m &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log 2>&1 || echo "[ERROR] Failed to get logs for pod $namespace/$pod_name" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          done
+            echo "---Container Logs (ALL NAMESPACES)---------------------------------------"
+            kubectl get pods -A --no-headers -o name 2>/dev/null | while read -r pod_name; do
+              namespace=$(echo "$pod_name" | cut -d'/' -f1)
+              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
+              echo "---Logs for pod: $namespace/$pod_name"
+              kubectl logs -n "$namespace" "$pod_name" --all-containers=true --previous=false --since=5m 2>&1 || echo "[ERROR] Failed to get logs for pod $namespace/$pod_name"
+            done
 
-          echo "---Helm Status--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          helm status cz-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Helm status command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Helm Status--------------------------------------------------------"
+            helm status cz-agent -n cz-agent || echo "[ERROR] Helm status command exited error."
 
-          echo "---Helm Values--------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          helm get values cz-agent -n cz-agent &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log || echo "[ERROR] Helm get values command exited error." &>> ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+            echo "---Helm Values--------------------------------------------------------"
+            helm get values cz-agent -n cz-agent || echo "[ERROR] Helm get values command exited error."
+          } >> "$LOG_FILE"
 
       - name: Uninstall CloudZero Agent
         if: always()
         run: |
-          make helm-uninstall CLUSTER_NAME=${{ env.CLUSTER_NAME }} || true
+          make helm-uninstall "CLUSTER_NAME=${{ env.CLUSTER_NAME }}" || true
 
       # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
       # potential secret it detected, since they will be publicly available if uploaded.
