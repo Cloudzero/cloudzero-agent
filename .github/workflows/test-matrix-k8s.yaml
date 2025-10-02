@@ -179,3 +179,131 @@ jobs:
           CLUSTER_NAME="kind-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
           # kind-test handles its own cleanup, but ensure cluster is deleted using Make target
           make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+
+  specialized-config-test:
+    name: config-test-${{ matrix.config.name }}
+    runs-on: ubuntu-latest
+    # These should match the permissions in the calling job.
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      config-test-status: ${{ job.status }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test specialized configurations that require different Helm values
+        config:
+          - name: "federated-mode"
+            description: "CloudZero Agent in federated mode with DaemonSet deployment"
+            overrides: |
+              defaults:
+                federation:
+                  enabled: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Install Krew and Plugins
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            (
+              set -x; cd "$(mktemp -d)" &&
+              OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+              ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+              KREW="krew-${OS}_${ARCH}" &&
+              curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+              tar zxvf "${KREW}.tar.gz" &&
+              ./"${KREW}" install krew
+            )
+            echo "$HOME/.krew/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.krew/bin:$PATH"
+            kubectl krew install stern
+
+      - name: Install Dependencies
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 4
+          command: |
+            make install-tools
+
+      - name: Create Specialized Configuration Override File
+        run: |
+          echo "Creating specialized configuration override file for ${{ matrix.config.name }}..."
+          # Create temporary file for extra overrides
+          EXTRA_OVERRIDES_FILE="${{ runner.temp }}/extra-overrides-${{ matrix.config.name }}.yaml"
+          cat <<'EOF' > "$EXTRA_OVERRIDES_FILE"
+          ${{ matrix.config.overrides }}
+          EOF
+          echo "HELM_EXTRA_OVERRIDES=$EXTRA_OVERRIDES_FILE" >> "$GITHUB_ENV"
+          echo "Created override file at: $EXTRA_OVERRIDES_FILE"
+          echo "Contents:"
+          cat "$EXTRA_OVERRIDES_FILE"
+
+      - name: Run Chart Tests with Specialized Configuration
+        env:
+          CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
+        run: |
+          echo "Running chart tests with specialized configuration: ${{ matrix.config.name }}"
+          echo "Description: ${{ matrix.config.description }}"
+          # Create unique cluster name for this configuration test
+          CLUSTER_NAME="kind-config-${{ matrix.config.name }}"
+          # Clean up any existing cluster using Make target
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+          # Create cluster configuration files for this test run
+          cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
+          cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
+          # Run the complete test workflow using Kind with extra overrides
+          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES"
+
+      - name: Set config output
+        id: set-output
+        run: |
+          {
+            echo "kubeconfig=tests/kuttl/kubeconfig"
+            echo "config-name=${{ matrix.config.name }}"
+            echo "config-description=${{ matrix.config.description }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Collect Logs
+        id: logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          rm -f "${{ runner.temp }}/${{ matrix.config.name }}.log"
+          touch "${{ runner.temp }}/${{ matrix.config.name }}.log"
+          echo "---Kubectl Get All-----------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+          kubectl get all -A &>> ${{ runner.temp }}/${{ matrix.config.name }}.log || echo "[ERROR] Kubectl get all command exited error." &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+          echo "---Kubectl Events------------------------------------------------------" &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+          kubectl events -A &>> ${{ runner.temp }}/${{ matrix.config.name }}.log || echo "[ERROR] Kubectl events command exited error." &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+          echo "---Stern Logs (im-a-namespace)----------------------------------------" &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+          kubectl stern -n im-a-namespace --since=3m --no-follow -t . | sort -k4 &>> ${{ runner.temp }}/${{ matrix.config.name }}.log || echo "[ERROR] Stern log command exited error." &>> ${{ runner.temp }}/${{ matrix.config.name }}.log
+
+      - name: Upload Failure Logs
+        uses: actions/upload-artifact@v4
+        if: always() && steps.logs.conclusion == 'success'
+        with:
+          name: config-${{ matrix.config.name }}.log
+          path: ${{ runner.temp }}/${{ matrix.config.name }}.log
+          retention-days: 1
+          if-no-files-found: warn
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up Kind cluster..."
+          CLUSTER_NAME="kind-config-${{ matrix.config.name }}"
+          # kind-test handles its own cleanup, but ensure cluster is deleted using Make target
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+          # Clean up temporary override file
+          rm -f "$HELM_EXTRA_OVERRIDES" || true
