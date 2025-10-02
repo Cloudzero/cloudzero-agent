@@ -68,6 +68,8 @@ jobs:
             { k8s: v1.30.11, platform: linux/arm64 },
             { k8s: v1.31.7, platform: linux/amd64 },
             { k8s: v1.32.3, platform: linux/arm64 },
+            { k8s: v1.33.5, platform: linux/arm64 },
+            { k8s: v1.34.1, platform: linux/arm64 },
           ]
 
     steps:
