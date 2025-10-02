@@ -9,6 +9,7 @@
     "blanks-around-lists": false, // MD032 - don't require blank lines around lists
     "no-emphasis-as-heading": false, // MD036 - allow emphasis instead of headings
     "no-alt-text": false, // MD045 - allow images without alt text
+    "ol-prefix": false, // MD029 - allow sequential numbering (1, 2, 3) for readability in source
   },
   // Only lint markdown files, ignore generated content and templates
   "globs": [

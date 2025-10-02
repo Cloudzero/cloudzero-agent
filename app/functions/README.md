@@ -44,7 +44,7 @@ graph TD
 
 **Usage**:
 
-```bash
+```sh
 collector --config /etc/agent/config.yaml --port 8080
 ```
 
@@ -61,7 +61,7 @@ collector --config /etc/agent/config.yaml --port 8080
 
 **Usage**:
 
-```bash
+```sh
 shipper --data-dir /data/metrics --api-key-file /secrets/api-key
 ```
 
@@ -78,7 +78,7 @@ shipper --data-dir /data/metrics --api-key-file /secrets/api-key
 
 **Usage**:
 
-```bash
+```sh
 webhook --cert-dir /certs --port 9443 --tls-cert-file tls.crt --tls-key-file tls.key
 ```
 
@@ -97,7 +97,7 @@ webhook --cert-dir /certs --port 9443 --tls-cert-file tls.crt --tls-key-file tls
 
 **Usage**:
 
-```bash
+```sh
 agent-validator --mode install --config /etc/agent/config.yaml
 ```
 
@@ -114,7 +114,7 @@ agent-validator --mode install --config /etc/agent/config.yaml
 
 **Usage**:
 
-```bash
+```sh
 agent-inspector --endpoint http://localhost:8080 --output json
 ```
 
@@ -131,7 +131,7 @@ agent-inspector --endpoint http://localhost:8080 --output json
 
 **Usage**:
 
-```bash
+```sh
 cluster-config loader --output /etc/agent/cluster.yaml
 ```
 
@@ -150,7 +150,7 @@ cluster-config loader --output /etc/agent/cluster.yaml
 
 **Usage**:
 
-```bash
+```sh
 certifik8s --namespace cloudzero --service webhook-service
 ```
 
@@ -167,7 +167,7 @@ certifik8s --namespace cloudzero --service webhook-service
 
 **Usage**:
 
-```bash
+```sh
 helmless --config values.yaml --output manifests/
 ```
 
@@ -184,7 +184,7 @@ helmless --config values.yaml --output manifests/
 
 **Usage**:
 
-```bash
+```sh
 scout --provider aws --region us-west-2 --output resources.json
 ```
 
@@ -201,7 +201,7 @@ scout --provider aws --region us-west-2 --output resources.json
 
 **Usage**:
 
-```bash
+```sh
 jsonbr2parquet --input /data/metrics --output /data/parquet --workers 4
 ```
 

@@ -10,25 +10,28 @@ The CloudZero Agent follows hexagonal (ports and adapters) architecture:
 
 ```mermaid
 graph TD
-    A[Primary Adapters] --> B[Application Core]
-    B --> C[Secondary Adapters]
+    A["Primary Adapters"]
+    B["Application Core"]
+    C["Secondary Adapters"]
+    A --> B
+    B --> C
 
     subgraph "Primary Adapters (Input)"
-        A1[HTTP Handlers]
-        A2[CLI Functions]
-        A3[Webhook Admission Controller]
+        A1["HTTP Handlers"]
+        A2["CLI Functions"]
+        A3["Webhook Admission Controller"]
     end
 
     subgraph "Application Core"
-        B1[Domain Services]
-        B2[Types & Interfaces]
-        B3[Business Logic]
+        B1["Domain Services"]
+        B2["Types & Interfaces"]
+        B3["Business Logic"]
     end
 
     subgraph "Secondary Adapters (Output)"
-        C1[Storage Systems]
-        C2[External APIs]
-        C3[File Systems]
+        C1["Storage Systems"]
+        C2["External APIs"]
+        C3["File Systems"]
     end
 
     A1 --> B1

@@ -9,7 +9,7 @@
 This repository contains several applications to support Kubernetes integration
 with the CloudZero platform, including:
 
-- _CloudZero Insights Controller_ - provides telemetry to the CloudZero platform to enabling complex cost allocation and analysis. This webhook application securely receives resource provisioning and deprovisioning requests from the Kubernetes API. It collects resource labels, annotations, and relationship metadata between resources, ultimately supporting the identification of CSP resources not directly connected to a Kubernetes node.
+- _CloudZero Webhook Server_ - provides telemetry to the CloudZero platform enabling complex cost allocation and analysis. This webhook application securely receives resource provisioning and deprovisioning requests from the Kubernetes API. It collects resource labels, annotations, and relationship metadata between resources, ultimately supporting the identification of CSP resources not directly connected to a Kubernetes node.
 
 - _CloudZero Collector_ - The collector application which implements a prometheus compliant interface for metrics collection; which writes the metrics payloads to files to a shared location for consumption by the shipper. Today the collector classifies incoming metrics data, and will save the data into either cost telemetry files, or into observability files. These files are compressed on disk to save space.
 
@@ -17,13 +17,22 @@ with the CloudZero platform, including:
 
 - _CloudZero Agent Validator_ - the validator application is part of the agent’s pod lifecycle hooks. It is responsible for performing basic validation checks, and notifying the CloudZero platform of installation status changes (initializing, started, stopping). This application runs during the lifecycle hook, then exits when complete.
 
-> Note the **_agent application_** which is responsible for executing metrics scrape jobs at various intervals. The agent will communicate with a kube-state-metrics exporter application, and cAdvisor exporter applications (one per machine instance). For large scale clusters, the agent runs in “federated mode” (aka daemonset mode), where each instance on each machine is responsible for metrics collection on that single machine.
+> Note the **_Agent Component_** (Prometheus in agent mode) which is responsible for executing metrics scrape jobs at various intervals. The Prometheus agent communicates with kube-state-metrics and cAdvisor exporters to collect metrics, then forwards them to the CloudZero Collector via Prometheus remote write protocol. For large scale clusters, the agent runs in "federated mode" (aka DaemonSet mode), where each Prometheus agent instance on each node is responsible for metrics collection on that single node.
 
-## ⚡ Getting Started With CloudZero Insights Controller
+## ⚡ Getting Started With CloudZero Webhook Server
 
-The easiest way to get started with the _CloudZero Insights Controller_ is by
+The easiest way to get started with the _CloudZero Webhook Server_ is by
 using the `cloudzero-agent` Helm chart from the [cloudzero-charts
 repository](https://github.com/Cloudzero/cloudzero-charts).
+
+### Development
+
+See the [Development Guide](./DEVELOPMENT.md) for comprehensive information about:
+
+- Building and testing components
+- Deployment workflows
+- Multi-cluster development
+- Making changes to the codebase
 
 ### Installation
 
@@ -36,8 +45,11 @@ See the [Configuration Guide](./CONFIGURATION.md) for details.
 #### Cleanup
 
 ```sh
-make undeploy-admission-controller
-make undeploy-test-app
+# Remove build artifacts
+make clean
+
+# Delete KIND cluster and cleanup
+make kind-down
 ```
 
 ### Debugging
@@ -87,7 +99,7 @@ This project provides a collector application, written in golang, which provides
 
 ## Message Format
 
-The output of the _CloudZero Insights Controller_ application is a JSON object
+The output of the _CloudZero Webhook Server_ (formerly Insights Controller) application is a JSON object
 that represents `cloudzero` metrics, which is POSTed to the CloudZero remote
 write API. The format of these objects is based on the Prometheus `Timeseries`
 protobuf message, defined in the
@@ -96,20 +108,20 @@ Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
 
 There are four kinds of objects that can be sent:
 
-### Pod Metrics
+1. **Pod metrics**
 
-#### Pod Metric Names
+### Pod Metric Names
 
 - `cloudzero_pod_labels`
 - `cloudzero_pod_annotations`
 
-#### Pod Required Fields
+### Pod Required Fields
 
 - `__name__`; will be one of the valid pod metric names
 - `namespace`; the namespace that the pod is launched in
 - `resource_type`; will always be `pod` for pod metrics
 
-**Example:**
+#### Pod Example
 
 ```json
 {
@@ -156,9 +168,9 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-### Workload Metrics
+2. **Workload Metrics**
 
-#### Workload Metric Names
+### Workload Metric Names
 
 - `cloudzero_deployment_labels`
 - `cloudzero_deployment_annotations`
@@ -171,7 +183,7 @@ There are four kinds of objects that can be sent:
 - `cloudzero_cronjob_labels`
 - `cloudzero_cronjob_annotations`
 
-#### Workload Required Fields
+### Workload Required Fields
 
 - `__name__`; will be one of the valid workload metric names
 - `namespace`; the namespace that the workload is launched in
@@ -179,7 +191,7 @@ There are four kinds of objects that can be sent:
 - `resource_type`; will be one of `deployment`, `statefulset`, `daemonset`,
   `job`, or `cronjob`
 
-**Example:**
+#### Workload Example
 
 ```json
 {
@@ -218,20 +230,20 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-### Namespace Metrics
+3. **Namespace Metrics**
 
-#### Namespace Metric Names
+### Namespace Metric Names
 
 - `cloudzero_namespace_labels`
 - `cloudzero_namespace_annotations`
 
-#### Namespace Required Fields
+### Namespace Required Fields
 
 - `__name__`; will be one of the valid namespace metric names
 - `namespace`; the name of the namespace
 - `resource_type`; will always be `namespace` for namespace metrics
 
-**Example:**
+#### Namespace Example
 
 ```json
 {
@@ -266,20 +278,20 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-### Node Metrics
+4. **Node Metrics**
 
-#### Node Metric Names
+### Node Metric Names
 
 - `cloudzero_node_labels`
 - `cloudzero_node_annotations`
 
-#### Node Required Fields
+### Node Required Fields
 
 - `__name__`; will be one of the valid node metric names
 - `node`; the name of the node
 - `resource_type`; will always be `node` for node metrics
 
-**Example:**
+#### Node Example
 
 ```json
 {

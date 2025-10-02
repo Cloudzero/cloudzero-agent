@@ -31,7 +31,7 @@ Implements Secondary Adapters for persistent data storage using Repository patte
 
 ## Testing
 
-```bash
+```sh
 # Test storage layer
 make test GO_TEST_TARGET=./app/storage
 

@@ -6,9 +6,8 @@ The storage layer implements Secondary Adapters in CloudZero Agent's hexagonal a
 
 ```mermaid
 graph LR
-    A[Domain Services] -->
-    B["Storage Interfaces<br/>(Types)"] -->
-    C["Storage Implementations<br/>(Secondary Adapters)"]
+    A[Domain Services] --> B[Storage Interfaces<br/>Types]
+    B --> C[Storage Implementations<br/>Secondary Adapters]
 ```
 
 ## Core Components

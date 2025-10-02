@@ -2,19 +2,17 @@
 
 To run the GitHub Actions workflows locally using the act utility, you can follow these steps:
 
-## 1. Get the `act` tool
+## Setup and Usage
 
-You can install act using Homebrew on macOS, or download it directly for other platforms.
+1. **Get the `act` tool**: You can install act using Homebrew on macOS, or download it directly for other platforms.
 
-```sh
-brew install act
-```
+   ```sh
+   brew install act
+   ```
 
-Or download it from the [GitHub releases page](https://github.com/nektos/act).
+   Or download it from the [GitHub releases page](https://github.com/nektos/act).
 
-## 2. Run the workflows manually using act
-
-act allows you to simulate the GitHub Actions environment and execute the workflows as if they were running on GitHub.
+2. **Run the workflows manually using act**: act allows you to simulate the GitHub Actions environment and execute the workflows as if they were running on GitHub.
 
 **_Note - for the following commands, it is assumed you are in the base directory of the repository - and have the following environment variables set:_**
 
