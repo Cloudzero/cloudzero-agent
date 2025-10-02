@@ -113,6 +113,24 @@ additionalProperties: false
 required:
   - host
 
+# Enforce that exactly one of apiKey or existingSecretName must be set
+# anyOf ensures at least one is required, oneOf ensures only one has a non-null value
+anyOf:
+  - required: [apiKey]
+  - required: [existingSecretName]
+oneOf:
+  - properties:
+      apiKey:
+        type: string
+        pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
+      existingSecretName:
+        type: "null"
+  - properties:
+      apiKey:
+        type: "null"
+      existingSecretName:
+        type: string
+
 properties:
   cloudAccountId:
     type: "string"

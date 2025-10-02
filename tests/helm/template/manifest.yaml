@@ -124,8 +124,7 @@ metadata:
   name: cz-agent-api-key
   namespace: cz-agent
 data:
-  value:
-          "bm90LWEtcmVhbC1hcGkta2V5"
+  value: "bm90LWEtcmVhbC1hcGkta2V5"
 ---
 # Source: cloudzero-agent/templates/webhook-tls-secret.yaml
 apiVersion: v1
