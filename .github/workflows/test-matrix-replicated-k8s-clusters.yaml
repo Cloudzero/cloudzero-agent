@@ -46,6 +46,7 @@ concurrency:
 jobs:
   compatibility-matrix:
     name: replicated-test-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}
+    if: ${{ vars.ENABLE_REPLICATED == 'true' }}
     permissions:
       contents: read
       packages: read
