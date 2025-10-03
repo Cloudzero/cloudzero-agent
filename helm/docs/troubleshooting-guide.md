@@ -158,7 +158,7 @@ kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubern
 kubectl -n cloudzero-agent get configmap cloudzero-agent-configuration -o yaml
 ```
 
-### Key Log Commands
+### Server Key Log Commands
 
 ```bash
 # Real-time monitoring
@@ -177,7 +177,7 @@ kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubern
 
 The webhook server captures Kubernetes resource metadata via admission controllers.
 
-### Common Issues & Solutions
+### Webhook Common Issues & Solutions
 
 **❌ Problem: Webhook not receiving admission requests**
 
@@ -223,7 +223,7 @@ kubectl get validatingwebhookconfiguration cloudzero-agent-webhook-server-webhoo
 kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=webhook-server,app.kubernetes.io/name=cloudzero-agent | grep -i "resource\|admit"
 ```
 
-### Key Log Commands
+### Webhook Key Log Commands
 
 ```bash
 # Monitor admission requests
@@ -289,7 +289,7 @@ kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <re
 kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator -c <release-name>-aggregator-shipper | grep -i "processed\|uploaded"
 ```
 
-### Key Log Commands
+### Aggregator Key Log Commands
 
 ```bash
 # Monitor collector in real-time (replace <release-name>)

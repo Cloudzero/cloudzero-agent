@@ -15,9 +15,11 @@ This project uses **hierarchical CLAUDE.md files** to provide structured codebas
 
 CloudZero Agent implements hexagonal (ports and adapters) architecture for cost allocation and monitoring of Kubernetes clusters.
 
-```
-Primary Adapters → Application Core → Secondary Adapters
-   (Input)         (Business Logic)      (Output)
+```mermaid
+graph LR
+    A["Primary Adapters<br/>(Input)"] -->
+    B["Application Core<br/>(Business Logic)"] -->
+    C["Secondary Adapters<br/>(Output)"]
 ```
 
 ## Directory Structure
@@ -46,7 +48,7 @@ Primary Adapters → Application Core → Secondary Adapters
 
 ## Testing
 
-```bash
+```sh
 # Test this directory's components
 make test GO_TEST_TARGET=./app/...
 

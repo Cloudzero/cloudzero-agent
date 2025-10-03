@@ -14,14 +14,14 @@ Before getting started with the development of the CloudZero Agent Validator, ma
   1. Install the protocol compiler plugins for Go using the following commands:
 
      ```sh
-     $ go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-     $ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
      ```
 
   2. Update your `PATH` so that the `protoc` compiler can find the plugins:
 
      ```sh
-     $ export PATH="$PATH:$(go env GOPATH)/bin"
+     export PATH="$PATH:$(go env GOPATH)/bin"
      ```
 
 ## Development Quick Start
@@ -33,13 +33,13 @@ To quickly get started with the development of the CloudZero Agent Validator, fo
 1. Clone the repository:
 
    ```sh
-   $ git clone https://github.com/Cloudzero/cloudzero-agent.git
+   git clone https://github.com/Cloudzero/cloudzero-agent.git
    ```
 
 2. Change to the project directory:
 
    ```sh
-   $ cd cloudzero-agent
+   cd cloudzero-agent
    ```
 
 ### 2. Building the Code
@@ -47,20 +47,20 @@ To quickly get started with the development of the CloudZero Agent Validator, fo
 1. Install the project dependencies:
 
    ```sh
-   $ go mod download
-   $  make install-tools
+   go mod download
+   make install-tools
    ```
 
 2. Generate the status protobuf definition package:
 
    ```sh
-   $ make generate
+   make generate
    ```
 
 3. Build the binary:
 
    ```sh
-   $ make build
+   make build
    ```
 
 ### 3. Local Testing
@@ -100,7 +100,7 @@ Stage  Job ID   Job name  Workflow name   Workflow file        Events
 If you are working on the CI/CD Action Workflows, it is useful to perform a `--dry-run` on the workflow to ensure the syntax is valid. To do this, run:
 
 ```sh
-$ act --container-architecture linux/arm64 --dryrun -j lint
+act --container-architecture linux/arm64 --dryrun -j lint
 ```
 
 #### Running a Workflow

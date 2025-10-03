@@ -12,7 +12,7 @@ brew install act
 
 Or download it from the [GitHub releases page](https://github.com/nektos/act).
 
-## 2. Run the workflows manually using act:
+## 2. Run the workflows manually using act
 
 act allows you to simulate the GitHub Actions environment and execute the workflows as if they were running on GitHub.
 
@@ -37,7 +37,7 @@ act --container-architecture linux/arm64 \
     -j release-to-main
 ```
 
-### Manually Trigger the DockerBuild Workflow:
+### Manually Trigger the DockerBuild Workflow
 
 For the DockerBuild workflow [docker-build.yml](docker-build.yml), simulate a push to the main branch, develop branch, and a new release tag. It will automatically build a docker image from the repository code, scan it for security vulnerabilties, then if on main or develop - will publish the docker image to the public GHCR repository associated with the repository.
 

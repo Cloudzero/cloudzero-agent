@@ -32,7 +32,7 @@ cloudzero-agent-validator config [sub-command] [command options]
 
 The `generate` command generates a generic config file. Use the following syntax:
 
-```
+```sh
 cloudzero-agent-validator config generate -account <CloudAccountID> -cluster <ClusterName> -region <Deployment Region>
 ```
 
@@ -40,7 +40,7 @@ cloudzero-agent-validator config generate -account <CloudAccountID> -cluster <Cl
 
 The `validate` command validates the config file. Use the following syntax:
 
-```
+```sh
 cloudzero-agent-validator config validate --config <path to configuration file>
 ```
 
@@ -52,7 +52,7 @@ The `diagnose` commands provides diagnostic check support. These are the main fo
 cloudzero-agent-validator diagnose [sub-command] [command options]
 ```
 
-#### Sub-commands
+#### Diagnose Sub-commands
 
 ##### `get-available`
 

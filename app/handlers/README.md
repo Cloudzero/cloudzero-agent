@@ -4,9 +4,12 @@ The handlers package implements Primary Adapters in CloudZero Agent's hexagonal 
 
 ## Architecture Overview
 
-```
-External Systems → HTTP Handlers → Domain Services → Storage/APIs
-  (Kubernetes)   → (Primary Adapters) → (Business Logic) → (Secondary Adapters)
+```mermaid
+graph LR
+    A["External Systems<br/>(Kubernetes)"] -->
+    B["HTTP Handlers<br/>(Primary Adapters)"] -->
+    C["Domain Services<br/>(Business Logic)"] -->
+    D["Storage/APIs<br/>(Secondary Adapters)"]
 ```
 
 ## Core Handlers

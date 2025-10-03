@@ -19,16 +19,18 @@ The collector serves as the primary entry point for metric data flowing into Clo
 
 ### Data Flow
 
-```
-External Systems → Collector (/collector endpoint)
-       ↓
-Metric filtering and classification
-       ↓
-Stream to Brotli-compressed JSON files
-       ↓
-Flush and rename files to signal completion
-       ↓
-Shipper detects completed files and uploads to CloudZero
+```mermaid
+graph TD
+    WebhookServer[Webhook Server] --> Collector
+    KSM[Kube State Metrics] --> AgentServer
+    cAdvisor[cAdvisor] --> AgentServer
+
+    AgentServer["CloudZero Agent Server (Prometheus)"] -->
+    Collector["Collector<br/>(/collector endpoint)"] -->
+    C["Metric filtering & classification"] -->
+    D["Stream to<br/>Brotli-compressed JSON files"] -->
+    E["Flush and rename files<br/>to signal completion"] -->
+    F["Shipper detects completed files<br/>and uploads to CloudZero"]
 ```
 
 ## Features
@@ -128,7 +130,7 @@ cloudzero:
 
 The collector exposes a Kubernetes custom metrics API for HPA autoscaling:
 
-```
+```text
 /apis/custom.metrics.k8s.io/v1beta1/namespaces/{namespace}/pods/*/czo_cost_metrics_shipping_progress
 ```
 
@@ -244,7 +246,7 @@ logging:
 
 1. **Configuration File Not Found**
 
-   ```
+   ```text
    configuration file does not exist
    ```
 
@@ -253,7 +255,7 @@ logging:
 
 2. **Storage Directory Issues**
 
-   ```
+   ```text
    failed to initialize database
    ```
 
@@ -262,7 +264,7 @@ logging:
    - Ensure directory exists and is writable
 
 3. **API Key Authentication**
-   ```
+   ```text
    failed to validate API key
    ```
    - Verify `CLOUDZERO_API_KEY` environment variable

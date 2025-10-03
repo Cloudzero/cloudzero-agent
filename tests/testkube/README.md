@@ -179,7 +179,7 @@ TestKube results can integrate with:
 
 1. **Connection timeout**:
 
-   ```
+   ```text
    curl: (28) Connection timed out after 5000 milliseconds
    ```
 
@@ -189,7 +189,7 @@ TestKube results can integrate with:
 
 2. **DNS resolution failure**:
 
-   ```
+   ```text
    curl: (6) Could not resolve host
    ```
 
@@ -199,7 +199,7 @@ TestKube results can integrate with:
 
 3. **SSL certificate errors** (if `-k` flag removed):
 
-   ```
+   ```text
    curl: (60) SSL certificate problem: self signed certificate
    ```
 
@@ -208,7 +208,7 @@ TestKube results can integrate with:
    - Or configure proper certificates for production
 
 4. **Permission denied**:
-   ```
+   ```text
    curl: (7) Failed to connect: Permission denied
    ```
    - Check RBAC permissions for TestKube service accounts

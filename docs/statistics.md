@@ -13,7 +13,7 @@ The `/metrics` endpoint is exposed to provide Prometheus-style metrics. This end
 
 To access the metrics, simply make an HTTP GET request to the `/metrics` endpoint:
 
-```
+```http
 GET /metrics
 ```
 

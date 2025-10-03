@@ -4,9 +4,11 @@ The storage layer implements Secondary Adapters in CloudZero Agent's hexagonal a
 
 ## Architecture Overview
 
-```
-Domain Services → Storage Interfaces → Storage Implementations
-                     (Types)              (Secondary Adapters)
+```mermaid
+graph LR
+    A[Domain Services] -->
+    B["Storage Interfaces<br/>(Types)"] -->
+    C["Storage Implementations<br/>(Secondary Adapters)"]
 ```
 
 ## Core Components
@@ -241,7 +243,7 @@ func (s *Service) UpdateResourceMetadata(ctx context.Context, updates []Resource
 }
 ```
 
-### Query Optimization
+### Query Optimization Examples
 
 ```go
 // Use proper indexing and query patterns

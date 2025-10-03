@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-agent.svg)
 
-<img src="./docs/assets/hld.png" alt="deployment" width="700">
+![deployment](./docs/assets/hld.png)
 
 This repository contains several applications to support Kubernetes integration
 with the CloudZero platform, including:
@@ -33,7 +33,7 @@ See the [Installation Guide](./INSTALL.md) for details.
 
 See the [Configuration Guide](./CONFIGURATION.md) for details.
 
-###### Cleanup
+#### Cleanup
 
 ```sh
 make undeploy-admission-controller
@@ -90,27 +90,26 @@ This project provides a collector application, written in golang, which provides
 The output of the _CloudZero Insights Controller_ application is a JSON object
 that represents `cloudzero` metrics, which is POSTed to the CloudZero remote
 write API. The format of these objects is based on the Prometheus `Timeseries`
-protobuf message, defined
-[here](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130).
+protobuf message, defined in the
+[Prometheus types.proto](https://github.com/prometheus/prometheus/blob/main/prompb/types.proto#L122-L130).
 Protobuf definitions for the `cloudzero` metrics are in the `proto/` directory.
 
 There are four kinds of objects that can be sent:
 
-1. **Pod metrics**
+### Pod Metrics
 
-### Metric Names
+#### Pod Metric Names
 
 - `cloudzero_pod_labels`
 - `cloudzero_pod_annotations`
 
-### Required Fields
+#### Pod Required Fields
 
 - `__name__`; will be one of the valid pod metric names
 - `namespace`; the namespace that the pod is launched in
 - `resource_type`; will always be `pod` for pod metrics
 
-<details open>
-<summary>Example</summary>
+**Example:**
 
 ```json
 {
@@ -157,11 +156,9 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-</details>
+### Workload Metrics
 
-2. **Workload Metrics**
-
-### Metric Names
+#### Workload Metric Names
 
 - `cloudzero_deployment_labels`
 - `cloudzero_deployment_annotations`
@@ -174,7 +171,7 @@ There are four kinds of objects that can be sent:
 - `cloudzero_cronjob_labels`
 - `cloudzero_cronjob_annotations`
 
-### Required Fields
+#### Workload Required Fields
 
 - `__name__`; will be one of the valid workload metric names
 - `namespace`; the namespace that the workload is launched in
@@ -182,8 +179,7 @@ There are four kinds of objects that can be sent:
 - `resource_type`; will be one of `deployment`, `statefulset`, `daemonset`,
   `job`, or `cronjob`
 
-<details open>
-<summary>Example</summary>
+**Example:**
 
 ```json
 {
@@ -222,23 +218,20 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-</details>
+### Namespace Metrics
 
-3.  **Namespace Metrics**
-
-### Metric Names
+#### Namespace Metric Names
 
 - `cloudzero_namespace_labels`
 - `cloudzero_namespace_annotations`
 
-### Required Fields
+#### Namespace Required Fields
 
 - `__name__`; will be one of the valid namespace metric names
 - `namespace`; the name of the namespace
 - `resource_type`; will always be `namespace` for namespace metrics
 
-<details open>
-<summary>Example</summary>
+**Example:**
 
 ```json
 {
@@ -273,23 +266,20 @@ There are four kinds of objects that can be sent:
 }
 ```
 
-</details>
+### Node Metrics
 
-4.  **Node Metrics**
-
-### Metric Names
+#### Node Metric Names
 
 - `cloudzero_node_labels`
 - `cloudzero_node_annotations`
 
-### Required Fields
+#### Node Required Fields
 
 - `__name__`; will be one of the valid node metric names
 - `node`; the name of the node
 - `resource_type`; will always be `node` for node metrics
 
-<details open>
-<summary>Example</summary>
+**Example:**
 
 ```json
 {
@@ -319,8 +309,6 @@ There are four kinds of objects that can be sent:
   ]
 }
 ```
-
-</details>
 
 ## 🤝 How to Contribute
 

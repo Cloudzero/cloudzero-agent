@@ -20,7 +20,7 @@ The helm unittest plugin must be installed:
 helm plugin install https://github.com/helm-unittest/helm-unittest
 ```
 
-### Running Tests
+### Running the Tests
 
 ```bash
 helm unittest .

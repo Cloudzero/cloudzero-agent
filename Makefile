@@ -29,9 +29,10 @@ HELM          ?= .tools/bin/helm
 KIND          ?= .tools/bin/kind
 KUBECONFORM   ?= .tools/bin/kubeconform
 KUTTL         ?= .tools/bin/kubectl-kuttl
+MARKDOWNLINT  ?= .tools/node_modules/.bin/markdownlint-cli2
+MMDC          ?= .tools/node_modules/.bin/mmdc
 MOCKGEN       ?= .tools/bin/mockgen
 PRETTIER      ?= .tools/node_modules/.bin/prettier
-MMDC          ?= .tools/node_modules/.bin/mmdc
 STATICCHECK   ?= .tools/bin/staticcheck
 
 # Build configuration
@@ -195,9 +196,13 @@ lint-go:
 lint-mermaid: ## Run Mermaid diagram validation on all Markdown files
 lint-mermaid: $(patsubst %.md,%.md-lint-mermaid,$(shell find . -name '*.md' -not -exec git check-ignore -q {} \; -print 2>/dev/null | sort -u | xargs grep -l '```mermaid' 2>/dev/null))
 
+.PHONY: lint-markdown
+lint-markdown: ## Run markdownlint on all Markdown files
+	$(MARKDOWNLINT)
+
 .PHONY: lint
 lint: ## Run the linter
-lint: lint-go lint-mermaid
+lint: lint-go lint-mermaid lint-markdown
 
 .PHONY: analyze-go
 analyze-go:

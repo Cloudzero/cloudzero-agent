@@ -15,7 +15,7 @@ Schema validation tests verify:
 
 Test files follow a structured naming pattern:
 
-```
+```text
 <component>.<field>.<condition>.<expected-result>.yaml
 ```
 

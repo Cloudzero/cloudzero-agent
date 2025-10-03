@@ -136,7 +136,7 @@ To make Helm wait for the install to complete, use the `--wait` flag. You can al
 helm install <release-name> . --values values.yaml --values override-values.yaml --namespace <namespace> --wait --timeout 5m
 ```
 
-### Explanation:
+### Explanation
 
 - `--wait`: Ensures Helm waits until all resources are in a ready state before completing the install.
 - `--timeout`: Specifies the maximum time to wait for the operation to complete (e.g., `5m` for 5 minutes).

@@ -6,7 +6,7 @@ This guide provides comprehensive steps to troubleshoot certificate-related issu
 
 1. [Understanding Certificate Management](#understanding-certificate-management)
 2. [Common Certificate Issues](#common-certificate-issues)
-3. [Diagnostic Steps](#diagnostic-steps)
+3. [Diagnostic Steps](#diagnostic-steps-for-non-default-options)
    - [1. Verify Certificate Configuration](#1-verify-certificate-configuration)
    - [2. Check Certificate Status](#2-check-certificate-status)
    - [3. Inspect Admission Webhook Configuration](#3-inspect-admission-webhook-configuration)
@@ -26,7 +26,7 @@ This guide provides comprehensive steps to troubleshoot certificate-related issu
 
 The CloudZero Agent Helm chart deploys a `ValidatingWebhookConfiguration` resource that requires TLS certificates to secure communication with the Kubernetes API server. By default, the chart automatically generates a self-signed certificate and configures the components to use it without any extra configuration. However, the chart also supports alternative methods:
 
-1. **Using `cert-manager`**: Automates certificate issuance and renewal; see [here](https://cert-manager.io/) for details.
+1. **Using `cert-manager`**: Automates certificate issuance and renewal; see the [cert-manager documentation](https://cert-manager.io/) for details.
 2. **Using `cloudzero-certificate` Chart**: Manually manages certificates via a separate Helm chart.
 3. **Bringing Your Own Certificate**: Utilizes externally managed certificates provided by an existing certificate manager.
 
@@ -85,7 +85,7 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 
 ### 2. Check Certificate Status
 
-#### If Using `cert-manager`:
+#### If Using `cert-manager`
 
 - **Verify `cert-manager` is Running**:
 
@@ -97,8 +97,11 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 
   eg.
 
-  ```bash
-  $ kubectl get pods -n cert-manager
+  ```sh
+  kubectl get pods -n cert-manager
+  ```
+
+  ```text
   NAME                                       READY   STATUS    RESTARTS   AGE
   cert-manager-57d855897b-v5f5s              1/1     Running   0          11d
   cert-manager-cainjector-5c7f79b84b-nwksr   1/1     Running   0          11d
@@ -113,8 +116,8 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 
   eg.
 
-  ```
-  $ kubectl logs -n cert-manager cert-manager-57d855897b-v5f5s
+  ```sh
+  kubectl logs -n cert-manager cert-manager-57d855897b-v5f5s
   ```
 
 - **Check Certificate Resources**:
@@ -127,8 +130,11 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 
   eg.
 
-  ```bash
-  $ kubectl get certificates -n default
+  ```sh
+  kubectl get certificates -n default
+  ```
+
+  ```text
   NAME                                         READY   SECRET                               AGE
   cloudzero-agent-webhook-server-certificate   True    cloudzero-agent-webhook-server-tls   6d17h
   ```
@@ -143,8 +149,11 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
 
   eg.
 
+  ```sh
+  kubectl describe certificate cloudzero-agent-webhook-server-certificate
+  ```
+
   ```yaml
-  $ kubectl describe certificate cloudzero-agent-webhook-server-certificate
   Name:         cloudzero-agent-webhook-server-certificate
   Namespace:    default
   Labels:       app.kubernetes.io/managed-by=Helm
@@ -193,7 +202,7 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
   Events:                    <none>
   ```
 
-#### If Using `cloudzero-certificate` Chart or Custom Certificates:
+#### If Using `cloudzero-certificate` Chart or Custom Certificates
 
 - **Check Secret Existence**:
 

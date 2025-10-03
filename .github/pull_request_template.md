@@ -1,11 +1,11 @@
-## Why?
+# Why?
 
 > This awesome thing improves my smile brightness
 
-## What
+# What
 
 > Outline the actions you took to achieve a brighter smile
 
-## How Tested
+# How Tested
 
 > Instructions to reproduce what I did to test this and achieve a brighter smile
