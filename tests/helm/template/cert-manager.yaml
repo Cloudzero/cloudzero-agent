@@ -2024,6 +2024,7 @@ spec:
     - port: 443
       targetPort: 8443
       name: http
+      appProtocol: https
   selector:
     app.kubernetes.io/component: webhook-server
     app.kubernetes.io/name: cloudzero-agent
