@@ -44,23 +44,25 @@ jobs:
           export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
           ORIGINAL_CHART_REVISION="$(git -C cloudzero-charts rev-parse HEAD)"
 
-          while read REVISION; do
-            git checkout $REVISION
+          while read -r REVISION; do
+            git checkout "$REVISION"
             rsync -av --del --exclude='.git' helm/ cloudzero-charts/charts/cloudzero-agent
-            export GIT_AUTHOR_NAME="$(git show -s --format='%an' $REVISION)"
-            export GIT_AUTHOR_EMAIL="$(git show -s --format='%ae' $REVISION)"
-            MESSAGE="$(git show -s --format='%B' $REVISION)"
+            GIT_AUTHOR_NAME="$(git show -s --format='%an' "$REVISION")"
+            export GIT_AUTHOR_NAME
+            GIT_AUTHOR_EMAIL="$(git show -s --format='%ae' "$REVISION")"
+            export GIT_AUTHOR_EMAIL
+            MESSAGE="$(git show -s --format='%B' "$REVISION")"
             (
               cd cloudzero-charts
               git add .
               git commit -m "$MESSAGE" || true
             );
-          done < <(git rev-list ${{ github.event.before }}..HEAD | tac)
+          done < <(git rev-list "${{ github.event.before }}"..HEAD | tac)
 
           if [ "$ORIGINAL_CHART_REVISION" != "$(git -C cloudzero-charts rev-parse HEAD)" ]; then
-            echo "PUSH_HELM_CHART=true" >>${GITHUB_ENV}
+            echo "PUSH_HELM_CHART=true" >>"${GITHUB_ENV}"
           else
-            echo "PUSH_HELM_CHART=false" >>${GITHUB_ENV}
+            echo "PUSH_HELM_CHART=false" >>"${GITHUB_ENV}"
           fi
 
       - name: Push to cloudzero-charts

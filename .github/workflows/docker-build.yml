@@ -58,8 +58,8 @@ jobs:
       - name: Prepare environment for current platform
         id: prepare
         run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          platform="${{ matrix.platform }}"
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Context for Buildx
         id: buildx-context
@@ -77,16 +77,16 @@ jobs:
 
       - name: Get raw repo name
         run: |
-          echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
-          export REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}
+          echo "REPO_NAME=${GITHUB_REPOSITORY#"$GITHUB_REPOSITORY_OWNER"/}" >> "$GITHUB_ENV"
+          export REPO_NAME="${GITHUB_REPOSITORY#"$GITHUB_REPOSITORY_OWNER"/}"
 
       # Format the image names for OCI compliance (all lowercase)
       - name: INPUT PREP - image name formatting
         id: image_name
         run: |
-          IMAGE_NAME=${{ env.IMAGE_NAME }}
-          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>"${GITHUB_ENV}"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>"${GITHUB_ENV}"
 
       # Extract metadata (tags, labels) the docker image build
       # No tags  of other metadata at this stage, as we are pushing by digest
@@ -107,11 +107,13 @@ jobs:
       - name: INPUT PREP - Set build time revision
         run: |
           REVISION=$(git rev-parse --short HEAD)
-          TAG=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+          TAG="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          echo "REVISION=${REVISION}" >>${GITHUB_ENV}
-          echo "TAG=${TAG}" >>${GITHUB_ENV}
-          echo "BUILD_TIME=${BUILD_TIME}" >>${GITHUB_ENV}
+          {
+            echo "REVISION=${REVISION}"
+            echo "TAG=${TAG}"
+            echo "BUILD_TIME=${BUILD_TIME}"
+          } >> "${GITHUB_ENV}"
 
       - name: TEST - Build image
         id: build_image
@@ -167,9 +169,9 @@ jobs:
       - name: INPUT PREP - image name formatting
         id: image_name
         run: |
-          IMAGE_NAME=${{ env.IMAGE_NAME }}
-          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>"${GITHUB_ENV}"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>"${GITHUB_ENV}"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -218,7 +220,7 @@ jobs:
         # The timestamp is used for annotating the Docker manifest list.
         id: timestamp
         run: |
-          echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
       - name: Create manifest list and push
         # This step creates a manifest list for the Docker images built for different platforms.
@@ -231,13 +233,26 @@ jobs:
         continue-on-error: true
         run: |
           ls -lFa
+          # Create arrays for arguments to avoid word splitting issues
+          readarray -t tags < <(jq -cr '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          readarray -t digests < <(printf '%s\n' *)
+
+          # Build the command with proper argument arrays
+          docker_args=()
+          for tag in "${tags[@]}"; do
+            docker_args+=("-t" "$tag")
+          done
+
+          for digest in "${digests[@]}"; do
+            docker_args+=("${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:$digest")
+          done
+
           docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            "${docker_args[@]}" \
             --annotation='index:org.opencontainers.image.description=${{ github.event.repository.description }}' \
             --annotation='index:org.opencontainers.image.created=${{ steps.timestamp.outputs.timestamp }}' \
             --annotation='index:org.opencontainers.image.url=${{ github.event.repository.url }}' \
-            --annotation='index:org.opencontainers.image.source=${{ github.event.repository.url }}' \
-            $(printf '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:%s ' *)
+            --annotation='index:org.opencontainers.image.source=${{ github.event.repository.url }}'
 
       - name: Create manifest list and push without annotations
         # This step creates a manifest list for the Docker images built for different platforms.
@@ -247,8 +262,21 @@ jobs:
         if: steps.manifest-annotate.outcome == 'failure'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create  $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:%s ' *)
+          # Create arrays for arguments to avoid word splitting issues
+          readarray -t tags < <(jq -cr '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          readarray -t digests < <(printf '%s\n' *)
+
+          # Build the command with proper argument arrays
+          docker_args=()
+          for tag in "${tags[@]}"; do
+            docker_args+=("-t" "$tag")
+          done
+
+          for digest in "${digests[@]}"; do
+            docker_args+=("${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}@sha256:$digest")
+          done
+
+          docker buildx imagetools create "${docker_args[@]}"
 
       - name: Inspect image
         # This step inspects the created manifest list to verify its contents.
@@ -360,9 +388,9 @@ jobs:
       - name: INPUT PREP - image name formatting
         id: image_name
         run: |
-          IMAGE_NAME=${{ env.IMAGE_NAME }}
-          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          echo "UNTESTED_IMAGE_NAME=${UNTESTED_IMAGE_NAME,,}" >>"${GITHUB_ENV}"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>"${GITHUB_ENV}"
 
       # install regctl for registry management operations
       - name: PRODUCTION STEP - Install Regctl for registry management
