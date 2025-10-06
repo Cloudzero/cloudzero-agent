@@ -59,12 +59,6 @@ clusterName: kind
 apiKey: "test-api-key-for-local-testing"
 cloudAccountId: "1234567890"
 region: "us-east-1"
-
-components:
-  agent:
-    image:
-      repository: ghcr.io/cloudzero/cloudzero-agent
-      tag: "intentionally-invalid-tag"
 ```
 
 ## Using the CLUSTER_NAME Variable
@@ -74,8 +68,11 @@ The `CLUSTER_NAME` environment variable selects which cluster configuration to u
 ### Basic Usage
 
 ```bash
-# Use KIND cluster (default)
+# Use KIND cluster (this is the default if CLUSTER_NAME is not set)
 CLUSTER_NAME=kind make helm-install
+
+# Or simply use the default
+make helm-install  # Same as CLUSTER_NAME=kind
 
 # Use development cluster
 CLUSTER_NAME=dev make helm-install
@@ -91,7 +88,7 @@ When `CLUSTER_NAME=dev`, the system uses:
 - **Cluster config:** `clusters/dev.yaml`
 - **Helm overrides:** `clusters/dev-overrides.yaml`
 
-If `CLUSTER_NAME` is not set, it defaults to `kind`.
+**Default:** If `CLUSTER_NAME` is not set, it defaults to `kind`.
 
 ## Makefile Integration
 
@@ -101,20 +98,39 @@ The cluster configuration system is deeply integrated with Make targets:
 
 ```bash
 # Install chart to specific cluster
-CLUSTER_NAME=brahms make helm-install
+CLUSTER_NAME=my-cluster make helm-install
 
-# Install with current image tag
-CLUSTER_NAME=brahms make helm-install-current
+# Install with current image tag (uses dev-$(git rev-parse HEAD) tag)
+CLUSTER_NAME=my-cluster make helm-install-current
+
+# Install and wait for deployment to be ready
+CLUSTER_NAME=my-cluster make helm-install helm-wait
 
 # Uninstall from cluster
-CLUSTER_NAME=brahms make helm-uninstall
+CLUSTER_NAME=my-cluster make helm-uninstall
+```
+
+### Common Development Tasks
+
+```bash
+# List available clusters
+ls clusters/*.yaml | sed 's/clusters\///g' | sed 's/\.yaml//g' | grep -v overrides
+
+# Wait for deployment to be fully ready
+CLUSTER_NAME=my-cluster make helm-wait
+
+# Get logs for specific service (example)
+kubectl --context="$(.tools/bin/gojq --yaml-input -r .context clusters/my-cluster.yaml)" -n "$(.tools/bin/gojq --yaml-input -r .namespace clusters/my-cluster.yaml)" logs deployment/my-release-aggregator -c my-release-aggregator-collector
+
+# Run KUTTL integration tests
+CLUSTER_NAME=my-cluster make helm-test-kuttl
 ```
 
 ### Testing Operations
 
 ```bash
 # Run KUTTL tests against specific cluster
-CLUSTER_NAME=brahms make helm-test-kuttl
+CLUSTER_NAME=my-cluster make helm-test-kuttl
 ```
 
 ### Low-Level Operations
@@ -184,7 +200,7 @@ The `.gitignore` file in this directory:
 **This means:**
 
 - **`kind.yaml` and `kind-overrides.yaml`** - Committed as examples for testing
-- **All other `*.yaml` files** - Ignored, allowing personal cluster configs
+- **All other `*.yaml` files** - Ignored by git, allowing personal cluster configs
 - **You can freely add your own cluster files** without affecting the repository
 
 ## Common Cluster Configurations
@@ -276,6 +292,45 @@ Use `local-config.mk` for sensitive data and personal settings:
 CLOUDZERO_DEV_API_KEY = your-dev-api-key
 CLUSTER_NAME = brahms
 ```
+
+## Specialized Configurations (Advanced)
+
+Specialized configurations allow us to test cluster configurations that are relatively uncommon using the exact same tests that we run on our standard clusters. This increases test coverage of these more obscure configurations by ensuring they work with the full test suite.
+
+### Using HELM_EXTRA_OVERRIDES
+
+The `HELM_EXTRA_OVERRIDES` environment variable allows you to specify an additional values file that overrides both the chart defaults and cluster overrides:
+
+**Priority Order (later takes precedence):**
+
+1. `helm/values.yaml` (chart defaults)
+2. `clusters/$(CLUSTER_NAME)-overrides.yaml` (cluster-specific overrides)
+3. `$(HELM_EXTRA_OVERRIDES)` (specialized configuration overrides)
+4. `--set` arguments (command-line overrides)
+
+### Example: Using Specialized Configuration
+
+```sh
+# Create temporary specialized configuration
+cat <<EOF > /tmp/test-config-overrides.yaml
+# Enable specific features for this test run
+defaults:
+  federation:
+    enabled: true
+EOF
+
+# Deploy and test
+make helm-install-current HELM_EXTRA_OVERRIDES=/tmp/test-config-overrides.yaml
+make helm-test-kuttl
+make helm-uninstall
+```
+
+### Notes
+
+- Extra overrides files are only used if they exist (no error if file not found)
+- This system is designed for testing specialized configurations, not for production deployments
+- For production, use proper cluster-specific overrides files instead
+- The `get-helm-extra-overrides` function in the Makefile handles the conditional inclusion
 
 ## Troubleshooting
 

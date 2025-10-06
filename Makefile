@@ -411,50 +411,6 @@ tests/kuttl/kubeconfig: ## Create kind cluster kubeconfig for testing
 	KUBECONFIG="$@" $(KUBECTL) wait --for=condition=Ready nodes --all --timeout=4m
 	KUBECONFIG="$@" $(KUBECTL) wait --for=condition=Available deployment/coredns --namespace kube-system --timeout=4m
 
-# ----------- CI TESTING ------------
-
-# Generate the secrets file used by the `act` tool for local GitHub Action development.
-.github/workflows/.secrets:
-	@if [[ "$(CLOUDZERO_DEV_API_KEY)" == "" ]] || [[ "$(GITHUB_TOKEN)" == "" ]]; then echo "CLOUDZERO_DEV_API_KEY and GITHUB_TOKEN are required to generate the .github/workflows/.secrets file, but at least one of them is not set. Consider adding to local-config.mk."; exit 1; fi
-	@echo "CLOUDZERO_DEV_API_KEY=$(CLOUDZERO_DEV_API_KEY)" > $@
-	@echo "GITHUB_TOKEN=$(GITHUB_TOKEN)" >> $@
-
-# Use ACT to run the chart-complete.yaml workflow (new unified system)
-.PHONY: test-ci-chart-kuttl
-test-ci-chart-kuttl: .github/workflows/.secrets ## Use ACT to run chart-complete.yaml workflow
-	$(ECHO) "Running chart-complete workflow with ACT..."
-	$(ACT) workflow_dispatch -W .github/workflows/chart-complete.yaml \
-		--artifact-server-path /tmp/artifacts \
-		--env-file .github/workflows/.secrets \
-		--platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-latest \
-		--container-architecture linux/amd64 \
-		--env ACTIONS_RUNNER_DEBUG=1 \
-		--input image-repo=$(IMAGE_REPO) \
-		--input image-path=$(IMAGE_PATH) \
-		--input image-tag=$(TAG) \
-		--pull=false \
-		$(NULL)
-
-# Use ACT to run the docker-build.yml workflow
-.PHONY: test-ci-docker-build
-test-ci-docker-build: .github/workflows/.secrets ## Use ACT to run docker-build.yml workflow
-	$(ECHO) "Running docker-build workflow with ACT..."
-	$(ECHO) "Note: docker-build.yml doesn't have workflow_dispatch trigger, testing syntax only..."
-	$(ACT) push -W .github/workflows/docker-build.yml \
-		--artifact-server-path /tmp/artifacts \
-		--env-file .github/workflows/.secrets \
-		--platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-latest \
-		--container-architecture linux/amd64 \
-		--pull=false \
-		--list \
-		$(NULL)
-
-# Main CI test target that runs all CI test suites
-.PHONY: test-ci
-test-ci: test-ci-chart-kuttl test-ci-docker-build
-test-ci: ## Run all CI test suites
-	$(ECHO) "✅ All CI test suites completed successfully"
-
 # ----------- DOCKER IMAGE ------------
 
 DEBUG_IMAGE ?= busybox:stable-uclibc
@@ -504,6 +460,11 @@ KUBE_VERSION               ?= 1.33.0
 CLUSTER_CONFIG_NAME       ?= $(CLUSTER_NAME)
 CLUSTER_CONFIG_FILE       ?= clusters/$(CLUSTER_CONFIG_NAME).yaml
 CLUSTER_OVERRIDES_FILE    ?= clusters/$(CLUSTER_CONFIG_NAME)-overrides.yaml
+
+# Additional helm overrides for specialized configurations (optional)
+# Set HELM_EXTRA_OVERRIDES to path of additional values file that takes precedence
+# Example: HELM_EXTRA_OVERRIDES=clusters/federated-mode-overrides.yaml
+HELM_EXTRA_OVERRIDES      ?=
 
 # =============================================================================
 # CLUSTER CONFIGURATION HELPER FUNCTIONS
@@ -579,6 +540,24 @@ define invoke-kubectl
 $(call get-kubeconfig-env) $(KUBECTL) $(call get-kubectx-arg,--context)
 endef
 
+# get-helm-extra-overrides - Generate additional --values argument if HELM_EXTRA_OVERRIDES is set
+#
+# This function enables specialized Helm chart configurations by allowing additional values files
+# to be layered on top of standard cluster overrides. This is useful for testing specific
+# deployment scenarios like federated mode, cert-manager integration, etc.
+#
+# Usage: $(call get-helm-extra-overrides)
+# Returns: "--values <file>" if HELM_EXTRA_OVERRIDES is set and non-empty, empty otherwise
+#
+# Priority order for values (later takes precedence):
+#   1. helm/values.yaml (chart defaults)
+#   2. $(CLUSTER_OVERRIDES_FILE) (cluster-specific overrides)
+#   3. $(HELM_EXTRA_OVERRIDES) (specialized configuration overrides)
+#   4. --set arguments (command-line overrides)
+define get-helm-extra-overrides
+$(if $(HELM_EXTRA_OVERRIDES),--values $(HELM_EXTRA_OVERRIDES),)
+endef
+
 # invoke-helm - Generate helm command with kubeconfig, context, and namespace
 # Returns: KUBECONFIG=<path> helm --kube-context <context> --namespace <namespace> [additional args]
 # Usage: $(call invoke-helm) install my-release ./chart
@@ -612,6 +591,7 @@ helm-install: ## Install the Helm chart (uses CLUSTER_CONFIG_NAME)
 		./helm \
 		--create-namespace \
 		--values $(CLUSTER_OVERRIDES_FILE) \
+		$(call get-helm-extra-overrides) \
 		$(NULL)
 
 # helm-install-current is the same as helm-install, except that it
@@ -623,12 +603,17 @@ helm-install-current: ## Install chart with test image
 		./helm \
 		--create-namespace \
 		--values $(CLUSTER_OVERRIDES_FILE) \
+		$(call get-helm-extra-overrides) \
 		--set components.agent.image.tag=dev-$(shell git rev-parse HEAD) \
 		$(NULL)
 
 .PHONY: helm-wait
 helm-wait: ## Wait for chart to be ready after installation
-	$(call invoke-kubectl) wait --for=condition=Available deployment/$(call get-cluster-property,.release)-cloudzero-agent-server --namespace $(call get-cluster-property,.namespace) --timeout=5m
+	$(call invoke-kubectl) wait --for=condition=Available \
+		--namespace $(call get-cluster-property,.namespace) \
+		--timeout=5m \
+		$(foreach deployment,cloudzero-agent-server cloudzero-agent-webhook-server aggregator cloudzero-state-metrics,deployment/$(call get-cluster-property,.release)-$(deployment)) \
+		$(NULL)
 
 .PHONY: helm-uninstall
 helm-uninstall: $(CLUSTER_CONFIG_FILE) ## Uninstall the Helm chart (uses CLUSTER_CONFIG_NAME)
@@ -640,6 +625,7 @@ helm-lint: helm/values.schema.json $(CLUSTER_CONFIG_FILE) $(CLUSTER_OVERRIDES_FI
 helm-lint: ## Lint the Helm chart (uses CLUSTER_CONFIG_NAME)
 	$(call invoke-helm) lint ./helm \
 		--values $(CLUSTER_OVERRIDES_FILE) \
+		$(call get-helm-extra-overrides) \
 		$(NULL)
 
 # Generate list of all schema test targets (file paths without .yaml extension)
