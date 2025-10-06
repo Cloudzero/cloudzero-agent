@@ -27,7 +27,7 @@ repository](https://github.com/Cloudzero/cloudzero-charts).
 
 ### Installation
 
-See the [Installation Guide](./INSTALL.md) for details.
+See the [Installation Guide](./helm/README.md#installation) for details.
 
 ### Configuration
 
