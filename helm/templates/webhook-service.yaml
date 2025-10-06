@@ -12,5 +12,6 @@ spec:
     - port: {{ .Values.insightsController.service.port }}
       targetPort: 8443
       name: http
+      appProtocol: https
   selector:
     {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 4 }}
