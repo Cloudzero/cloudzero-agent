@@ -1,48 +1,175 @@
-# Domain Package - Business Logic
+# CloudZero Agent Domain Layer
 
-## Purpose
+The domain layer implements the Application Core in CloudZero Agent's hexagonal architecture, containing core business logic for cost allocation, metric processing, and Kubernetes resource management. Most services use dependency injection through types/ interfaces, though some services (shipper, backfiller) have direct HTTP client dependencies.
 
-Contains core business logic for CloudZero Agent cost allocation, metric processing, and Kubernetes resource management. Most services use dependency injection through types/ interfaces, though some services (shipper, backfiller) have direct HTTP client dependencies.
+## Architecture Overview
+
+```mermaid
+graph LR
+    A[Primary Adapters<br/>HTTP/CLI] --> B[Domain Services<br/>Business Logic]
+    B --> C[Secondary Adapters<br/>Storage/APIs]
+```
 
 ## Core Services
 
-### Metric Processing
+### Cost Allocation Pipeline
 
-- **`metric_collector.go`** - Prometheus remote_write ingestion
-- **`filter/`** - Cost vs observability metric classification
-- **`shipper/`** - CloudZero platform data upload
+- **MetricCollector**: Processes all Prometheus remote_write metrics (both cost and observability)
+- **MetricFilter**: High-performance classification of cost vs observability metrics using configurable patterns
+- **MetricShipper**: Manages periodic file upload to CloudZero platform via presigned S3 URLs with retry logic
 
 ### Kubernetes Integration
 
-- **`webhook/`** - Admission control for resource metadata collection
-- **`k8s/`** - Kubernetes client abstractions
+- **WebhookController**: Kubernetes admission webhook for validating and enhancing resources with cost allocation metadata
+- **ResourceHandlers**: Per-resource-type logic for 20+ Kubernetes resources
+- **BackfillService**: Historical resource discovery and metadata attribution
 
 ### Operational Services
 
-- **`monitor/`** - Secret rotation and certificate management
-- **`healthz/`** - Service health monitoring
-- **`diagnostic/`** - System diagnostics and troubleshooting
+- **HealthCheck**: HTTP health check endpoint with extensible check functions
+- **Monitor**: TLS certificate lifecycle management with dynamic reloading and rotation
+- **Diagnostic**: System health analysis and troubleshooting automation
 
-## Subdirectories
+## Package Organization
 
-- **[webhook/](./webhook/)** - Kubernetes admission webhook logic
-- **[filter/](./filter/)** - Metric filtering and classification
-- **[shipper/](./shipper/)** - Data shipping to CloudZero platform
-- **[monitor/](./monitor/)** - Certificate and secret management
-- **[healthz/](./healthz/)** - Health checking services
-- **[k8s/](./k8s/)** - Kubernetes client utilities
-- **[diagnostic/](./diagnostic/)** - Diagnostic tools and checks
+### Core Domain (`app/domain/`)
 
-## Testing
+- **webhook/**: Kubernetes admission webhook business logic
+- **shipper/**: CloudZero platform integration and data upload
+- **filter/**: Metric classification and cost relevance analysis
+- **monitor/**: Secret management and certificate lifecycle
+- **healthz/**: Health checking and dependency validation
 
-```bash
-# Test domain layer
-make test GO_TEST_TARGET=./app/domain
+### Kubernetes Support (`app/domain/k8s/`)
 
-# Test with mocks
-make generate && make test GO_TEST_TARGET=./app/domain
+- **client**: Kubernetes API client abstractions
+- **resources**: Resource-specific processing logic
+
+### Diagnostics (`app/domain/diagnostic/`)
+
+- **catalog**: Diagnostic test registry and execution
+- **k8s/**: Kubernetes cluster diagnostics
+- **prom/**: Prometheus integration diagnostics
+- **cz/**: CloudZero platform connectivity diagnostics
+
+## Design Principles
+
+### Hexagonal Architecture
+
+- **Port Interfaces**: All external dependencies accessed through interfaces
+- **Dependency Injection**: Services receive dependencies, never create them
+- **Business Logic Purity**: No HTTP, database, or I/O concerns in domain services
+- **Testability**: Clean interfaces enable comprehensive unit testing
+
+### Error Handling
+
+- **Typed Errors**: Domain-specific error types for different failure scenarios
+- **Context Propagation**: Request contexts flow through all operations
+- **Graceful Degradation**: Services continue operating with reduced functionality
+- **Observability**: Comprehensive logging and metrics for operational monitoring
+
+### Performance
+
+- **Streaming Processing**: Large datasets processed without loading into memory
+- **Concurrent Operations**: Parallel processing where safe and beneficial
+- **Resource Pooling**: Reuse expensive resources like HTTP clients
+- **Caching**: Strategic caching for frequently accessed data
+
+## Integration Patterns
+
+### Primary Adapters → Domain
+
+```go
+// HTTP handlers inject domain services
+func NewRemoteWriteAPI(collector *domain.MetricCollector) *RemoteWriteAPI
+
+// CLI functions use domain services
+func runCollector(collector *domain.MetricCollector) error
 ```
 
-## Architecture Role
+### Domain → Secondary Adapters
 
-**Application Core** - Business logic layer using dependency injection. Most external dependencies injected through interfaces defined in `types/`, with exceptions in shipper and backfiller services that create HTTP clients directly.
+```go
+// Domain services use interface abstractions
+type MetricCollector struct {
+    store types.WritableStore  // Storage interface
+    client types.HTTPClient    // HTTP interface
+    filter types.MetricFilter  // Business logic interface
+}
+```
+
+### Service Composition
+
+```go
+// Services compose through dependency injection
+func NewWebhookController(
+    store types.ResourceStore,
+    handlers []webhook.ResourceHandler,
+    validator types.PolicyValidator,
+) *WebhookController
+```
+
+## Testing Approach
+
+### Unit Testing
+
+- **Mock Dependencies**: All interfaces have mock implementations
+- **Business Logic Focus**: Test domain logic without external dependencies
+- **Edge Case Coverage**: Comprehensive error condition testing
+- **Performance Validation**: Benchmark critical paths
+
+### Integration Testing
+
+- **Service Boundaries**: Test integration between domain services
+- **End-to-End Flows**: Complete request processing validation
+- **Error Propagation**: Verify error handling across service boundaries
+- **Resource Cleanup**: Ensure proper resource management
+
+## Operational Considerations
+
+### Monitoring
+
+- **Metrics Collection**: Prometheus metrics for all domain operations
+- **Health Checking**: Comprehensive health status reporting
+- **Error Tracking**: Structured error logging for troubleshooting
+- **Performance Monitoring**: Latency and throughput tracking
+
+### Scalability
+
+- **Stateless Design**: Services scale horizontally without coordination
+- **Resource Efficiency**: Optimized memory and CPU usage patterns
+- **Backpressure Handling**: Graceful handling of load spikes
+- **Circuit Breaking**: Protection against cascading failures
+
+### Security
+
+- **Input Validation**: All external input validated and sanitized
+- **Secret Management**: Secure handling of API keys and credentials
+- **Access Control**: Authentication and authorization where required
+- **Audit Logging**: Comprehensive audit trails for compliance
+
+## Development Guidelines
+
+### Adding New Domain Services
+
+1. Define clear interface contracts in `app/types/`
+2. Implement pure business logic without external dependencies
+3. Use dependency injection for all external integrations
+4. Add comprehensive unit tests with mocked dependencies
+5. Document business requirements and architectural decisions
+
+### Modifying Existing Services
+
+1. Maintain interface compatibility or version appropriately
+2. Add comprehensive tests for new functionality
+3. Update documentation and architectural diagrams
+4. Consider performance impact on existing operations
+5. Validate error handling and edge cases
+
+### Implementation Guidelines
+
+1. Use interfaces defined in `app/types/` for all dependencies
+2. Accept dependencies through constructor injection
+3. Return domain-specific errors that can be handled appropriately
+4. Implement comprehensive logging for operational visibility
+5. Design for concurrent access and thread safety

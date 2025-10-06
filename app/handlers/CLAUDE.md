@@ -30,7 +30,7 @@ Implements Primary Adapters that translate HTTP requests into domain service ope
 
 ## Testing
 
-```bash
+```sh
 # Test handlers
 make test GO_TEST_TARGET=./app/handlers
 

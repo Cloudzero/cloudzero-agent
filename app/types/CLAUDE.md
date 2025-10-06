@@ -32,7 +32,7 @@ Defines interfaces, types, and errors that form the Application Core contracts. 
 
 ## Testing
 
-```bash
+```sh
 # Test types package
 make test GO_TEST_TARGET=./app/types
 

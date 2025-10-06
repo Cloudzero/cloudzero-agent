@@ -45,6 +45,36 @@ PRs to our libraries are always welcome and can be a quick way to get your fix o
 
 For changes that address core functionality or would require breaking changes (e.g. a major release), it's best to open an Issue to discuss your proposal first. This is not required but can save time creating and reviewing changes.
 
+#### Commit Message Standards
+
+Use detailed explanatory commit messages that provide full context:
+
+**Format:**
+
+```text
+Subject: Imperative mood, ticket reference if applicable
+
+Body paragraph explaining the problem context and motivation
+for making this change. What behavior was observed that needed
+changing? What were the implications of the previous approach?
+
+Second paragraph describing the specific changes made and the
+technical approach chosen. Why was this approach selected over
+alternatives? What are the key implementation details?
+
+Final paragraph covering any trade-offs, decisions made, and
+future considerations. What feels "more correct" about the new
+approach? What opportunities or implications does this create?
+```
+
+**Key principles:**
+
+- Explain **why** the change was necessary
+- Describe **what** was implemented
+- Detail **how** it was implemented
+- Acknowledge **trade-offs** and decisions made
+- Consider **future implications**
+
 In general, we follow the ["fork-and-pull" Git workflow](https://github.com/susam/gitpr)
 
 1. Fork the repository to your own Github account

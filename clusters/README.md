@@ -290,7 +290,19 @@ Use `local-config.mk` for sensitive data and personal settings:
 ```makefile
 # local-config.mk (ignored by git)
 CLOUDZERO_DEV_API_KEY = your-dev-api-key
-CLUSTER_NAME = brahms
+
+# Set default cluster for all operations (optional)
+CLUSTER_NAME ?= my-cluster
+```
+
+**Note**: Use `?=` to set a default that can be overridden on the command line:
+
+```sh
+# Uses default from local-config.mk
+make helm-install
+
+# Overrides default from local-config.mk
+CLUSTER_NAME=other-cluster make helm-install
 ```
 
 ## Specialized Configurations (Advanced)
