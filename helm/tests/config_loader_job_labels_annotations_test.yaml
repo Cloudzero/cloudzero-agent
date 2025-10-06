@@ -1,0 +1,207 @@
+suite: test config-loader job labels and annotations
+templates:
+  - templates/config-loader-job.yaml
+tests:
+  # Test default labels are applied
+  - it: should apply default labels to Job metadata
+    set:
+      defaults.labels:
+        custom-label: "default-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: "default-value"
+      - equal:
+          path: metadata.labels["team"]
+          value: "platform"
+
+  # Test default labels are applied to Pod template
+  - it: should apply default labels to Pod template metadata
+    set:
+      defaults.labels:
+        custom-label: "default-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["custom-label"]
+          value: "default-value"
+      - equal:
+          path: spec.template.metadata.labels["team"]
+          value: "platform"
+
+  # Test component-specific labels override defaults
+  - it: should merge component-specific labels with defaults on Job metadata
+    set:
+      defaults.labels:
+        custom-label: "default-value"
+        team: "platform"
+      components.miscellaneous.configLoader.labels:
+        custom-label: "overridden-value"
+        environment: "production"
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: "overridden-value"
+      - equal:
+          path: metadata.labels["team"]
+          value: "platform"
+      - equal:
+          path: metadata.labels["environment"]
+          value: "production"
+
+  # Test component-specific labels override defaults on Pod template
+  - it: should merge component-specific labels with defaults on Pod template metadata
+    set:
+      defaults.labels:
+        custom-label: "default-value"
+        team: "platform"
+      components.miscellaneous.configLoader.labels:
+        custom-label: "overridden-value"
+        environment: "production"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["custom-label"]
+          value: "overridden-value"
+      - equal:
+          path: spec.template.metadata.labels["team"]
+          value: "platform"
+      - equal:
+          path: spec.template.metadata.labels["environment"]
+          value: "production"
+
+  # Test default annotations are applied
+  - it: should apply default annotations to Job metadata
+    set:
+      defaults.annotations:
+        prometheus.io/scrape: "true"
+        monitoring.io/alert: "critical"
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+      - equal:
+          path: metadata.annotations["monitoring.io/alert"]
+          value: "critical"
+
+  # Test default annotations are applied to Pod template
+  - it: should apply default annotations to Pod template metadata
+    set:
+      defaults.annotations:
+        prometheus.io/scrape: "true"
+        monitoring.io/alert: "critical"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["monitoring.io/alert"]
+          value: "critical"
+
+  # Test component-specific annotations override defaults
+  - it: should merge component-specific annotations with defaults on Job metadata
+    set:
+      defaults.annotations:
+        prometheus.io/scrape: "true"
+        monitoring.io/alert: "critical"
+      components.miscellaneous.configLoader.annotations:
+        prometheus.io/scrape: "false"
+        custom.io/annotation: "value"
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "false"
+      - equal:
+          path: metadata.annotations["monitoring.io/alert"]
+          value: "critical"
+      - equal:
+          path: metadata.annotations["custom.io/annotation"]
+          value: "value"
+
+  # Test component-specific annotations override defaults on Pod template
+  - it: should merge component-specific annotations with defaults on Pod template metadata
+    set:
+      defaults.annotations:
+        prometheus.io/scrape: "true"
+        monitoring.io/alert: "critical"
+      components.miscellaneous.configLoader.annotations:
+        prometheus.io/scrape: "false"
+        custom.io/annotation: "value"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["prometheus.io/scrape"]
+          value: "false"
+      - equal:
+          path: spec.template.metadata.annotations["monitoring.io/alert"]
+          value: "critical"
+      - equal:
+          path: spec.template.metadata.annotations["custom.io/annotation"]
+          value: "value"
+
+  # Test empty labels and annotations
+  - it: should work with empty labels and annotations
+    set:
+      defaults.labels: {}
+      defaults.annotations: {}
+      components.miscellaneous.configLoader.labels: {}
+      components.miscellaneous.configLoader.annotations: {}
+    asserts:
+      - isKind:
+          of: Job
+
+  # Test only component-specific labels without defaults
+  - it: should apply only component-specific labels when defaults are empty
+    set:
+      defaults.labels: {}
+      components.miscellaneous.configLoader.labels:
+        component-label: "config-loader"
+        version: "1.0"
+    asserts:
+      - equal:
+          path: metadata.labels["component-label"]
+          value: "config-loader"
+      - equal:
+          path: metadata.labels["version"]
+          value: "1.0"
+
+  # Test only component-specific annotations without defaults
+  - it: should apply only component-specific annotations when defaults are empty
+    set:
+      defaults.annotations: {}
+      components.miscellaneous.configLoader.annotations:
+        component-annotation: "config-loader"
+        build: "12345"
+    asserts:
+      - equal:
+          path: metadata.annotations["component-annotation"]
+          value: "config-loader"
+      - equal:
+          path: metadata.annotations["build"]
+          value: "12345"
+
+  # Test checksum annotation is preserved
+  - it: should preserve checksum annotation along with custom annotations
+    set:
+      defaults.annotations:
+        custom: "value"
+      components.miscellaneous.configLoader.annotations:
+        another: "annotation"
+    asserts:
+      - isNotEmpty:
+          path: metadata.annotations["checksum/values"]
+      - equal:
+          path: metadata.annotations["custom"]
+          value: "value"
+      - equal:
+          path: metadata.annotations["another"]
+          value: "annotation"
+
+  # Test app.kubernetes.io/component label is set correctly
+  - it: should set app.kubernetes.io/component label to config-loader
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: "config-loader"
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: "config-loader"

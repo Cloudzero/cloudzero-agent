@@ -1,0 +1,7 @@
+components:
+  miscellaneous:
+    helmless:
+      labels:
+        custom-label: "value"
+        team: "platform"
+        app.kubernetes.io/part-of: "cloudzero"

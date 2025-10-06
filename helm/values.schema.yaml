@@ -411,6 +411,18 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+              annotations:
+                description: |
+                  Annotations to add to the config loader job.
+
+                  These annotations are merged with defaults.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+              labels:
+                description: |
+                  Labels to add to the config loader job.
+
+                  These labels are merged with defaults.labels.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
           helmless:
             description: |
               The helmless job component generates configuration without Helm.
@@ -431,6 +443,18 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+              annotations:
+                description: |
+                  Annotations to add to the helmless job.
+
+                  These annotations are merged with defaults.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+              labels:
+                description: |
+                  Labels to add to the helmless job.
+
+                  These labels are merged with defaults.labels.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
           initCert:
             description: |
               The init cert job component initializes TLS certificates.

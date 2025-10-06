@@ -1,0 +1,7 @@
+components:
+  miscellaneous:
+    configLoader:
+      annotations:
+        prometheus.io/scrape: "true"
+        monitoring.io/alert: "critical"
+        custom.io/annotation: "value"
