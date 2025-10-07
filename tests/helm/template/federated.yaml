@@ -25,6 +25,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-cloudzero-agent-server
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -39,6 +48,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-aggregator
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -53,6 +71,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-cloudzero-agent-webhook-server
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -105,6 +132,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
   namespace: cz-agent
 ---
@@ -2064,6 +2092,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   selector:
     app.kubernetes.io/component: aggregator

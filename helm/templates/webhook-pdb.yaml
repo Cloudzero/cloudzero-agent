@@ -1,5 +1,6 @@
 {{ include "cloudzero-agent.generatePodDisruptionBudget" (dict
     "component" .Values.components.webhookServer
+    "componentName" .Values.insightsController.server.name
     "name" (include "cloudzero-agent.insightsController.deploymentName" .)
     "matchLabels" (include "cloudzero-agent.insightsController.server.matchLabels" .)
     "replicas" (.Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas)
