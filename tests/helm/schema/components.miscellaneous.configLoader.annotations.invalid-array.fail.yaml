@@ -1,0 +1,6 @@
+components:
+  miscellaneous:
+    configLoader:
+      annotations: # Should be an object, not an array
+        - "invalid"
+        - "annotations"

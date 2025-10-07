@@ -5,6 +5,7 @@ metadata:
   name: {{ include "cloudzero-agent.aggregator.name" . }}
   labels:
     {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
 spec:
   selector:
     {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 4 }}

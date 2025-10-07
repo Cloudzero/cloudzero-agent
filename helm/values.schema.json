@@ -3811,6 +3811,12 @@
             "configLoader": {
               "additionalProperties": false,
               "properties": {
+                "annotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "labels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -3823,6 +3829,12 @@
             "helmless": {
               "additionalProperties": false,
               "properties": {
+                "annotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "labels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },

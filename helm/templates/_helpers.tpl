@@ -912,6 +912,8 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
   namespace: {{ .root.Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" .root "component" .componentName) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" .root.Values.defaults.annotations | nindent 2 }}
 spec:
   {{- if $pdb.minAvailable }}
   {{- if lt $replicas (int $pdb.minAvailable) -}}

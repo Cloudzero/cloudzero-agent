@@ -1,0 +1,4 @@
+components:
+  miscellaneous:
+    configLoader:
+      labels: "invalid-should-be-object" # Should be an object, not a string

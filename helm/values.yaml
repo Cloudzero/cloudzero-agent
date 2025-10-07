@@ -293,6 +293,14 @@ components:
       # For details, see the Kubernetes documentation on security contexts:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
+      # Annotations to add to the config loader job.
+      #
+      # These annotations are merged with defaults.annotations.
+      annotations: {}
+      # Labels to add to the config loader job.
+      #
+      # These labels are merged with defaults.labels.
+      labels: {}
     # The helmless job component generates configuration without Helm.
     helmless:
       # Resource requirements and limits for the helmless job component.
@@ -311,6 +319,14 @@ components:
       # For details, see the Kubernetes documentation on security contexts:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
+      # Annotations to add to the helmless job.
+      #
+      # These annotations are merged with defaults.annotations.
+      annotations: {}
+      # Labels to add to the helmless job.
+      #
+      # These labels are merged with defaults.labels.
+      labels: {}
     # The init cert job component initializes TLS certificates.
     initCert:
       # Resource requirements and limits for the init cert job component.

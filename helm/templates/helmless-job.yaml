@@ -3,15 +3,21 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.helmlessJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
-  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (.Values.components.miscellaneous.helmless.annotations | default (dict))
+      (deepCopy .Values.defaults.annotations)
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless" "labels" .Values.components.miscellaneous.helmless.labels) | nindent 2 }}
 spec:
   template:
     metadata:
       name: {{ include "cloudzero-agent.helmlessJobName" . }}
       namespace: {{ .Release.Namespace }}
-      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless") | nindent 6 }}
-      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "helmless" "labels" .Values.components.miscellaneous.helmless.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge
+          (.Values.components.miscellaneous.helmless.annotations | default (dict))
+          (deepCopy .Values.defaults.annotations)
+        ) | nindent 6 }}
     spec:
       restartPolicy: OnFailure
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.agent.image) | nindent 6 }}

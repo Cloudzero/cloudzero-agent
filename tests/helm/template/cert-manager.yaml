@@ -25,6 +25,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-cloudzero-agent-server
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -39,6 +48,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-aggregator
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: aggregator
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -53,6 +71,15 @@ kind: PodDisruptionBudget
 metadata:
   name: cz-agent-cloudzero-agent-webhook-server
   namespace: cz-agent
+  labels:
+    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v2.55.1
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   minAvailable: 1
   selector:
@@ -105,6 +132,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
   name: cz-agent-cloudzero-agent-webhook-server-init-cert
   namespace: cz-agent
 ---
@@ -807,6 +835,8 @@ data:
         tolerations: []
       miscellaneous:
         configLoader:
+          annotations: {}
+          labels: {}
           resources:
             limits:
               cpu: 500m
@@ -816,6 +846,8 @@ data:
               memory: 128Mi
           securityContext: {}
         helmless:
+          annotations: {}
+          labels: {}
           resources:
             limits:
               cpu: 200m
@@ -1991,6 +2023,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v2.55.1
     helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
 spec:
   selector:
     app.kubernetes.io/component: aggregator
@@ -2752,7 +2785,7 @@ metadata:
   annotations:
     checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   labels:
-    app.kubernetes.io/component: webhook-server
+    app.kubernetes.io/component: config-loader
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
@@ -2765,9 +2798,13 @@ spec:
       name: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
       namespace: cz-agent
       labels:
-        app.kubernetes.io/component: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/component: config-loader
         app.kubernetes.io/instance: cz-agent
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/part-of: cloudzero-agent
+        app.kubernetes.io/version: v2.55.1
+        helm.sh/chart: cloudzero-agent-1.1.0-dev
       
     spec:
       

@@ -4,19 +4,21 @@ metadata:
   name: {{ include "cloudzero-agent.configLoaderJobName" . }}
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateAnnotations" (merge
-      (deepCopy .Values.defaults.annotations)
       (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
+      (.Values.components.miscellaneous.configLoader.annotations | default (dict))
+      (deepCopy .Values.defaults.annotations)
     ) | nindent 2 }}
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "config-loader" "labels" .Values.components.miscellaneous.configLoader.labels) | nindent 2 }}
 spec:
   template:
     metadata:
       name: {{ include "cloudzero-agent.configLoaderJobName" . }}
       namespace: {{ .Release.Namespace }}
-      labels:
-        {{- include "cloudzero-agent.insightsController.validatorJob.matchLabels" . | nindent 8 }}
-      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "config-loader" "labels" .Values.components.miscellaneous.configLoader.labels) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (merge
+          (.Values.components.miscellaneous.configLoader.annotations | default (dict))
+          (deepCopy .Values.defaults.annotations)
+        ) | nindent 6 }}
     spec:
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.validator.image) | nindent 6 }}
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
