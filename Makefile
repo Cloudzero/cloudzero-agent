@@ -173,7 +173,7 @@ PRETTIER_TARGET       ?= .
 .PHONY: format-prettier
 format: format-prettier
 format-prettier:
-	$(PRETTIER) --write $(PRETTIER_TARGET)
+	$(PRETTIER) --write $(PRETTIER_TARGET) | grep -v '(unchanged)$$' || true
 
 .PHONY: lint-go
 lint-go:
