@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/cloudzero/cloudzero-agent v0.0.0-00010101000000-000000000000
-	github.com/docker/docker v28.4.0+incompatible
+	github.com/docker/docker v28.5.1+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v1.0.0
