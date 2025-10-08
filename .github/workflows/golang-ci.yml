@@ -124,12 +124,14 @@ jobs:
         with:
           version: "29.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Clean generated files
+        run: make maintainer-clean
       - name: Install tools
         run: make install-tools
       - name: Generate code
         run: make generate
         env:
-          PROTOC: ${{ steps.setup-protoc.outputs.path }}
+          PROTOC: ${{ steps.setup-protoc.outputs.path }}/bin/protoc
       - name: Format code
         run: make format
       - name: Check file format
