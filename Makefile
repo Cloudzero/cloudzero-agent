@@ -289,7 +289,7 @@ GO_BINARY_DIRS = \
 	$(NULL)
 
 GO_COMMAND_PACKAGE_DIRS = \
-	$(foreach parent_dir,$(GO_BINARY_DIRS),$(foreach src_dir,$(wildcard $(parent_dir)/*/),$(patsubst %/,%,$(src_dir)))) \
+	$(patsubst %/,%,$(filter %/,$(foreach parent_dir,$(GO_BINARY_DIRS),$(wildcard $(parent_dir)/*/)))) \
 	$(NULL)
 
 GO_BINARIES = \

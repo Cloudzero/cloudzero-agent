@@ -64,11 +64,15 @@ kubeMetrics:
 # Container Runtime Metrics - Essential for Resource Usage Tracking
 # These metrics capture actual resource consumption by containers, enabling CloudZero
 # to correlate resource requests/limits with actual usage for cost optimization insights.
+# GPU metrics are collected in native DCGM format and transformed by the collector
+# to percentage-based metrics for consistent reporting.
 containerMetrics:
   - container_cpu_usage_seconds_total
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
+  - container_resources_gpu_usage_percent
+  - container_resources_gpu_memory_usage_percent
 # CloudZero Agent Operational Metrics - Essential for Agent Health Monitoring
 # These metrics track CloudZero Agent performance, resource usage, and operational health,
 # enabling monitoring, alerting, and troubleshooting of the cost allocation pipeline.
@@ -227,6 +231,8 @@ metricFilters:
         - container_memory_working_set_bytes
         - container_network_receive_bytes_total
         - container_network_transmit_bytes_total
+        - container_resources_gpu_usage_percent
+        - container_resources_gpu_memory_usage_percent
         - kube_node_info
         - kube_node_status_capacity
         - kube_pod_container_resource_limits

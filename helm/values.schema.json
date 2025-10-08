@@ -6440,6 +6440,18 @@
               "required": ["enabled"],
               "type": "object"
             },
+            "gpu": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "scrapeInterval": {
+                  "$ref": "#/$defs/com.cloudzero.agent.duration"
+                }
+              },
+              "type": "object"
+            },
             "kubeStateMetrics": {
               "additionalProperties": false,
               "properties": {

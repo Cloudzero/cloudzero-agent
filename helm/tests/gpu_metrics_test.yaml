@@ -1,0 +1,146 @@
+suite: test GPU metrics scrape job configuration
+templates:
+  - agent-cm.yaml
+tests:
+  # Test that GPU scrape job is included when GPU metrics are enabled
+
+  - it: should include DCGM GPU scrape job when GPU metrics enabled
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+      prometheusConfig.scrapeJobs.gpu.scrapeInterval: 30s
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-dcgm-exporter"
+
+  # Test that GPU scrape job is NOT included when GPU metrics are disabled
+
+  - it: should NOT include GPU scrape job when GPU metrics disabled
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "cloudzero-dcgm-exporter"
+
+  # Test that custom scrape interval is applied correctly
+
+  - it: should use custom GPU scrape interval of 45s when specified
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+      prometheusConfig.scrapeJobs.gpu.scrapeInterval: 45s
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-dcgm-exporter"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "scrape_interval: 45s"
+
+  # Test that DCGM label selector is present
+
+  - it: should include DCGM label selector for service discovery
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "app.kubernetes.io/name=dcgm-exporter"
+
+  # Test that provenance label is added
+
+  - it: should add provenance=dcgm label to GPU metrics
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "replacement: dcgm"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "target_label: provenance"
+
+  # Test that DCGM metrics are collected in native format
+
+  - it: should collect DCGM_FI_DEV_GPU_UTIL in native format
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_GPU_UTIL"
+
+  - it: should collect DCGM_FI_DEV_FB_USED in native format
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_FB_USED"
+
+  - it: should collect DCGM_FI_DEV_FB_FREE in native format
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_FB_FREE"
+
+  # Test that DCGM metrics are in remote_write allow list
+
+  - it: should include DCGM metrics in remote_write filter
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_GPU_UTIL"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_FB_USED"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "DCGM_FI_DEV_FB_FREE"
+
+  # Test that unattributed metrics are dropped
+
+  - it: should drop metrics without container attribution
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "source_labels: \\[container\\]"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "action: drop"
