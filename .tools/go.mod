@@ -9,7 +9,7 @@ require (
 	github.com/rhysd/actionlint v1.7.7
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 	helm.sh/helm/v3 v3.19.0
 	honnef.co/go/tools v0.6.1
 	mvdan.cc/gofumpt v0.9.1
