@@ -22,7 +22,7 @@ Usage: {{ include "cloudzero-agent.versionNumber" . }}
 Returns: string with version annotation
 */}}
 {{- define "cloudzero-agent.versionNumber" -}}
-version: 1.2.7  # <- Software release corresponding to this chart version.
+version: 1.2.8  # <- Software release corresponding to this chart version.
 {{- end -}}
 
 {{/*
