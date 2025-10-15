@@ -15,16 +15,16 @@ function check_go_version() {
 
     if [ "$DESIRED_GO_VERSION_NO_MICRO" = "$DESIRED_GO_VERSION" ]; then
         echo "Error: Go version in go.mod does not include a micro version (${DESIRED_GO_VERSION} -> ${DESIRED_GO_VERSION}.0?)" >&2
-        FAILED=TRUE
+        FAILED=true
     fi
 
     # Dockerfiles
-    find . -type f -iname 'Dockerfile*' -print0 | while IFS= read -r -d '' DOCKERFILE; do
+    while IFS= read -r -d '' DOCKERFILE; do
         git grep -q " golang:${DESIRED_GO_VERSION}" ${DOCKERFILE} || {
             echo "${DOCKERFILE} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2
             FAILED=true
         }
-    done
+    done < <(find . -type f -iname 'Dockerfile*' -not -path '*/node_modules/*' -print0)
 
     # go.mod
     for GO_MOD in \
@@ -52,6 +52,6 @@ function check_helm_chart_version_bump() {
     fi
 }
 check_helm_chart_version_bump
-if [ "$FAILED" = true ]; then
+if [ "$FAILED" != false ]; then
     exit 1
 fi
