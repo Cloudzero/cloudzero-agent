@@ -67,7 +67,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.2.0
-	github.com/ccoveille/go-safecast v1.6.1
+	github.com/ccoveille/go-safecast v1.7.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-obvious/server v0.1.15
