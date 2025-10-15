@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"sync"
@@ -22,7 +23,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 
@@ -452,7 +452,7 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
 		}
 		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-		jitter := time.Duration(rand.Int63n(int64(time.Second)))
+		jitter := time.Duration(rand.Int64N(int64(time.Second))) //nolint:gosec // cryptographically secure PRNG here is not necessary
 		time.Sleep(backoff + jitter)
 	}
 
