@@ -63,6 +63,13 @@ collect_dependencies($direct_refs; $k8s_defs) as $all_needed |
 # Merge only the needed definitions from k8s into the $defs section
 .["$defs"] = ($input["$defs"] + $needed_defs) |
 
+# Second pass: Check all definitions for missing references and add them
+# This handles cases where transitively included definitions reference other definitions
+((.["$defs"] | find_refs) - ($all_needed + ($input["$defs"] | keys))) as $missing_refs |
+(collect_dependencies($missing_refs; $k8s_defs)) as $additional_needed |
+($k8s_defs | with_entries(select(.key as $k | $additional_needed | contains([$k])))) as $additional_defs |
+.["$defs"] = (.["$defs"] + $additional_defs) |
+
 # Walk through the entire object and update any $ref paths
 #
 # The Kubernetes JSON Schema uses the obsolete `definitions` name, but we want
