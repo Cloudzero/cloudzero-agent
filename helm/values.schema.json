@@ -296,6 +296,25 @@
       "required": ["schedule", "jobTemplate"],
       "type": "object"
     },
+    "io.k8s.api.batch.v1.CronJobStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ObjectReference"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "lastScheduleTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "lastSuccessfulTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.batch.v1.Job": {
       "additionalProperties": false,
       "properties": {
@@ -324,6 +343,31 @@
           "version": "v1"
         }
       ]
+    },
+    "io.k8s.api.batch.v1.JobCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "lastProbeTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "lastTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status"],
+      "type": "object"
     },
     "io.k8s.api.batch.v1.JobSpec": {
       "additionalProperties": false,
@@ -387,6 +431,56 @@
       "required": ["template"],
       "type": "object"
     },
+    "io.k8s.api.batch.v1.JobStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "completedIndexes": {
+          "type": "string"
+        },
+        "completionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.batch.v1.JobCondition"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "failed": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "failedIndexes": {
+          "type": "string"
+        },
+        "ready": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "startTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "succeeded": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "terminating": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "uncountedTerminatedPods": {
+          "$ref": "#/$defs/io.k8s.api.batch.v1.UncountedTerminatedPods"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.batch.v1.JobTemplateSpec": {
       "additionalProperties": false,
       "properties": {
@@ -444,7 +538,7 @@
           "type": "string"
         }
       },
-      "required": ["type", "status"],
+      "required": ["type"],
       "type": "object"
     },
     "io.k8s.api.batch.v1.PodFailurePolicyRule": {
@@ -490,6 +584,26 @@
         },
         "succeededIndexes": {
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.batch.v1.UncountedTerminatedPods": {
+      "additionalProperties": false,
+      "properties": {
+        "failed": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "set"
+        },
+        "succeeded": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "set"
         }
       },
       "type": "object"
@@ -550,6 +664,19 @@
         }
       ]
     },
+    "io.k8s.api.core.v1.AttachedVolume": {
+      "additionalProperties": false,
+      "properties": {
+        "devicePath": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name", "devicePath"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.AzureDiskVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -575,6 +702,25 @@
       "required": ["diskName", "diskURI"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.AzureFilePersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "secretNamespace": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        }
+      },
+      "required": ["secretName", "shareName"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.AzureFileVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -589,6 +735,46 @@
         }
       },
       "required": ["secretName", "shareName"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.CSIPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "controllerExpandSecretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "controllerPublishSecretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "driver": {
+          "type": "string"
+        },
+        "fsType": {
+          "type": "string"
+        },
+        "nodeExpandSecretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "nodePublishSecretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "nodeStageSecretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "volumeAttributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "volumeHandle": {
+          "type": "string"
+        }
+      },
+      "required": ["driver", "volumeHandle"],
       "type": "object"
     },
     "io.k8s.api.core.v1.CSIVolumeSource": {
@@ -636,6 +822,35 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.CephFSPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "monitors": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "path": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretFile": {
+          "type": "string"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": ["monitors"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.CephFSVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -665,6 +880,25 @@
       "required": ["monitors"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.CinderPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "fsType": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "volumeID": {
+          "type": "string"
+        }
+      },
+      "required": ["volumeID"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.CinderVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -682,6 +916,16 @@
         }
       },
       "required": ["volumeID"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ClientIPConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "timeoutSeconds": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "io.k8s.api.core.v1.ClusterTrustBundleProjection": {
@@ -773,6 +1017,28 @@
       "required": ["key"],
       "type": "object",
       "x-kubernetes-map-type": "atomic"
+    },
+    "io.k8s.api.core.v1.ConfigMapNodeConfigSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kubeletConfigKey": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        }
+      },
+      "required": ["namespace", "name", "kubeletConfigKey"],
+      "type": "object"
     },
     "io.k8s.api.core.v1.ConfigMapProjection": {
       "additionalProperties": false,
@@ -891,6 +1157,13 @@
         "restartPolicy": {
           "type": "string"
         },
+        "restartPolicyRules": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerRestartRule"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
         "securityContext": {
           "$ref": "#/$defs/io.k8s.api.core.v1.SecurityContext"
         },
@@ -939,6 +1212,39 @@
       "required": ["name"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.ContainerExtendedResourceRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "containerName": {
+          "type": "string"
+        },
+        "requestName": {
+          "type": "string"
+        },
+        "resourceName": {
+          "type": "string"
+        }
+      },
+      "required": ["containerName", "resourceName", "requestName"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerImage": {
+      "additionalProperties": false,
+      "properties": {
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "sizeBytes": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.ContainerPort": {
       "additionalProperties": false,
       "properties": {
@@ -974,6 +1280,193 @@
         }
       },
       "required": ["resourceName", "restartPolicy"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerRestartRule": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "exitCodes": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerRestartRuleOnExitCodes"
+        }
+      },
+      "required": ["action"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerRestartRuleOnExitCodes": {
+      "additionalProperties": false,
+      "properties": {
+        "operator": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "set"
+        }
+      },
+      "required": ["operator"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerState": {
+      "additionalProperties": false,
+      "properties": {
+        "running": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStateRunning"
+        },
+        "terminated": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStateTerminated"
+        },
+        "waiting": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStateWaiting"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerStateRunning": {
+      "additionalProperties": false,
+      "properties": {
+        "startedAt": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerStateTerminated": {
+      "additionalProperties": false,
+      "properties": {
+        "containerID": {
+          "type": "string"
+        },
+        "exitCode": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "finishedAt": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signal": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "startedAt": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        }
+      },
+      "required": ["exitCode"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerStateWaiting": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "allocatedResources": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "allocatedResourcesStatus": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ResourceStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["name"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "name",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "containerID": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "imageID": {
+          "type": "string"
+        },
+        "lastState": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerState"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        },
+        "restartCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "started": {
+          "type": "boolean"
+        },
+        "state": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerState"
+        },
+        "stopSignal": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ContainerUser"
+        },
+        "volumeMounts": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.VolumeMountStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["mountPath"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "mountPath",
+          "x-kubernetes-patch-strategy": "merge"
+        }
+      },
+      "required": ["name", "ready", "restartCount", "image", "imageID"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ContainerUser": {
+      "additionalProperties": false,
+      "properties": {
+        "linux": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.LinuxContainerUser"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.DaemonEndpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "Port": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": ["Port"],
       "type": "object"
     },
     "io.k8s.api.core.v1.DownwardAPIProjection": {
@@ -1078,6 +1571,9 @@
         "fieldRef": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ObjectFieldSelector"
         },
+        "fileKeyRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.FileKeySelector"
+        },
         "resourceFieldRef": {
           "$ref": "#/$defs/io.k8s.api.core.v1.ResourceFieldSelector"
         },
@@ -1161,6 +1657,13 @@
         },
         "restartPolicy": {
           "type": "string"
+        },
+        "restartPolicyRules": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerRestartRule"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
         },
         "securityContext": {
           "$ref": "#/$defs/io.k8s.api.core.v1.SecurityContext"
@@ -1265,6 +1768,51 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.FileKeySelector": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "volumeName": {
+          "type": "string"
+        }
+      },
+      "required": ["volumeName", "path", "key"],
+      "type": "object",
+      "x-kubernetes-map-type": "atomic"
+    },
+    "io.k8s.api.core.v1.FlexPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "fsType": {
+          "type": "string"
+        },
+        "options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        }
+      },
+      "required": ["driver"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.FlexVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -1352,6 +1900,25 @@
       "required": ["repository"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.GlusterfsPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoints": {
+          "type": "string"
+        },
+        "endpointsNamespace": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": ["endpoints", "path"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.GlusterfsVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -1424,6 +1991,16 @@
       "required": ["ip"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.HostIP": {
+      "additionalProperties": false,
+      "properties": {
+        "ip": {
+          "type": "string"
+        }
+      },
+      "required": ["ip"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.HostPathVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -1435,6 +2012,51 @@
         }
       },
       "required": ["path"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ISCSIPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "chapAuthDiscovery": {
+          "type": "boolean"
+        },
+        "chapAuthSession": {
+          "type": "boolean"
+        },
+        "fsType": {
+          "type": "string"
+        },
+        "initiatorName": {
+          "type": "string"
+        },
+        "iqn": {
+          "type": "string"
+        },
+        "iscsiInterface": {
+          "type": "string"
+        },
+        "lun": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "portals": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "targetPortal": {
+          "type": "string"
+        }
+      },
+      "required": ["targetPortal", "iqn", "lun"],
       "type": "object"
     },
     "io.k8s.api.core.v1.ISCSIVolumeSource": {
@@ -1544,6 +2166,64 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.LinuxContainerUser": {
+      "additionalProperties": false,
+      "properties": {
+        "gid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "supplementalGroups": {
+          "items": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "uid": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["uid", "gid"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.LoadBalancerIngress": {
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "ipMode": {
+          "type": "string"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.PortStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.LoadBalancerStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "ingress": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.LoadBalancerIngress"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.LocalObjectReference": {
       "additionalProperties": false,
       "properties": {
@@ -1553,6 +2233,32 @@
       },
       "type": "object",
       "x-kubernetes-map-type": "atomic"
+    },
+    "io.k8s.api.core.v1.LocalVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "fsType": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": ["path"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ModifyVolumeStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "targetVolumeAttributesClassName": {
+          "type": "string"
+        }
+      },
+      "required": ["status"],
+      "type": "object"
     },
     "io.k8s.api.core.v1.NFSVolumeSource": {
       "additionalProperties": false,
@@ -1599,6 +2305,19 @@
         }
       ]
     },
+    "io.k8s.api.core.v1.NodeAddress": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "address"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.NodeAffinity": {
       "additionalProperties": false,
       "properties": {
@@ -1611,6 +2330,100 @@
         },
         "requiredDuringSchedulingIgnoredDuringExecution": {
           "$ref": "#/$defs/io.k8s.api.core.v1.NodeSelector"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "lastHeartbeatTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "lastTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeConfigSource": {
+      "additionalProperties": false,
+      "properties": {
+        "configMap": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ConfigMapNodeConfigSource"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeConfigStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeConfigSource"
+        },
+        "assigned": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeConfigSource"
+        },
+        "error": {
+          "type": "string"
+        },
+        "lastKnownGood": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeConfigSource"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeDaemonEndpoints": {
+      "additionalProperties": false,
+      "properties": {
+        "kubeletEndpoint": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.DaemonEndpoint"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeFeatures": {
+      "additionalProperties": false,
+      "properties": {
+        "supplementalGroupsPolicy": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeRuntimeHandler": {
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeRuntimeHandlerFeatures"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeRuntimeHandlerFeatures": {
+      "additionalProperties": false,
+      "properties": {
+        "recursiveReadOnlyMounts": {
+          "type": "boolean"
+        },
+        "userNamespaces": {
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -1671,6 +2484,184 @@
       "type": "object",
       "x-kubernetes-map-type": "atomic"
     },
+    "io.k8s.api.core.v1.NodeSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "configSource": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeConfigSource"
+        },
+        "externalID": {
+          "type": "string"
+        },
+        "podCIDR": {
+          "type": "string"
+        },
+        "podCIDRs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "set",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "providerID": {
+          "type": "string"
+        },
+        "taints": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.Taint"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "unschedulable": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "addresses": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.NodeAddress"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "allocatable": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "capacity": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.NodeCondition"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "config": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeConfigStatus"
+        },
+        "daemonEndpoints": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeDaemonEndpoints"
+        },
+        "features": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeFeatures"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerImage"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "nodeInfo": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeSystemInfo"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "runtimeHandlers": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.NodeRuntimeHandler"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "volumesAttached": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.AttachedVolume"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "volumesInUse": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeSwapStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.NodeSystemInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "type": "string"
+        },
+        "bootID": {
+          "type": "string"
+        },
+        "containerRuntimeVersion": {
+          "type": "string"
+        },
+        "kernelVersion": {
+          "type": "string"
+        },
+        "kubeProxyVersion": {
+          "type": "string"
+        },
+        "kubeletVersion": {
+          "type": "string"
+        },
+        "machineID": {
+          "type": "string"
+        },
+        "operatingSystem": {
+          "type": "string"
+        },
+        "osImage": {
+          "type": "string"
+        },
+        "swap": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeSwapStatus"
+        },
+        "systemUUID": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "machineID",
+        "systemUUID",
+        "bootID",
+        "kernelVersion",
+        "osImage",
+        "containerRuntimeVersion",
+        "kubeletVersion",
+        "kubeProxyVersion",
+        "operatingSystem",
+        "architecture"
+      ],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.ObjectFieldSelector": {
       "additionalProperties": false,
       "properties": {
@@ -1682,6 +2673,34 @@
         }
       },
       "required": ["fieldPath"],
+      "type": "object",
+      "x-kubernetes-map-type": "atomic"
+    },
+    "io.k8s.api.core.v1.ObjectReference": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "fieldPath": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        }
+      },
       "type": "object",
       "x-kubernetes-map-type": "atomic"
     },
@@ -1743,6 +2762,31 @@
         }
       ]
     },
+    "io.k8s.api.core.v1.PersistentVolumeClaimCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "lastProbeTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "lastTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PersistentVolumeClaimSpec": {
       "additionalProperties": false,
       "properties": {
@@ -1780,6 +2824,57 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.PersistentVolumeClaimStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "accessModes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "allocatedResourceStatuses": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "x-kubernetes-map-type": "granular"
+        },
+        "allocatedResources": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "capacity": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.PersistentVolumeClaimCondition"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "currentVolumeAttributesClassName": {
+          "type": "string"
+        },
+        "modifyVolumeStatus": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ModifyVolumeStatus"
+        },
+        "phase": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PersistentVolumeClaimTemplate": {
       "additionalProperties": false,
       "properties": {
@@ -1804,6 +2899,135 @@
         }
       },
       "required": ["claimName"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PersistentVolumeSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "accessModes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "awsElasticBlockStore": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource"
+        },
+        "azureDisk": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.AzureDiskVolumeSource"
+        },
+        "azureFile": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.AzureFilePersistentVolumeSource"
+        },
+        "capacity": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.api.resource.Quantity"
+          },
+          "type": "object"
+        },
+        "cephfs": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.CephFSPersistentVolumeSource"
+        },
+        "cinder": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.CinderPersistentVolumeSource"
+        },
+        "claimRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ObjectReference",
+          "x-kubernetes-map-type": "granular"
+        },
+        "csi": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.CSIPersistentVolumeSource"
+        },
+        "fc": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.FCVolumeSource"
+        },
+        "flexVolume": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.FlexPersistentVolumeSource"
+        },
+        "flocker": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.FlockerVolumeSource"
+        },
+        "gcePersistentDisk": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.GCEPersistentDiskVolumeSource"
+        },
+        "glusterfs": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.GlusterfsPersistentVolumeSource"
+        },
+        "hostPath": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.HostPathVolumeSource"
+        },
+        "iscsi": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ISCSIPersistentVolumeSource"
+        },
+        "local": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.LocalVolumeSource"
+        },
+        "mountOptions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "nfs": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NFSVolumeSource"
+        },
+        "nodeAffinity": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.VolumeNodeAffinity"
+        },
+        "persistentVolumeReclaimPolicy": {
+          "type": "string"
+        },
+        "photonPersistentDisk": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PhotonPersistentDiskVolumeSource"
+        },
+        "portworxVolume": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PortworxVolumeSource"
+        },
+        "quobyte": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.QuobyteVolumeSource"
+        },
+        "rbd": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.RBDPersistentVolumeSource"
+        },
+        "scaleIO": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ScaleIOPersistentVolumeSource"
+        },
+        "storageClassName": {
+          "type": "string"
+        },
+        "storageos": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.StorageOSPersistentVolumeSource"
+        },
+        "volumeAttributesClassName": {
+          "type": "string"
+        },
+        "volumeMode": {
+          "type": "string"
+        },
+        "vsphereVolume": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.VsphereVirtualDiskVolumeSource"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PersistentVolumeStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "lastPhaseTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "io.k8s.api.core.v1.PhotonPersistentDiskVolumeSource": {
@@ -1925,6 +3149,61 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.PodCertificateProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "certificateChainPath": {
+          "type": "string"
+        },
+        "credentialBundlePath": {
+          "type": "string"
+        },
+        "keyPath": {
+          "type": "string"
+        },
+        "keyType": {
+          "type": "string"
+        },
+        "maxExpirationSeconds": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "signerName": {
+          "type": "string"
+        }
+      },
+      "required": ["signerName", "keyType"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PodCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "lastProbeTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "lastTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PodDNSConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1964,6 +3243,33 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.PodExtendedResourceClaimStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "requestMappings": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerExtendedResourceRequest"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "resourceClaimName": {
+          "type": "string"
+        }
+      },
+      "required": ["requestMappings", "resourceClaimName"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PodIP": {
+      "additionalProperties": false,
+      "properties": {
+        "ip": {
+          "type": "string"
+        }
+      },
+      "required": ["ip"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PodOS": {
       "additionalProperties": false,
       "properties": {
@@ -1994,6 +3300,19 @@
           "type": "string"
         },
         "resourceClaimTemplateName": {
+          "type": "string"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PodResourceClaimStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "resourceClaimName": {
           "type": "string"
         }
       },
@@ -2132,6 +3451,9 @@
           "type": "boolean"
         },
         "hostname": {
+          "type": "string"
+        },
+        "hostnameOverride": {
           "type": "string"
         },
         "imagePullSecrets": {
@@ -2275,6 +3597,106 @@
       "required": ["containers"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.PodStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.PodCondition"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "containerStatuses": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "ephemeralContainerStatuses": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "extendedResourceClaimStatus": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodExtendedResourceClaimStatus"
+        },
+        "hostIP": {
+          "type": "string"
+        },
+        "hostIPs": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.HostIP"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic",
+          "x-kubernetes-patch-merge-key": "ip",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "initContainerStatuses": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ContainerStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "message": {
+          "type": "string"
+        },
+        "nominatedNodeName": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "podIP": {
+          "type": "string"
+        },
+        "podIPs": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.PodIP"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["ip"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "ip",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "qosClass": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resize": {
+          "type": "string"
+        },
+        "resourceClaimStatuses": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.PodResourceClaimStatus"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["name"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "name",
+          "x-kubernetes-patch-strategy": "merge,retainKeys"
+        },
+        "startTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.PodTemplate": {
       "additionalProperties": false,
       "properties": {
@@ -2311,6 +3733,23 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSpec"
         }
       },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.PortStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "port": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string"
+        }
+      },
+      "required": ["port", "protocol"],
       "type": "object"
     },
     "io.k8s.api.core.v1.PortworxVolumeSource": {
@@ -2427,6 +3866,41 @@
       "required": ["registry", "volume"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.RBDPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "fsType": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "keyring": {
+          "type": "string"
+        },
+        "monitors": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "pool": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": ["monitors", "image"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.RBDVolumeSource": {
       "additionalProperties": false,
       "properties": {
@@ -2492,6 +3966,19 @@
       "type": "object",
       "x-kubernetes-map-type": "atomic"
     },
+    "io.k8s.api.core.v1.ResourceHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "health": {
+          "type": "string"
+        },
+        "resourceID": {
+          "type": "string"
+        }
+      },
+      "required": ["resourceID"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.ResourceRequirements": {
       "additionalProperties": false,
       "properties": {
@@ -2518,6 +4005,24 @@
       },
       "type": "object"
     },
+    "io.k8s.api.core.v1.ResourceStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ResourceHealth"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["resourceID"],
+          "x-kubernetes-list-type": "map"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
     "io.k8s.api.core.v1.SELinuxOptions": {
       "additionalProperties": false,
       "properties": {
@@ -2534,6 +4039,43 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ScaleIOPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "fsType": {
+          "type": "string"
+        },
+        "gateway": {
+          "type": "string"
+        },
+        "protectionDomain": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SecretReference"
+        },
+        "sslEnabled": {
+          "type": "boolean"
+        },
+        "storageMode": {
+          "type": "string"
+        },
+        "storagePool": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "volumeName": {
+          "type": "string"
+        }
+      },
+      "required": ["gateway", "system", "secretRef"],
       "type": "object"
     },
     "io.k8s.api.core.v1.ScaleIOVolumeSource": {
@@ -2683,6 +4225,19 @@
         }
       },
       "type": "object"
+    },
+    "io.k8s.api.core.v1.SecretReference": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "x-kubernetes-map-type": "atomic"
     },
     "io.k8s.api.core.v1.SecretVolumeSource": {
       "additionalProperties": false,
@@ -2840,6 +4395,155 @@
       "required": ["path"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.ServicePort": {
+      "additionalProperties": false,
+      "properties": {
+        "appProtocol": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nodePort": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "port": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "targetPort": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.util.intstr.IntOrString"
+        }
+      },
+      "required": ["port"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ServiceSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "allocateLoadBalancerNodePorts": {
+          "type": "boolean"
+        },
+        "clusterIP": {
+          "type": "string"
+        },
+        "clusterIPs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "externalIPs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "externalName": {
+          "type": "string"
+        },
+        "externalTrafficPolicy": {
+          "type": "string"
+        },
+        "healthCheckNodePort": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "internalTrafficPolicy": {
+          "type": "string"
+        },
+        "ipFamilies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "ipFamilyPolicy": {
+          "type": "string"
+        },
+        "loadBalancerClass": {
+          "type": "string"
+        },
+        "loadBalancerIP": {
+          "type": "string"
+        },
+        "loadBalancerSourceRanges": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.ServicePort"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["port", "protocol"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "port",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "publishNotReadyAddresses": {
+          "type": "boolean"
+        },
+        "selector": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "x-kubernetes-map-type": "atomic"
+        },
+        "sessionAffinity": {
+          "type": "string"
+        },
+        "sessionAffinityConfig": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.SessionAffinityConfig"
+        },
+        "trafficDistribution": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.ServiceStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Condition"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "loadBalancer": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.LoadBalancerStatus"
+        }
+      },
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.SessionAffinityConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "clientIP": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ClientIPConfig"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.SleepAction": {
       "additionalProperties": false,
       "properties": {
@@ -2849,6 +4553,27 @@
         }
       },
       "required": ["seconds"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.StorageOSPersistentVolumeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "fsType": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "secretRef": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ObjectReference"
+        },
+        "volumeName": {
+          "type": "string"
+        },
+        "volumeNamespace": {
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "io.k8s.api.core.v1.StorageOSVolumeSource": {
@@ -2896,6 +4621,25 @@
         }
       },
       "required": ["port"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.Taint": {
+      "additionalProperties": false,
+      "properties": {
+        "effect": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "timeAdded": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["key", "effect"],
       "type": "object"
     },
     "io.k8s.api.core.v1.Toleration": {
@@ -3134,6 +4878,34 @@
       "required": ["name", "mountPath"],
       "type": "object"
     },
+    "io.k8s.api.core.v1.VolumeMountStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "mountPath": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "recursiveReadOnly": {
+          "type": "string"
+        }
+      },
+      "required": ["name", "mountPath"],
+      "type": "object"
+    },
+    "io.k8s.api.core.v1.VolumeNodeAffinity": {
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.NodeSelector"
+        }
+      },
+      "type": "object"
+    },
     "io.k8s.api.core.v1.VolumeProjection": {
       "additionalProperties": false,
       "properties": {
@@ -3145,6 +4917,9 @@
         },
         "downwardAPI": {
           "$ref": "#/$defs/io.k8s.api.core.v1.DownwardAPIProjection"
+        },
+        "podCertificate": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.PodCertificateProjection"
         },
         "secret": {
           "$ref": "#/$defs/io.k8s.api.core.v1.SecretProjection"
@@ -3272,6 +5047,54 @@
       },
       "type": "object"
     },
+    "io.k8s.api.policy.v1.PodDisruptionBudgetStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Condition"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": ["type"],
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-patch-merge-key": "type",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "currentHealthy": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "desiredHealthy": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "disruptedPods": {
+          "additionalProperties": {
+            "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+          },
+          "type": "object"
+        },
+        "disruptionsAllowed": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "expectedPods": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "observedGeneration": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "disruptionsAllowed",
+        "currentHealthy",
+        "desiredHealthy",
+        "expectedPods"
+      ],
+      "type": "object"
+    },
     "io.k8s.apimachinery.pkg.api.resource.Quantity": {
       "oneOf": [
         {
@@ -3281,6 +5104,32 @@
           "type": "number"
         }
       ]
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.Condition": {
+      "additionalProperties": false,
+      "properties": {
+        "lastTransitionTime": {
+          "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.Time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "status", "lastTransitionTime", "reason", "message"],
+      "type": "object"
     },
     "io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1": {
       "type": "object"
