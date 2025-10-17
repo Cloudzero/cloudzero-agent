@@ -178,10 +178,15 @@ func TestSecretMonitor_Start_Directory(t *testing.T) {
 	newTempFile := filepath.Join(tempDir, "new_secret.txt")
 	mockBus := new(MockBus)
 
-	// Expect either a create or change event
+	// Expect either a create or change event (or both)
 	mockBus.On("Publish", mock.MatchedBy(func(event types.Event) bool {
-		return (event.Type == domain.FileCreated || event.Type == domain.FileChanged) &&
-			event.Value.(types.FileCreated).Name == newTempFile
+		if event.Type == domain.FileCreated {
+			return event.Value.(types.FileCreated).Name == newTempFile
+		}
+		if event.Type == domain.FileChanged {
+			return event.Value.(types.FileChanged).Name == newTempFile
+		}
+		return false
 	})).Return()
 
 	monitor, err := domain.NewFileMonitor(ctx, mockBus, tempDir)
@@ -192,24 +197,37 @@ func TestSecretMonitor_Start_Directory(t *testing.T) {
 	defer monitor.Close()
 
 	// Create a new file in the directory to simulate a create event
-
 	err = os.WriteFile(newTempFile, []byte("new content"), 0o644)
 	assert.NoError(t, err)
-
-	mockBus.On("Publish", types.Event{
-		Type: domain.FileChanged,
-		Value: types.FileChanged{
-			Name: newTempFile,
-		},
-	}).Return()
 
 	// Give some time for the event to be processed
 	time.Sleep(100 * time.Millisecond)
 
-	mockBus.AssertCalled(t, "Publish", types.Event{
-		Type: domain.FileCreated,
-		Value: types.FileCreated{
-			Name: newTempFile,
-		},
-	})
+	// Assert that at least one relevant event was called (Create and/or Write)
+	// Different filesystems may emit different combinations of events for file creation
+	mockBus.AssertCalled(t, "Publish", mock.MatchedBy(func(event types.Event) bool {
+		if event.Type == domain.FileCreated {
+			return event.Value.(types.FileCreated).Name == newTempFile
+		}
+		if event.Type == domain.FileChanged {
+			return event.Value.(types.FileChanged).Name == newTempFile
+		}
+		return false
+	}))
+
+	// Verify we got at least one call but allow for multiple (Create + Write)
+	calls := mockBus.Calls
+	relevantCalls := 0
+	for _, call := range calls {
+		if len(call.Arguments) > 0 {
+			if event, ok := call.Arguments[0].(types.Event); ok {
+				if (event.Type == domain.FileCreated || event.Type == domain.FileChanged) &&
+					((event.Type == domain.FileCreated && event.Value.(types.FileCreated).Name == newTempFile) ||
+						(event.Type == domain.FileChanged && event.Value.(types.FileChanged).Name == newTempFile)) {
+					relevantCalls++
+				}
+			}
+		}
+	}
+	assert.GreaterOrEqual(t, relevantCalls, 1, "should receive at least one file event")
 }
