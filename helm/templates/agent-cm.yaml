@@ -7,6 +7,12 @@ metadata:
   namespace: {{ include "cloudzero-agent.namespace" . }}
   {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
+{{- if include "cloudzero-agent.isAlloy" . }}
+  # Alloy River configuration
+  alloy-config.river: |-
+    {{- include "cloudzero-agent.alloy.riverConfig" . | nindent 4 }}
+{{- else }}
+  # Prometheus YAML configuration
   prometheus.yml: |-
     {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
     {{ .Values.prometheusConfig.configOverride | nindent 4 }}
@@ -46,3 +52,4 @@ data:
     {{- end}}
 
     {{- include "cloudzero-agent.aggregator.remoteWrite" . | nindent 4 }}
+{{- end }}{{/* End Prometheus configuration */}}

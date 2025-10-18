@@ -5496,6 +5496,57 @@
       },
       "type": "object"
     },
+    "alloy": {
+      "additionalProperties": false,
+      "properties": {
+        "autoscaling": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "maxReplicas": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "minReplicas": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "image": {
+          "$ref": "#/$defs/com.cloudzero.agent.image"
+        }
+      },
+      "type": "object"
+    },
     "apiKey": {
       "type": ["string", "null"]
     },

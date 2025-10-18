@@ -186,6 +186,7 @@ metadata:
   namespace: cz-agent
   
 data:
+  # Prometheus YAML configuration
   prometheus.yml: |-
     global:
       scrape_interval: 60s
@@ -789,6 +790,17 @@ data:
             cpu: ""
             memory: ""
       tolerations: []
+    alloy:
+      autoscaling:
+        enabled: false
+        maxReplicas: 10
+        minReplicas: 2
+        targetCPUUtilizationPercentage: 80
+      config: {}
+      enabled: false
+      image:
+        repository: docker.io/grafana/alloy
+        tag: v1.5.1
     apiKey: '***'
     cloudAccountId: "1234567890"
     clusterName: my-cluster
@@ -2280,6 +2292,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
       containers:
+        # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
           imagePullPolicy: "IfNotPresent"
@@ -2324,6 +2337,7 @@ spec:
             - name: config-volume
               mountPath: /etc/config
               readOnly: true
+        # Prometheus server container
         - name: cloudzero-agent-server
           
           image: "quay.io/prometheus/prometheus:v2.55.1"

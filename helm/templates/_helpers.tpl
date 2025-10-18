@@ -1108,3 +1108,100 @@ Container-level security context properties (from k8s.json schema):
     ) -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Alloy/Prometheus Implementation Detection Helpers
+
+These helpers determine which metrics collector implementation to use based on
+the configuration and provide utilities for selecting the appropriate behavior.
+*/}}
+
+{{/*
+Check if Alloy should be used as the metrics collector
+
+Returns "true" if alloy.enabled is true, otherwise ""
+
+Usage: {{ include "cloudzero-agent.useAlloy" . }}
+*/}}
+{{- define "cloudzero-agent.useAlloy" -}}
+{{- if .Values.alloy.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Check if Prometheus should be used as the metrics collector
+
+Returns "true" if Alloy is NOT enabled, otherwise ""
+This is the inverse of useAlloy.
+
+Usage: {{ include "cloudzero-agent.isPrometheus" . }}
+*/}}
+{{- define "cloudzero-agent.isPrometheus" -}}
+{{- if not .Values.alloy.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Check if Alloy should be used (alias for useAlloy for clarity)
+
+Returns "true" if Alloy is enabled, otherwise ""
+
+Usage: {{ include "cloudzero-agent.isAlloy" . }}
+*/}}
+{{- define "cloudzero-agent.isAlloy" -}}
+{{- include "cloudzero-agent.useAlloy" . -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector image configuration
+
+Returns the appropriate image configuration based on which collector is active:
+- For Alloy: Uses alloy.image
+- For Prometheus: Uses components.prometheus.image
+
+Usage: {{ include "cloudzero-agent.agentCollectorImage" . }}
+Returns: Image object with repository, tag, registry, pullPolicy
+*/}}
+{{- define "cloudzero-agent.agentCollectorImage" -}}
+{{- if include "cloudzero-agent.useAlloy" . -}}
+  {{- toYaml .Values.alloy.image -}}
+{{- else -}}
+  {{- toYaml .Values.components.prometheus.image -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector container name
+
+Returns the appropriate container name for the metrics collector:
+- "alloy" for Alloy
+- "prometheus" for Prometheus
+
+Usage: {{ include "cloudzero-agent.agentCollectorContainerName" . }}
+*/}}
+{{- define "cloudzero-agent.agentCollectorContainerName" -}}
+{{- if include "cloudzero-agent.useAlloy" . -}}
+alloy
+{{- else -}}
+prometheus
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector configuration file name
+
+Returns the appropriate configuration file name:
+- "alloy-config.river" for Alloy
+- "prometheus.yml" for Prometheus
+
+Usage: {{ include "cloudzero-agent.agentCollectorConfigFileName" . }}
+*/}}
+{{- define "cloudzero-agent.agentCollectorConfigFileName" -}}
+{{- if include "cloudzero-agent.useAlloy" . -}}
+alloy-config.river
+{{- else -}}
+prometheus.yml
+{{- end -}}
+{{- end -}}

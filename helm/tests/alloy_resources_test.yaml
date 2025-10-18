@@ -1,0 +1,72 @@
+suite: test Alloy resource configuration
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test that Alloy uses components.agent.resources
+  - it: should use components.agent.resources for Alloy container
+    set:
+      alloy.enabled: true
+      components.agent.resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "2Gi"
+          cpu: "2000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "1Gi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "2Gi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "2000m"
+
+  # Test that different resources can be used for Prometheus vs Alloy
+  - it: should allow different resource configs for Prometheus and Alloy
+    set:
+      alloy.enabled: false
+      components.agent.resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+
+  # Test security context application
+  - it: should apply security context to Alloy container
+    set:
+      alloy.enabled: true
+      defaults.securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsNonRoot
+          value: true
+
+  # Test component-specific security context override
+  - it: should allow component-specific security context override for Alloy
+    set:
+      alloy.enabled: true
+      defaults.securityContext:
+        runAsUser: 1000
+      components.agent.securityContext:
+        runAsUser: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 2000

@@ -218,8 +218,8 @@ properties:
     properties:
       federation:
         description: |
-          Federated mode deploys the agent as a DaemonSet, with each node in the
-          cluster running its own metrics collector.
+          Federated mode deploys the agent in a distributed configuration for
+          high-scale clusters as a DaemonSet with one pod per node.
         type: object
         additionalProperties: false
         properties:
@@ -915,6 +915,70 @@ properties:
             type: array
             items:
               type: object
+
+  alloy:
+    description: |
+      Grafana Alloy configuration settings.
+      This section contains all Alloy-specific configuration isolated from the
+      main agent configuration during the experimental phase.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to use Grafana Alloy instead of Prometheus as the metrics
+          collector. When enabled, Alloy replaces Prometheus for metrics collection
+          and forwarding.
+        type: boolean
+        default: false
+      image:
+        description: |
+          Container image configuration for Grafana Alloy.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      autoscaling:
+        description: |
+          Horizontal Pod Autoscaler configuration for Alloy.
+          Only applies when alloy.enabled=true in non-federated mode.
+
+          For details, see the Kubernetes documentation on HPA:
+          https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+        oneOf:
+          - type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable horizontal pod autoscaling.
+                type: boolean
+              minReplicas:
+                description: |
+                  Minimum number of replicas.
+                type: integer
+                minimum: 1
+              maxReplicas:
+                description: |
+                  Maximum number of replicas.
+                type: integer
+                minimum: 1
+              targetCPUUtilizationPercentage:
+                description: |
+                  Target CPU utilization percentage for autoscaling.
+                type: integer
+                minimum: 1
+                maximum: 100
+              targetMemoryUtilizationPercentage:
+                description: |
+                  Target memory utilization percentage for autoscaling.
+                type: integer
+                minimum: 1
+                maximum: 100
+          - type: "null"
+      config:
+        description: |
+          Advanced River configuration options. These settings allow fine-tuning
+          of Alloy's behavior beyond the standard configuration.
+        type: object
+        additionalProperties: true
 
   commonMetaLabels:
     $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"

@@ -1,0 +1,10 @@
+# Valid: CPU target at boundary (1%)
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 1

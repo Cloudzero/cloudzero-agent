@@ -44,8 +44,8 @@ existingSecretName: null
 # components within this chart, or used as defaults in case values are not
 # explicitly set per-component.
 defaults:
-  # Federated mode deploys the agent as a DaemonSet, with each node in the
-  # cluster running its own metrics collector.
+  # Federated mode deploys the agent in a distributed configuration for
+  # high-scale clusters as a DaemonSet with one pod per node.
   federation:
     # Whether to enable federated mode.
     enabled: false
@@ -201,6 +201,7 @@ components:
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
       tag: 1.2.8  # <- Software release corresponding to this chart version.
+
     podDisruptionBudget:
       # enabled:
       # minAvailable:
@@ -221,6 +222,7 @@ components:
       limits:
         memory: "1024Mi"
         cpu: "1000m"
+
     # The agent federated node component runs on each node for federation.
     federatedNode:
       # Security context for the agent federated node pods.
@@ -556,6 +558,59 @@ prometheusConfig:
       scrapeInterval: 120s
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
+
+# Grafana Alloy configuration settings.
+# This section contains all Alloy-specific configuration isolated from the
+# main agent configuration during the experimental phase.
+alloy:
+  # Whether to use Grafana Alloy instead of Prometheus as the metrics
+  # collector. When enabled, Alloy replaces Prometheus for metrics collection
+  # and forwarding.
+  #
+  # Grafana Alloy is a modern observability collector that provides better
+  # performance and native horizontal scalability compared to Prometheus.
+  # It is the recommended choice for new deployments.
+  #
+  # Note: This is currently an opt-in feature. In the future, Alloy will
+  # become the default (opt-out), and eventually Prometheus support will be
+  # removed entirely.
+  enabled: false
+
+  # Container image configuration for Grafana Alloy.
+  image:
+    repository: docker.io/grafana/alloy
+    tag: v1.5.1
+    # registry: docker.io
+    # pullPolicy: IfNotPresent
+
+  # Horizontal Pod Autoscaler configuration for Alloy.
+  # Only applies when alloy.enabled=true in non-federated mode.
+  #
+  # HPA enables automatic scaling based on resource utilization,
+  # allowing the deployment to handle varying load efficiently.
+  #
+  # For details, see the Kubernetes documentation on HPA:
+  # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  autoscaling:
+    # Whether to enable horizontal pod autoscaling.
+    enabled: false
+    # Minimum number of replicas.
+    minReplicas: 2
+    # Maximum number of replicas.
+    maxReplicas: 10
+    # Target CPU utilization percentage for autoscaling.
+    targetCPUUtilizationPercentage: 80
+    # Target memory utilization percentage for autoscaling (optional).
+    # targetMemoryUtilizationPercentage: 80
+
+  # Advanced River configuration options. These settings allow fine-tuning
+  # of Alloy's behavior beyond the standard configuration.
+  #
+  # Example:
+  #   config:
+  #     clustering:
+  #       enabled: true
+  config: {}
 
 # General server settings that apply to both the prometheus agent server and the webhook server
 serverConfig:

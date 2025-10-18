@@ -72,8 +72,9 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
       containers:
-        {{- if .Values.configmapReload.prometheus.enabled }}
-        - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
+        {{- if or (and (include "cloudzero-agent.isPrometheus" .) .Values.configmapReload.prometheus.enabled) (and (include "cloudzero-agent.isAlloy" .) .Values.configmapReload.prometheus.enabled) }}
+        # ConfigMap reloader sidecar for Prometheus/Alloy
+        - name: {{ template "cloudzero-agent.name" . }}-{{ if include "cloudzero-agent.isPrometheus" . }}{{ .Values.server.name }}-{{ end }}{{ if include "cloudzero-agent.isAlloy" . }}alloy-{{ end }}configmap-reload
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
           args:
             - --watched-dir=/etc/config
@@ -114,6 +115,8 @@ spec:
               mountPath: /etc/config
               readOnly: true
         {{- end }}
+        {{- if include "cloudzero-agent.isPrometheus" . }}
+        # Prometheus server container
         - name: {{ template "cloudzero-agent.name" . }}-server
           {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
@@ -186,6 +189,83 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/app/config/
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+        {{- end }}{{/* End Prometheus container */}}
+        {{- if include "cloudzero-agent.isAlloy" . }}
+        # Grafana Alloy container
+        - name: {{ template "cloudzero-agent.name" . }}-alloy
+          {{- $alloyImage := include "cloudzero-agent.agentCollectorImage" . | fromYaml }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" $alloyImage) | nindent 10 }}
+          args:
+            - run
+            - /etc/alloy/alloy-config.river
+            - --server.http.listen-addr=0.0.0.0:9090
+            - --storage.path=/tmp/alloy
+            {{- if .Values.defaults.federation.enabled }}
+            - --cluster.enabled=true
+            - --cluster.name={{ .Values.clusterName }}
+            {{- end }}
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /checks/cloudzero-agent-validator
+                  - diagnose
+                  - post-start
+                  - -f
+                  - /checks/app/config/validator.yml
+            preStop:
+              exec:
+                command:
+                  - /checks/cloudzero-agent-validator
+                  - diagnose
+                  - pre-stop
+                  - -f
+                  - /checks/app/config/validator.yml
+          ports:
+            - name: http-metrics
+              containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            failureThreshold: 3
+            successThreshold: 1
+          {{- include "cloudzero-agent.generateResources" (.Values.components.agent.resources | default (dict)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
+              (.Values.defaults.securityContext | default (dict))
+              (.Values.components.agent.securityContext | default (dict))
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: lifecycle-volume
+              mountPath: /checks/
+            - name: validator-config-volume
+              mountPath: /checks/app/config/
+            {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
+        {{- end }}{{/* End Alloy container */}}
       {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
           (.Values.defaults.securityContext | default (dict))
           (.Values.components.agent.securityContext | default (dict))
