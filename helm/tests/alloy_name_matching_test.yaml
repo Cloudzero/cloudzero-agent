@@ -1,0 +1,77 @@
+suite: test Alloy resource name matching
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-hpa.yaml
+  - templates/agent-serviceaccount.yaml
+  - templates/agent-pdb.yaml
+tests:
+  # Test that deployment name matches HPA name and scaleTargetRef
+  - it: should have matching names for HPA and HPA scaleTargetRef
+    templates:
+      - templates/agent-hpa.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      alloy.autoscaling.enabled: true
+      serviceAccount.create: true
+    asserts:
+      # Verify HPA name matches expected deployment name (both use same helper)
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+      # Verify HPA scaleTargetRef.name matches the deployment name
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-cz-server
+
+  # Test that ServiceAccount name matches deployment name (when serviceAccount.create=true)
+  - it: should have ServiceAccount name matching deployment name
+    templates:
+      - templates/agent-serviceaccount.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify ServiceAccount name matches expected deployment name
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+  - it: should have deployment serviceAccountName matching ServiceAccount name
+    templates:
+      - templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify deployment references the ServiceAccount correctly
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: RELEASE-NAME-cz-server
+
+  # Test that PDB name matches deployment name
+  - it: should have PDB name matching deployment name
+    templates:
+      - templates/agent-deploy.yaml
+      - templates/agent-pdb.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.agent.podDisruptionBudget:
+        minAvailable: 1
+    asserts:
+      # Verify deployment name
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+          template: templates/agent-deploy.yaml
+      # Verify PDB name matches deployment name
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+          template: templates/agent-pdb.yaml

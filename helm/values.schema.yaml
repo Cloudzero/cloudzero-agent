@@ -218,15 +218,19 @@ properties:
     properties:
       federation:
         description: |
-          Federated mode deploys the agent as a DaemonSet, with each node in the
-          cluster running its own metrics collector.
+          Federated mode deploys the agent in a distributed configuration for
+          high-scale clusters as a DaemonSet with one pod per node.
         type: object
         additionalProperties: false
         properties:
           enabled:
             description: |
               Whether to enable federated mode.
-            type: boolean
+              If set (true or false), this takes precedence over components.agent.mode.
+              null means use components.agent.mode.
+            type:
+              - boolean
+              - "null"
       image:
         description: |
           The default image settings which will be fallen back on for all
@@ -295,6 +299,37 @@ properties:
             description: |
               Container image configuration for the agent.
             $ref: "#/$defs/com.cloudzero.agent.image"
+          mode:
+            description: |
+              Agent deployment mode. Controls how the agent collects and processes metrics.
+
+              Valid values:
+              - "federated": Deploys the agent in federated mode as a DaemonSet with one pod
+                per node. This is equivalent to setting defaults.federation.enabled to true.
+                Uses Prometheus in server mode for metrics collection.
+              - "agent": Deploys Prometheus in agent mode. This is optimized for remote write
+                scenarios and uses fewer resources. Equivalent to server.agentMode=true.
+              - "server": Deploys Prometheus in server mode. This is the traditional Prometheus
+                deployment with full storage and query capabilities. Equivalent to
+                server.agentMode=false.
+              - "clustered": Uses Grafana Alloy instead of Prometheus for metrics collection.
+                Alloy provides better performance and native horizontal scalability. Equivalent
+                to alloy.enabled=true.
+
+              If null (automatic mode), the mode will be derived from legacy configuration:
+              - defaults.federation.enabled=true -> "federated"
+              - server.agentMode=false -> "server"
+              - Default -> "agent"
+
+              If set, takes precedence over all legacy properties.
+            oneOf:
+              - enum:
+                  - federated
+                  - agent
+                  - server
+                  - clustered
+              - type: "null"
+            default: null
           podDisruptionBudget:
             description: |
               Pod disruption budget configuration for the agent.
@@ -937,6 +972,80 @@ properties:
             type: array
             items:
               type: object
+
+  alloy:
+    description: |
+      Grafana Alloy configuration settings.
+      This section contains all Alloy-specific configuration isolated from the
+      main agent configuration during the experimental phase.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to use Grafana Alloy instead of Prometheus as the metrics
+          collector. When enabled, Alloy replaces Prometheus for metrics collection
+          and forwarding.
+        type: boolean
+        default: false
+      image:
+        description: |
+          Container image configuration for Grafana Alloy.
+        $ref: "#/$defs/com.cloudzero.agent.image"
+      autoscaling:
+        description: |
+          Horizontal Pod Autoscaler configuration for Alloy.
+          Only applies when alloy.enabled=true in non-federated mode.
+
+          For details, see the Kubernetes documentation on HPA:
+          https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+        oneOf:
+          - type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable horizontal pod autoscaling.
+                type: boolean
+              minReplicas:
+                description: |
+                  Minimum number of replicas.
+                type: integer
+                minimum: 1
+              maxReplicas:
+                description: |
+                  Maximum number of replicas.
+                type: integer
+                minimum: 1
+              targetCPUUtilizationPercentage:
+                description: |
+                  Target CPU utilization percentage for autoscaling.
+                type: integer
+                minimum: 1
+                maximum: 100
+              targetMemoryUtilizationPercentage:
+                description: |
+                  Target memory utilization percentage for autoscaling.
+                type: integer
+                minimum: 1
+                maximum: 100
+          - type: "null"
+      resources:
+        description: |
+          Resource requirements and limits for the Alloy container.
+
+          Alloy has different performance characteristics than Prometheus and typically
+          requires less resources for the same workload due to its more efficient design.
+
+          For details, see the Kubernetes documentation on resource management:
+          https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+      config:
+        description: |
+          Advanced River configuration options. These settings allow fine-tuning
+          of Alloy's behavior beyond the standard configuration.
+        type: object
+        additionalProperties: true
 
   commonMetaLabels:
     $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
@@ -1725,8 +1834,11 @@ properties:
       agentMode:
         description: |
           Whether the server is running in agent mode.
-        type: boolean
-        default: true
+          If set (true or false) and components.agent.mode is not explicitly set, this is used to derive the mode.
+          null means use components.agent.mode.
+        type:
+          - boolean
+          - "null"
       logging:
         description: |
           Logging configuration settings for the Prometheus server.

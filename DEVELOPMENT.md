@@ -137,6 +137,27 @@ For detailed testing guidance on individual components, see:
 - `tests/README.md` - Integration test documentation
 - `helm/docs/` - Helm chart testing details
 
+### Testing Alloy Integration
+
+The chart supports both Prometheus and Grafana Alloy as metrics collectors. To test Alloy, first enable it in your cluster overrides file (`clusters/*-overrides.yaml`):
+
+```yaml
+defaults:
+  federation:
+    alloy: true
+```
+
+Then deploy:
+
+```sh
+CLUSTER_NAME=my-cluster make helm-install helm-wait
+```
+
+For detailed Alloy documentation, see:
+
+- `helm/docs/alloy-migration-guide.md` - Migration from Prometheus
+- `helm/docs/troubleshooting-guide.md` - Alloy-specific troubleshooting
+
 ## Go Development Patterns
 
 ### Package Organization

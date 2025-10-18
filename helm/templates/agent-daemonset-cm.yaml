@@ -1,4 +1,4 @@
-{{- if .Values.defaults.federation.enabled -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated" -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -9,7 +9,7 @@ metadata:
   {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
   prometheus.yml.in: |-
-    {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
+    {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") .Values.prometheusConfig.configOverride }}
     {{ .Values.prometheusConfig.configOverride | nindent 4 }}
     {{- else }}
     global:

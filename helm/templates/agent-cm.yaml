@@ -7,8 +7,14 @@ metadata:
   namespace: {{ include "cloudzero-agent.namespace" . }}
   {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
 data:
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
+  # Alloy River configuration
+  alloy-config.river: |-
+    {{- include "cloudzero-agent.alloy.riverConfig" . | nindent 4 }}
+{{- else }}
+  # Prometheus YAML configuration
   prometheus.yml: |-
-    {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.configOverride }}
+    {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") .Values.prometheusConfig.configOverride }}
     {{ .Values.prometheusConfig.configOverride | nindent 4 }}
     {{- else }}
     global:
@@ -24,7 +30,7 @@ data:
       {{- include "cloudzero-agent.prometheus.scrapeKubeStateMetrics" . | nindent 6 }}
       {{- end }}{{/* End kubeStateMetrics scrape job */}}
 
-      {{- if and (not .Values.defaults.federation.enabled) .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+      {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" false) | nindent 6 }}
       {{- end }}{{/* End cadvisor scrape job */}}
 
@@ -50,3 +56,4 @@ data:
     {{- end}}
 
     {{- include "cloudzero-agent.aggregator.remoteWrite" . | nindent 4 }}
+{{- end }}{{/* End Prometheus configuration */}}

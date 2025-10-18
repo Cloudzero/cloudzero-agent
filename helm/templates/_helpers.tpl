@@ -329,7 +329,11 @@ Create a fully qualified Prometheus server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.server.fullname" -}}
-{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "server" "override" .Values.server.fullnameOverride) -}}
+{{- if .Values.server.fullnameOverride -}}
+  {{- .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+  {{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "server") -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -1171,5 +1175,97 @@ Container-level security context properties (from k8s.json schema):
       "name" "securityContext"
       "value" ((include "cloudzero-agent.filterProperties" (dict "input" . "properties" $containerProperties)) | fromJson)
     ) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Alloy/Prometheus Implementation Detection Helpers
+
+These helpers determine which metrics collector implementation to use based on
+the configuration and provide utilities for selecting the appropriate behavior.
+*/}}
+
+{{/*
+Derive the agent mode from legacy properties if explicitly set, otherwise fall back to components.agent.mode.
+
+The mode is derived as follows:
+1. If legacy properties are explicitly set (non-null), derive from them:
+   - defaults.federation.enabled=true -> "federated"
+   - server.agentMode=true -> "agent"
+   - server.agentMode=false -> "server"
+2. Otherwise, use components.agent.mode (which has a default value)
+   - components.agent.mode can be "federated", "agent", "server", or "clustered"
+   - Note: The only way to use Alloy is by setting components.agent.mode to "clustered"
+
+Returns one of: "federated", "agent", "server", "clustered"
+
+Usage in templates: {{ eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated" }}
+*/}}
+{{- define "cloudzero-agent.Values.components.agent.mode" -}}
+  {{- /* If components.agent.mode is set (not null), it takes precedence over everything. */ -}}
+  {{- if .Values.components.agent.mode -}}
+    {{- .Values.components.agent.mode -}}
+  {{- else -}}
+    {{- /* Automatic mode: use legacy properties with default to agent */ -}}
+    {{- if and .Values.defaults .Values.defaults.federation (eq .Values.defaults.federation.enabled true) -}}
+      federated
+    {{- else if and .Values.server (ne .Values.server.agentMode nil) (eq .Values.server.agentMode false) -}}
+      server
+    {{- else -}}
+      {{- /* Default: Prometheus agent mode */ -}}
+      agent
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector image configuration
+
+Returns the appropriate image configuration based on which collector is active:
+- For Alloy: Uses alloy.image
+- For Prometheus: Uses components.prometheus.image
+
+Usage: {{ include "cloudzero-agent.agentCollectorImage" . }}
+Returns: Image object with repository, tag, registry, pullPolicy
+*/}}
+{{- define "cloudzero-agent.agentCollectorImage" -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" -}}
+  {{- toYaml .Values.alloy.image -}}
+{{- else -}}
+  {{- toYaml .Values.components.prometheus.image -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector container name
+
+Returns the appropriate container name for the metrics collector:
+- "alloy" for Alloy
+- "prometheus" for Prometheus
+
+Usage: {{ include "cloudzero-agent.agentCollectorContainerName" . }}
+*/}}
+{{- define "cloudzero-agent.agentCollectorContainerName" -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" -}}
+alloy
+{{- else -}}
+prometheus
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the metrics collector configuration file name
+
+Returns the appropriate configuration file name:
+- "alloy-config.river" for Alloy
+- "prometheus.yml" for Prometheus
+
+Usage: {{ include "cloudzero-agent.agentCollectorConfigFileName" . }}
+*/}}
+{{- define "cloudzero-agent.agentCollectorConfigFileName" -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" -}}
+alloy-config.river
+{{- else -}}
+prometheus.yml
 {{- end -}}
 {{- end -}}

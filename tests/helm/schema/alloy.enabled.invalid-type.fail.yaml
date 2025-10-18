@@ -1,0 +1,5 @@
+# Invalid: Alloy must be boolean, not string
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: "true"

@@ -17,8 +17,7 @@ templates:
   - agent-clusterrole.yaml
   - agent-clusterrolebinding.yaml
   - agent-cm.yaml
-  - agent-daemonset-cm.yaml
-  - agent-daemonset.yaml
+  # agent-daemonset-cm.yaml and agent-daemonset.yaml only render in federated mode
   - agent-deploy.yaml
   - agent-pdb.yaml
   - agent-pvc.yaml
@@ -52,7 +51,7 @@ tests:
     # - insightsController.enabled: Renders webhook-related resources
     # - insightsController.tls.secret.create: Renders webhook-tls-secret.yaml
     # - initCertJob.enabled: Renders init-cert-job and related RBAC resources
-    # - defaults.federation.enabled: Renders agent-daemonset.yaml and agent-daemonset-cm.yaml
+    # - components.agent.mode: agent: Renders agent-deploy.yaml (test uses non-federated mode to include deployment)
     # - server.persistentVolume.enabled: Renders agent-pvc.yaml
     set:
       defaults.labels:
@@ -61,7 +60,7 @@ tests:
       insightsController.tls.secret.create: true
       insightsController.tls.useCertManager: false
       initCertJob.enabled: true
-      defaults.federation.enabled: true
+      components.agent.mode: agent
       server.persistentVolume.enabled: true
     asserts:
       - equal:
@@ -80,7 +79,7 @@ tests:
       insightsController.tls.secret.create: true
       insightsController.tls.useCertManager: false
       initCertJob.enabled: true
-      defaults.federation.enabled: true
+      components.agent.mode: agent
       server.persistentVolume.enabled: true
     asserts:
       - equal:

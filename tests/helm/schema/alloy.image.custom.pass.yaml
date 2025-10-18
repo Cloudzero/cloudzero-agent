@@ -1,0 +1,9 @@
+# Valid: Custom default Alloy image
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: true
+  image:
+    repository: ghcr.io/grafana/alloy
+    tag: latest
+    pullPolicy: Never

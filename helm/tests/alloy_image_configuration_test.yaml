@@ -1,0 +1,60 @@
+suite: test Alloy image configuration
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test default Alloy image
+  - it: should use default Alloy image from alloy.image
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: docker.io/grafana/alloy:v1.11.3
+
+  # Test custom Alloy image
+  - it: should use custom Alloy image when specified
+    set:
+      components.agent.mode: clustered
+      alloy.image:
+        repository: custom.registry.io/custom/alloy
+        tag: v2.0.0
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: custom.registry.io/custom/alloy:v2.0.0
+
+  # Test that alloy image is only used for Alloy
+  - it: should not affect Prometheus image
+    set:
+      components.agent.mode: agent
+      alloy.image:
+        repository: custom.registry.io/custom/alloy
+        tag: v2.0.0
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: prometheus
+      - notMatchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: alloy
+
+  # Test image pull policy from alloy.image
+  - it: should respect pullPolicy from alloy.image
+    set:
+      components.agent.mode: clustered
+      alloy.image:
+        pullPolicy: Always
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].imagePullPolicy
+          value: Always
+
+  # Test fallback to defaults.image.pullPolicy
+  - it: should fallback to defaults.image.pullPolicy
+    set:
+      components.agent.mode: clustered
+      defaults.image.pullPolicy: Never
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].imagePullPolicy
+          value: Never

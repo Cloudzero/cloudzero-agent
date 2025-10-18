@@ -44,12 +44,6 @@ existingSecretName: null
 # components within this chart, or used as defaults in case values are not
 # explicitly set per-component.
 defaults:
-  # Federated mode deploys the agent as a DaemonSet, with each node in the
-  # cluster running its own metrics collector.
-  federation:
-    # Whether to enable federated mode.
-    enabled: false
-
   # The default image settings which will be fallen back on for all components.
   #
   # Note that all image values (including repository, tag, etc.) are valid here,
@@ -201,6 +195,28 @@ components:
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
       tag: 1.2.8  # <- Software release corresponding to this chart version.
+
+    # Agent deployment mode. Controls how the agent collects and processes metrics.
+    #
+    # Valid values:
+    #
+    # - "agent": Deploys Prometheus in agent mode. This is optimized for remote write
+    #   scenarios and uses fewer resources. Equivalent to server.agentMode=true.
+    #
+    # - "server": Deploys Prometheus in server mode. This is the traditional Prometheus
+    #   deployment with full storage and query capabilities. Equivalent to
+    #   server.agentMode=false.
+    #
+    # - "federated": Deploys the agent in federated mode as a DaemonSet with one pod
+    #   per node. This is equivalent to setting defaults.federation.enabled to true.
+    #   Uses Prometheus in server mode for metrics collection.
+    #
+    # - "clustered": Uses Grafana Alloy instead of Prometheus for metrics collection.
+    #   Alloy provides better performance and native horizontal scalability.
+    #
+    # - null means automatic mode (use legacy properties with default to agent).
+    mode: null
+
     podDisruptionBudget:
       # enabled:
       # minAvailable:
@@ -221,6 +237,7 @@ components:
       limits:
         memory: "1024Mi"
         cpu: "1000m"
+
     # The agent federated node component runs on each node for federation.
     federatedNode:
       # Security context for the agent federated node pods.
@@ -562,6 +579,52 @@ prometheusConfig:
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 
+# EXPERIMENTAL Grafana Alloy configuration settings. This section contains all
+# Alloy-specific configuration isolated from the main agent configuration during
+# the experimental phase.
+alloy:
+  # Container image configuration for Grafana Alloy.
+  image:
+    repository: docker.io/grafana/alloy
+    tag: v1.11.3
+    # registry: docker.io
+    # pullPolicy: IfNotPresent
+
+  # Horizontal Pod Autoscaler configuration for Alloy.
+  # Only applies when alloy.enabled=true in non-federated mode.
+  #
+  # HPA enables automatic scaling based on resource utilization,
+  # allowing the deployment to handle varying load efficiently.
+  #
+  # For details, see the Kubernetes documentation on HPA:
+  # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  autoscaling:
+    # Whether to enable horizontal pod autoscaling.
+    enabled: true
+    # Minimum number of replicas.
+    minReplicas: 1
+    # Maximum number of replicas.
+    maxReplicas: 10
+    # Target CPU utilization percentage for autoscaling.
+    targetCPUUtilizationPercentage: 80
+    # Target memory utilization percentage for autoscaling (optional).
+    targetMemoryUtilizationPercentage: 80
+
+  # Resource requirements and limits for the Alloy container.
+  #
+  # Alloy has different performance characteristics than Prometheus and typically
+  # requires less resources for the same workload due to its more efficient design.
+  #
+  # For details, see the Kubernetes documentation on resource management:
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "100m"
+
 # General server settings that apply to both the prometheus agent server and the webhook server
 serverConfig:
   # -- The agent will use this file path on the container filesystem to get the CZ API key.
@@ -711,7 +774,9 @@ server:
   # -- Priority class name for the server pods. Falls back to defaults.priorityClassName if not set.
   priorityClassName:
   # Whether the server is running in agent mode.
-  agentMode: true
+  # If set (true or false) and components.agent.mode is not explicitly set, this is used to derive the mode.
+  # null means use components.agent.mode.
+  agentMode: null
   # Command-line arguments to pass to the server.
   args:
     - --config.file=/etc/config/prometheus/configmaps/prometheus.yml

@@ -5496,6 +5496,60 @@
       },
       "type": "object"
     },
+    "alloy": {
+      "additionalProperties": false,
+      "properties": {
+        "autoscaling": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "maxReplicas": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "minReplicas": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "image": {
+          "$ref": "#/$defs/com.cloudzero.agent.image"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        }
+      },
+      "type": "object"
+    },
     "apiKey": {
       "type": ["string", "null"]
     },
@@ -5539,6 +5593,17 @@
             },
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"
+            },
+            "mode": {
+              "default": null,
+              "oneOf": [
+                {
+                  "enum": ["federated", "agent", "server", "clustered"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "podDisruptionBudget": {
               "oneOf": [
@@ -5823,7 +5888,7 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": ["boolean", "null"]
             }
           },
           "type": "object"
@@ -6543,8 +6608,7 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.Affinity"
         },
         "agentMode": {
-          "default": true,
-          "type": "boolean"
+          "type": ["boolean", "null"]
         },
         "annotations": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"

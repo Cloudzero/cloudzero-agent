@@ -1,0 +1,137 @@
+suite: test Alloy resources configuration
+templates:
+  - templates/agent-deploy.yaml
+tests:
+  # Test that Alloy uses alloy.resources when set
+  - it: should use alloy.resources for Alloy container
+    set:
+      components.agent.mode: clustered
+      alloy.resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "100m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "500m"
+
+  # Test that Alloy uses default values from values.yaml
+  - it: should use default alloy.resources from values.yaml
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "100m"
+
+  # Test that Prometheus still uses components.agent.resources
+  - it: should use components.agent.resources for Prometheus container
+    set:
+      components.agent.mode: agent
+      components.agent.resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "1024Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "1000m"
+
+  # Test that custom alloy.resources override defaults
+  - it: should override default alloy.resources with custom values
+    set:
+      components.agent.mode: clustered
+      alloy.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "250m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "128Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "50m"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.memory
+          value: "256Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: "250m"
+
+  # Test that Alloy and Prometheus have independent resource configurations
+  - it: should not affect Prometheus resources when alloy.resources is set
+    set:
+      components.agent.mode: agent
+      alloy.resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "256Mi"
+          cpu: "250m"
+      components.agent.resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.cpu
+          value: "250m"

@@ -1,0 +1,9 @@
+# Invalid: minReplicas must be >= 1
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 0
+    maxReplicas: 10

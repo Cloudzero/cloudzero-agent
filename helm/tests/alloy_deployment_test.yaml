@@ -1,0 +1,167 @@
+suite: test Alloy deployment configuration
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-cm.yaml
+tests:
+  # Test that Prometheus is deployed by default (Alloy disabled)
+  - it: should deploy Prometheus container when Alloy is not enabled
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+        template: templates/agent-deploy.yaml
+      - matchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: prometheus
+        template: templates/agent-deploy.yaml
+      - isNotEmpty:
+          path: data["prometheus.yml"]
+        template: templates/agent-cm.yaml
+      - isNull:
+          path: data["alloy-config.river"]
+        template: templates/agent-cm.yaml
+
+  # Test that Alloy is deployed when enabled
+  - it: should deploy Alloy container when components.agent.mode is clustered
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+        template: templates/agent-deploy.yaml
+      - matchRegex:
+          path: spec.template.spec.containers[1].image
+          pattern: grafana/alloy
+        template: templates/agent-deploy.yaml
+      - isNull:
+          path: data["prometheus.yml"]
+        template: templates/agent-cm.yaml
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+        template: templates/agent-cm.yaml
+
+  # Test that ConfigMap reloader is deployed with Alloy
+  - it: should deploy ConfigMap reloader sidecar when using Alloy
+    set:
+      components.agent.mode: clustered
+      configmapReload.prometheus.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: cloudzero-agent-server-configmap-reload
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+        template: templates/agent-deploy.yaml
+
+  # Test that ConfigMap reloader IS deployed with Prometheus
+  - it: should deploy ConfigMap reloader sidecar when using Prometheus
+    set:
+      components.agent.mode: agent
+      configmapReload.prometheus.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: cloudzero-agent-server-configmap-reload
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+        template: templates/agent-deploy.yaml
+
+  # Test Alloy container configuration
+  - it: should configure Alloy container correctly
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: run
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: /etc/alloy/alloy-config.river
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: --server.http.listen-addr=0.0.0.0:9090
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].ports[0].containerPort
+          value: 9090
+        template: templates/agent-deploy.yaml
+
+  # Test Alloy clustering mode
+  # Note: Alloy mode and federated mode are mutually exclusive, clustering is always disabled
+  - it: should not enable Alloy clustering (Alloy mode doesn't use federation)
+    set:
+      components.agent.mode: clustered
+      clusterName: test-cluster
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[1].args
+          content: --cluster.enabled=true
+        template: templates/agent-deploy.yaml
+      - notContains:
+          path: spec.template.spec.containers[1].args
+          content: --cluster.name=test-cluster
+        template: templates/agent-deploy.yaml
+
+  # Test Alloy volume mounts
+  - it: should mount Alloy config from ConfigMap
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: config-volume
+            mountPath: /etc/alloy
+            readOnly: true
+        template: templates/agent-deploy.yaml
+
+  # Test Alloy environment variables
+  - it: should set HOSTNAME environment variable for Alloy
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: HOSTNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+
+  # Test Alloy probes
+  - it: should configure Alloy readiness and liveness probes
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.httpGet.path
+          value: /-/ready
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.httpGet.port
+          value: 9090
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.path
+          value: /-/healthy
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.port
+          value: 9090
+        template: templates/agent-deploy.yaml

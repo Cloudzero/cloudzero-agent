@@ -420,7 +420,7 @@ providing the cluster state foundation for all downstream cost analysis and opti
       action: keep
 
     # Metric labels to keep.
-    - regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
+    - regex: {{ printf "^(%s)$" (include "cloudzero-agent.requiredMetricLabels" .) }}
       action: labelkeep
 
   static_configs:

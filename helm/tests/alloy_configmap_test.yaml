@@ -1,0 +1,95 @@
+suite: test Alloy ConfigMap generation
+templates:
+  - templates/agent-cm.yaml
+tests:
+  # Test that ConfigMap contains River config for Alloy
+  - it: should generate River configuration when Alloy is enabled
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+      - isNull:
+          path: data["prometheus.yml"]
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "prometheus.scrape"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "prometheus.remote_write"
+
+  # Test that ConfigMap contains Prometheus config when Alloy is disabled
+  - it: should generate Prometheus configuration when Alloy is disabled
+    set:
+      components.agent.mode: agent
+    asserts:
+      - isNotEmpty:
+          path: data["prometheus.yml"]
+      - isNull:
+          path: data["alloy-config.river"]
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "scrape_configs:"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "remote_write:"
+
+  # Test that River config includes kube-state-metrics scrape when enabled
+  - it: should include kube-state-metrics in River config
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.kubeStateMetrics.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "kube_state_metrics"'
+
+  # Test that River config includes aggregator scrape when enabled
+  - it: should include aggregator scrape in River config
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.aggregator.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "aggregator"'
+
+  # Test that River config respects scrape job toggles
+  - it: should not include disabled scrape jobs in River config
+    set:
+      components.agent.mode: clustered
+      prometheusConfig:
+        scrapeJobs:
+          kubeStateMetrics:
+            enabled: false
+          aggregator:
+            enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "kube_state_metrics"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "aggregator"'
+
+  # Test that River config includes remote_write
+  - it: should include remote_write configuration
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.remote_write "cloudzero"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "/collector"
+
+  # Test clustering configuration in River
+  - it: should enable clustering in scrape jobs
+    set:
+      components.agent.mode: clustered
+    asserts:
+      # Verify clustering is enabled
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "clustering \\{\\s+enabled = true\\s+\\}"
