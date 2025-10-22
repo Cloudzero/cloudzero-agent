@@ -78,7 +78,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/prometheus v0.307.0
+	github.com/prometheus/prometheus v0.307.2
 	github.com/shirou/gopsutil/v4 v4.25.9
 	github.com/stretchr/testify v1.11.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
