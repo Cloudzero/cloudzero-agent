@@ -554,6 +554,11 @@ prometheusConfig:
       enabled: true
       # Scrape interval for aggregator job
       scrapeInterval: 120s
+    # -- Enables the GPU metrics scrape job (NVIDIA DCGM Exporter auto-discovery).
+    gpu:
+      enabled: false
+      # Scrape interval for GPU metrics job
+      scrapeInterval: 30s
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
 

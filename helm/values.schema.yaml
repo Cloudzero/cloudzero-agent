@@ -909,6 +909,28 @@ properties:
                 description: |
                   Scrape interval for aggregator job.
                 $ref: "#/$defs/com.cloudzero.agent.duration"
+          gpu:
+            description: |
+              GPU metrics scrape job configuration.
+
+              Automatically discovers and scrapes GPU metrics from NVIDIA DCGM
+              Exporter. Collects GPU compute utilization and memory usage
+              metrics with per-container attribution.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: |
+                  Whether to enable the GPU metrics scrape job.
+
+                  When enabled, Prometheus will automatically discover GPU
+                  exporters (currently only NVIDIA DCGM ins supported) and
+                  collect metrics.
+                type: boolean
+              scrapeInterval:
+                description: |
+                  Scrape interval for GPU metrics job.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
           additionalScrapeJobs:
             description: |
               Additional scrape jobs to add to the configuration.

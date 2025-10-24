@@ -30,6 +30,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/gator"
+	"github.com/cloudzero/cloudzero-agent/app/domain/transform"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 )
 
@@ -113,6 +114,9 @@ type MetricCollector struct {
 	// filter implements metric classification logic to separate cost from observability metrics.
 	filter *MetricFilter
 
+	// transformer handles vendor-specific metric transformation (e.g., DCGM GPU metrics).
+	transformer types.MetricTransformer
+
 	// clock provides time abstraction for testing and consistent timestamping.
 	clock types.TimeProvider
 
@@ -144,6 +148,7 @@ func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore 
 		costStore:          costStore,
 		observabilityStore: observabilityStore,
 		filter:             filter,
+		transformer:        transform.NewMetricTransformer(),
 		clock:              clock,
 		cancelFunc:         cancel,
 	}
@@ -190,6 +195,27 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 		}
 	default:
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
+	}
+
+	// Log complete DCGM metrics for debugging GPU transformation
+	for _, metric := range metrics {
+		if strings.HasPrefix(metric.MetricName, "DCGM_FI_DEV_") {
+			log.Ctx(ctx).Info().
+				Str("metricName", metric.MetricName).
+				Str("value", metric.Value).
+				Str("nodeName", metric.NodeName).
+				Interface("labels", metric.Labels).
+				Time("timestamp", metric.TimeStamp).
+				Str("clusterName", metric.ClusterName).
+				Str("cloudAccountID", metric.CloudAccountID).
+				Msg("DCGM metric received")
+		}
+	}
+
+	// Transform vendor-specific metrics (e.g., DCGM GPU metrics) before filtering
+	metrics, err = d.transformer.Transform(ctx, metrics)
+	if err != nil {
+		return stats, fmt.Errorf("failed to transform metrics: %w", err)
 	}
 
 	costMetrics, observabilityMetrics, droppedMetrics := d.filter.Filter(metrics)

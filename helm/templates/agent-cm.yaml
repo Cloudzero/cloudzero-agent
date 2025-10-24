@@ -40,6 +40,10 @@ data:
       {{- include "cloudzero-agent.prometheus.scrapePrometheus" . | nindent 6 }}
       {{- end }}
 
+      {{- if .Values.prometheusConfig.scrapeJobs.gpu.enabled }}
+      {{- include "cloudzero-agent.prometheus.scrapeGPU" . | nindent 6 }}
+      {{- end }}{{/* End GPU scrape job */}}
+
       {{- if .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs -}}
       {{ toYaml .Values.prometheusConfig.scrapeJobs.additionalScrapeJobs | toString | nindent 6 }}
       {{- end }}{{/* End additional scrape jobs */}}
