@@ -12,6 +12,10 @@ spec:
     matchLabels:
       {{- include "cloudzero-agent.server.matchLabels" . | nindent 6 }}
   replicas: 1
+  {{- if .Values.server.persistentVolume }}
+  strategy:
+    type: Recreate
+  {{- end }}
   template:
     metadata:
       {{- include "cloudzero-agent.generateAnnotations" .Values.server.podAnnotations | nindent 8 }}
