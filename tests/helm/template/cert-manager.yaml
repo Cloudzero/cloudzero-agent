@@ -3177,7 +3177,6 @@ webhooks:
         name: cz-agent-cloudzero-agent-webhook-server-svc
         path: /validate
         port: 443
-      caBundle: ''
     admissionReviewVersions: ["v1"]
     sideEffects: None
     timeoutSeconds: 1
