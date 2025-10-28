@@ -82,8 +82,6 @@ webhooks:
         port: {{ $.Values.insightsController.service.port }}
       {{- if (gt (len $.Values.insightsController.tls.caBundle) 1 ) }}
       caBundle: {{ $.Values.insightsController.tls.caBundle | quote }}
-      {{- else if $.Values.insightsController.tls.useCertManager }}
-      caBundle: ''
       {{- end }}
     admissionReviewVersions: ["v1"]
     sideEffects: None

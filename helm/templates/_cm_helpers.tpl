@@ -557,9 +557,9 @@ and optimization recommendations across Kubernetes workloads.
   # Scrape metrics from cAdvisor.
   relabel_configs:
 
-    # Replace the value of __address__ labels with "kubernetes.default.svc:443"
+    # Replace the value of __address__ labels with "kubernetes.default.svc.cluster.local:443"
     - target_label: __address__
-      replacement: kubernetes.default.svc:443
+      replacement: kubernetes.default.svc.cluster.local:443
 
     # Replace the value of __metrics_path__ in __meta_kubernetes_node_name with
     # "/api/v1/nodes/$1/proxy/metrics/cadvisor"
