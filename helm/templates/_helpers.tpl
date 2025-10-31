@@ -623,9 +623,22 @@ Note that jobConfigID *only* exists so we can avoid lots of commit noise when
 regenerating the manifests in tests/helm/template. It should never be set in
 production, as it will break important functionality to automatically reload
 things when a ConfigMap changes.
+
+When used as a subchart, .global values from the parent chart are excluded
+from the checksum.
 */}}
 {{- define "cloudzero-agent.configurationChecksum" -}}
-{{ .Values.jobConfigID | default (. | toYaml | sha256sum) }}
+{{- if .Values.jobConfigID -}}
+{{ .Values.jobConfigID }}
+{{- else -}}
+{{- $cleanValues := omit .Values "global" -}}
+{{- if $cleanValues.kubeStateMetrics -}}
+  {{- $cleanKSM := omit $cleanValues.kubeStateMetrics "global" -}}
+  {{- $_ := set $cleanValues "kubeStateMetrics" $cleanKSM -}}
+{{- end -}}
+{{- $context := dict "Chart" .Chart "Release" .Release "Values" $cleanValues "Capabilities" .Capabilities -}}
+{{ $context | toYaml | sha256sum }}
+{{- end -}}
 {{- end -}}
 
 {{/*
