@@ -31,7 +31,7 @@ require (
 	github.com/aws/aws-lambda-go v1.47.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/ccoveille/go-safecast v1.7.0 // indirect
+	github.com/ccoveille/go-safecast v1.8.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
