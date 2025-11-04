@@ -207,7 +207,7 @@ Create the name of the service account to use for the server component
 Create the name of the service account to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.serviceAccountName" -}}
-{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{- $defaultName := include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "init-cert") -}}
 {{ .Values.initCertJob.rbac.serviceAccountName | default $defaultName }}
 {{- end -}}
 
@@ -215,7 +215,7 @@ Create the name of the service account to use for the init-cert Job
 Create the name of the ClusterRole to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.clusterRoleName" -}}
-{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{- $defaultName := include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "init-cert") -}}
 {{ .Values.initCertJob.rbac.clusterRoleName | default $defaultName }}
 {{- end -}}
 
@@ -223,7 +223,7 @@ Create the name of the ClusterRole to use for the init-cert Job
 Create the name of the ClusterRoleBinding to use for the init-cert Job
 */}}
 {{- define "cloudzero-agent.initCertJob.clusterRoleBindingName" -}}
-{{- $defaultName := (printf "%s-init-cert" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) | trunc 63 -}}
+{{- $defaultName := include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "init-cert") -}}
 {{ .Values.initCertJob.rbac.clusterRoleBindingName | default $defaultName }}
 {{- end -}}
 
@@ -241,20 +241,95 @@ annotations:
 
 
 {{/*
+Override kube-state-metrics subchart naming to use our centralized naming system.
+
+These templates override the kube-state-metrics.fullname and kube-state-metrics.name
+helpers from the subchart, allowing us to integrate the subchart's resources into
+our naming convention and ensure all names are valid Kubernetes identifiers.
+
+Respects nameOverride from the subchart's own values (not parent chart values).
+When this is called from the subchart, .Values refers to the subchart's values.
+*/}}
+{{- define "kube-state-metrics.fullname" -}}
+{{- $component := .Values.nameOverride | default "ksm" -}}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" $component) -}}
+{{- end -}}
+
+{{/*
+Override kube-state-metrics.name to ensure container names are valid.
+Container names must be lowercase, so we ensure the name is always lowercase.
+*/}}
+{{- define "kube-state-metrics.name" -}}
+{{- .Values.nameOverride | default "ksm" | lower -}}
+{{- end -}}
+
+{{/*
+Centralized Resource Name Generation
+
+This helper generates consistent Kubernetes resource names for all CloudZero Agent components.
+
+Usage: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "server") }}
+
+Parameters:
+  - context: The template context (usually .)
+  - component: Component identifier (e.g., "server", "webhook", "aggregator")
+  - subcomponent: Optional subcomponent identifier (e.g., "svc", "init-cert", "tls")
+  - suffix: Optional variable suffix (e.g., checksums)
+  - override: Optional name override (takes precedence over standard naming)
+
+Naming pattern: {release-name}-cz-{component}[-{subcomponent}][-{suffix}] (truncated to 63 chars)
+*/}}
+{{- define "cloudzero-agent.internal.resourceName" -}}
+  {{- $component := .component -}}
+  {{- $subcomponent := .subcomponent | default "" -}}
+  {{- $suffix := .suffix | default "" -}}
+  {{- $override := .override | default "" -}}
+  {{- if $override -}}
+    {{- $name := $override -}}
+    {{- if $subcomponent -}}
+      {{- $name = printf "%s-%s" $name $subcomponent -}}
+    {{- end -}}
+    {{- if $suffix -}}
+      {{- $name = printf "%s-%s" $name $suffix -}}
+    {{- end -}}
+    {{- $name | trunc 63 | trimSuffix "-" -}}
+  {{- else -}}
+    {{- $czPrefix := "cz" -}}
+    {{- $minSuffixChars := 4 -}}
+    {{- $importantParts := $component -}}
+    {{- if $subcomponent -}}
+      {{- $importantParts = printf "%s-%s" $importantParts $subcomponent -}}
+    {{- end -}}
+    {{- $suffixSpace := 0 -}}
+    {{- if $suffix -}}
+      {{- $actualSuffixLen := len $suffix -}}
+      {{- if gt $actualSuffixLen $minSuffixChars -}}
+        {{- $suffixSpace = add $minSuffixChars 1 -}}
+      {{- else -}}
+        {{- $suffixSpace = add $actualSuffixLen 1 -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $fixedSpace := add (add (len $czPrefix) (len $importantParts)) 2 -}}
+    {{- $requiredLength := add $fixedSpace $suffixSpace -}}
+    {{- $maxReleaseLen := int (sub 63 $requiredLength) -}}
+    {{- $releaseName := .context.Release.Name -}}
+    {{- if gt (len $releaseName) $maxReleaseLen -}}
+      {{- $releaseName = trunc $maxReleaseLen $releaseName | trimSuffix "-" -}}
+    {{- end -}}
+    {{- $name := printf "%s-%s-%s" $releaseName $czPrefix $importantParts -}}
+    {{- if $suffix -}}
+      {{- $name = printf "%s-%s" $name $suffix -}}
+    {{- end -}}
+    {{- $name | trunc 63 | trimSuffix "-" -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
 Create a fully qualified Prometheus server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.server.fullname" -}}
-{{- if .Values.server.fullnameOverride -}}
-{{- .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- printf "%s-%s" .Release.Name .Values.server.name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s-%s" .Release.Name $name "server" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "server" "override" .Values.server.fullnameOverride) -}}
 {{- end -}}
 
 {{/*
@@ -396,28 +471,14 @@ Required metric labels
 The name of the KSM service target that will be used in the scrape config and validator
 */}}
 {{- define "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" -}}
-{{- $name := "" -}}
-{{/* If the user specifies an override for the service name, use it. */}}
 {{- if .Values.kubeStateMetrics.targetOverride -}}
-{{ .Values.kubeStateMetrics.targetOverride }}
-{{/* After the first override option is not used, try to mirror what the KSM chart does internally. */}}
-{{- else if .Values.kubeStateMetrics.fullnameOverride -}}
-{{- $svcName := .Values.kubeStateMetrics.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
-{{/* If KSM is not enabled, and they haven't set a targetOverride, fail the installation */}}
+{{- .Values.kubeStateMetrics.targetOverride -}}
 {{- else if not .Values.kubeStateMetrics.enabled -}}
 {{- required "You must set a targetOverride for kubeStateMetrics" .Values.kubeStateMetrics.targetOverride -}}
-{{/* This is the case where the user has not tried to change the name and are still using the internal KSM */}}
-{{- else if .Values.kubeStateMetrics.enabled -}}
-{{- $name = default .Chart.Name .Values.kubeStateMetrics.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- $svcName := .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
 {{- else -}}
-{{- $svcName := printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{ printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) | trim }}
-{{- end }}
-{{- end }}
+{{- $svcName := include "kube-state-metrics.fullname" (dict "Values" .Values.kubeStateMetrics "Chart" (dict "Name" "kube-state-metrics") "Release" .Release) -}}
+{{- printf "%s.%s.svc.cluster.local:%d" $svcName .Release.Namespace (int .Values.kubeStateMetrics.service.port) -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -546,16 +607,7 @@ Create a fully qualified webhook server name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "cloudzero-agent.insightsController.server.webhookFullname" -}}
-{{- if .Values.server.fullnameOverride -}}
-{{- printf "%s-webhook" .Values.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- printf "%s-%s" .Release.Name .Values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s-%s" .Release.Name $name .Values.insightsController.server.name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook") -}}
 {{- end -}}
 
 {{/*
@@ -569,23 +621,23 @@ Name for the webhook server Deployment
 Name for the webhook server service
 */}}
 {{- define "cloudzero-agent.serviceName" -}}
-{{- printf "%s-svc" (include "cloudzero-agent.insightsController.server.webhookFullname" .) }}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook") -}}
 {{- end }}
 
 {{/*
 Name for the validating webhook configuration resource
 */}}
 {{- define "cloudzero-agent.validatingWebhookConfigName" -}}
-{{- printf "%s-webhook" (include "cloudzero-agent.insightsController.server.webhookFullname" .) }}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook") -}}
 {{- end }}
 
 
 {{ define "cloudzero-agent.webhookConfigMapName" -}}
-{{ .Values.insightsController.ConfigMapNameOverride | default (printf "%s-webhook-configuration" .Release.Name) }}
+{{ .Values.insightsController.ConfigMapNameOverride | default (include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "configuration")) }}
 {{- end}}
 
 {{ define "cloudzero-agent.aggregator.name" -}}
-{{ .Values.aggregator.name | default (printf "%s-aggregator" .Release.Name) }}
+{{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "aggregator" "override" .Values.aggregator.name) }}
 {{- end}}
 
 {{/*
@@ -599,7 +651,7 @@ Mount path for the insights server configuration file
 Name for the issuer resource
 */}}
 {{- define "cloudzero-agent.issuerName" -}}
-{{- printf "%s-issuer" (include "cloudzero-agent.insightsController.server.webhookFullname" .) }}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "issuer") }}
 {{- end }}
 
 {{/*
@@ -698,14 +750,14 @@ annotations:
 Name for the certificate resource
 */}}
 {{- define "cloudzero-agent.certificateName" -}}
-{{- printf "%s-certificate" (include "cloudzero-agent.insightsController.server.webhookFullname" .) }}
+{{- include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "certificate") }}
 {{- end }}
 
 {{/*
 Name for the secret holding TLS certificates
 */}}
 {{- define "cloudzero-agent.tlsSecretName" -}}
-{{- .Values.insightsController.tls.secret.name | default (printf "%s-tls" (include "cloudzero-agent.insightsController.server.webhookFullname" .)) }}
+{{- .Values.insightsController.tls.secret.name | default (include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "webhook" "subcomponent" "tls")) }}
 {{- end }}
 
 {{/*
