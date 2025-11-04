@@ -1013,6 +1013,13 @@ data:
           nodes: false
           pods: true
           statefulsets: false
+      autoscaling:
+        annotations: {}
+        enabled: false
+        maxReplicas: 10
+        minReplicas: 2
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       configurationMountPath: null
       enabled: true
       labels:

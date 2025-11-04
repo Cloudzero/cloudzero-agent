@@ -1260,6 +1260,53 @@ properties:
                   Whether to collect annotations from StatefulSets.
                 type: boolean
                 default: false
+      autoscaling:
+        description: |
+          Horizontal Pod Autoscaler configuration for the webhook server.
+
+          When enabled, automatically scales the webhook server based on CPU and/or
+          memory utilization. This is particularly useful for high-churn clusters
+          with frequent resource creation/modification events.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: |
+              Whether to enable horizontal pod autoscaling for the webhook server.
+            type: boolean
+            default: false
+          annotations:
+            description: |
+              Additional annotations to add to the HPA resource.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          minReplicas:
+            description: |
+              Minimum number of webhook server replicas.
+            type: integer
+            minimum: 1
+            default: 2
+          maxReplicas:
+            description: |
+              Maximum number of webhook server replicas.
+            type: integer
+            minimum: 1
+            default: 10
+          targetCPUUtilizationPercentage:
+            description: |
+              Target CPU utilization percentage for autoscaling.
+              Set to null to disable CPU-based scaling.
+            type: [integer, "null"]
+            minimum: 1
+            maximum: 100
+            default: 80
+          targetMemoryUtilizationPercentage:
+            description: |
+              Target memory utilization percentage for autoscaling.
+              Set to null to disable memory-based scaling.
+            type: [integer, "null"]
+            minimum: 1
+            maximum: 100
+            default: 80
       tls:
         description: |
           Configuration for TLS certificates used by the insights controller.

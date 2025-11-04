@@ -1,0 +1,70 @@
+{{- if and .Values.insightsController.enabled .Values.insightsController.autoscaling.enabled }}
+{{- /*
+Horizontal Pod Autoscaler for CloudZero Webhook Server
+
+This HPA applies when the webhook server (insights controller) is enabled
+(insightsController.enabled=true) and autoscaling is enabled
+(insightsController.autoscaling.enabled=true)
+
+The HPA scales the webhook server deployment based on CPU and/or memory utilization,
+allowing the system to automatically adjust to varying admission webhook load.
+This is particularly useful for high-churn clusters with frequent resource
+creation/modification events.
+*/ -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" (merge
+      (deepCopy .Values.defaults.annotations)
+      .Values.insightsController.autoscaling.annotations
+    ) | nindent 2 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
+  minReplicas: {{ .Values.insightsController.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.insightsController.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.insightsController.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.insightsController.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.insightsController.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.insightsController.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+      selectPolicy: Max
+{{- end }}
