@@ -109,4 +109,4 @@ tests:
       components.agent.podDisruptionBudget.maxUnavailable: 2
     asserts:
       - failedTemplate:
-          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-server cannot have both minAvailable and maxUnavailable set."
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cz-server cannot have both minAvailable and maxUnavailable set."

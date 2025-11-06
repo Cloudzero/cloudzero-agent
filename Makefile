@@ -612,7 +612,7 @@ helm-wait: ## Wait for chart to be ready after installation
 	$(call invoke-kubectl) wait --for=condition=Available \
 		--namespace $(call get-cluster-property,.namespace) \
 		--timeout=5m \
-		$(foreach deployment,cloudzero-agent-server cloudzero-agent-webhook-server aggregator cloudzero-state-metrics,deployment/$(call get-cluster-property,.release)-$(deployment)) \
+		$(foreach deployment,server webhook aggregator ksm,deployment/$(call get-cluster-property,.release)-cz-$(deployment)) \
 		$(NULL)
 
 .PHONY: helm-uninstall

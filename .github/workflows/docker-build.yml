@@ -92,7 +92,7 @@ jobs:
       # No tags  of other metadata at this stage, as we are pushing by digest
       - name: INPUT PREP - Basic Docker metadata for initial build
         id: meta
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
         with:
           # ONLY use the untested registry address for the image until it is tested
           images: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}
@@ -159,7 +159,7 @@ jobs:
     needs: ["docker-build"]
     steps:
       - name: Download digests
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
@@ -190,7 +190,7 @@ jobs:
       # This is the full metadata for the manifest
       - name: INPUT PREP - Extract Docker metadata from git repository
         id: meta
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
         env:
           VALIDATOR_IMAGE_DESCRIPTION: "CloudZero Agent Validator"
         with:

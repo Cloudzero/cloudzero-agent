@@ -8,7 +8,7 @@ tests:
       components.webhookServer.podDisruptionBudget.maxUnavailable: 1
     asserts:
       - failedTemplate:
-          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-webhook-server cannot have both minAvailable and maxUnavailable set."
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cz-webhook cannot have both minAvailable and maxUnavailable set."
 
   - it: should fail when defaults has both values set
     set:
@@ -16,7 +16,7 @@ tests:
       defaults.podDisruptionBudget.maxUnavailable: 1
     asserts:
       - failedTemplate:
-          errorMessage: "Pod disruption budget for RELEASE-NAME-cloudzero-agent-webhook-server cannot have both minAvailable and maxUnavailable set."
+          errorMessage: "Pod disruption budget for RELEASE-NAME-cz-webhook cannot have both minAvailable and maxUnavailable set."
 
   - it: should succeed with only maxUnavailable set
     set:

@@ -468,7 +468,7 @@ This monitoring is essential for:
     # Keep __meta_kubernetes_endpoints_name labels.
     - source_labels: [__meta_kubernetes_endpoints_name]
       action: keep
-      regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
+      regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}
 
   metric_relabel_configs:
     # Metrics to keep.
