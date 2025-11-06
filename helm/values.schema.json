@@ -6091,6 +6091,41 @@
           },
           "type": "object"
         },
+        "autoscaling": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "maxReplicas": {
+              "default": 10,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "minReplicas": {
+              "default": 2,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "targetCPUUtilizationPercentage": {
+              "default": 80,
+              "maximum": 100,
+              "minimum": 1,
+              "type": ["integer", "null"]
+            },
+            "targetMemoryUtilizationPercentage": {
+              "default": 80,
+              "maximum": 100,
+              "minimum": 1,
+              "type": ["integer", "null"]
+            }
+          },
+          "type": "object"
+        },
         "configurationMountPath": {
           "type": ["string", "null"]
         },

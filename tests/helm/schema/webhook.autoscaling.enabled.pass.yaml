@@ -1,0 +1,10 @@
+# Valid: Autoscaling enabled with webhook server
+apiKey: "test-key-123"
+existingSecretName: null
+insightsController:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70

@@ -982,6 +982,29 @@ insightsController:
     # For additional information, see:
     # https://github.com/Cloudzero/cloudzero-charts/blob/develop/charts/cloudzero-agent/docs/istio.md
     suppressIstioAnnotations: false
+  # Horizontal Pod Autoscaler configuration for the webhook server.
+  #
+  # EXPERIMENTAL: These settings are experimental and may move to the
+  # components.webhookServer section or change in a future release.
+  #
+  # When enabled, automatically scales the webhook server based on CPU and/or
+  # memory utilization. This is particularly useful for high-churn clusters
+  # with frequent resource creation/modification events.
+  autoscaling:
+    # Whether to enable horizontal pod autoscaling for the webhook server.
+    enabled: false
+    # Additional annotations to add to the HPA resource.
+    annotations: {}
+    # Minimum number of webhook server replicas.
+    minReplicas: 2
+    # Maximum number of webhook server replicas.
+    maxReplicas: 10
+    # Target CPU utilization percentage for autoscaling.
+    # Set to null to disable CPU-based scaling.
+    targetCPUUtilizationPercentage: 80
+    # Target memory utilization percentage for autoscaling.
+    # Set to null to disable memory-based scaling.
+    targetMemoryUtilizationPercentage: 80
   # Additional volume mounts to add to the insights controller pods.
   volumeMounts: []
   # Additional volumes to add to the insights controller pods.

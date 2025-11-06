@@ -1,0 +1,245 @@
+suite: test Webhook Server HPA configuration
+templates:
+  - templates/webhook-hpa.yaml
+tests:
+  # Test that HPA is not created when webhook is disabled
+  - it: should not create HPA when webhook is disabled
+    set:
+      insightsController.enabled: false
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Test that HPA is not created when autoscaling is disabled
+  - it: should not create HPA when autoscaling is disabled
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Test that HPA is created when both webhook and autoscaling are enabled
+  - it: should create HPA when webhook and autoscaling are enabled
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: apiVersion
+          value: autoscaling/v2
+
+  # Test HPA target reference
+  - it: should target the correct deployment
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.apiVersion
+          value: apps/v1
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-cz-webhook
+
+  # Test replica configuration
+  - it: should use configured min and max replicas
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 15
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 3
+      - equal:
+          path: spec.maxReplicas
+          value: 15
+
+  # Test default replica values
+  - it: should use default replica values
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+
+  # Test CPU metric configuration
+  - it: should configure CPU metric when targetCPUUtilizationPercentage is set
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        targetCPUUtilizationPercentage: 75
+    asserts:
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 75
+
+  # Test memory metric configuration
+  - it: should configure memory metric when targetMemoryUtilizationPercentage is set
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        targetMemoryUtilizationPercentage: 85
+    asserts:
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 85
+
+  # Test default includes both CPU and memory metrics
+  - it: should configure both CPU and memory metrics by default
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 2
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 80
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80
+
+  # Test both metrics
+  - it: should configure both CPU and memory metrics
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        targetCPUUtilizationPercentage: 70
+        targetMemoryUtilizationPercentage: 80
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 2
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80
+
+  # Test no metrics when both are null
+  - it: should not configure metrics when both CPU and memory are null
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        targetCPUUtilizationPercentage: null
+        targetMemoryUtilizationPercentage: null
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 0
+
+  # Test scaling behavior
+  - it: should configure scale-down behavior
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 300
+      - lengthEqual:
+          path: spec.behavior.scaleDown.policies
+          count: 2
+      - equal:
+          path: spec.behavior.scaleDown.selectPolicy
+          value: Min
+
+  # Test scale-up behavior
+  - it: should configure scale-up behavior
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: spec.behavior.scaleUp.stabilizationWindowSeconds
+          value: 0
+      - lengthEqual:
+          path: spec.behavior.scaleUp.policies
+          count: 2
+      - equal:
+          path: spec.behavior.scaleUp.selectPolicy
+          value: Max
+
+  # Test HPA labels
+  - it: should have correct labels including component label
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling.enabled: true
+    asserts:
+      - isNotEmpty:
+          path: metadata.labels
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: webhook-server
+
+  # Test HPA annotations
+  - it: should include custom annotations when provided
+    set:
+      insightsController.enabled: true
+      insightsController.autoscaling:
+        enabled: true
+        annotations:
+          custom.annotation: "test-value"
+    asserts:
+      - equal:
+          path: metadata.annotations["custom.annotation"]
+          value: "test-value"

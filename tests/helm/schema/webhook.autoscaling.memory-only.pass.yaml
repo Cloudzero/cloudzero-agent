@@ -1,0 +1,11 @@
+# Valid: Memory target only (CPU explicitly null)
+apiKey: "test-key-123"
+existingSecretName: null
+insightsController:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: null
+    targetMemoryUtilizationPercentage: 85

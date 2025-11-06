@@ -1,0 +1,11 @@
+# Valid: Both CPU and memory targets configured
+apiKey: "test-key-123"
+existingSecretName: null
+insightsController:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
