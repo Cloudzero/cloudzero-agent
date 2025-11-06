@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![GitHub release](https://img.shields.io/github/release/Cloudzero/cloudzero-charts.svg)
 
-A Helm chart for deploying Prometheus in agent mode to send cluster metrics to the CloudZero platform.
+A Helm chart for deploying a metrics collector to send cluster metrics to the CloudZero platform.
 
 For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-charts/releases). You can also [enable release notifications](#enabling-release-notifications).
 

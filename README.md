@@ -17,7 +17,7 @@ with the CloudZero platform, including:
 
 - _CloudZero Agent Validator_ - the validator application is part of the agent’s pod lifecycle hooks. It is responsible for performing basic validation checks, and notifying the CloudZero platform of installation status changes (initializing, started, stopping). This application runs during the lifecycle hook, then exits when complete.
 
-> Note the **_Agent Component_** (Prometheus in agent mode) which is responsible for executing metrics scrape jobs at various intervals. The Prometheus agent communicates with kube-state-metrics and cAdvisor exporters to collect metrics, then forwards them to the CloudZero Collector via Prometheus remote write protocol. For large scale clusters, the agent runs in "federated mode" (aka DaemonSet mode), where each Prometheus agent instance on each node is responsible for metrics collection on that single node.
+> Note the **_Agent Component_** which is responsible for executing metrics scrape jobs at various intervals. The metrics collector communicates with kube-state-metrics and cAdvisor exporters to collect metrics, then forwards them to the CloudZero Collector via the Prometheus remote write protocol.
 
 ## ⚡ Getting Started With CloudZero Webhook Server
 

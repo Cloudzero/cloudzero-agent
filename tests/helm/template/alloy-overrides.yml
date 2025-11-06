@@ -1,0 +1,11 @@
+# Alloy in standard (non-federated) mode
+cloudAccountId: "1234567890"
+clusterName: "alloy-test-cluster"
+region: "us-east-1"
+apiKey: "alloy-test-api-key"
+jobConfigID: "DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E"
+
+components:
+  agent:
+    mode: clustered
+    replicas: 2

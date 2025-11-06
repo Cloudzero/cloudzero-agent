@@ -1,0 +1,65 @@
+{{- if and (eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered") .Values.alloy.autoscaling.enabled }}
+{{- /*
+Horizontal Pod Autoscaler for Grafana Alloy
+
+This HPA only applies when using Alloy as the metrics collector
+(components.agent.mode="clustered") and autoscaling is enabled
+(alloy.autoscaling.enabled=true)
+
+The HPA scales the Alloy deployment based on CPU and/or memory utilization,
+allowing the system to automatically adjust to varying metric collection load.
+*/ -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "cloudzero-agent.server.fullname" . }}
+  namespace: {{ include "cloudzero-agent.namespace" . }}
+  labels:
+    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "cloudzero-agent.server.fullname" . }}
+  minReplicas: {{ .Values.alloy.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.alloy.autoscaling.maxReplicas }}
+  metrics:
+  {{- if .Values.alloy.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.alloy.autoscaling.targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if .Values.alloy.autoscaling.targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.alloy.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+      selectPolicy: Max
+{{- end }}

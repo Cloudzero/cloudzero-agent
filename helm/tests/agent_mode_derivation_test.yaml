@@ -1,0 +1,190 @@
+suite: test agent mode derivation from legacy properties
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-daemonset.yaml
+  - templates/agent-cm.yaml
+tests:
+  # Test that components.agent.mode takes precedence when set
+  - it: should use components.agent.mode when explicitly set, ignoring legacy properties
+    set:
+      defaults.federation.enabled: true
+      server.agentMode: false
+      components.agent.mode: clustered
+    asserts:
+      # Should render deployment with Alloy (components.agent.mode takes precedence)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should have Alloy container
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+        template: templates/agent-deploy.yaml
+      # Should have Alloy config
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+        template: templates/agent-cm.yaml
+      # Should not render daemonset (clustered mode uses deployment)
+      - hasDocuments:
+          count: 0
+        template: templates/agent-daemonset.yaml
+
+  # Test automatic mode: defaults.federation.enabled=true derives mode as "federated"
+  - it: should derive mode as federated when defaults.federation.enabled is true and mode is null
+    set:
+      defaults.federation.enabled: true
+      components.agent.mode: null
+    asserts:
+      # Should render daemonset (federated mode)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-daemonset.yaml
+      # Should render deployment (AgentDeploy is needed in federated mode)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Verify daemonset is actually there
+      - isKind:
+          of: DaemonSet
+        template: templates/agent-daemonset.yaml
+
+  # Test automatic mode: defaults.federation.enabled=false doesn't enable federated mode
+  - it: should not derive federated mode when defaults.federation.enabled is false and mode is null
+    set:
+      defaults.federation.enabled: false
+      components.agent.mode: null
+    asserts:
+      # Should render deployment (not federated)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should not render daemonset
+      - hasDocuments:
+          count: 0
+        template: templates/agent-daemonset.yaml
+      # Should have agent mode flag (default)
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: --enable-feature=agent
+        template: templates/agent-deploy.yaml
+
+  # Test automatic mode: server.agentMode=false derives mode as "server"
+  - it: should derive mode as server when server.agentMode is false and mode is null
+    set:
+      defaults.federation.enabled: false
+      server.agentMode: false
+      components.agent.mode: null
+    asserts:
+      # Should render deployment
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should NOT have agent mode flag (server mode)
+      - notContains:
+          path: spec.template.spec.containers[1].args
+          content: --enable-feature=agent
+        template: templates/agent-deploy.yaml
+      # Should have Prometheus config (not Alloy)
+      - isNotEmpty:
+          path: data["prometheus.yml"]
+        template: templates/agent-cm.yaml
+
+  # Test automatic mode: default behavior when all legacy properties are null
+  - it: should default to agent mode when mode is null and legacy properties are null
+    set:
+      defaults.federation.enabled: null
+      server.agentMode: null
+      components.agent.mode: null
+    asserts:
+      # Should render deployment
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should have agent mode flag (default)
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: --enable-feature=agent
+        template: templates/agent-deploy.yaml
+      # Should have Prometheus config (not Alloy)
+      - isNotEmpty:
+          path: data["prometheus.yml"]
+        template: templates/agent-cm.yaml
+
+  # Test priority: defaults.federation.enabled takes precedence over server.agentMode in automatic mode
+  - it: should prioritize defaults.federation.enabled over server.agentMode when mode is null
+    set:
+      defaults.federation.enabled: true
+      server.agentMode: false
+      components.agent.mode: null
+    asserts:
+      # Should render daemonset (federated mode takes precedence)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-daemonset.yaml
+      # Should render deployment (AgentDeploy is needed in federated mode)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that components.agent.mode="federated" works
+  - it: should use federated mode when components.agent.mode is set to federated
+    set:
+      components.agent.mode: federated
+    asserts:
+      # Should render daemonset
+      - hasDocuments:
+          count: 1
+        template: templates/agent-daemonset.yaml
+      # Should render deployment (AgentDeploy is needed in federated mode)
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that components.agent.mode="agent" works
+  - it: should use agent mode when components.agent.mode is set to agent
+    set:
+      components.agent.mode: agent
+    asserts:
+      # Should render deployment
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should have agent mode flag
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: --enable-feature=agent
+        template: templates/agent-deploy.yaml
+
+  # Test that components.agent.mode="server" works
+  - it: should use server mode when components.agent.mode is set to server
+    set:
+      components.agent.mode: server
+    asserts:
+      # Should render deployment
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should NOT have agent mode flag
+      - notContains:
+          path: spec.template.spec.containers[1].args
+          content: --enable-feature=agent
+        template: templates/agent-deploy.yaml
+
+  # Test that components.agent.mode="clustered" works
+  - it: should use clustered mode when components.agent.mode is set to clustered
+    set:
+      components.agent.mode: clustered
+    asserts:
+      # Should render deployment with Alloy
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      # Should have Alloy container
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-alloy
+        template: templates/agent-deploy.yaml
+      # Should have Alloy config
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+        template: templates/agent-cm.yaml

@@ -1,4 +1,4 @@
-{{- if .Values.defaults.federation.enabled -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated" -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -111,7 +111,10 @@ spec:
             - --web.enable-lifecycle
             - --web.console.libraries=/etc/prometheus/console_libraries
             - --web.console.templates=/etc/prometheus/consoles
+            {{- /* In federated mode, default to Prometheus agent unless server.agentMode is explicitly false */ -}}
+            {{- if or (not .Values.server) (eq .Values.server.agentMode nil) (eq .Values.server.agentMode true) }}
             - --enable-feature=agent
+            {{- end }}
           ports:
             - containerPort: 9090
           readinessProbe:
@@ -177,4 +180,4 @@ spec:
           {{- else }}
             {}
           {{- end }}
-{{- end }}{{/* End if .Values.defaults.federation.enabled */}}
+{{- end }}{{/* End if federated mode */}}

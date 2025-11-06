@@ -1,0 +1,5 @@
+# Valid: Alloy enabled with standard configuration
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: true

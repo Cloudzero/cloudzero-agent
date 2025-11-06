@@ -4,7 +4,7 @@ templates:
 tests:
   - it: should apply pod and container security contexts to daemonset
     set:
-      defaults.federation.enabled: true
+      components.agent.mode: federated
       defaults.securityContext:
         runAsUser: 65534
         runAsGroup: 65534
@@ -65,7 +65,7 @@ tests:
 
   - it: should use defaults when no component security context is set
     set:
-      defaults.federation.enabled: true
+      components.agent.mode: federated
       defaults.securityContext:
         runAsUser: 50000
         runAsGroup: 60000
@@ -94,7 +94,7 @@ tests:
 
   - it: should only render security context when federation is enabled
     set:
-      defaults.federation.enabled: false
+      components.agent.mode: agent
     asserts:
       - hasDocuments:
           count: 0

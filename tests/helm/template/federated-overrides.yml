@@ -6,6 +6,7 @@ apiKey: "not-a-real-api-key"
 # For testing only, you should never use this property in production.
 jobConfigID: "DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E"
 
-defaults:
-  federation:
-    enabled: true
+# Use new mode property - equivalent to defaults.federation.enabled=true
+components:
+  agent:
+    mode: federated

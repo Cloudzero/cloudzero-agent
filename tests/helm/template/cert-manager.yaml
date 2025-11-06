@@ -170,6 +170,7 @@ metadata:
   namespace: cz-agent
   
 data:
+  # Prometheus YAML configuration
   prometheus.yml: |-
     global:
       scrape_interval: 60s
@@ -777,6 +778,23 @@ data:
             cpu: ""
             memory: ""
       tolerations: []
+    alloy:
+      autoscaling:
+        enabled: true
+        maxReplicas: 10
+        minReplicas: 1
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
+      image:
+        repository: docker.io/grafana/alloy
+        tag: v1.11.3
+      resources:
+        limits:
+          cpu: 100m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 256Mi
     apiKey: '***'
     cloudAccountId: "1234567890"
     clusterName: my-cluster
@@ -795,6 +813,7 @@ data:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.8
+        mode: null
         podDisruptionBudget: null
         reloader:
           resources:
@@ -927,8 +946,6 @@ data:
       dns:
         config: {}
         policy: null
-      federation:
-        enabled: false
       image:
         pullPolicy: IfNotPresent
         pullSecrets: null
@@ -1377,7 +1394,7 @@ data:
     secretAnnotations: {}
     server:
       affinity: {}
-      agentMode: true
+      agentMode: null
       args:
       - --config.file=/etc/config/prometheus/configmaps/prometheus.yml
       - --web.enable-lifecycle
@@ -2278,6 +2295,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
       containers:
+        # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
           image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
           imagePullPolicy: "IfNotPresent"
@@ -2322,6 +2340,7 @@ spec:
             - name: config-volume
               mountPath: /etc/config
               readOnly: true
+        # Prometheus server container
         - name: cloudzero-agent-server
           
           image: "quay.io/prometheus/prometheus:v2.55.1"

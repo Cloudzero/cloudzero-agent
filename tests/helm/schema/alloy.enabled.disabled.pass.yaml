@@ -1,0 +1,5 @@
+# Valid: Alloy explicitly disabled (Prometheus mode)
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: false

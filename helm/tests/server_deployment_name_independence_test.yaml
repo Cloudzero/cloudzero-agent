@@ -1,0 +1,157 @@
+suite: test server deployment name independence
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-hpa.yaml
+  - templates/agent-serviceaccount.yaml
+  - templates/agent-pdb.yaml
+  - templates/agent-pvc.yaml
+  - templates/config-loader-job.yaml
+tests:
+  # Test that HPA references the deployment correctly
+  - it: should have HPA scaleTargetRef.name match deployment name
+    template: templates/agent-hpa.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      alloy.autoscaling.enabled: true
+    asserts:
+      # Verify HPA scaleTargetRef.name matches the actual deployment name
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-cz-server
+  - it: should have deployment name match what HPA references
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      alloy.autoscaling.enabled: true
+    asserts:
+      # Verify deployment name matches what HPA references
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+
+  # Test that deployment references ServiceAccount correctly
+  - it: should have deployment serviceAccountName match ServiceAccount name
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify deployment references the correct ServiceAccount name
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: RELEASE-NAME-cz-server
+  - it: should have ServiceAccount name match what deployment references
+    template: templates/agent-serviceaccount.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify ServiceAccount name matches what deployment references
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+
+  # Test that PDB selector matches deployment pod labels
+  - it: should have PDB selector match deployment pod labels
+    template: templates/agent-pdb.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.agent.podDisruptionBudget:
+        minAvailable: 1
+    asserts:
+      # Verify PDB selector has the expected labels
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: cloudzero-agent
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: server
+  - it: should have deployment pod labels match PDB selector
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.agent.podDisruptionBudget:
+        minAvailable: 1
+    asserts:
+      # Verify deployment pod labels match PDB selector
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: cloudzero-agent
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: server
+
+  # Test that deployment references PVC correctly
+  - it: should have deployment claimName match PVC name
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      server.persistentVolume.enabled: true
+      server.persistentVolume.size: 10Gi
+      server.persistentVolume.accessModes:
+        - ReadWriteOnce
+    asserts:
+      # Verify deployment references the correct PVC name (check all volumes for persistentVolumeClaim)
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-cz-server
+  - it: should have PVC name match what deployment references
+    template: templates/agent-pvc.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      server.persistentVolume.enabled: true
+      server.persistentVolume.size: 10Gi
+      server.persistentVolume.accessModes:
+        - ReadWriteOnce
+    asserts:
+      # Verify PVC name matches what deployment references
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+
+  # Test that config-loader Job references ServiceAccount correctly
+  - it: should have config-loader Job serviceAccountName match ServiceAccount name
+    templates:
+      - templates/config-loader-job.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify config-loader Job references the correct ServiceAccount name
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: RELEASE-NAME-cz-server
+  - it: should have ServiceAccount name match what config-loader Job references
+    templates:
+      - templates/agent-serviceaccount.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      serviceAccount.create: true
+    asserts:
+      # Verify ServiceAccount name matches what config-loader Job references
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server

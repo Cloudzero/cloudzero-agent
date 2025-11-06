@@ -47,16 +47,16 @@ tests:
       components.agent.reloader.securityContext:
         runAsUser: 9999
     asserts:
-      # Test config reloader container (first container when enabled)
+      # Test config reloader container (second container when enabled)
       - equal:
-          path: spec.template.spec.containers[0].securityContext.runAsUser
+          path: spec.template.spec.containers[1].securityContext.runAsUser
           value: 9999
       - equal:
-          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          path: spec.template.spec.containers[1].securityContext.runAsNonRoot
           value: true
       # Container should not have pod-level properties
       - isNull:
-          path: spec.template.spec.containers[0].securityContext.fsGroup
+          path: spec.template.spec.containers[1].securityContext.fsGroup
 
   - it: should fallback to defaults when component security context is not set
     set:

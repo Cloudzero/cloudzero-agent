@@ -1,0 +1,9 @@
+# Valid: Alloy in federated mode with clustering
+apiKey: "test-key-123"
+existingSecretName: null
+clusterName: "production-cluster"
+defaults:
+  federation:
+    enabled: true
+alloy:
+  enabled: true

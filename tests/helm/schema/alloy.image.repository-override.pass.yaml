@@ -1,0 +1,9 @@
+# Valid: Custom Alloy image with registry override
+apiKey: "test-key-123"
+existingSecretName: null
+alloy:
+  enabled: true
+  image:
+    repository: custom.registry.io/custom/alloy
+    tag: v2.0.0
+    pullPolicy: Always
