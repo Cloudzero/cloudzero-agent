@@ -47,4 +47,10 @@ Please refer to the documentation for guidance on `kubeStateMetrics` settings.
 
                       Install Successful
 
-Your data will be available in the CloudZero portal after 48 hours. 
+→ Next Steps:
+
+1. Your cluster should appear within the next hour at:
+   https://app.cloudzero.com/organization/k8s-integration
+   Verify your installation is correct and no errors are reported.
+
+2. Full data will be available after 48 hours.
