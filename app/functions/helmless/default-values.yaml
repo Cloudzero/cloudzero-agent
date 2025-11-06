@@ -483,7 +483,7 @@ kubeStateMetrics:
     sha:
     pullPolicy: IfNotPresent
   imagePullSecrets: []
-  nameOverride: "cloudzero-state-metrics"
+  nameOverride:
   # Resource requirements and limits for kube-state-metrics.
   #
   # https://github.com/kubernetes/kube-state-metrics/blob/main/README.md#scaling-kube-state-metrics:

@@ -26,7 +26,7 @@ tests:
           value: Deployment
       - equal:
           path: spec.template.spec.containers[0].name
-          value: "RELEASE-NAME-aggregator-collector"
+          value: "RELEASE-NAME-cz-aggregator-collector"
       - isNull:
           path: spec.template.spec.containers[0].resources
       # Note: shipper container still has resources because it has default values in legacy path
@@ -160,7 +160,7 @@ tests:
           value: Deployment
       - equal:
           path: spec.template.spec.containers[0].name
-          value: "RELEASE-NAME-aggregator-collector"
+          value: "RELEASE-NAME-cz-aggregator-collector"
       - isNull:
           path: spec.template.spec.containers[0].resources
       # Note: shipper container still has resources because it has default values in legacy path
