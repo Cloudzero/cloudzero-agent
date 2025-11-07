@@ -1,0 +1,4 @@
+components:
+  agent:
+    mode: null
+    replicas: null

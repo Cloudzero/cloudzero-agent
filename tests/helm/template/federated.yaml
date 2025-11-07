@@ -913,7 +913,7 @@ data:
               memory: 64Mi
           securityContext: {}
         podDisruptionBudget: null
-        replicas: 3
+        replicas: null
         securityContext: {}
         shipper:
           resources:
@@ -985,7 +985,7 @@ data:
           schedule: 0 */12 * * *
           securityContext: {}
         podDisruptionBudget: null
-        replicas: 3
+        replicas: null
         resources:
           limits:
             cpu: 500m
@@ -1024,6 +1024,7 @@ data:
         enabled: true
         minAvailable: 1
       priorityClassName: null
+      replicas: 3
       securityContext:
         fsGroup: 65534
         runAsGroup: 65534

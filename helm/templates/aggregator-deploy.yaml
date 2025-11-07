@@ -41,7 +41,7 @@ spec:
   selector:
     matchLabels:
       {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 6 }}
-  replicas: {{ .Values.components.aggregator.replicas }}
+  replicas: {{ .Values.components.aggregator.replicas | default .Values.defaults.replicas }}
   template:
     metadata:
       {{- include "cloudzero-agent.generateAnnotations" (merge
