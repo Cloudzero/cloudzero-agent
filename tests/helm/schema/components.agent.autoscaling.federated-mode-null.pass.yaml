@@ -1,0 +1,9 @@
+# Valid: autoscaling: null with mode: federated should work
+# This test verifies that when mode is federated, autoscaling can be null,
+# which will fall back to defaults.autoscaling.
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: federated
+    autoscaling: null

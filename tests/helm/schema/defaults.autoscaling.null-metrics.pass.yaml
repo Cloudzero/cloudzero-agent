@@ -1,0 +1,14 @@
+# Valid: Defaults autoscaling with null metrics (disabled)
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: null
+    targetMemoryUtilizationPercentage: null
+components:
+  agent:
+    autoscaling:
+      enabled: false

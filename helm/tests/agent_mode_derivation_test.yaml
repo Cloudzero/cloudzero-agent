@@ -5,9 +5,12 @@ templates:
   - templates/agent-cm.yaml
 tests:
   # Test that components.agent.mode takes precedence when set
+  # Note: When defaults.federation.enabled is true, components.agent.mode cannot be
+  # "clustered", "agent", or "server" - it must be null or "federated". So we test
+  # with defaults.federation.enabled set to false to verify mode takes precedence.
   - it: should use components.agent.mode when explicitly set, ignoring legacy properties
     set:
-      defaults.federation.enabled: true
+      defaults.federation.enabled: false
       server.agentMode: false
       components.agent.mode: clustered
     asserts:

@@ -1,0 +1,5 @@
+components:
+  agent:
+    mode: server
+    autoscaling:
+      enabled: true

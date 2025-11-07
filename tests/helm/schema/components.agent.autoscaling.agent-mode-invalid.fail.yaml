@@ -1,6 +1,7 @@
-# Valid: Alloy explicitly disabled (Prometheus agent mode)
 apiKey: "test-key-123"
 existingSecretName: null
 components:
   agent:
     mode: agent
+    autoscaling:
+      enabled: true

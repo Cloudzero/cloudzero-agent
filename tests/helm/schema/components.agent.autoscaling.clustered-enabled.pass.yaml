@@ -1,4 +1,3 @@
-# Valid: CPU target at boundary (1%) in clustered mode
 apiKey: "test-key-123"
 existingSecretName: null
 defaults:
@@ -9,6 +8,5 @@ components:
     mode: clustered
     autoscaling:
       enabled: true
-      minReplicas: 2
+      minReplicas: 1
       maxReplicas: 10
-      targetCPUUtilizationPercentage: 1

@@ -1,9 +1,14 @@
-# Valid: Custom Alloy image with registry override
+# Valid: Custom Alloy image with registry override (clustered mode)
 apiKey: "test-key-123"
 existingSecretName: null
-alloy:
-  enabled: true
-  image:
-    repository: custom.registry.io/custom/alloy
-    tag: v2.0.0
-    pullPolicy: Always
+defaults:
+  federation:
+    enabled: false
+components:
+  agent:
+    mode: clustered
+    clusteredNode:
+      image:
+        repository: custom.registry.io/custom/alloy
+        tag: v2.0.0
+        pullPolicy: Always

@@ -176,6 +176,25 @@ defaults:
   # Default number of replicas to use for components which support multiple
   # replicas. This can be overridden by component-specific replica settings.
   replicas: 3
+  # Default Horizontal Pod Autoscaler configuration to use across components
+  # which support autoscaling. Component-specific autoscaling settings will
+  # fall back to these defaults when not explicitly set.
+  #
+  # For details, see the Kubernetes documentation on HPA:
+  # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  autoscaling:
+    # Whether to enable horizontal pod autoscaling.
+    enabled: false
+    # Minimum number of replicas.
+    minReplicas: 1
+    # Maximum number of replicas.
+    maxReplicas: 10
+    # Target CPU utilization percentage for autoscaling.
+    # Set to null to disable CPU-based scaling.
+    targetCPUUtilizationPercentage: 80
+    # Target memory utilization percentage for autoscaling.
+    # Set to null to disable memory-based scaling.
+    targetMemoryUtilizationPercentage: 80
   # Default security context for all pods. Component-specific security contexts
   # will be merged with these defaults, with component settings taking precedence.
   #
@@ -204,21 +223,33 @@ components:
     # Valid values:
     #
     # - "agent": Deploys Prometheus in agent mode. This is optimized for remote write
-    #   scenarios and uses fewer resources. Equivalent to server.agentMode=true.
+    #   scenarios and uses fewer resources.
     #
     # - "server": Deploys Prometheus in server mode. This is the traditional Prometheus
-    #   deployment with full storage and query capabilities. Equivalent to
-    #   server.agentMode=false.
+    #   deployment with full storage and query capabilities.
     #
     # - "federated": Deploys the agent in federated mode as a DaemonSet with one pod
     #   per node. This is equivalent to setting defaults.federation.enabled to true.
     #   Uses Prometheus in server mode for metrics collection.
     #
-    # - "clustered": Uses Grafana Alloy instead of Prometheus for metrics collection.
-    #   Alloy provides better performance and native horizontal scalability.
+    # - "clustered": EXPERIMENTAL. Uses Grafana Alloy instead of Prometheus for
+    #   metrics collection. Alloy provides better performance and native
+    #   horizontal scalability.
     #
-    # - null means automatic mode (use legacy properties with default to agent).
+    # - null means automatic mode (currently defaults to "agent").
     mode: null
+
+    # Horizontal Pod Autoscaler configuration for the agent.
+    # Only applies when components.agent.mode is set to "clustered".
+    #
+    # HPA enables automatic scaling based on resource utilization,
+    # allowing the deployment to handle varying load efficiently.
+    #
+    # If null, falls back to defaults.autoscaling.
+    #
+    # For details, see the Kubernetes documentation on HPA:
+    # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+    autoscaling: null
 
     podDisruptionBudget:
       # enabled:
@@ -259,6 +290,31 @@ components:
         limits:
           memory: "1024Mi"
           cpu: "1000m"
+
+    # The agent clustered node component configuration.
+    # Only applies when components.agent.mode is set to "clustered".
+    clusteredNode:
+      # Container image configuration for Grafana Alloy.
+      image:
+        repository: docker.io/grafana/alloy
+        tag: v1.11.3
+
+      # Resource requirements and limits for the container.
+      #
+      # Alloy has different performance characteristics than Prometheus and
+      # typically requires less resources for the same workload due to its more
+      # efficient design.
+      #
+      # For details, see the Kubernetes documentation on resource management:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "50m"
+        limits:
+          memory: "512Mi"
+          cpu: "100m"
+
     # The agent configmap reloader component watches for configuration changes.
     reloader:
       # Security context for the agent configmap reloader container.
@@ -435,6 +491,15 @@ components:
   # Settings for the webhook server.
   webhookServer:
     replicas: null
+    # Horizontal Pod Autoscaler configuration for the webhook server.
+    #
+    # When enabled, automatically scales the webhook server based on CPU and/or
+    # memory utilization. This is particularly useful for high-churn clusters
+    # with frequent resource creation/modification events.
+    #
+    # For details, see the Kubernetes documentation on HPA:
+    # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+    autoscaling: null
     podDisruptionBudget:
       # enabled:
       # minAvailable:
@@ -581,52 +646,6 @@ prometheusConfig:
       scrapeInterval: 30s
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
     additionalScrapeJobs: []
-
-# EXPERIMENTAL Grafana Alloy configuration settings. This section contains all
-# Alloy-specific configuration isolated from the main agent configuration during
-# the experimental phase.
-alloy:
-  # Container image configuration for Grafana Alloy.
-  image:
-    repository: docker.io/grafana/alloy
-    tag: v1.11.3
-    # registry: docker.io
-    # pullPolicy: IfNotPresent
-
-  # Horizontal Pod Autoscaler configuration for Alloy.
-  # Only applies when alloy.enabled=true in non-federated mode.
-  #
-  # HPA enables automatic scaling based on resource utilization,
-  # allowing the deployment to handle varying load efficiently.
-  #
-  # For details, see the Kubernetes documentation on HPA:
-  # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-  autoscaling:
-    # Whether to enable horizontal pod autoscaling.
-    enabled: true
-    # Minimum number of replicas.
-    minReplicas: 1
-    # Maximum number of replicas.
-    maxReplicas: 10
-    # Target CPU utilization percentage for autoscaling.
-    targetCPUUtilizationPercentage: 80
-    # Target memory utilization percentage for autoscaling (optional).
-    targetMemoryUtilizationPercentage: 80
-
-  # Resource requirements and limits for the Alloy container.
-  #
-  # Alloy has different performance characteristics than Prometheus and typically
-  # requires less resources for the same workload due to its more efficient design.
-  #
-  # For details, see the Kubernetes documentation on resource management:
-  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "50m"
-    limits:
-      memory: "512Mi"
-      cpu: "100m"
 
 # General server settings that apply to both the prometheus agent server and the webhook server
 serverConfig:
@@ -1050,29 +1069,6 @@ insightsController:
     # For additional information, see:
     # https://github.com/Cloudzero/cloudzero-charts/blob/develop/charts/cloudzero-agent/docs/istio.md
     suppressIstioAnnotations: false
-  # Horizontal Pod Autoscaler configuration for the webhook server.
-  #
-  # EXPERIMENTAL: These settings are experimental and may move to the
-  # components.webhookServer section or change in a future release.
-  #
-  # When enabled, automatically scales the webhook server based on CPU and/or
-  # memory utilization. This is particularly useful for high-churn clusters
-  # with frequent resource creation/modification events.
-  autoscaling:
-    # Whether to enable horizontal pod autoscaling for the webhook server.
-    enabled: false
-    # Additional annotations to add to the HPA resource.
-    annotations: {}
-    # Minimum number of webhook server replicas.
-    minReplicas: 2
-    # Maximum number of webhook server replicas.
-    maxReplicas: 10
-    # Target CPU utilization percentage for autoscaling.
-    # Set to null to disable CPU-based scaling.
-    targetCPUUtilizationPercentage: 80
-    # Target memory utilization percentage for autoscaling.
-    # Set to null to disable memory-based scaling.
-    targetMemoryUtilizationPercentage: 80
   # Additional volume mounts to add to the insights controller pods.
   volumeMounts: []
   # Additional volumes to add to the insights controller pods.

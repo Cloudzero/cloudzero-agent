@@ -13,7 +13,7 @@ tests:
       apiKey: "test-key"
       existingSecretName: null
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
       serviceAccount.create: true
     asserts:
       # Verify HPA name matches expected deployment name (both use same helper)

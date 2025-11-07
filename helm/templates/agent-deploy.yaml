@@ -255,7 +255,7 @@ spec:
             timeoutSeconds: 1
             failureThreshold: 3
             successThreshold: 1
-          {{- include "cloudzero-agent.generateResources" (.Values.alloy.resources | default (dict)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateResources" (.Values.components.agent.clusteredNode.resources | default (dict)) | nindent 10 }}
           {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
               (.Values.defaults.securityContext | default (dict))
               (.Values.components.agent.securityContext | default (dict))

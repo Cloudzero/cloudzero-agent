@@ -1,0 +1,18 @@
+# Valid: Webhook autoscaling null falls back to defaults
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+components:
+  agent:
+    autoscaling:
+      enabled: false
+  webhookServer:
+    autoscaling: null
+insightsController:
+  enabled: true

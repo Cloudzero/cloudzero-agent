@@ -1,0 +1,115 @@
+suite: test autoscaling fallback to defaults
+templates:
+  - agent-hpa.yaml
+tests:
+  - it: should use defaults.autoscaling when components.agent.autoscaling is null
+    set:
+      components.agent.mode: clustered
+      components.agent.autoscaling: null
+      defaults.autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 15
+        targetCPUUtilizationPercentage: 75
+        targetMemoryUtilizationPercentage: 85
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 15
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 75
+      - equal:
+          path: spec.metrics[1].resource.target.averageUtilization
+          value: 85
+
+  - it: should use component values when set, falling back to defaults for missing properties
+    set:
+      components.agent.mode: clustered
+      components.agent.autoscaling:
+        enabled: true
+        minReplicas: 5
+        # maxReplicas, targetCPUUtilizationPercentage, targetMemoryUtilizationPercentage
+        # should fall back to defaults
+      defaults.autoscaling:
+        enabled: false
+        minReplicas: 2
+        maxReplicas: 20
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 90
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 5
+      - equal:
+          path: spec.maxReplicas
+          value: 20
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 80
+      - equal:
+          path: spec.metrics[1].resource.target.averageUtilization
+          value: 90
+
+  - it: should handle null targetCPUUtilizationPercentage in defaults
+    set:
+      components.agent.mode: clustered
+      components.agent.autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+        # targetCPUUtilizationPercentage should fall back to null from defaults
+      defaults.autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: null
+        targetMemoryUtilizationPercentage: 80
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - lengthEqual:
+          path: spec.metrics
+          count: 1
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: memory
+
+  - it: should handle null targetMemoryUtilizationPercentage in defaults
+    set:
+      components.agent.mode: clustered
+      components.agent.autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+        # targetMemoryUtilizationPercentage should fall back to null from defaults
+      defaults.autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 75
+        targetMemoryUtilizationPercentage: null
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - lengthEqual:
+          path: spec.metrics
+          count: 1
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu

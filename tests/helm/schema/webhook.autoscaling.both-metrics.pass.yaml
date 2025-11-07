@@ -1,11 +1,16 @@
 # Valid: Both CPU and memory targets configured
 apiKey: "test-key-123"
 existingSecretName: null
+components:
+  agent:
+    autoscaling:
+      enabled: false
+  webhookServer:
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 75
+      targetMemoryUtilizationPercentage: 80
 insightsController:
   enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 15
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 80

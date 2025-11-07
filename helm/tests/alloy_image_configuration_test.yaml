@@ -3,7 +3,7 @@ templates:
   - templates/agent-deploy.yaml
 tests:
   # Test default Alloy image
-  - it: should use default Alloy image from alloy.image
+  - it: should use default Alloy image from components.agent.clusteredNode.image
     set:
       components.agent.mode: clustered
     asserts:
@@ -15,7 +15,7 @@ tests:
   - it: should use custom Alloy image when specified
     set:
       components.agent.mode: clustered
-      alloy.image:
+      components.agent.clusteredNode.image:
         repository: custom.registry.io/custom/alloy
         tag: v2.0.0
     asserts:
@@ -27,7 +27,9 @@ tests:
   - it: should not affect Prometheus image
     set:
       components.agent.mode: agent
-      alloy.image:
+      components.agent.autoscaling:
+        enabled: false
+      components.agent.clusteredNode.image:
         repository: custom.registry.io/custom/alloy
         tag: v2.0.0
     asserts:
@@ -38,11 +40,11 @@ tests:
           path: spec.template.spec.containers[1].image
           pattern: alloy
 
-  # Test image pull policy from alloy.image
-  - it: should respect pullPolicy from alloy.image
+  # Test image pull policy from components.agent.clusteredNode.image
+  - it: should respect pullPolicy from components.agent.clusteredNode.image
     set:
       components.agent.mode: clustered
-      alloy.image:
+      components.agent.clusteredNode.image:
         pullPolicy: Always
     asserts:
       - equal:

@@ -1,10 +1,15 @@
 # Invalid: CPU target must be <= 100
 apiKey: "test-key-123"
 existingSecretName: null
+components:
+  agent:
+    autoscaling:
+      enabled: false
+  webhookServer:
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 101
 insightsController:
   enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 101

@@ -1,0 +1,12 @@
+# Invalid: autoscaling.enabled: true is not allowed with mode: null (automatic)
+# This test verifies that when mode is null (automatic), autoscaling.enabled must be false
+# or autoscaling must be null.
+#
+# Expected: Should fail with error about autoscaling.enabled, not about mode
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: null
+    autoscaling:
+      enabled: true

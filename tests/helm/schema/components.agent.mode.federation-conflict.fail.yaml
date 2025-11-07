@@ -1,0 +1,11 @@
+# Invalid: defaults.federation.enabled=true conflicts with components.agent.mode=clustered
+# When defaults.federation.enabled is true, components.agent.mode must be null or "federated"
+apiKey: "test-key-123"
+existingSecretName: null
+clusterName: "production-cluster"
+defaults:
+  federation:
+    enabled: true
+components:
+  agent:
+    mode: clustered

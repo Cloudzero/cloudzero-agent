@@ -93,6 +93,53 @@ $defs:
     type: string
     pattern: '^[0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$'
 
+  com.cloudzero.agent.AutoscalingSpec:
+    description: |
+      Horizontal Pod Autoscaler configuration specification.
+
+      This type defines the common structure for autoscaling configuration
+      used across multiple components. Component-specific autoscaling
+      configurations should reference this type and can extend it with
+      additional properties if needed.
+
+      For details, see the Kubernetes documentation on HPA:
+      https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: |
+          Whether to enable horizontal pod autoscaling.
+        type: boolean
+      minReplicas:
+        description: |
+          Minimum number of replicas.
+        type: integer
+        minimum: 1
+      maxReplicas:
+        description: |
+          Maximum number of replicas.
+        type: integer
+        minimum: 1
+      targetCPUUtilizationPercentage:
+        description: |
+          Target CPU utilization percentage for autoscaling.
+          Set to null to disable CPU-based scaling.
+        oneOf:
+          - type: integer
+            minimum: 1
+            maximum: 100
+          - type: "null"
+      targetMemoryUtilizationPercentage:
+        description: |
+          Target memory utilization percentage for autoscaling.
+          Set to null to disable memory-based scaling.
+        oneOf:
+          - type: integer
+            minimum: 1
+            maximum: 100
+          - type: "null"
+
   com.cloudzero.agent.PodDisruptionBudgetSpec:
     description: |
       A Pod Disruption Budget.
@@ -279,6 +326,15 @@ properties:
           replica settings.
         type: integer
         default: 3
+      autoscaling:
+        description: |
+          Default Horizontal Pod Autoscaler configuration to use across
+          components which support autoscaling. Component-specific autoscaling
+          settings will fall back to these defaults when not explicitly set.
+
+          For details, see the Kubernetes documentation on HPA:
+          https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+        $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
       securityContext:
         description: |
           Default security context for all pods. Component-specific security contexts
@@ -319,9 +375,8 @@ properties:
               - "server": Deploys Prometheus in server mode. This is the traditional Prometheus
                 deployment with full storage and query capabilities. Equivalent to
                 server.agentMode=false.
-              - "clustered": Uses Grafana Alloy instead of Prometheus for metrics collection.
-                Alloy provides better performance and native horizontal scalability. Equivalent
-                to alloy.enabled=true.
+              - "clustered": EXPERIMENTAL. Uses Grafana Alloy instead of Prometheus for metrics
+                collection. Alloy provides better performance and native horizontal scalability.
 
               If null (automatic mode), the mode will be derived from legacy configuration:
               - defaults.federation.enabled=true -> "federated"
@@ -355,6 +410,17 @@ properties:
               null, falls back to defaults.replicas.
             oneOf:
               - type: integer
+              - type: "null"
+          autoscaling:
+            description: |
+              Horizontal Pod Autoscaler configuration for the agent.
+              Only applies when components.agent.mode is set to "clustered".
+              If null, falls back to defaults.autoscaling.
+
+              For details, see the Kubernetes documentation on HPA:
+              https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+            oneOf:
+              - $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
               - type: "null"
           tolerations:
             description: |
@@ -397,6 +463,34 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          clusteredNode:
+            description: |
+              The agent clustered node component configuration for Alloy-based metrics collection.
+              Only applies when components.agent.mode is set to "clustered".
+            additionalProperties: false
+            type: object
+            properties:
+              image:
+                description: |
+                  Container image configuration for Grafana Alloy.
+                $ref: "#/$defs/com.cloudzero.agent.image"
+              resources:
+                description: |
+                  Resource requirements and limits for the Alloy container.
+
+                  Alloy has different performance characteristics than Prometheus and typically
+                  requires less resources for the same workload due to its more efficient design.
+
+                  For details, see the Kubernetes documentation on resource management:
+                  https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+              securityContext:
+                description: |
+                  Security context for the Alloy pods.
+
+                  For details, see the Kubernetes documentation on security contexts:
+                  https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+                $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
           reloader:
             description: |
               The agent configmap reloader component watches for configuration changes.
@@ -418,6 +512,15 @@ properties:
                   https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                 $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
         allOf:
+          # Conditional: Replicas constraint for non-clustered modes
+          #
+          # If mode is null (automatic) or one of ["federated", "agent",
+          # "server"], and replicas is explicitly set to an integer, then
+          # replicas must be 1.
+          #
+          # This ensures that non-clustered modes only support single-replica
+          # deployments, which is necessary because Prometheus can't really
+          # scale horizontally automatically.
           - if:
               anyOf:
                 - properties:
@@ -435,6 +538,55 @@ properties:
                 properties:
                   replicas:
                     const: 1
+
+          # Conditional: Autoscaling constraint for non-clustered modes
+          # If mode is null (automatic) or one of ["federated", "agent",
+          #
+          # "server"], then autoscaling must be either:
+          #
+          #   - null (disabled), OR
+          #   - an object with enabled: false (explicitly disabled)
+          #
+          # This prevents enabling autoscaling in non-clustered modes, as
+          # autoscaling only works with the "clustered" mode. Error message will
+          # indicate autoscaling.enabled must be false, not that mode must be
+          # clustered.
+          - if:
+              anyOf:
+                - properties:
+                    mode:
+                      type: "null"
+                - properties:
+                    mode:
+                      enum: ["federated", "agent", "server"]
+            then:
+              properties:
+                autoscaling:
+                  oneOf:
+                    - type: "null"
+                    - allOf:
+                        - $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+                        - properties:
+                            enabled:
+                              const: false
+
+          # Conditional: Autoscaling allowed for clustered mode
+          #
+          # If mode is "clustered", then autoscaling can be:
+          #   - null (will fall back to defaults.autoscaling), OR
+          #   - a valid AutoscalingSpec object (can have enabled: true or false)
+          #
+          # This allows full autoscaling configuration only in clustered mode.
+          - if:
+              properties:
+                mode:
+                  const: clustered
+            then:
+              properties:
+                autoscaling:
+                  oneOf:
+                    - type: "null"
+                    - $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
 
       validator:
         description: |
@@ -678,6 +830,20 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          autoscaling:
+            description: |
+              Horizontal Pod Autoscaler configuration for the webhook server.
+
+              When enabled, automatically scales the webhook server based on CPU and/or
+              memory utilization. This is particularly useful for high-churn clusters
+              with frequent resource creation/modification events.
+
+              If null, falls back to defaults.autoscaling. Individual properties
+              within this object will also fall back to defaults.autoscaling if not
+              explicitly set.
+            oneOf:
+              - $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+              - type: "null"
           podDisruptionBudget:
             description: |
               Pod disruption budget configuration for the webhook server.
@@ -1006,80 +1172,6 @@ properties:
             items:
               type: object
 
-  alloy:
-    description: |
-      Grafana Alloy configuration settings.
-      This section contains all Alloy-specific configuration isolated from the
-      main agent configuration during the experimental phase.
-    type: object
-    additionalProperties: false
-    properties:
-      enabled:
-        description: |
-          Whether to use Grafana Alloy instead of Prometheus as the metrics
-          collector. When enabled, Alloy replaces Prometheus for metrics collection
-          and forwarding.
-        type: boolean
-        default: false
-      image:
-        description: |
-          Container image configuration for Grafana Alloy.
-        $ref: "#/$defs/com.cloudzero.agent.image"
-      autoscaling:
-        description: |
-          Horizontal Pod Autoscaler configuration for Alloy.
-          Only applies when alloy.enabled=true in non-federated mode.
-
-          For details, see the Kubernetes documentation on HPA:
-          https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-        oneOf:
-          - type: object
-            additionalProperties: false
-            properties:
-              enabled:
-                description: |
-                  Whether to enable horizontal pod autoscaling.
-                type: boolean
-              minReplicas:
-                description: |
-                  Minimum number of replicas.
-                type: integer
-                minimum: 1
-              maxReplicas:
-                description: |
-                  Maximum number of replicas.
-                type: integer
-                minimum: 1
-              targetCPUUtilizationPercentage:
-                description: |
-                  Target CPU utilization percentage for autoscaling.
-                type: integer
-                minimum: 1
-                maximum: 100
-              targetMemoryUtilizationPercentage:
-                description: |
-                  Target memory utilization percentage for autoscaling.
-                type: integer
-                minimum: 1
-                maximum: 100
-          - type: "null"
-      resources:
-        description: |
-          Resource requirements and limits for the Alloy container.
-
-          Alloy has different performance characteristics than Prometheus and typically
-          requires less resources for the same workload due to its more efficient design.
-
-          For details, see the Kubernetes documentation on resource management:
-          https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
-      config:
-        description: |
-          Advanced River configuration options. These settings allow fine-tuning
-          of Alloy's behavior beyond the standard configuration.
-        type: object
-        additionalProperties: true
-
   commonMetaLabels:
     $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
     title: Common labels applied to all resources
@@ -1402,53 +1494,6 @@ properties:
                   Whether to collect annotations from StatefulSets.
                 type: boolean
                 default: false
-      autoscaling:
-        description: |
-          Horizontal Pod Autoscaler configuration for the webhook server.
-
-          When enabled, automatically scales the webhook server based on CPU and/or
-          memory utilization. This is particularly useful for high-churn clusters
-          with frequent resource creation/modification events.
-        type: object
-        additionalProperties: false
-        properties:
-          enabled:
-            description: |
-              Whether to enable horizontal pod autoscaling for the webhook server.
-            type: boolean
-            default: false
-          annotations:
-            description: |
-              Additional annotations to add to the HPA resource.
-            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
-          minReplicas:
-            description: |
-              Minimum number of webhook server replicas.
-            type: integer
-            minimum: 1
-            default: 2
-          maxReplicas:
-            description: |
-              Maximum number of webhook server replicas.
-            type: integer
-            minimum: 1
-            default: 10
-          targetCPUUtilizationPercentage:
-            description: |
-              Target CPU utilization percentage for autoscaling.
-              Set to null to disable CPU-based scaling.
-            type: [integer, "null"]
-            minimum: 1
-            maximum: 100
-            default: 80
-          targetMemoryUtilizationPercentage:
-            description: |
-              Target memory utilization percentage for autoscaling.
-              Set to null to disable memory-based scaling.
-            type: [integer, "null"]
-            minimum: 1
-            maximum: 100
-            default: 80
       tls:
         description: |
           Configuration for TLS certificates used by the insights controller.
@@ -1865,7 +1910,10 @@ properties:
           Annotations to add to the server pods.
         $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
       agentMode:
+        deprecated: true
         description: |
+          This field is deprecated. Please use `components.agent.mode` instead.
+
           Whether the server is running in agent mode.
           If set (true or false) and components.agent.mode is not explicitly set, this is used to derive the mode.
           null means use components.agent.mode.
@@ -2273,3 +2321,46 @@ properties:
       between parent and child charts.
 
       For more information, see: https://helm.sh/docs/chart_template_guide/subcharts_and_globals/
+
+# Root-level conditional validations that span multiple properties
+allOf:
+  # Conditional: Federation mode constraint
+  #
+  # If defaults.federation.enabled is true, then components.agent.mode must be
+  # either null (automatic, which will resolve to "federated") or explicitly
+  # set to "federated". It cannot be set to "clustered", "agent", or "server".
+  #
+  # This ensures that when federation is enabled via defaults.federation.enabled,
+  # the mode is consistent with federation settings. When mode is null and
+  # defaults.federation.enabled is true, the helper function will automatically
+  # resolve the mode to "federated" for template rendering purposes.
+  #
+  # Note: This validation only triggers when defaults.federation.enabled is
+  # explicitly set to true. If it's null or not set, this validation does not apply.
+  - if:
+      allOf:
+        - properties:
+            defaults:
+              type: object
+              required:
+                - federation
+              properties:
+                federation:
+                  type: object
+                  required:
+                    - enabled
+                  properties:
+                    enabled:
+                      const: true
+    then:
+      properties:
+        components:
+          type: object
+          properties:
+            agent:
+              type: object
+              properties:
+                mode:
+                  oneOf:
+                    - type: "null"
+                    - const: federated

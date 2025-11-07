@@ -2,11 +2,11 @@ suite: test Alloy resources configuration
 templates:
   - templates/agent-deploy.yaml
 tests:
-  # Test that Alloy uses alloy.resources when set
-  - it: should use alloy.resources for Alloy container
+  # Test that Alloy uses components.agent.clusteredNode.resources when set
+  - it: should use components.agent.clusteredNode.resources for Alloy container
     set:
       components.agent.mode: clustered
-      alloy.resources:
+      components.agent.clusteredNode.resources:
         requests:
           memory: "256Mi"
           cpu: "100m"
@@ -31,7 +31,7 @@ tests:
           value: "500m"
 
   # Test that Alloy uses default values from values.yaml
-  - it: should use default alloy.resources from values.yaml
+  - it: should use default components.agent.clusteredNode.resources from values.yaml
     set:
       components.agent.mode: clustered
     asserts:
@@ -55,6 +55,8 @@ tests:
   - it: should use components.agent.resources for Prometheus container
     set:
       components.agent.mode: agent
+      components.agent.autoscaling:
+        enabled: false
       components.agent.resources:
         requests:
           memory: "512Mi"
@@ -79,11 +81,11 @@ tests:
           path: spec.template.spec.containers[1].resources.limits.cpu
           value: "1000m"
 
-  # Test that custom alloy.resources override defaults
-  - it: should override default alloy.resources with custom values
+  # Test that custom components.agent.clusteredNode.resources override defaults
+  - it: should override default components.agent.clusteredNode.resources with custom values
     set:
       components.agent.mode: clustered
-      alloy.resources:
+      components.agent.clusteredNode.resources:
         requests:
           memory: "128Mi"
           cpu: "50m"
@@ -108,10 +110,12 @@ tests:
           value: "250m"
 
   # Test that Alloy and Prometheus have independent resource configurations
-  - it: should not affect Prometheus resources when alloy.resources is set
+  - it: should not affect Prometheus resources when components.agent.clusteredNode.resources is set
     set:
       components.agent.mode: agent
-      alloy.resources:
+      components.agent.autoscaling:
+        enabled: false
+      components.agent.clusteredNode.resources:
         requests:
           memory: "128Mi"
           cpu: "50m"

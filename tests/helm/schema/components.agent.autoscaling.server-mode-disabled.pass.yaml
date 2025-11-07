@@ -1,0 +1,12 @@
+# Valid: autoscaling.enabled: false with mode: server should work
+# This test verifies that when mode is server, autoscaling.enabled can be false.
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  federation:
+    enabled: false
+components:
+  agent:
+    mode: server
+    autoscaling:
+      enabled: false

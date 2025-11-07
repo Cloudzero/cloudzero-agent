@@ -5,8 +5,10 @@ tests:
   # Test that HPA is not created when webhook is disabled
   - it: should not create HPA when webhook is disabled
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: false
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - hasDocuments:
           count: 0
@@ -14,8 +16,10 @@ tests:
   # Test that HPA is not created when autoscaling is disabled
   - it: should not create HPA when autoscaling is disabled
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: false
+      components.webhookServer.autoscaling.enabled: false
     asserts:
       - hasDocuments:
           count: 0
@@ -23,8 +27,10 @@ tests:
   # Test that HPA is created when both webhook and autoscaling are enabled
   - it: should create HPA when webhook and autoscaling are enabled
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - hasDocuments:
           count: 1
@@ -37,8 +43,10 @@ tests:
   # Test HPA target reference
   - it: should target the correct deployment
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.scaleTargetRef.apiVersion
@@ -53,8 +61,10 @@ tests:
   # Test replica configuration
   - it: should use configured min and max replicas
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling:
+      components.webhookServer.autoscaling:
         enabled: true
         minReplicas: 3
         maxReplicas: 15
@@ -66,11 +76,16 @@ tests:
           path: spec.maxReplicas
           value: 15
 
-  # Test default replica values
-  - it: should use default replica values
+  # Test default replica values (from defaults.autoscaling)
+  - it: should use default replica values from defaults.autoscaling
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
+      defaults.autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
     asserts:
       - equal:
           path: spec.minReplicas
@@ -82,8 +97,10 @@ tests:
   # Test CPU metric configuration
   - it: should configure CPU metric when targetCPUUtilizationPercentage is set
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling:
+      components.webhookServer.autoscaling:
         enabled: true
         targetCPUUtilizationPercentage: 75
     asserts:
@@ -100,8 +117,10 @@ tests:
   # Test memory metric configuration
   - it: should configure memory metric when targetMemoryUtilizationPercentage is set
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling:
+      components.webhookServer.autoscaling:
         enabled: true
         targetMemoryUtilizationPercentage: 85
     asserts:
@@ -118,8 +137,10 @@ tests:
   # Test default includes both CPU and memory metrics
   - it: should configure both CPU and memory metrics by default
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - lengthEqual:
           path: spec.metrics
@@ -146,8 +167,10 @@ tests:
   # Test both metrics
   - it: should configure both CPU and memory metrics
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling:
+      components.webhookServer.autoscaling:
         enabled: true
         targetCPUUtilizationPercentage: 70
         targetMemoryUtilizationPercentage: 80
@@ -177,8 +200,13 @@ tests:
   # Test no metrics when both are null
   - it: should not configure metrics when both CPU and memory are null
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling:
+      defaults.autoscaling:
+        targetCPUUtilizationPercentage: null
+        targetMemoryUtilizationPercentage: null
+      components.webhookServer.autoscaling:
         enabled: true
         targetCPUUtilizationPercentage: null
         targetMemoryUtilizationPercentage: null
@@ -190,8 +218,10 @@ tests:
   # Test scaling behavior
   - it: should configure scale-down behavior
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.behavior.scaleDown.stabilizationWindowSeconds
@@ -206,8 +236,10 @@ tests:
   # Test scale-up behavior
   - it: should configure scale-up behavior
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.behavior.scaleUp.stabilizationWindowSeconds
@@ -222,24 +254,13 @@ tests:
   # Test HPA labels
   - it: should have correct labels including component label
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.enabled: true
-      insightsController.autoscaling.enabled: true
+      components.webhookServer.autoscaling.enabled: true
     asserts:
       - isNotEmpty:
           path: metadata.labels
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
           value: webhook-server
-
-  # Test HPA annotations
-  - it: should include custom annotations when provided
-    set:
-      insightsController.enabled: true
-      insightsController.autoscaling:
-        enabled: true
-        annotations:
-          custom.annotation: "test-value"
-    asserts:
-      - equal:
-          path: metadata.annotations["custom.annotation"]
-          value: "test-value"
