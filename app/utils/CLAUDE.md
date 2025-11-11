@@ -11,6 +11,12 @@ Provides reusable utility functions and types used across all architectural laye
 
 ## Specialized Packages
 
+**Helm Values (`helmless/`):**
+
+- Helm value override extraction and comparison
+- Compares configured values against defaults
+- Used by helmless CLI and cluster-config loader
+
 **Kubernetes (`k8s/`):**
 
 - `services.go` - Service discovery and management

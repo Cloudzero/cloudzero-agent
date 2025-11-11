@@ -15,6 +15,10 @@ The domain layer implements the Application Core in CloudZero Agent's hexagonal 
 - **`webhook/`** - Admission control for resource metadata collection
 - **`k8s/`** - Kubernetes client abstractions and utilities
 
+### Configuration
+
+- **`helmless/`** - Embedded Helm chart default values for override extraction
+
 ### Operational Services
 
 - **`monitor/`** - Certificate management and secret rotation
