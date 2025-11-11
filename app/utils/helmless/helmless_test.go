@@ -19,8 +19,8 @@ func TestExtract(t *testing.T) {
 		validateFunc func(t *testing.T, result []byte)
 	}{
 		{
-			name: "no configured values",
-			config: Config{},
+			name:    "no configured values",
+			config:  Config{},
 			wantErr: true,
 		},
 		{
