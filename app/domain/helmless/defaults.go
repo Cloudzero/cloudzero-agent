@@ -8,6 +8,8 @@ import (
 	_ "embed"
 )
 
+//go:generate make -C ../../.. app/domain/helmless/default-values.yaml
+
 // DefaultValues contains the default Helm chart values, embedded at build time.
 //
 //go:embed default-values.yaml
