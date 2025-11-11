@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2016-2025, CloudZero, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package helmless
 
 import (
 	"os"
@@ -62,18 +62,22 @@ func TestRunWithExtractorIntegration(t *testing.T) {
 	config := Config{
 		ConfiguredValuesPath: configuredFile,
 		DefaultValuesPath:    defaultsFile,
-		OutputPath:           output,
 	}
 
-	err = run(config)
+	outputData, err := Extract(config)
 	require.NoError(t, err)
 
+	// Write output to file
+	_, err = output.Write(outputData)
+	require.NoError(t, err)
+	output.Close()
+
 	// Read and parse output file
-	outputData, err := os.ReadFile(outputFile)
+	readData, err := os.ReadFile(outputFile)
 	require.NoError(t, err)
 
 	var result map[string]interface{}
-	err = yaml.Unmarshal(outputData, &result)
+	err = yaml.Unmarshal(readData, &result)
 	require.NoError(t, err)
 
 	// Verify expected overrides (kubeStateMetrics should be excluded)
@@ -111,18 +115,22 @@ func TestRunWithEmbeddedDefaults(t *testing.T) {
 	config := Config{
 		ConfiguredValuesPath: configuredFile,
 		DefaultValuesPath:    "",
-		OutputPath:           output,
 	}
 
-	err = run(config)
+	outputData, err := Extract(config)
 	require.NoError(t, err)
 
+	// Write output to file
+	_, err = output.Write(outputData)
+	require.NoError(t, err)
+	output.Close()
+
 	// Read and parse output file
-	outputData, err := os.ReadFile(outputFile)
+	readData, err := os.ReadFile(outputFile)
 	require.NoError(t, err)
 
 	var result map[string]interface{}
-	err = yaml.Unmarshal(outputData, &result)
+	err = yaml.Unmarshal(readData, &result)
 	require.NoError(t, err)
 
 	// Should have some overrides (exact content depends on embedded defaults)

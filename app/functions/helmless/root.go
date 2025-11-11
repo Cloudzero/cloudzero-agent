@@ -7,33 +7,13 @@
 // customized in a Helm deployment of the CloudZero Agent for Kubernetes.
 package main
 
-//go:generate make -C ../../.. app/functions/helmless/default-values.yaml
-
 import (
-	_ "embed"
 	"fmt"
 	"os"
 
-	"github.com/cloudzero/cloudzero-agent/app/functions/helmless/overrides"
+	"github.com/cloudzero/cloudzero-agent/app/utils/helmless"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
-
-//go:embed default-values.yaml
-var embeddedDefaultValues []byte
-
-// Config holds the configuration for the Helm overrides extractor.
-type Config struct {
-	// ConfiguredValuesPath is the path to the YAML file containing the
-	// configured values.
-	ConfiguredValuesPath string
-	// DefaultValuesPath is the path to the YAML file containing the default
-	// values from the Helm chart. If empty, embedded defaults will be used.
-	DefaultValuesPath string
-	// OutputPath is the file to write the output to. If nil, output will be
-	// written to stdout.
-	OutputPath *os.File
-}
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
@@ -54,19 +34,35 @@ identifying differences and creating a minimal overrides file.`,
 		if err != nil {
 			return err
 		}
-		config := Config{
+
+		// Configure the helmless extraction
+		config := helmless.Config{
 			ConfiguredValuesPath: configuredPath,
 			DefaultValuesPath:    defaultsPath,
-			OutputPath:           os.Stdout,
 		}
+
+		// Extract the overrides
+		result, err := helmless.Extract(config)
+		if err != nil {
+			return fmt.Errorf("extracting overrides: %w", err)
+		}
+
+		// Write output to file or stdout
+		output := os.Stdout
 		if outputPath != "-" {
-			output, err := os.Create(outputPath)
+			file, err := os.Create(outputPath)
 			if err != nil {
 				return fmt.Errorf("create output file: %w", err)
 			}
-			config.OutputPath = output
+			defer file.Close()
+			output = file
 		}
-		return run(config)
+
+		if _, err := output.Write(result); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
+
+		return nil
 	},
 }
 
@@ -75,74 +71,6 @@ func init() {
 	rootCmd.Flags().StringP("configured", "c", "configured-values.yaml", "Path to configured values YAML file")
 	rootCmd.Flags().StringP("defaults", "d", "", "Path to default values YAML file (uses embedded defaults if not provided)")
 	rootCmd.Flags().StringP("output", "o", "-", "Path to output overrides YAML file")
-}
-
-// run executes the main logic of the program.
-func run(config Config) error {
-	configuredValues, err := readYAML(config.ConfiguredValuesPath)
-	if err != nil {
-		return fmt.Errorf("reading configured values: %w", err)
-	}
-
-	var defaultValues map[string]interface{}
-	if config.DefaultValuesPath == "" {
-		// Use embedded defaults
-		defaultValues, err = readYAMLFromBytes(embeddedDefaultValues)
-		if err != nil {
-			return fmt.Errorf("reading embedded default values: %w", err)
-		}
-	} else {
-		// Use provided defaults file
-		defaultValues, err = readYAML(config.DefaultValuesPath)
-		if err != nil {
-			return fmt.Errorf("reading default values: %w", err)
-		}
-	}
-
-	// Create extractor with kubeStateMetrics excluded (it's an alias for a
-	// subchart, and subchart values aren't included in the output of
-	// `helm show values ./helm`)
-	extractor := overrides.NewExtractor("kubeStateMetrics")
-	overridesMap := extractor.Extract(configuredValues, defaultValues)
-
-	if err := writeYAML(config.OutputPath, overridesMap); err != nil {
-		return fmt.Errorf("writing overrides: %w", err)
-	}
-
-	return nil
-}
-
-// readYAML reads and parses a YAML file into a map.
-func readYAML(path string) (map[string]interface{}, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return readYAMLFromBytes(data)
-}
-
-// readYAMLFromBytes parses YAML data from bytes into a map.
-func readYAMLFromBytes(data []byte) (map[string]interface{}, error) {
-	var result map[string]interface{}
-	if err := yaml.Unmarshal(data, &result); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-// writeYAML writes a value to a file in YAML format.
-func writeYAML(output *os.File, data interface{}) error {
-	encoder := yaml.NewEncoder(output)
-	defer encoder.Close()
-
-	encoder.SetIndent(2)
-	if err := encoder.Encode(data); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func main() {

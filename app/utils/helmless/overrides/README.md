@@ -9,7 +9,7 @@ This package contains the core logic for identifying differences between configu
 ## Usage
 
 ```go
-import "github.com/cloudzero/cloudzero-agent/app/functions/helmless/overrides"
+import "github.com/cloudzero/cloudzero-agent/app/utils/helmless/overrides"
 
 // Create an extractor with optional exclude keys
 extractor := overrides.NewExtractor("kubeStateMetrics", "excludedKey")
