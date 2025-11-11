@@ -298,18 +298,18 @@ GO_BINARIES = \
 
 # Generate embedded defaults for helmless (conditional on REGENERATE setting)
 ifneq ($(REGENERATE),never)
-app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
+app/domain/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
 	$(HELM) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
 
-bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
+bin/cloudzero-helmless: app/domain/helmless/default-values.yaml
 
 # Add the embedded defaults file to dependencies
-$(OUTPUT_BIN_DIR)/cloudzero-helmless: app/functions/helmless/default-values.yaml
+$(OUTPUT_BIN_DIR)/cloudzero-helmless: app/domain/helmless/default-values.yaml
 
-generate: app/functions/helmless/default-values.yaml
+generate: app/domain/helmless/default-values.yaml
 endif
 
-MAINTAINER_CLEANFILES += app/functions/helmless/default-values.yaml
+MAINTAINER_CLEANFILES += app/domain/helmless/default-values.yaml
 
 $(eval $(foreach target,$(GO_COMMAND_PACKAGE_DIRS),$(call generate-go-command-target,$(target))))
 
