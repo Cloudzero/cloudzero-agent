@@ -1,0 +1,204 @@
+suite: test agent replicas validation
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-daemonset.yaml
+tests:
+  # Test that null replicas defaults to 1 for non-clustered modes
+  - it: should default to replicas=1 when replicas is null and mode is null
+    set:
+      components.agent.mode: null
+      components.agent.replicas: null
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=1 is used in deployment for non-clustered modes
+  - it: should use replicas=1 in deployment when mode is null
+    set:
+      components.agent.mode: null
+      components.agent.replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=1 is used in deployment for agent mode
+  - it: should use replicas=1 in deployment when mode is agent
+    set:
+      components.agent.mode: agent
+      components.agent.replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=1 is used in deployment for server mode
+  - it: should use replicas=1 in deployment when mode is server
+    set:
+      components.agent.mode: server
+      components.agent.replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=1 is used in deployment for federated mode
+  - it: should use replicas=1 in deployment when mode is federated
+    set:
+      components.agent.mode: federated
+      components.agent.replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=3 is used in deployment when mode is clustered
+  - it: should use replicas=3 in deployment when mode is clustered
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 3
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=5 is used in deployment when mode is clustered
+  - it: should use replicas=5 in deployment when mode is clustered
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: 5
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 5
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas=1 is used in deployment when mode is clustered
+  - it: should use replicas=1 in deployment when mode is clustered
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas defaults to defaults.replicas (3) when null in clustered mode
+  - it: should default to defaults.replicas (3) when replicas is null in clustered mode
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: null
+      defaults.replicas: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 3
+        template: templates/agent-deploy.yaml
+
+  # Test that replicas uses defaults.replicas when explicitly set to different value
+  - it: should use defaults.replicas when components.agent.replicas is null and defaults.replicas is set
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: null
+      defaults.replicas: 5
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 5
+        template: templates/agent-deploy.yaml
+
+  # Test that components.agent.replicas takes precedence over defaults.replicas
+  - it: should use components.agent.replicas when set, ignoring defaults.replicas
+    set:
+      components.agent.mode: clustered
+      components.agent.replicas: 7
+      defaults.replicas: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 7
+        template: templates/agent-deploy.yaml
+
+  # Test that null replicas defaults to 1 for agent mode
+  - it: should default to replicas=1 when replicas is null and mode is agent
+    set:
+      components.agent.mode: agent
+      components.agent.replicas: null
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that null replicas defaults to 1 for server mode
+  - it: should default to replicas=1 when replicas is null and mode is server
+    set:
+      components.agent.mode: server
+      components.agent.replicas: null
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-deploy.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/agent-deploy.yaml
+
+  # Test that null replicas is allowed for federated mode
+  - it: should allow null replicas when mode is federated
+    set:
+      components.agent.mode: federated
+      components.agent.replicas: null
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/agent-daemonset.yaml
+
+  # Note: Schema validation failures (e.g., replicas=2 with mode=null) are tested
+  # in tests/helm/schema/components.agent.replicas.*.fail.yaml files.
+  # Helm unittest cannot test schema validation failures as they occur before
+  # template rendering.

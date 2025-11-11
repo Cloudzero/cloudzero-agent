@@ -5578,6 +5578,44 @@
       "properties": {
         "agent": {
           "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "mode": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "mode": {
+                        "enum": ["federated", "agent", "server"]
+                      }
+                    }
+                  }
+                ]
+              },
+              "then": {
+                "if": {
+                  "properties": {
+                    "replicas": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "replicas": {
+                      "const": 1
+                    }
+                  }
+                }
+              }
+            }
+          ],
           "properties": {
             "federatedNode": {
               "additionalProperties": false,
@@ -5628,7 +5666,14 @@
               "type": "object"
             },
             "replicas": {
-              "type": "integer"
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
@@ -5914,6 +5959,10 @@
         },
         "priorityClassName": {
           "type": ["string", "null"]
+        },
+        "replicas": {
+          "default": 3,
+          "type": "integer"
         },
         "securityContext": {
           "$ref": "#/$defs/io.k8s.api.core.v1.PodSecurityContext"

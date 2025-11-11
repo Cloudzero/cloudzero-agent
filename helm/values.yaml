@@ -173,6 +173,9 @@ defaults:
   # Note that if you set this, you'll likely also want to set
   # kubeStateMetrics.priorityClassName.
   priorityClassName:
+  # Default number of replicas to use for components which support multiple
+  # replicas. This can be overridden by component-specific replica settings.
+  replicas: 3
   # Default security context for all pods. Component-specific security contexts
   # will be merged with these defaults, with component settings taking precedence.
   #
@@ -385,7 +388,7 @@ components:
   # metrics from the agent, webhook, etc., and sends them to the CloudZero API
   # after some processing.
   aggregator:
-    replicas: 3
+    replicas: null
     podDisruptionBudget:
       # enabled:
       # minAvailable:
@@ -431,7 +434,7 @@ components:
 
   # Settings for the webhook server.
   webhookServer:
-    replicas: 3
+    replicas: null
     podDisruptionBudget:
       # enabled:
       # minAvailable:

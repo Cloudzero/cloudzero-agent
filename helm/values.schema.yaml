@@ -272,6 +272,13 @@ properties:
         type:
           - string
           - "null"
+      replicas:
+        description: |
+          Default number of replicas to use across components which support
+          multiple replicas. This can be overridden by component-specific
+          replica settings.
+        type: integer
+        default: 3
       securityContext:
         description: |
           Default security context for all pods. Component-specific security contexts
@@ -342,7 +349,13 @@ properties:
           replicas:
             description: |
               Number of replicas to deploy.
-            type: integer
+
+              For modes other than "clustered", if set, this must be 1, or left
+              unset. For "clustered" mode, this can be any integer value. If
+              null, falls back to defaults.replicas.
+            oneOf:
+              - type: integer
+              - type: "null"
           tolerations:
             description: |
               Tolerations configuration for the agent pods.
@@ -404,6 +417,24 @@ properties:
                   For details, see the Kubernetes documentation on resource management:
                   https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                 $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        allOf:
+          - if:
+              anyOf:
+                - properties:
+                    mode:
+                      type: "null"
+                - properties:
+                    mode:
+                      enum: ["federated", "agent", "server"]
+            then:
+              if:
+                properties:
+                  replicas:
+                    type: integer
+              then:
+                properties:
+                  replicas:
+                    const: 1
 
       validator:
         description: |
@@ -579,7 +610,8 @@ properties:
               - type: "null"
           replicas:
             description: |
-              Number of replicas to deploy.
+              Number of replicas to deploy. If null, falls back to
+              defaults.replicas.
             additionalProperties: false
             type:
               - integer
@@ -657,7 +689,8 @@ properties:
               - type: "null"
           replicas:
             description: |
-              Number of replicas to deploy.
+              Number of replicas to deploy. If null, falls back to
+              defaults.replicas.
             additionalProperties: false
             type:
               - integer

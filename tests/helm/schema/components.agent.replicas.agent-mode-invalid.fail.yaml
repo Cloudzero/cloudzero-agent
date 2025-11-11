@@ -1,0 +1,4 @@
+components:
+  agent:
+    mode: agent
+    replicas: 2
