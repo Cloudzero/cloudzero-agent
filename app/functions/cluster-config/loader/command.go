@@ -20,6 +20,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 	http "github.com/cloudzero/cloudzero-agent/app/http/client"
 	"github.com/cloudzero/cloudzero-agent/app/types/clusterconfig"
+	"github.com/cloudzero/cloudzero-agent/app/utils/helmless"
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
@@ -183,6 +184,18 @@ func run(c *cli.Context) error {
 		}
 	}
 
+	// extract helm overrides (values that differ from chart defaults)
+	helmlessOutputB64 := ""
+	helmlessResult, err := helmless.Extract(helmless.Config{
+		ConfiguredValuesBytes: valuesRaw,
+	})
+	if err != nil {
+		log.Ctx(c.Context).Err(err).Msg("failed to extract helmless overrides")
+		errs = append(errs, fmt.Sprintf("failed to extract helmless overrides: %v", err))
+	} else {
+		helmlessOutputB64 = base64.StdEncoding.EncodeToString(helmlessResult)
+	}
+
 	// create a new cluster config object
 	cfg := clusterconfig.ClusterConfig{
 		Account:                   accountID,
@@ -199,6 +212,7 @@ func run(c *cli.Context) error {
 		ConfigValidatorBase64:     settingsValidatorB64,
 		ConfigWebhookServerBase64: settingsWebhookB64,
 		ConfigAggregatorBase64:    settingsAggregatorB64,
+		HelmlessOutputBase64:      helmlessOutputB64,
 		Errors:                    errs,
 	}
 
