@@ -19,6 +19,7 @@ message ClusterConfig {
     string config_validator_base64 = 31;
     string config_webhook_server_base64 = 32;
     string config_aggregator_base64 = 33;
+    string helmless_output_base64 = 34;
 
     repeated string errors = 40;
 }
