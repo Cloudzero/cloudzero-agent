@@ -10,7 +10,7 @@ require (
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.10
-	helm.sh/helm/v3 v3.19.0
+	helm.sh/helm/v3 v3.19.2
 	honnef.co/go/tools v0.6.1
 	mvdan.cc/gofumpt v0.9.2
 	sigs.k8s.io/kind v0.30.0
@@ -34,12 +34,12 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
-	github.com/containerd/containerd v1.7.28 // indirect
+	github.com/containerd/containerd v1.7.29 // indirect
 	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v27.5.1+incompatible // indirect
@@ -130,7 +130,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
 	github.com/thoas/go-funk v0.9.3 // indirect
