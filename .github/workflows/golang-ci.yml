@@ -212,6 +212,28 @@ jobs:
       - name: Install dependencies in tests directory
         run: go -C tests mod tidy
 
+      # Free up disk space to prevent Docker overlay FS from exceeding 85%
+      - name: Free up disk space
+        run: |
+          echo "=== Cleaning up disk space ==="
+
+          # Remove Docker images and build cache
+          docker system prune -af --volumes
+
+          # Clean apt cache
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          # Remove large tools we don't need
+          # Android SDK, .NET, etc. are often pre-installed but unused
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+
+          echo ""
+          echo "=== Disk Usage After Cleanup ==="
+          df -h / | tail -1
+
       # smoke tests hit alfa.
       - name: Run smoke tests
         run: GO="$(which go)" sudo -E make test-smoke
