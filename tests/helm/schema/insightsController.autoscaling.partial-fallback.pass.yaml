@@ -1,0 +1,22 @@
+# Valid: Webhook autoscaling with partial values falls back to defaults for missing properties
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+components:
+  agent:
+    autoscaling:
+      enabled: false
+  webhookServer:
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      # maxReplicas, targetCPUUtilizationPercentage, targetMemoryUtilizationPercentage
+      # will fall back to defaults
+insightsController:
+  enabled: true

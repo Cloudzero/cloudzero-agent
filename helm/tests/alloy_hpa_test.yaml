@@ -6,7 +6,8 @@ tests:
   - it: should not create HPA when using Prometheus
     set:
       components.agent.mode: agent
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling:
+        enabled: false
     asserts:
       - hasDocuments:
           count: 0
@@ -15,7 +16,7 @@ tests:
   - it: should not create HPA when autoscaling is disabled
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: false
+      components.agent.autoscaling.enabled: false
     asserts:
       - hasDocuments:
           count: 0
@@ -24,7 +25,8 @@ tests:
   - it: should not create HPA when federation is enabled
     set:
       components.agent.mode: federated
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling:
+        enabled: false
     asserts:
       - hasDocuments:
           count: 0
@@ -33,7 +35,7 @@ tests:
   - it: should create HPA when Alloy is enabled with autoscaling
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       - hasDocuments:
           count: 1
@@ -47,7 +49,7 @@ tests:
   - it: should target the correct deployment
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.scaleTargetRef.apiVersion
@@ -63,7 +65,7 @@ tests:
   - it: should use configured min and max replicas
     set:
       components.agent.mode: clustered
-      alloy.autoscaling:
+      components.agent.autoscaling:
         enabled: true
         minReplicas: 3
         maxReplicas: 20
@@ -79,7 +81,7 @@ tests:
   - it: should configure CPU metric when targetCPUUtilizationPercentage is set
     set:
       components.agent.mode: clustered
-      alloy.autoscaling:
+      components.agent.autoscaling:
         enabled: true
         targetCPUUtilizationPercentage: 75
     asserts:
@@ -97,7 +99,7 @@ tests:
   - it: should configure memory metric when targetMemoryUtilizationPercentage is set
     set:
       components.agent.mode: clustered
-      alloy.autoscaling:
+      components.agent.autoscaling:
         enabled: true
         targetMemoryUtilizationPercentage: 85
     asserts:
@@ -115,7 +117,7 @@ tests:
   - it: should configure both CPU and memory metrics
     set:
       components.agent.mode: clustered
-      alloy.autoscaling:
+      components.agent.autoscaling:
         enabled: true
         targetCPUUtilizationPercentage: 70
         targetMemoryUtilizationPercentage: 80
@@ -146,7 +148,7 @@ tests:
   - it: should configure scale-down behavior
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.behavior.scaleDown.stabilizationWindowSeconds
@@ -162,7 +164,7 @@ tests:
   - it: should configure scale-up behavior
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       - equal:
           path: spec.behavior.scaleUp.stabilizationWindowSeconds
@@ -178,7 +180,7 @@ tests:
   - it: should have correct labels including component label
     set:
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       - isNotEmpty:
           path: metadata.labels
@@ -196,7 +198,7 @@ tests:
       apiKey: "test-key"
       existingSecretName: null
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       # Verify HPA name matches expected deployment name (both use same helper)
       - equal:

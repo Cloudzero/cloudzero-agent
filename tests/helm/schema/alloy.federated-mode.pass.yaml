@@ -1,9 +1,12 @@
-# Valid: Alloy in federated mode with clustering
+# Valid: defaults.federation.enabled=true with components.agent.mode=null
+# When mode is null and defaults.federation.enabled is true, the helper function
+# will automatically resolve the mode to "federated" for template rendering purposes.
 apiKey: "test-key-123"
 existingSecretName: null
 clusterName: "production-cluster"
 defaults:
   federation:
     enabled: true
-alloy:
-  enabled: true
+components:
+  agent:
+    mode: null

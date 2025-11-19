@@ -1,0 +1,67 @@
+suite: test webhook autoscaling fallback to defaults
+templates:
+  - webhook-hpa.yaml
+tests:
+  - it: should use defaults.autoscaling for webhook when components.webhookServer.autoscaling is null
+    set:
+      components.agent.autoscaling:
+        enabled: false
+      insightsController.enabled: true
+      components.webhookServer.autoscaling: null
+      defaults.autoscaling:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 12
+        targetCPUUtilizationPercentage: 70
+        targetMemoryUtilizationPercentage: 80
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 3
+      - equal:
+          path: spec.maxReplicas
+          value: 12
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 70
+      - equal:
+          path: spec.metrics[1].resource.target.averageUtilization
+          value: 80
+
+  - it: should use webhook component values when set, falling back to defaults for missing properties
+    set:
+      components.agent.autoscaling:
+        enabled: false
+      insightsController.enabled: true
+      components.webhookServer.autoscaling:
+        enabled: true
+        minReplicas: 4
+        # maxReplicas, targetCPUUtilizationPercentage, targetMemoryUtilizationPercentage
+        # should fall back to defaults
+      defaults.autoscaling:
+        enabled: false
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 85
+        targetMemoryUtilizationPercentage: 95
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 4
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 85
+      - equal:
+          path: spec.metrics[1].resource.target.averageUtilization
+          value: 95

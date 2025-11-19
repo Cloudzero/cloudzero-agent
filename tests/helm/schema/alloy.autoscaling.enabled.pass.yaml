@@ -1,10 +1,11 @@
-# Valid: Autoscaling enabled with Alloy
+# Valid: Autoscaling enabled with Alloy (clustered mode)
 apiKey: "test-key-123"
 existingSecretName: null
-alloy:
-  enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
+components:
+  agent:
+    mode: clustered
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70

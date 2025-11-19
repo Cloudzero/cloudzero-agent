@@ -1,10 +1,7 @@
-# Invalid: minReplicas must be >= 1
 apiKey: "test-key-123"
 existingSecretName: null
 components:
   agent:
-    mode: clustered
+    mode: federated
     autoscaling:
       enabled: true
-      minReplicas: 0
-      maxReplicas: 10

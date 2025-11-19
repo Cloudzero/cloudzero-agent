@@ -1,5 +1,6 @@
-# Valid: Alloy enabled with standard configuration
+# Valid: Alloy enabled with standard configuration (clustered mode)
 apiKey: "test-key-123"
 existingSecretName: null
-alloy:
-  enabled: true
+components:
+  agent:
+    mode: clustered

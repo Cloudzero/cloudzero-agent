@@ -817,29 +817,24 @@ data:
             cpu: ""
             memory: ""
       tolerations: []
-    alloy:
-      autoscaling:
-        enabled: true
-        maxReplicas: 10
-        minReplicas: 1
-        targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
-      image:
-        repository: docker.io/grafana/alloy
-        tag: v1.11.3
-      resources:
-        limits:
-          cpu: 100m
-          memory: 512Mi
-        requests:
-          cpu: 50m
-          memory: 256Mi
     apiKey: '***'
     cloudAccountId: "1234567890"
     clusterName: alloy-test-cluster
     commonMetaLabels: {}
     components:
       agent:
+        autoscaling: null
+        clusteredNode:
+          image:
+            repository: docker.io/grafana/alloy
+            tag: v1.11.3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
         federatedNode:
           resources:
             limits:
@@ -945,6 +940,7 @@ data:
             cpu: 50m
             memory: 64Mi
       webhookServer:
+        autoscaling: null
         backfill:
           resources:
             limits:
@@ -983,6 +979,12 @@ data:
     defaults:
       affinity: {}
       annotations: {}
+      autoscaling:
+        enabled: false
+        maxReplicas: 10
+        minReplicas: 1
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       dns:
         config: {}
         policy: null
@@ -1071,13 +1073,6 @@ data:
           nodes: false
           pods: true
           statefulsets: false
-      autoscaling:
-        annotations: {}
-        enabled: false
-        maxReplicas: 10
-        minReplicas: 2
-        targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
       configurationMountPath: null
       enabled: true
       labels:
@@ -2777,63 +2772,6 @@ spec:
         - name: cloudzero-api-key
           secret:
             secretName: cz-agent-api-key
----
-# Source: cloudzero-agent/templates/agent-hpa.yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: cz-agent-cz-server
-  namespace: cz-agent
-  labels:
-    app.kubernetes.io/component: server
-    app.kubernetes.io/instance: cz-agent
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
-    app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
-    helm.sh/chart: cloudzero-agent-1.1.0-dev
-  
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: cz-agent-cz-server
-  minReplicas: 1
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 80
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-      - type: Percent
-        value: 50
-        periodSeconds: 60
-      - type: Pods
-        value: 2
-        periodSeconds: 60
-      selectPolicy: Min
-    scaleUp:
-      stabilizationWindowSeconds: 0
-      policies:
-      - type: Percent
-        value: 100
-        periodSeconds: 30
-      - type: Pods
-        value: 4
-        periodSeconds: 30
-      selectPolicy: Max
 ---
 # Source: cloudzero-agent/templates/backfill-job.yaml
 apiVersion: batch/v1

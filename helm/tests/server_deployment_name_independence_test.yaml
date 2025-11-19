@@ -14,7 +14,7 @@ tests:
       apiKey: "test-key"
       existingSecretName: null
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       # Verify HPA scaleTargetRef.name matches the actual deployment name
       - equal:
@@ -26,7 +26,7 @@ tests:
       apiKey: "test-key"
       existingSecretName: null
       components.agent.mode: clustered
-      alloy.autoscaling.enabled: true
+      components.agent.autoscaling.enabled: true
     asserts:
       # Verify deployment name matches what HPA references
       - equal:

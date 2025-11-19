@@ -1,9 +1,14 @@
-# Valid: Custom default Alloy image
+# Valid: Custom default Alloy image (clustered mode)
 apiKey: "test-key-123"
 existingSecretName: null
-alloy:
-  enabled: true
-  image:
-    repository: ghcr.io/grafana/alloy
-    tag: latest
-    pullPolicy: Never
+defaults:
+  federation:
+    enabled: false
+components:
+  agent:
+    mode: clustered
+    clusteredNode:
+      image:
+        repository: ghcr.io/grafana/alloy
+        tag: latest
+        pullPolicy: Never

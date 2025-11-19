@@ -1,10 +1,12 @@
-{{- if and (eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered") .Values.alloy.autoscaling.enabled }}
+{{- $autoscaling := include "cloudzero-agent.getAutoscaling" (dict "component" .Values.components.agent.autoscaling "defaults" .Values.defaults.autoscaling) | fromYaml -}}
+{{- if and (eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered") $autoscaling.enabled }}
 {{- /*
 Horizontal Pod Autoscaler for Grafana Alloy
 
 This HPA only applies when using Alloy as the metrics collector
-(components.agent.mode="clustered") and autoscaling is enabled
-(alloy.autoscaling.enabled=true)
+(components.agent.mode="clustered") and autoscaling is enabled.
+Autoscaling configuration falls back to defaults.autoscaling when
+components.agent.autoscaling is null or when individual properties are not set.
 
 The HPA scales the Alloy deployment based on CPU and/or memory utilization,
 allowing the system to automatically adjust to varying metric collection load.
@@ -22,24 +24,24 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ template "cloudzero-agent.server.fullname" . }}
-  minReplicas: {{ .Values.alloy.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.alloy.autoscaling.maxReplicas }}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
   metrics:
-  {{- if .Values.alloy.autoscaling.targetCPUUtilizationPercentage }}
+  {{- if $autoscaling.targetCPUUtilizationPercentage }}
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: {{ .Values.alloy.autoscaling.targetCPUUtilizationPercentage }}
+        averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
   {{- end }}
-  {{- if .Values.alloy.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- if $autoscaling.targetMemoryUtilizationPercentage }}
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: {{ .Values.alloy.autoscaling.targetMemoryUtilizationPercentage }}
+        averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage }}
   {{- end }}
   behavior:
     scaleDown:

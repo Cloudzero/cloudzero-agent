@@ -1,5 +1,46 @@
 {
   "$defs": {
+    "com.cloudzero.agent.AutoscalingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "maxReplicas": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "minReplicas": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targetCPUUtilizationPercentage": {
+          "oneOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targetMemoryUtilizationPercentage": {
+          "oneOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
     "com.cloudzero.agent.PodDisruptionBudgetSpec": {
       "additionalProperties": false,
       "properties": {
@@ -5320,6 +5361,57 @@
   "$id": "https://raw.githubusercontent.com/Cloudzero/cloudzero-agent/refs/heads/develop/helm/values.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "defaults": {
+                "properties": {
+                  "federation": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    },
+                    "required": ["enabled"],
+                    "type": "object"
+                  }
+                },
+                "required": ["federation"],
+                "type": "object"
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "properties": {
+              "agent": {
+                "properties": {
+                  "mode": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "const": "federated"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
   "anyOf": [
     {
       "required": ["apiKey"]
@@ -5496,60 +5588,6 @@
       },
       "type": "object"
     },
-    "alloy": {
-      "additionalProperties": false,
-      "properties": {
-        "autoscaling": {
-          "oneOf": [
-            {
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "maxReplicas": {
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "minReplicas": {
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "targetCPUUtilizationPercentage": {
-                  "maximum": 100,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "targetMemoryUtilizationPercentage": {
-                  "maximum": 100,
-                  "minimum": 1,
-                  "type": "integer"
-                }
-              },
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "config": {
-          "additionalProperties": true,
-          "type": "object"
-        },
-        "enabled": {
-          "default": false,
-          "type": "boolean"
-        },
-        "image": {
-          "$ref": "#/$defs/com.cloudzero.agent.image"
-        },
-        "resources": {
-          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
-        }
-      },
-      "type": "object"
-    },
     "apiKey": {
       "type": ["string", "null"]
     },
@@ -5614,9 +5652,102 @@
                   }
                 }
               }
+            },
+            {
+              "if": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "mode": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "mode": {
+                        "enum": ["federated", "agent", "server"]
+                      }
+                    }
+                  }
+                ]
+              },
+              "then": {
+                "properties": {
+                  "autoscaling": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "allOf": [
+                          {
+                            "$ref": "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+                          },
+                          {
+                            "properties": {
+                              "enabled": {
+                                "const": false
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "clustered"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "autoscaling": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "properties": {
+            "autoscaling": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "clusteredNode": {
+              "additionalProperties": false,
+              "properties": {
+                "image": {
+                  "$ref": "#/$defs/com.cloudzero.agent.image"
+                },
+                "resources": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+                },
+                "securityContext": {
+                  "$ref": "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+                }
+              },
+              "type": "object"
+            },
             "federatedNode": {
               "additionalProperties": false,
               "properties": {
@@ -5848,6 +5979,16 @@
         "webhookServer": {
           "additionalProperties": false,
           "properties": {
+            "autoscaling": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "backfill": {
               "additionalProperties": false,
               "properties": {
@@ -5925,6 +6066,9 @@
         },
         "annotations": {
           "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+        },
+        "autoscaling": {
+          "$ref": "#/$defs/com.cloudzero.agent.AutoscalingSpec"
         },
         "dns": {
           "$ref": "#/$defs/com.cloudzero.agent.dns"
@@ -6201,41 +6345,6 @@
                 }
               },
               "type": "object"
-            }
-          },
-          "type": "object"
-        },
-        "autoscaling": {
-          "additionalProperties": false,
-          "properties": {
-            "annotations": {
-              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
-            },
-            "enabled": {
-              "default": false,
-              "type": "boolean"
-            },
-            "maxReplicas": {
-              "default": 10,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "minReplicas": {
-              "default": 2,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "targetCPUUtilizationPercentage": {
-              "default": 80,
-              "maximum": 100,
-              "minimum": 1,
-              "type": ["integer", "null"]
-            },
-            "targetMemoryUtilizationPercentage": {
-              "default": 80,
-              "maximum": 100,
-              "minimum": 1,
-              "type": ["integer", "null"]
             }
           },
           "type": "object"
@@ -6657,6 +6766,7 @@
           "$ref": "#/$defs/io.k8s.api.core.v1.Affinity"
         },
         "agentMode": {
+          "deprecated": true,
           "type": ["boolean", "null"]
         },
         "annotations": {

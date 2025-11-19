@@ -1,0 +1,9 @@
+# Valid: autoscaling: null with mode: null (automatic) should work
+# This test verifies that when mode is null (automatic), autoscaling can be null,
+# which will fall back to defaults.autoscaling.
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: null
+    autoscaling: null

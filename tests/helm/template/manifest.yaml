@@ -794,29 +794,24 @@ data:
             cpu: ""
             memory: ""
       tolerations: []
-    alloy:
-      autoscaling:
-        enabled: true
-        maxReplicas: 10
-        minReplicas: 1
-        targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
-      image:
-        repository: docker.io/grafana/alloy
-        tag: v1.11.3
-      resources:
-        limits:
-          cpu: 100m
-          memory: 512Mi
-        requests:
-          cpu: 50m
-          memory: 256Mi
     apiKey: '***'
     cloudAccountId: "1234567890"
     clusterName: my-cluster
     commonMetaLabels: {}
     components:
       agent:
+        autoscaling: null
+        clusteredNode:
+          image:
+            repository: docker.io/grafana/alloy
+            tag: v1.11.3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
         federatedNode:
           resources:
             limits:
@@ -921,6 +916,7 @@ data:
             cpu: 50m
             memory: 64Mi
       webhookServer:
+        autoscaling: null
         backfill:
           resources:
             limits:
@@ -959,6 +955,12 @@ data:
     defaults:
       affinity: {}
       annotations: {}
+      autoscaling:
+        enabled: false
+        maxReplicas: 10
+        minReplicas: 1
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       dns:
         config: {}
         policy: null
@@ -1047,13 +1049,6 @@ data:
           nodes: false
           pods: true
           statefulsets: false
-      autoscaling:
-        annotations: {}
-        enabled: false
-        maxReplicas: 10
-        minReplicas: 2
-        targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
       configurationMountPath: null
       enabled: true
       labels:

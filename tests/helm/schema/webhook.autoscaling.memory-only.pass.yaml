@@ -1,11 +1,16 @@
 # Valid: Memory target only (CPU explicitly null)
 apiKey: "test-key-123"
 existingSecretName: null
+components:
+  agent:
+    autoscaling:
+      enabled: false
+  webhookServer:
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: null
+      targetMemoryUtilizationPercentage: 85
 insightsController:
   enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: null
-    targetMemoryUtilizationPercentage: 85

@@ -1,0 +1,14 @@
+# Valid: Agent autoscaling null falls back to defaults
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+components:
+  agent:
+    mode: clustered
+    autoscaling: null

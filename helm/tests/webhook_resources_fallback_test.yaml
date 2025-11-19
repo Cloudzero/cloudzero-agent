@@ -5,6 +5,8 @@ tests:
   # Test that insightsController.resources takes precedence over components.webhookServer.resources
   - it: should use insightsController.resources when both are set
     set:
+      components.agent.autoscaling:
+        enabled: false
       components.webhookServer:
         resources:
           requests:
@@ -37,6 +39,8 @@ tests:
   # Test that insightsController.resources is used when components.webhookServer.resources is not set
   - it: should use insightsController.resources when components.webhookServer.resources is not set
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.resources:
         requests:
           memory: "128Mi"
@@ -61,6 +65,8 @@ tests:
   # Test that components.webhookServer.resources is used when insightsController.resources is not set
   - it: should use components.webhookServer.resources when insightsController.resources is not set
     set:
+      components.agent.autoscaling:
+        enabled: false
       components.webhookServer:
         resources:
           requests:
@@ -93,6 +99,8 @@ tests:
   # Test that default resources are used when both components and legacy resources are null
   - it: should use default resources when both components and legacy resources are null
     set:
+      components.agent.autoscaling:
+        enabled: false
       insightsController.resources:
         requests:
           memory: ""

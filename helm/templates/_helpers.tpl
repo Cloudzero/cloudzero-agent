@@ -1222,7 +1222,7 @@ Usage in templates: {{ eq (include "cloudzero-agent.Values.components.agent.mode
 Get the metrics collector image configuration
 
 Returns the appropriate image configuration based on which collector is active:
-- For Alloy: Uses alloy.image
+- For Alloy: Uses components.agent.clusteredNode.image
 - For Prometheus: Uses components.prometheus.image
 
 Usage: {{ include "cloudzero-agent.agentCollectorImage" . }}
@@ -1230,9 +1230,34 @@ Returns: Image object with repository, tag, registry, pullPolicy
 */}}
 {{- define "cloudzero-agent.agentCollectorImage" -}}
 {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" -}}
-  {{- toYaml .Values.alloy.image -}}
+  {{- toYaml .Values.components.agent.clusteredNode.image -}}
 {{- else -}}
   {{- toYaml .Values.components.prometheus.image -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get autoscaling configuration with fallback to defaults
+
+Returns the autoscaling configuration, falling back to defaults.autoscaling
+when the component-specific autoscaling is null or when individual properties
+are not set.
+
+Usage: {{ include "cloudzero-agent.getAutoscaling" (dict "component" .Values.components.agent.autoscaling "defaults" .Values.defaults.autoscaling) }}
+Returns: Autoscaling configuration object
+*/}}
+{{- define "cloudzero-agent.getAutoscaling" -}}
+{{- if .component -}}
+  {{- $result := dict
+        "enabled" (hasKey .component "enabled" | ternary .component.enabled .defaults.enabled)
+        "minReplicas" (.component.minReplicas | default .defaults.minReplicas)
+        "maxReplicas" (.component.maxReplicas | default .defaults.maxReplicas)
+        "targetCPUUtilizationPercentage" (.component.targetCPUUtilizationPercentage | default .defaults.targetCPUUtilizationPercentage)
+        "targetMemoryUtilizationPercentage" (.component.targetMemoryUtilizationPercentage | default .defaults.targetMemoryUtilizationPercentage)
+  -}}
+  {{- toYaml $result -}}
+{{- else -}}
+  {{- toYaml .defaults -}}
 {{- end -}}
 {{- end -}}
 

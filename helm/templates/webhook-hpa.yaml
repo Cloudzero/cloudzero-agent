@@ -1,10 +1,12 @@
-{{- if and .Values.insightsController.enabled .Values.insightsController.autoscaling.enabled }}
+{{- $autoscaling := include "cloudzero-agent.getAutoscaling" (dict "component" .Values.components.webhookServer.autoscaling "defaults" .Values.defaults.autoscaling) | fromYaml -}}
+{{- if and .Values.insightsController.enabled $autoscaling.enabled }}
 {{- /*
 Horizontal Pod Autoscaler for CloudZero Webhook Server
 
 This HPA applies when the webhook server (insights controller) is enabled
-(insightsController.enabled=true) and autoscaling is enabled
-(insightsController.autoscaling.enabled=true)
+(insightsController.enabled=true) and autoscaling is enabled.
+Autoscaling configuration falls back to defaults.autoscaling when
+components.webhookServer.autoscaling is null or when individual properties are not set.
 
 The HPA scales the webhook server deployment based on CPU and/or memory utilization,
 allowing the system to automatically adjust to varying admission webhook load.
@@ -20,31 +22,31 @@ metadata:
     {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
   {{- include "cloudzero-agent.generateAnnotations" (merge
       (deepCopy .Values.defaults.annotations)
-      .Values.insightsController.autoscaling.annotations
+      (.Values.insightsController.server.podAnnotations | default (dict))
     ) | nindent 2 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
-  minReplicas: {{ .Values.insightsController.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.insightsController.autoscaling.maxReplicas }}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
   metrics:
-  {{- if .Values.insightsController.autoscaling.targetCPUUtilizationPercentage }}
+  {{- if $autoscaling.targetCPUUtilizationPercentage }}
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: {{ .Values.insightsController.autoscaling.targetCPUUtilizationPercentage }}
+        averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
   {{- end }}
-  {{- if .Values.insightsController.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- if $autoscaling.targetMemoryUtilizationPercentage }}
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: {{ .Values.insightsController.autoscaling.targetMemoryUtilizationPercentage }}
+        averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage }}
   {{- end }}
   behavior:
     scaleDown:

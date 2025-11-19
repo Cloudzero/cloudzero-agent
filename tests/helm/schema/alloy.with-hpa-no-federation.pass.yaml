@@ -1,14 +1,15 @@
-# Valid: Alloy with HPA in non-federated mode
+# Valid: Alloy with HPA in non-federated mode (clustered mode)
 apiKey: "test-key-123"
 existingSecretName: null
 defaults:
   federation:
     enabled: false
-alloy:
-  enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 85
+components:
+  agent:
+    mode: clustered
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 80
+      targetMemoryUtilizationPercentage: 85

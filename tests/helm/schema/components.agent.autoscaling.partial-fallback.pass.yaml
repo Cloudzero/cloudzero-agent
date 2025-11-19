@@ -1,0 +1,20 @@
+# Valid: Agent autoscaling with partial values falls back to defaults for missing properties
+apiKey: "test-key-123"
+existingSecretName: null
+defaults:
+  federation:
+    enabled: false
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+components:
+  agent:
+    mode: clustered
+    autoscaling:
+      enabled: true
+      minReplicas: 5
+      # maxReplicas, targetCPUUtilizationPercentage, targetMemoryUtilizationPercentage
+      # will fall back to defaults
