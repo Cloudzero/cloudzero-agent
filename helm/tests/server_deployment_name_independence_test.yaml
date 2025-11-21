@@ -99,7 +99,7 @@ tests:
     set:
       apiKey: "test-key"
       existingSecretName: null
-      components.agent.mode: clustered
+      components.agent.mode: agent
       server.persistentVolume.enabled: true
       server.persistentVolume.size: 10Gi
       server.persistentVolume.accessModes:
@@ -117,7 +117,7 @@ tests:
     set:
       apiKey: "test-key"
       existingSecretName: null
-      components.agent.mode: clustered
+      components.agent.mode: agent
       server.persistentVolume.enabled: true
       server.persistentVolume.size: 10Gi
       server.persistentVolume.accessModes:

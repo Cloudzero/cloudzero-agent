@@ -1,0 +1,13 @@
+# Invalid: Clustered mode (Alloy) with persistent volume enabled
+# This should fail because persistent volumes are incompatible with clustered mode:
+# - Alloy uses /tmp/alloy for ephemeral storage, not the PV mount
+# - Clustered mode supports multiple replicas, but PVs with ReadWriteOnce can't be shared
+# - The Recreate deployment strategy (required for PV) prevents rolling updates
+apiKey: "test-key"
+existingSecretName: null
+components:
+  agent:
+    mode: clustered
+server:
+  persistentVolume:
+    enabled: true

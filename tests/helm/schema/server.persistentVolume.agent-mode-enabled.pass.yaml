@@ -1,0 +1,11 @@
+# Valid: Agent mode (Prometheus) with persistent volume enabled
+# Persistent volumes work fine with non-clustered modes (agent, server, federated)
+apiKey: "test-key"
+existingSecretName: null
+components:
+  agent:
+    mode: agent
+server:
+  persistentVolume:
+    enabled: true
+    size: 10Gi

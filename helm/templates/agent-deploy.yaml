@@ -16,7 +16,7 @@ spec:
   {{- else }}
   replicas: 1
   {{- end }}
-  {{- if .Values.server.persistentVolume }}
+  {{- if .Values.server.persistentVolume.enabled }}
   strategy:
     type: Recreate
   {{- end }}

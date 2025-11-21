@@ -2364,3 +2364,38 @@ allOf:
                   oneOf:
                     - type: "null"
                     - const: federated
+
+  # Conditional: Persistent volume constraint for clustered mode
+  #
+  # If components.agent.mode is "clustered" (Alloy mode), then
+  # server.persistentVolume.enabled must be false.
+  #
+  # This is necessary because:
+  # 1. Alloy doesn't use the persistent volume mount (it uses /tmp/alloy)
+  # 2. Alloy is designed for horizontal scaling with multiple replicas
+  # 3. Persistent volumes with ReadWriteOnce can't be shared across pods
+  # 4. The Recreate deployment strategy (required for PV) prevents proper
+  #    rolling updates needed for multi-replica deployments
+  #
+  # In clustered/Alloy mode, metrics data should be transient and stored
+  # in remote storage via remote_write configuration.
+  - if:
+      properties:
+        components:
+          type: object
+          properties:
+            agent:
+              type: object
+              properties:
+                mode:
+                  const: clustered
+    then:
+      properties:
+        server:
+          type: object
+          properties:
+            persistentVolume:
+              type: object
+              properties:
+                enabled:
+                  const: false
