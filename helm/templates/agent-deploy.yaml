@@ -16,6 +16,10 @@ spec:
   {{- else }}
   replicas: 1
   {{- end }}
+  {{- if .Values.server.persistentVolume.enabled }}
+  strategy:
+    type: Recreate
+  {{- end }}
   template:
     metadata:
       {{- include "cloudzero-agent.generateAnnotations" .Values.server.podAnnotations | nindent 8 }}

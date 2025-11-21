@@ -1,0 +1,196 @@
+suite: test persistent volume configuration
+templates:
+  - templates/agent-deploy.yaml
+  - templates/agent-pvc.yaml
+tests:
+  # Test persistent volume disabled (default behavior)
+  - it: should use emptyDir when persistentVolume is disabled
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: false
+    asserts:
+      # Verify emptyDir is used for storage
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            emptyDir:
+              sizeLimit: 8Gi
+      # Verify strategy is not set (should use default RollingUpdate)
+      - isNull:
+          path: spec.strategy
+
+  # Test persistent volume enabled - basic configuration
+  - it: should use PVC when persistentVolume is enabled
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: true
+      server.persistentVolume.size: 10Gi
+    asserts:
+      # Verify PVC is used for storage
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-cz-server
+      # Verify strategy is set to Recreate
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      # Verify volume mount is configured
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: cloudzero-agent-storage-volume
+            mountPath: /data
+            subPath: ""
+
+  # Test PVC is created when enabled
+  - it: should create PVC when persistentVolume is enabled
+    template: templates/agent-pvc.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: true
+      server.persistentVolume.size: 15Gi
+      server.persistentVolume.storageClass: "fast-ssd"
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server
+      - equal:
+          path: spec.resources.requests.storage
+          value: 15Gi
+      - equal:
+          path: spec.storageClassName
+          value: fast-ssd
+
+  # Test PVC is not created when disabled
+  - it: should not create PVC when persistentVolume is disabled
+    template: templates/agent-pvc.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Test existing PVC claim name is used
+  - it: should use existingClaim when specified
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: true
+      server.persistentVolume.existingClaim: "my-existing-pvc"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: my-existing-pvc
+      # Should still use Recreate strategy with existing claim
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+
+  # Test custom mount path
+  - it: should use custom mountPath when specified
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      server.persistentVolume.enabled: true
+      server.persistentVolume.mountPath: /custom/data/path
+      server.persistentVolume.subPath: "prometheus-data"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: cloudzero-agent-storage-volume
+            mountPath: /custom/data/path
+            subPath: "prometheus-data"
+
+  # Test persistent volume with agent mode (Prometheus)
+  - it: should work with agent mode (Prometheus with --enable-feature=agent)
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: agent
+      server.persistentVolume.enabled: true
+    asserts:
+      # Verify Prometheus container is used
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+      # Verify strategy is Recreate
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      # Verify PVC is mounted
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-cz-server
+
+  # Test persistent volume with server mode (standard Prometheus)
+  - it: should work with server mode (standard Prometheus)
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: server
+      server.persistentVolume.enabled: true
+    asserts:
+      # Verify Prometheus container is used
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+      # Verify strategy is Recreate
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      # Verify PVC is mounted
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-cz-server
+
+  # Test persistent volume with federated mode
+  - it: should work with federated mode
+    template: templates/agent-deploy.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: federated
+      server.persistentVolume.enabled: true
+    asserts:
+      # Verify Prometheus container is used
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: cloudzero-agent-server
+      # Verify strategy is Recreate
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      # Verify PVC is mounted
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-agent-storage-volume
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-cz-server

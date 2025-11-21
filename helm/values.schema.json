@@ -5410,6 +5410,42 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "components": {
+            "properties": {
+              "agent": {
+                "properties": {
+                  "mode": {
+                    "const": "clustered"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "server": {
+            "properties": {
+              "persistentVolume": {
+                "properties": {
+                  "enabled": {
+                    "const": false
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
     }
   ],
   "anyOf": [

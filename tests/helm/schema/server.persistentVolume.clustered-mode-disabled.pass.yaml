@@ -1,0 +1,10 @@
+# Valid: Clustered mode (Alloy) with persistent volume explicitly disabled
+# Persistent volumes are not supported in clustered mode
+apiKey: "test-key"
+existingSecretName: null
+components:
+  agent:
+    mode: clustered
+server:
+  persistentVolume:
+    enabled: false
