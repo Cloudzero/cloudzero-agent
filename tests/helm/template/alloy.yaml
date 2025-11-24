@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 spec:
@@ -54,7 +54,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 spec:
@@ -77,7 +77,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 spec:
@@ -114,7 +114,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-server
@@ -130,7 +130,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-webhook-init-cert
@@ -146,7 +146,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-api-key
@@ -164,7 +164,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-webhook-tls
@@ -180,7 +180,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-configuration
   namespace: cz-agent
@@ -408,7 +408,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 data:
@@ -760,7 +760,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 data:
@@ -1540,7 +1540,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-validator-configuration
   namespace: cz-agent
@@ -1623,7 +1623,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-cz-webhook-configuration
   namespace: cz-agent
@@ -1853,7 +1853,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   name: cz-agent-cz-server
 rules:
@@ -1945,7 +1945,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
     checkov.io/skip_1: CKV_K8S_155
@@ -2013,7 +2013,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-server
@@ -2036,7 +2036,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-webhook-init-cert
@@ -2088,7 +2088,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cz-agent-cz-aggregator
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
 spec:
@@ -2113,7 +2113,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
@@ -2232,7 +2232,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   
   name: cz-agent-cz-server
@@ -2253,7 +2253,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.55.1
+        app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
     spec:
       
@@ -2504,7 +2504,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cz-agent-cz-aggregator
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   selector:
@@ -2523,7 +2523,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cz-agent-cz-aggregator
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.55.1
+        app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
     spec:
       serviceAccountName: cz-agent-cz-server
@@ -2663,7 +2663,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   # Deployment annotations: Merge defaults with webhook-specific annotations
   # Supports monitoring, backup policies, and operational tooling integration
@@ -2683,7 +2683,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.55.1
+        app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       annotations:
         checksum/config: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
@@ -2786,7 +2786,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
     job-type: backfill
     job-category: onetime
@@ -2866,7 +2866,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   template:
@@ -2879,7 +2879,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.55.1
+        app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       
     spec:
@@ -2990,7 +2990,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   template:
@@ -3003,7 +3003,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudzero-agent
         app.kubernetes.io/part-of: cloudzero-agent
-        app.kubernetes.io/version: v2.55.1
+        app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       
     spec:
@@ -3060,7 +3060,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   template:
@@ -3123,7 +3123,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
     job-type: backfill
     job-category: cronjob
@@ -3207,7 +3207,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudzero-agent
     app.kubernetes.io/part-of: cloudzero-agent
-    app.kubernetes.io/version: v2.55.1
+    app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   # Certificate management annotations for automatic TLS certificate injection
   # When cert-manager is enabled, automatically injects CA bundle for webhook TLS validation

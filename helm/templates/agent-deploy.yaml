@@ -152,8 +152,9 @@ spec:
                   - /checks/app/config/validator.yml
           args:
             {{ toYaml .Values.server.args | nindent 12}}
-            {{- if or (eq (include "cloudzero-agent.Values.components.agent.mode" .) "agent") (eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated") }}
-            - --enable-feature=agent
+            {{- $agentFlag := include "cloudzero-agent.prometheusAgentFlag" . }}
+            {{- if $agentFlag }}
+            - {{ $agentFlag }}
             {{- end }}
             - --log.level={{ .Values.server.logging.level | default "info" }}
           ports:

@@ -1294,3 +1294,34 @@ alloy-config.river
 prometheus.yml
 {{- end -}}
 {{- end -}}
+
+{{/*
+Get the appropriate Prometheus agent mode flag based on version and mode
+
+Determines whether Prometheus should run in agent mode and which flag to use:
+- Prometheus 2.x uses --enable-feature=agent
+- Prometheus 3.x uses --agent
+- Returns empty string if not in agent/federated mode
+
+The cloudzero-agent.Values.components.agent.mode helper already handles all the
+complex mode derivation logic, so we just check if it returns "agent" or "federated"
+and then determine the appropriate version-specific flag.
+
+Uses the same tag fallback chain as image generation:
+server.image.tag -> components.prometheus.image.tag -> Chart.AppVersion
+
+Usage: {{ include "cloudzero-agent.prometheusAgentFlag" . }}
+Returns: string (either "--agent", "--enable-feature=agent", or empty string)
+*/}}
+{{- define "cloudzero-agent.prometheusAgentFlag" -}}
+  {{- $mode := include "cloudzero-agent.Values.components.agent.mode" . -}}
+  {{- if or (eq $mode "agent") (eq $mode "federated") -}}
+    {{- /* Use same fallback chain as image generation: server.image.tag -> components.prometheus.image.tag -> Chart.AppVersion */ -}}
+    {{- $tag := .Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion -}}
+    {{- if hasPrefix "v2." $tag -}}
+      --enable-feature=agent
+    {{- else -}}
+      --agent
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

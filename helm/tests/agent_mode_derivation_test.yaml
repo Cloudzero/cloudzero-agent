@@ -68,7 +68,7 @@ tests:
       # Should have agent mode flag (default)
       - contains:
           path: spec.template.spec.containers[1].args
-          content: --enable-feature=agent
+          content: --agent
         template: templates/agent-deploy.yaml
 
   # Test automatic mode: server.agentMode=false derives mode as "server"
@@ -85,7 +85,7 @@ tests:
       # Should NOT have agent mode flag (server mode)
       - notContains:
           path: spec.template.spec.containers[1].args
-          content: --enable-feature=agent
+          content: --agent
         template: templates/agent-deploy.yaml
       # Should have Prometheus config (not Alloy)
       - isNotEmpty:
@@ -106,7 +106,7 @@ tests:
       # Should have agent mode flag (default)
       - contains:
           path: spec.template.spec.containers[1].args
-          content: --enable-feature=agent
+          content: --agent
         template: templates/agent-deploy.yaml
       # Should have Prometheus config (not Alloy)
       - isNotEmpty:
@@ -155,7 +155,7 @@ tests:
       # Should have agent mode flag
       - contains:
           path: spec.template.spec.containers[1].args
-          content: --enable-feature=agent
+          content: --agent
         template: templates/agent-deploy.yaml
 
   # Test that components.agent.mode="server" works
@@ -170,7 +170,7 @@ tests:
       # Should NOT have agent mode flag
       - notContains:
           path: spec.template.spec.containers[1].args
-          content: --enable-feature=agent
+          content: --agent
         template: templates/agent-deploy.yaml
 
   # Test that components.agent.mode="clustered" works
