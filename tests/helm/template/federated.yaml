@@ -841,6 +841,7 @@ data:
     commonMetaLabels: {}
     components:
       agent:
+        annotations: {}
         autoscaling: null
         clusteredNode:
           image:
@@ -854,6 +855,10 @@ data:
               cpu: 50m
               memory: 256Mi
         federatedNode:
+          annotations: {}
+          labels: {}
+          podAnnotations: {}
+          podLabels: {}
           resources:
             limits:
               cpu: 1000m
@@ -865,8 +870,11 @@ data:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.8
+        labels: {}
         mode: federated
+        podAnnotations: {}
         podDisruptionBudget: null
+        podLabels: {}
         reloader:
           resources:
             limits:
@@ -896,7 +904,9 @@ data:
               memory: 64Mi
           securityContext: {}
         labels: {}
+        podAnnotations: {}
         podDisruptionBudget: null
+        podLabels: {}
         replicas: null
         securityContext: {}
         shipper:
@@ -913,6 +923,8 @@ data:
         configLoader:
           annotations: {}
           labels: {}
+          podAnnotations: {}
+          podLabels: {}
           resources:
             limits:
               cpu: 500m
@@ -924,6 +936,8 @@ data:
         helmless:
           annotations: {}
           labels: {}
+          podAnnotations: {}
+          podLabels: {}
           resources:
             limits:
               cpu: 200m
@@ -935,6 +949,8 @@ data:
         initCert:
           annotations: {}
           labels: {}
+          podAnnotations: {}
+          podLabels: {}
           resources:
             limits:
               cpu: 200m
@@ -965,6 +981,10 @@ data:
         annotations: {}
         autoscaling: null
         backfill:
+          annotations: {}
+          labels: {}
+          podAnnotations: {}
+          podLabels: {}
           resources:
             limits:
               cpu: 500m
@@ -975,7 +995,9 @@ data:
           schedule: 0 */12 * * *
           securityContext: {}
         labels: {}
+        podAnnotations: {}
         podDisruptionBudget: null
+        podLabels: {}
         replicas: null
         resources:
           limits:

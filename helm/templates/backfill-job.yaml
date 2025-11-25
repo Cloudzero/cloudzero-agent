@@ -72,6 +72,7 @@ spec:
                 $.Values.commonMetaLabels
                 $.Values.components.webhookServer.labels
                 $.Values.components.webhookServer.backfill.labels
+                $.Values.components.webhookServer.backfill.podLabels
                 (dict "job-type" "backfill")
                 (dict "job-category" "cronjob")
               )
@@ -82,6 +83,7 @@ spec:
                 $.Values.defaults.annotations
                 $.Values.components.webhookServer.annotations
                 $.Values.components.webhookServer.backfill.annotations
+                $.Values.components.webhookServer.backfill.podAnnotations
               )
             ) | nindent 10 }}
         spec:
@@ -98,6 +100,7 @@ spec:
             $.Values.commonMetaLabels
             $.Values.components.webhookServer.labels
             $.Values.components.webhookServer.backfill.labels
+            $.Values.components.webhookServer.backfill.podLabels
             (dict "job-type" "backfill")
             (dict "job-category" "onetime")
           )
@@ -108,6 +111,7 @@ spec:
             $.Values.defaults.annotations
             $.Values.components.webhookServer.annotations
             $.Values.components.webhookServer.backfill.annotations
+            $.Values.components.webhookServer.backfill.podAnnotations
           )
         ) | nindent 6 }}
     spec:

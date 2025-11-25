@@ -43,6 +43,7 @@ spec:
             .Values.commonMetaLabels
             .Values.components.agent.labels
             .Values.server.podLabels
+            .Values.components.agent.podLabels
           )
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateAnnotations" (dict
@@ -51,6 +52,7 @@ spec:
             .Values.defaults.annotations
             .Values.server.podAnnotations
             .Values.components.agent.annotations
+            .Values.components.agent.podAnnotations
           )
         ) | nindent 6 }}
     spec:

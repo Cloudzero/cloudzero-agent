@@ -1,0 +1,545 @@
+suite: test pod-specific labels and annotations
+templates:
+  - agent-deploy.yaml
+  - agent-daemonset.yaml
+  - aggregator-deploy.yaml
+  - webhook-deploy.yaml
+  - backfill-job.yaml
+  - config-loader-job.yaml
+  - helmless-job.yaml
+  - init-cert-job.yaml
+tests:
+  # ============================================================================
+  # Agent Deployment (components.agent)
+  # ============================================================================
+  - it: agent deployment should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.agent.labels:
+        component-label: "component-value"
+      components.agent.podLabels:
+        pod-label: "pod-value"
+    template: agent-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Deployment metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: agent deployment should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.agent.annotations:
+        component-annotation: "component-value"
+      components.agent.podAnnotations:
+        pod-annotation: "pod-value"
+    template: agent-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Deployment metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  - it: agent deployment podLabels should have highest priority
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      defaults.labels:
+        priority-test: "defaults"
+      commonMetaLabels:
+        priority-test: "common"
+      components.agent.labels:
+        priority-test: "component"
+      components.agent.podLabels:
+        priority-test: "pod"
+    template: agent-deploy.yaml
+    asserts:
+      # Pod template should use pod-level value (highest priority)
+      - equal:
+          path: spec.template.metadata.labels.priority-test
+          value: "pod"
+
+  - it: agent deployment podAnnotations should have highest priority
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      defaults.annotations:
+        priority-test: "defaults"
+      components.agent.annotations:
+        priority-test: "component"
+      components.agent.podAnnotations:
+        priority-test: "pod"
+    template: agent-deploy.yaml
+    asserts:
+      # Pod template should use pod-level value (highest priority)
+      - equal:
+          path: spec.template.metadata.annotations.priority-test
+          value: "pod"
+
+  # ============================================================================
+  # Agent DaemonSet (components.agent.federatedNode)
+  # ============================================================================
+  - it: agent daemonset should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: federated
+      components.agent.federatedNode.labels:
+        federated-label: "federated-value"
+      components.agent.federatedNode.podLabels:
+        pod-label: "pod-value"
+    template: agent-daemonset.yaml
+    asserts:
+      # Pod template should have both federated and pod labels
+      - equal:
+          path: spec.template.metadata.labels.federated-label
+          value: "federated-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # DaemonSet metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.federated-label
+          value: "federated-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: agent daemonset should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: federated
+      components.agent.federatedNode.annotations:
+        federated-annotation: "federated-value"
+      components.agent.federatedNode.podAnnotations:
+        pod-annotation: "pod-value"
+    template: agent-daemonset.yaml
+    asserts:
+      # Pod template should have both federated and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.federated-annotation
+          value: "federated-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # DaemonSet metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.federated-annotation
+          value: "federated-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  - it: agent daemonset podLabels should have highest priority
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: federated
+      components.agent.labels:
+        priority-test: "agent"
+      components.agent.federatedNode.labels:
+        priority-test: "federated"
+      components.agent.federatedNode.podLabels:
+        priority-test: "pod"
+    template: agent-daemonset.yaml
+    asserts:
+      # Pod template should use pod-level value (highest priority)
+      - equal:
+          path: spec.template.metadata.labels.priority-test
+          value: "pod"
+
+  # ============================================================================
+  # Aggregator Deployment (components.aggregator)
+  # ============================================================================
+  - it: aggregator deployment should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.aggregator.labels:
+        component-label: "component-value"
+      components.aggregator.podLabels:
+        pod-label: "pod-value"
+    template: aggregator-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Deployment metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: aggregator deployment should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.aggregator.annotations:
+        component-annotation: "component-value"
+      components.aggregator.podAnnotations:
+        pod-annotation: "pod-value"
+    template: aggregator-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Deployment metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  - it: aggregator deployment podLabels should have highest priority
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      defaults.labels:
+        priority-test: "defaults"
+      components.aggregator.labels:
+        priority-test: "component"
+      components.aggregator.podLabels:
+        priority-test: "pod"
+    template: aggregator-deploy.yaml
+    asserts:
+      # Pod template should use pod-level value (highest priority)
+      - equal:
+          path: spec.template.metadata.labels.priority-test
+          value: "pod"
+
+  # ============================================================================
+  # Webhook Server Deployment (components.webhookServer)
+  # ============================================================================
+  - it: webhook deployment should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.webhookServer.labels:
+        component-label: "component-value"
+      components.webhookServer.podLabels:
+        pod-label: "pod-value"
+    template: webhook-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Deployment metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: webhook deployment should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.webhookServer.annotations:
+        component-annotation: "component-value"
+      components.webhookServer.podAnnotations:
+        pod-annotation: "pod-value"
+    template: webhook-deploy.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Deployment metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  # ============================================================================
+  # Backfill CronJob (components.webhookServer.backfill)
+  # ============================================================================
+  - it: backfill cronjob should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      insightsController.enabled: true
+      components.webhookServer.backfill.labels:
+        component-label: "component-value"
+      components.webhookServer.backfill.podLabels:
+        pod-label: "pod-value"
+    template: backfill-job.yaml
+    documentIndex: 0
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # CronJob metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: backfill job should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      insightsController.enabled: true
+      components.webhookServer.backfill.labels:
+        component-label: "component-value"
+      components.webhookServer.backfill.podLabels:
+        pod-label: "pod-value"
+    template: backfill-job.yaml
+    documentIndex: 1
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Job metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: backfill cronjob should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      insightsController.enabled: true
+      components.webhookServer.backfill.annotations:
+        component-annotation: "component-value"
+      components.webhookServer.backfill.podAnnotations:
+        pod-annotation: "pod-value"
+    template: backfill-job.yaml
+    documentIndex: 0
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # CronJob metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  # ============================================================================
+  # Config Loader Job (components.miscellaneous.configLoader)
+  # ============================================================================
+  - it: config-loader job should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.miscellaneous.configLoader.labels:
+        component-label: "component-value"
+      components.miscellaneous.configLoader.podLabels:
+        pod-label: "pod-value"
+    template: config-loader-job.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Job metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: config-loader job should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.miscellaneous.configLoader.annotations:
+        component-annotation: "component-value"
+      components.miscellaneous.configLoader.podAnnotations:
+        pod-annotation: "pod-value"
+    template: config-loader-job.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Job metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  # ============================================================================
+  # Helmless Job (components.miscellaneous.helmless)
+  # ============================================================================
+  - it: helmless job should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.miscellaneous.helmless.labels:
+        component-label: "component-value"
+      components.miscellaneous.helmless.podLabels:
+        pod-label: "pod-value"
+    template: helmless-job.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Job metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: helmless job should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      components.miscellaneous.helmless.annotations:
+        component-annotation: "component-value"
+      components.miscellaneous.helmless.podAnnotations:
+        pod-annotation: "pod-value"
+    template: helmless-job.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Job metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation
+
+  # ============================================================================
+  # Init Cert Job (components.miscellaneous.initCert)
+  # ============================================================================
+  - it: init-cert job should apply podLabels only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      initCertJob.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      components.miscellaneous.initCert.labels:
+        component-label: "component-value"
+      components.miscellaneous.initCert.podLabels:
+        pod-label: "pod-value"
+    template: init-cert-job.yaml
+    asserts:
+      # Pod template should have both component and pod labels
+      - equal:
+          path: spec.template.metadata.labels.component-label
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.labels.pod-label
+          value: "pod-value"
+      # Job metadata should NOT have pod labels
+      - equal:
+          path: metadata.labels.component-label
+          value: "component-value"
+      - isNull:
+          path: metadata.labels.pod-label
+
+  - it: init-cert job should apply podAnnotations only to pod template
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      initCertJob.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+      components.miscellaneous.initCert.annotations:
+        component-annotation: "component-value"
+      components.miscellaneous.initCert.podAnnotations:
+        pod-annotation: "pod-value"
+    template: init-cert-job.yaml
+    asserts:
+      # Pod template should have both component and pod annotations
+      - equal:
+          path: spec.template.metadata.annotations.component-annotation
+          value: "component-value"
+      - equal:
+          path: spec.template.metadata.annotations.pod-annotation
+          value: "pod-value"
+      # Job metadata should NOT have pod annotations
+      - equal:
+          path: metadata.annotations.component-annotation
+          value: "component-value"
+      - isNull:
+          path: metadata.annotations.pod-annotation

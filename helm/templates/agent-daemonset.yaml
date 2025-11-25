@@ -38,6 +38,7 @@ spec:
             .Values.components.agent.labels
             .Values.components.agent.federatedNode.labels
             .Values.server.podLabels
+            .Values.components.agent.federatedNode.podLabels
           )
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateAnnotations" (dict
@@ -47,6 +48,7 @@ spec:
             .Values.server.podAnnotations
             .Values.components.agent.annotations
             .Values.components.agent.federatedNode.annotations
+            .Values.components.agent.federatedNode.podAnnotations
           )
         ) | nindent 6 }}
     spec:

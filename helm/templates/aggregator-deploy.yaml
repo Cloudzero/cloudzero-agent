@@ -56,6 +56,7 @@ spec:
           "annotations" (list
             .Values.defaults.annotations
             .Values.components.aggregator.annotations
+            .Values.components.aggregator.podAnnotations
             (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
           )
         ) | nindent 6 }}
@@ -66,6 +67,7 @@ spec:
             .Values.defaults.labels
             .Values.commonMetaLabels
             .Values.components.aggregator.labels
+            .Values.components.aggregator.podLabels
           )
         ) | nindent 6 }}
     spec:

@@ -455,6 +455,20 @@ properties:
 
               These annotations are merged with defaults.annotations.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          podLabels:
+            description: |
+              Pod-specific labels that apply ONLY to pod templates.
+
+              These labels are merged after component labels with highest priority
+              and only appear in pod metadata, not on parent resources.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          podAnnotations:
+            description: |
+              Pod-specific annotations that apply ONLY to pod templates.
+
+              These annotations are merged after component annotations and only
+              appear in pod metadata, not on parent resources.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           federatedNode:
             description: |
               The agent federated node component runs on each node for federation.
@@ -472,6 +486,20 @@ properties:
                   Annotations to be added to agent federated node resources.
 
                   These annotations are merged with defaults.annotations and components.agent.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+              podLabels:
+                description: |
+                  Pod-specific labels that apply ONLY to pod templates.
+
+                  These labels are merged after federated node labels with highest priority
+                  and only appear in pod metadata, not on the DaemonSet.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podAnnotations:
+                description: |
+                  Pod-specific annotations that apply ONLY to pod templates.
+
+                  These annotations are merged after federated node annotations and only
+                  appear in pod metadata, not on the DaemonSet.
                 $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
               resources:
                 description: |
@@ -677,6 +705,20 @@ properties:
 
                   These labels are merged with defaults.labels.
                 $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podLabels:
+                description: |
+                  Pod-specific labels that apply ONLY to pod templates.
+
+                  These labels are merged after component labels with highest priority
+                  and only appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podAnnotations:
+                description: |
+                  Pod-specific annotations that apply ONLY to pod templates.
+
+                  These annotations are merged after component annotations and only
+                  appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           helmless:
             description: |
               The helmless job component generates configuration without Helm.
@@ -709,6 +751,20 @@ properties:
 
                   These labels are merged with defaults.labels.
                 $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podLabels:
+                description: |
+                  Pod-specific labels that apply ONLY to pod templates.
+
+                  These labels are merged after component labels with highest priority
+                  and only appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podAnnotations:
+                description: |
+                  Pod-specific annotations that apply ONLY to pod templates.
+
+                  These annotations are merged after component annotations and only
+                  appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           initCert:
             description: |
               The init cert job component initializes TLS certificates.
@@ -741,6 +797,20 @@ properties:
 
                   These annotations are merged with defaults.annotations.
                 $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+              podLabels:
+                description: |
+                  Pod-specific labels that apply ONLY to pod templates.
+
+                  These labels are merged after component labels with highest priority
+                  and only appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podAnnotations:
+                description: |
+                  Pod-specific annotations that apply ONLY to pod templates.
+
+                  These annotations are merged after component annotations and only
+                  appear in pod metadata, not on the Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
 
       aggregator:
         description: |
@@ -762,6 +832,20 @@ properties:
               Annotations to be added to the aggregator deployment.
 
               These annotations are merged with defaults.annotations.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          podLabels:
+            description: |
+              Pod-specific labels that apply ONLY to pod templates.
+
+              These labels are merged after component labels with highest priority
+              and only appear in pod metadata, not on the Deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          podAnnotations:
+            description: |
+              Pod-specific annotations that apply ONLY to pod templates.
+
+              These annotations are merged after component annotations and only
+              appear in pod metadata, not on the Deployment.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           collector:
             description: |
@@ -943,6 +1027,20 @@ properties:
 
               These annotations are merged with defaults.annotations.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+          podLabels:
+            description: |
+              Pod-specific labels that apply ONLY to pod templates.
+
+              These labels are merged after component labels with highest priority
+              and only appear in pod metadata, not on the Deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          podAnnotations:
+            description: |
+              Pod-specific annotations that apply ONLY to pod templates.
+
+              These annotations are merged after component annotations and only
+              appear in pod metadata, not on the Deployment.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           backfill:
             description: |
               The backfill job component performs initial data backfilling.
@@ -965,6 +1063,20 @@ properties:
                   Annotations to be added to backfill job resources.
 
                   These annotations are merged with defaults.annotations and components.webhookServer.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+              podLabels:
+                description: |
+                  Pod-specific labels that apply ONLY to pod templates.
+
+                  These labels are merged after backfill labels with highest priority
+                  and only appear in pod metadata, not on the CronJob or Job.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              podAnnotations:
+                description: |
+                  Pod-specific annotations that apply ONLY to pod templates.
+
+                  These annotations are merged after backfill annotations and only
+                  appear in pod metadata, not on the CronJob or Job.
                 $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
               resources:
                 description: |
