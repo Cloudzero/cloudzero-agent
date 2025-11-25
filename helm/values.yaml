@@ -438,7 +438,7 @@ components:
   prometheusReloader:
     image:
       repository: quay.io/prometheus-operator/prometheus-config-reloader
-      tag: "v0.84.0"
+      tag: "v0.87.0"
 
   # Settings for the aggregator component. This is the piece which accepts
   # metrics from the agent, webhook, etc., and sends them to the CloudZero API
@@ -564,7 +564,7 @@ kubeStateMetrics:
   image:
     registry: registry.k8s.io
     repository: kube-state-metrics/kube-state-metrics
-    tag: "v2.16.0"
+    tag: "v2.17.0"
     sha:
     pullPolicy: IfNotPresent
   imagePullSecrets: []

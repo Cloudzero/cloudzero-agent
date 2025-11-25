@@ -930,7 +930,7 @@ data:
       prometheusReloader:
         image:
           repository: quay.io/prometheus-operator/prometheus-config-reloader
-          tag: v0.84.0
+          tag: v0.87.0
       validator:
         resources:
           limits:
@@ -1214,7 +1214,7 @@ data:
         pullPolicy: IfNotPresent
         registry: registry.k8s.io
         repository: kube-state-metrics/kube-state-metrics
-        tag: v2.16.0
+        tag: v2.17.0
       imagePullSecrets: []
       initContainers: []
       kubeRBACProxy:
@@ -2181,7 +2181,7 @@ spec:
         - --port=8080
         - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
         imagePullPolicy: IfNotPresent
-        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
         ports:
         - containerPort: 8080
           name: "http"
@@ -2333,7 +2333,7 @@ spec:
       containers:
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.84.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.87.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
