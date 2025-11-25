@@ -47,6 +47,10 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 {{- include "cloudzero-agent.alloy.scrapeAlloy" . }}
 {{- end }}
 
+{{- if .Values.prometheusConfig.scrapeJobs.gpu.enabled }}
+{{- include "cloudzero-agent.alloy.scrapeGPU" . }}
+{{- end }}
+
 // Remote write to CloudZero aggregator
 {{- include "cloudzero-agent.alloy.remoteWrite" . }}
 {{- end -}}
@@ -288,6 +292,110 @@ prometheus.relabel "alloy" {
     source_labels = ["__name__"]
     regex         = "^({{ join "|" (include "cloudzero-agent.defaults" . | fromYaml).prometheusMetrics }})$"
     action        = "keep"
+  }
+}
+{{- end -}}
+
+{{/*
+Alloy DCGM GPU Scrape Job
+
+Generates River configuration for scraping NVIDIA DCGM Exporter metrics.
+Collects raw DCGM metrics which are transformed by the collector into
+container_resources_gpu_* metrics for cost allocation.
+
+This configuration:
+- Discovers dcgm-exporter services via Kubernetes API
+- Scrapes raw DCGM metrics (GPU_UTIL, FB_USED, FB_FREE)
+- Adds provenance label for metric source tracking
+- Filters to only GPU metrics with container attribution
+- Forwards to aggregator for transformation and storage
+
+The collector's DCGM transformer converts raw metrics to:
+- container_resources_gpu_usage_percent (from DCGM_FI_DEV_GPU_UTIL)
+- container_resources_gpu_memory_usage_percent (from DCGM_FI_DEV_FB_USED/FREE)
+
+Usage: {{ include "cloudzero-agent.alloy.scrapeGPU" . }}
+*/}}
+{{- define "cloudzero-agent.alloy.scrapeGPU" -}}
+// NVIDIA DCGM GPU Metrics Scrape Job
+// Collects raw GPU metrics for transformation and cost allocation
+
+discovery.kubernetes "dcgm" {
+  role = "service"
+
+  selectors {
+    role  = "service"
+    label = "app.kubernetes.io/name=dcgm-exporter"
+  }
+}
+
+prometheus.scrape "dcgm" {
+  targets    = discovery.kubernetes.dcgm.targets
+  forward_to = [prometheus.relabel.dcgm_provenance.receiver]
+  scrape_interval = "{{ .Values.prometheusConfig.scrapeJobs.gpu.scrapeInterval }}"
+
+  clustering {
+    enabled = true
+  }
+}
+
+// Add provenance label and Kubernetes metadata
+prometheus.relabel "dcgm_provenance" {
+  forward_to = [prometheus.relabel.dcgm_metrics.receiver]
+
+  // Add provenance label to indicate DCGM as the metric source
+  rule {
+    source_labels = ["__meta_kubernetes_service_label_app_kubernetes_io_name"]
+    regex         = "dcgm-exporter"
+    replacement   = "dcgm"
+    target_label  = "provenance"
+  }
+
+  // Add Kubernetes metadata for cost attribution
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "kubernetes_namespace"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_service_name"]
+    target_label  = "kubernetes_service"
+  }
+}
+
+// Filter metrics - keep only the 3 DCGM metrics needed
+prometheus.relabel "dcgm_metrics" {
+  forward_to = [prometheus.relabel.dcgm_attribution.receiver]
+
+  // Keep only specific DCGM metrics
+  rule {
+    source_labels = ["__name__"]
+    regex         = "DCGM_FI_DEV_GPU_UTIL|DCGM_FI_DEV_FB_USED|DCGM_FI_DEV_FB_FREE"
+    action        = "keep"
+  }
+}
+
+// Filter out metrics without container attribution
+prometheus.relabel "dcgm_attribution" {
+  forward_to = [prometheus.remote_write.cloudzero.receiver]
+
+  // Drop metrics without container attribution
+  rule {
+    source_labels = ["container"]
+    regex         = "^$"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["pod"]
+    regex         = "^$"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["namespace"]
+    regex         = "^$"
+    action        = "drop"
   }
 }
 {{- end -}}
