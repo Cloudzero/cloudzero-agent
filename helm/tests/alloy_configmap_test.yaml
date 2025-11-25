@@ -93,3 +93,67 @@ tests:
       - matchRegex:
           path: data["alloy-config.river"]
           pattern: "clustering \\{\\s+enabled = true\\s+\\}"
+
+  # Test that River config includes DCGM GPU scrape when enabled
+  - it: should include DCGM GPU scrape in River config when enabled
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.kubernetes "dcgm"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "dcgm"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.relabel "dcgm_provenance"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.relabel "dcgm_metrics"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.relabel "dcgm_attribution"'
+
+  # Test that River config includes DCGM metric filtering
+  - it: should filter DCGM metrics correctly
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "DCGM_FI_DEV_GPU_UTIL"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "DCGM_FI_DEV_FB_USED"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "DCGM_FI_DEV_FB_FREE"
+
+  # Test that River config includes provenance label for DCGM
+  - it: should add provenance label to DCGM metrics
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.gpu.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'target_label.*=.*"provenance"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'replacement.*=.*"dcgm"'
+
+  # Test that DCGM scrape is excluded when GPU scraping is disabled
+  - it: should not include DCGM scrape when GPU scraping is disabled
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.gpu.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.kubernetes "dcgm"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "dcgm"'
