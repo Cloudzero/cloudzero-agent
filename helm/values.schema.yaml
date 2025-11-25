@@ -443,12 +443,36 @@ properties:
               For details, see the Kubernetes documentation on security contexts:
               https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
             $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          labels:
+            description: |
+              Labels to be added to agent resources.
+
+              These labels are merged with defaults.labels.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          annotations:
+            description: |
+              Annotations to be added to agent resources.
+
+              These annotations are merged with defaults.annotations.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           federatedNode:
             description: |
               The agent federated node component runs on each node for federation.
             additionalProperties: false
             type: object
             properties:
+              labels:
+                description: |
+                  Labels to be added to agent federated node resources.
+
+                  These labels are merged with defaults.labels and components.agent.labels.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              annotations:
+                description: |
+                  Annotations to be added to agent federated node resources.
+
+                  These annotations are merged with defaults.annotations and components.agent.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
               resources:
                 description: |
                   Resource requirements and limits for the agent federated node component.
@@ -595,6 +619,18 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          labels:
+            description: |
+              Labels to be added to validator resources.
+
+              These labels are merged with defaults.labels.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          annotations:
+            description: |
+              Annotations to be added to validator resources.
+
+              These annotations are merged with defaults.annotations.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           resources:
             description: |
               Resource requirements and limits for the validator component.
@@ -693,6 +729,18 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+              labels:
+                description: |
+                  Labels to add to the init cert job.
+
+                  These labels are merged with defaults.labels.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              annotations:
+                description: |
+                  Annotations to add to the init cert job.
+
+                  These annotations are merged with defaults.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
 
       aggregator:
         description: |
@@ -703,9 +751,17 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          labels:
+            description: |
+              Labels to be added to aggregator resources.
+
+              These labels are merged with defaults.labels.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
           annotations:
             description: |
               Annotations to be added to the aggregator deployment.
+
+              These annotations are merged with defaults.annotations.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           collector:
             description: |
@@ -875,6 +931,18 @@ properties:
               For details, see the Kubernetes documentation on security contexts:
               https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
             $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          labels:
+            description: |
+              Labels to be added to webhook server resources.
+
+              These labels are merged with defaults.labels.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+          annotations:
+            description: |
+              Annotations to be added to webhook server resources.
+
+              These annotations are merged with defaults.annotations.
+            $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           backfill:
             description: |
               The backfill job component performs initial data backfilling.
@@ -886,6 +954,18 @@ properties:
                   Schedule for the backfill CronJob. Defaults to every 3 hours. Use standard cron format.
                 $ref: "#/$defs/io.k8s.api.batch.v1.CronJobSpec/properties/schedule"
                 default: "0 */3 * * *"
+              labels:
+                description: |
+                  Labels to be added to backfill job resources.
+
+                  These labels are merged with defaults.labels and components.webhookServer.labels.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+              annotations:
+                description: |
+                  Annotations to be added to backfill job resources.
+
+                  These annotations are merged with defaults.annotations and components.webhookServer.annotations.
+                $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
               resources:
                 description: |
                   Resource requirements and limits for the backfill job component.
