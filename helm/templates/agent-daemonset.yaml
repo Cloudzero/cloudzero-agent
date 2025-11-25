@@ -4,7 +4,7 @@ kind: DaemonSet
 metadata:
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "agent"
+      "name" "server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
@@ -31,7 +31,7 @@ spec:
     metadata:
       {{- include "cloudzero-agent.generateLabels" (dict
           "root" .
-          "component" "agent"
+          "name" "server"
           "labels" (list
             .Values.defaults.labels
             .Values.commonMetaLabels

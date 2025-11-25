@@ -37,7 +37,7 @@ metadata:
   # Provides consistent labeling for service discovery, monitoring, and resource management
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "aggregator"
+      "name" "aggregator"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
@@ -61,7 +61,7 @@ spec:
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateLabels" (dict
           "root" .
-          "component" "aggregator"
+          "name" "aggregator"
           "labels" (list
             .Values.defaults.labels
             .Values.commonMetaLabels

@@ -18,7 +18,7 @@ metadata:
   namespace: {{ include "cloudzero-agent.namespace" . }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" .Values.server.name
+      "name" "server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels

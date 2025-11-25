@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" .Values.server.name
+      "name" "server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
@@ -37,7 +37,7 @@ spec:
     metadata:
       {{- include "cloudzero-agent.generateLabels" (dict
           "root" .
-          "component" .Values.server.name
+          "name" "server"
           "labels" (list
             .Values.defaults.labels
             .Values.commonMetaLabels

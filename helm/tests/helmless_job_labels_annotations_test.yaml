@@ -179,12 +179,12 @@ tests:
           path: metadata.annotations["build"]
           value: "12345"
 
-  # Test app.kubernetes.io/component label is set correctly
-  - it: should set app.kubernetes.io/component label to helmless
+  # Test app.kubernetes.io/name label is set correctly
+  - it: should set app.kubernetes.io/name label to helmless
     asserts:
       - equal:
-          path: metadata.labels["app.kubernetes.io/component"]
+          path: metadata.labels["app.kubernetes.io/name"]
           value: "helmless"
       - equal:
-          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
           value: "helmless"

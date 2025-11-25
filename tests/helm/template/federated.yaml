@@ -26,10 +26,9 @@ metadata:
   name: cz-agent-cz-server
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -38,8 +37,7 @@ spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: server
-      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/name: server
       app.kubernetes.io/instance: cz-agent
 ---
 # Source: cloudzero-agent/templates/aggregator-pdb.yaml
@@ -49,10 +47,9 @@ metadata:
   name: cz-agent-cz-aggregator
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -61,8 +58,7 @@ spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: aggregator
-      app.kubernetes.io/name: cz-agent-cz-aggregator
+      app.kubernetes.io/name: aggregator
       app.kubernetes.io/instance: cz-agent
 ---
 # Source: cloudzero-agent/templates/webhook-pdb.yaml
@@ -72,10 +68,9 @@ metadata:
   name: cz-agent-cz-webhook
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -84,8 +79,7 @@ spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: webhook-server
-      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/name: webhook-server
       app.kubernetes.io/instance: cz-agent
 ---
 # Source: cloudzero-agent/charts/kubeStateMetrics/templates/serviceaccount.yaml
@@ -109,10 +103,9 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -125,10 +118,9 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -141,10 +133,9 @@ apiVersion: v1
 kind: Secret
 metadata:
   labels:
-    app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -159,10 +150,9 @@ apiVersion: v1
 kind: Secret
 metadata:
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -175,10 +165,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -325,10 +314,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/component: agent
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -434,10 +422,9 @@ metadata:
   name: cz-agent-cz-aggregator
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -787,10 +774,9 @@ metadata:
   name: cz-agent-helmless-cm
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: helmless
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: helmless
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -1573,10 +1559,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/component: validator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: validator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -1656,10 +1641,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -1886,10 +1870,9 @@ kind: ClusterRole
 metadata:
   
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -1978,10 +1961,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/component: init-cert
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: init-cert
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2046,10 +2028,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2069,10 +2050,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
-    app.kubernetes.io/component: init-cert
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: init-cert
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2131,8 +2111,7 @@ metadata:
   
 spec:
   selector:
-    app.kubernetes.io/component: aggregator
-    app.kubernetes.io/name: cz-agent-cz-aggregator
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/instance: cz-agent
   ports:
     - protocol: TCP
@@ -2146,10 +2125,9 @@ kind: Service
 metadata:
   name: cz-agent-cz-webhook
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2164,8 +2142,7 @@ spec:
       name: http
       appProtocol: https
   selector:
-    app.kubernetes.io/component: webhook-server
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/instance: cz-agent
 ---
 # Source: cloudzero-agent/templates/agent-daemonset.yaml
@@ -2173,10 +2150,9 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app.kubernetes.io/component: agent
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2186,16 +2162,14 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/component: server
-      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/name: server
       app.kubernetes.io/instance: cz-agent
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: agent
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: server
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2462,10 +2436,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/component: server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2475,17 +2448,15 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/component: server
-      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/name: server
       app.kubernetes.io/instance: cz-agent
   replicas: 1
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: server
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: server
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2727,18 +2698,16 @@ metadata:
   # Labels: Combine standard aggregator labels with user-defined metadata labels
   # Provides consistent labeling for service discovery, monitoring, and resource management
   labels:
-    app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/component: aggregator
-      app.kubernetes.io/name: cz-agent-cz-aggregator
+      app.kubernetes.io/name: aggregator
       app.kubernetes.io/instance: cz-agent
   replicas: 3
   template:
@@ -2746,10 +2715,9 @@ spec:
       annotations:
         checksum/config: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
       labels:
-        app.kubernetes.io/component: aggregator
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: aggregator
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2886,10 +2854,9 @@ metadata:
   namespace: cz-agent
   # Standard webhook server labels for consistent resource identification
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -2900,16 +2867,14 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app.kubernetes.io/component: webhook-server
-      app.kubernetes.io/name: cloudzero-agent
+      app.kubernetes.io/name: webhook-server
       app.kubernetes.io/instance: cz-agent
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: webhook-server
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: webhook-server
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3009,10 +2974,9 @@ metadata:
   namespace: cz-agent
   
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: backfill
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3024,10 +2988,9 @@ spec:
       name: cz-agent-backfill-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA
       namespace: cz-agent
       labels:
-        app.kubernetes.io/component: webhook-server
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: backfill
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3093,10 +3056,9 @@ metadata:
   annotations:
     checksum/values: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
   labels:
-    app.kubernetes.io/component: config-loader
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: validator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3106,10 +3068,9 @@ spec:
       name: cz-agent-confload-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
       namespace: cz-agent
       labels:
-        app.kubernetes.io/component: config-loader
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: validator
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3217,10 +3178,9 @@ metadata:
   namespace: cz-agent
   
   labels:
-    app.kubernetes.io/component: helmless
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: helmless
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3230,10 +3190,9 @@ spec:
       name: cz-agent-helmless-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
       namespace: cz-agent
       labels:
-        app.kubernetes.io/component: helmless
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: helmless
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3287,10 +3246,9 @@ metadata:
   namespace: cz-agent
   
   labels:
-    app.kubernetes.io/component: init-cert
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: init-cert
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3299,10 +3257,9 @@ spec:
     metadata:
       name: cz-agent-init-cert-DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
       labels:
-        app.kubernetes.io/component: init-cert
         app.kubernetes.io/instance: cz-agent
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: cloudzero-agent
+        app.kubernetes.io/name: init-cert
         app.kubernetes.io/part-of: cloudzero-agent
         app.kubernetes.io/version: v3.7.3
         helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3354,10 +3311,9 @@ metadata:
   namespace: cz-agent
   
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: backfill
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3375,10 +3331,9 @@ spec:
           name: cz-agent-backfill
           namespace: cz-agent
           labels:
-            app.kubernetes.io/component: webhook-server
             app.kubernetes.io/instance: cz-agent
             app.kubernetes.io/managed-by: Helm
-            app.kubernetes.io/name: cloudzero-agent
+            app.kubernetes.io/name: backfill
             app.kubernetes.io/part-of: cloudzero-agent
             app.kubernetes.io/version: v3.7.3
             helm.sh/chart: cloudzero-agent-1.1.0-dev
@@ -3442,10 +3397,9 @@ metadata:
   name: cz-agent-cz-webhook
   namespace: cz-agent
   labels:
-    app.kubernetes.io/component: webhook-server
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cloudzero-agent
+    app.kubernetes.io/name: webhook-server
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev

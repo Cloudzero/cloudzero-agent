@@ -20,7 +20,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" .Values.insightsController.server.name
+      "name" "webhook-server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels

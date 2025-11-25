@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "validator"
+      "name" "validator"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels

@@ -147,7 +147,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "cloudzero-agent.server.matchLabels" -}}
 app.kubernetes.io/name: server
-app.kubernetes.io/component: {{ .Values.server.name }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -498,7 +497,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "cloudzero-agent.insightsController.server.matchLabels" -}}
 app.kubernetes.io/name: webhook-server
-app.kubernetes.io/component: {{ .Values.insightsController.server.name }}
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -522,7 +520,6 @@ Create common matchLabels for aggregator
 */}}
 {{- define "cloudzero-agent.aggregator.matchLabels" -}}
 app.kubernetes.io/name: aggregator
-app.kubernetes.io/component: aggregator
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -878,19 +875,26 @@ dnsConfig:
 {{- end -}}
 
 {{/*
-Generate labels for a component with merge support.
+Generate labels with merge support, name, and optional component.
 
 Parameters (dict):
 - root: Chart context (.) (required)
-- component: Component name for app.kubernetes.io/component label (optional)
+- name: Application name for app.kubernetes.io/name label (required)
+- component: Optional architectural component for app.kubernetes.io/component label (optional)
 - labels: List of label dicts to merge in order, from lowest to highest priority (required)
 
 Returns: Formatted "labels:\n  key: value" output
 
 Merge behavior:
-- Starts with base labels (app.kubernetes.io/name, app.kubernetes.io/instance, etc.)
+- Starts with base labels (app.kubernetes.io/instance, app.kubernetes.io/part-of, etc.)
 - Merges each dict in the labels list in order (later values override earlier)
-- Adds app.kubernetes.io/component LAST (highest priority, cannot be overridden)
+- Adds app.kubernetes.io/name LAST (highest priority, cannot be overridden)
+- Adds app.kubernetes.io/component LAST if provided (highest priority, cannot be overridden)
+
+Following Kubernetes recommended labels:
+- app.kubernetes.io/name: The application (e.g., "server", "aggregator", "webhook-server")
+- app.kubernetes.io/component: Optional architectural role (e.g., "gatherer", "processor")
+- app.kubernetes.io/part-of: Set to "cloudzero-agent" in baseLabels
 
 The caller controls the priority order by arranging the labels list. Common pattern:
   (list defaults commonLabels componentLabels)
@@ -898,7 +902,7 @@ The caller controls the priority order by arranging the labels list. Common patt
 Example:
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "agent"
+      "name" "server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
@@ -908,6 +912,7 @@ Example:
 */}}
 {{- define "cloudzero-agent.generateLabels" -}}
 {{- $root := .root | required "root context required" -}}
+{{- $name := .name | required "name parameter required" -}}
 {{- $component := .component | default "" -}}
 {{- $labelsList := .labels | required "labels list required" -}}
 
@@ -921,7 +926,10 @@ Example:
   {{- end -}}
 {{- end -}}
 
-{{/* Add component label LAST so it has highest priority and cannot be overridden */}}
+{{/* Add name label LAST so it has highest priority and cannot be overridden */}}
+{{- $merged = mergeOverwrite $merged (dict "app.kubernetes.io/name" $name) -}}
+
+{{/* Add component label if provided */}}
 {{- if $component -}}
   {{- $merged = mergeOverwrite $merged (dict "app.kubernetes.io/component" $component) -}}
 {{- end -}}
@@ -1043,7 +1051,7 @@ metadata:
   namespace: {{ .root.Release.Namespace }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .root
-      "component" .componentName
+      "name" .componentName
       "labels" (list
         .root.Values.defaults.labels
         .root.Values.commonMetaLabels

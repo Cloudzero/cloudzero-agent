@@ -32,7 +32,7 @@ metadata:
   # Standard webhook server labels for consistent resource identification
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" .Values.insightsController.server.name
+      "name" "webhook-server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
@@ -58,7 +58,7 @@ spec:
     metadata:
       {{- include "cloudzero-agent.generateLabels" (dict
           "root" .
-          "component" .Values.insightsController.server.name
+          "name" "webhook-server"
           "labels" (list
             .Values.defaults.labels
             .Values.commonMetaLabels

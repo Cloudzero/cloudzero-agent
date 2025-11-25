@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "aggregator"
+      "name" "aggregator"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels

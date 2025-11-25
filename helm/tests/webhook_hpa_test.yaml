@@ -252,7 +252,7 @@ tests:
           value: Max
 
   # Test HPA labels
-  - it: should have correct labels including component label
+  - it: should have correct labels including name label
     set:
       components.agent.autoscaling:
         enabled: false
@@ -262,5 +262,5 @@ tests:
       - isNotEmpty:
           path: metadata.labels
       - equal:
-          path: metadata.labels["app.kubernetes.io/component"]
+          path: metadata.labels["app.kubernetes.io/name"]
           value: webhook-server

@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "webhook-server"
+      "name" "webhook-server"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels

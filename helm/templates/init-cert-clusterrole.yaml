@@ -9,7 +9,7 @@ kind: ClusterRole
 metadata:
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
-      "component" "init-cert"
+      "name" "init-cert"
       "labels" (list
         .Values.defaults.labels
         .Values.commonMetaLabels
