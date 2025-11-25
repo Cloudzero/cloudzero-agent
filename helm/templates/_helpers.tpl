@@ -139,15 +139,14 @@ Returns: string (e.g., "cloudzero-webhook.default.svc")
 {{- end -}}
 
 {{/*
-Create labels for prometheus
+Common match labels for selectors
 */}}
 {{- define "cloudzero-agent.common.matchLabels" -}}
-app.kubernetes.io/name: {{ include "cloudzero-agent.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "cloudzero-agent.server.matchLabels" -}}
-app.kubernetes.io/component: {{ .Values.server.name }}
+app.kubernetes.io/name: server
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -156,7 +155,6 @@ Common base labels for all Kubernetes resources
 */}}
 {{- define "cloudzero-agent.baseLabels" -}}
 {{- dict
-    "app.kubernetes.io/name" (include "cloudzero-agent.name" .)
     "app.kubernetes.io/instance" .Release.Name
     "app.kubernetes.io/version" .Chart.AppVersion
     "helm.sh/chart" (include "cloudzero-agent.chart" .)
@@ -498,7 +496,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "cloudzero-agent.insightsController.server.matchLabels" -}}
-app.kubernetes.io/component: {{ .Values.insightsController.server.name }}
+app.kubernetes.io/name: webhook-server
 {{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
@@ -521,9 +519,8 @@ app.kubernetes.io/component: {{ include "cloudzero-agent.configLoaderJobName" . 
 Create common matchLabels for aggregator
 */}}
 {{- define "cloudzero-agent.aggregator.matchLabels" -}}
-app.kubernetes.io/component: aggregator
-app.kubernetes.io/name: {{ include "cloudzero-agent.aggregator.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/name: aggregator
+{{ include "cloudzero-agent.common.matchLabels" . }}
 {{- end -}}
 
 {{/*
@@ -878,42 +875,113 @@ dnsConfig:
 {{- end -}}
 
 {{/*
-Generate labels for a component
+Generate labels with merge support, name, and optional component.
+
+Parameters (dict):
+- root: Chart context (.) (required)
+- name: Application name for app.kubernetes.io/name label (required)
+- component: Optional architectural component for app.kubernetes.io/component label (optional)
+- labels: List of label dicts to merge in order, from lowest to highest priority (required)
+
+Returns: Formatted "labels:\n  key: value" output
+
+Merge behavior:
+- Starts with base labels (app.kubernetes.io/instance, app.kubernetes.io/part-of, etc.)
+- Merges each dict in the labels list in order (later values override earlier)
+- Adds app.kubernetes.io/name LAST (highest priority, cannot be overridden)
+- Adds app.kubernetes.io/component LAST if provided (highest priority, cannot be overridden)
+
+Following Kubernetes recommended labels:
+- app.kubernetes.io/name: The application (e.g., "server", "aggregator", "webhook-server")
+- app.kubernetes.io/component: Optional architectural role (e.g., "gatherer", "processor")
+- app.kubernetes.io/part-of: Set to "cloudzero-agent" in baseLabels
+
+The caller controls the priority order by arranging the labels list. Common pattern:
+  (list defaults commonLabels componentLabels)
+
+Example:
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.agent.labels
+      )
+    ) | nindent 8 }}
 */}}
 {{- define "cloudzero-agent.generateLabels" -}}
-{{- if .component -}}
-{{- $merged := mergeOverwrite
-     (include "cloudzero-agent.baseLabels" .globals | fromYaml)
-     (dict "app.kubernetes.io/component" .component)
-     (.globals.Values.defaults.labels | default (dict))
-     (.globals.Values.commonMetaLabels | default (dict))
-     (.labels | default (dict))
--}}
+{{- $root := .root | required "root context required" -}}
+{{- $name := .name | required "name parameter required" -}}
+{{- $component := .component | default "" -}}
+{{- $labelsList := .labels | required "labels list required" -}}
+
+{{/* Start with base labels */}}
+{{- $merged := include "cloudzero-agent.baseLabels" $root | fromYaml -}}
+
+{{/* Merge each label dict in order (lowest to highest priority) */}}
+{{- range $labelDict := $labelsList -}}
+  {{- if $labelDict -}}
+    {{- $merged = mergeOverwrite $merged $labelDict -}}
+  {{- end -}}
+{{- end -}}
+
+{{/* Add name label LAST so it has highest priority and cannot be overridden */}}
+{{- $merged = mergeOverwrite $merged (dict "app.kubernetes.io/name" $name) -}}
+
+{{/* Add component label if provided */}}
+{{- if $component -}}
+  {{- $merged = mergeOverwrite $merged (dict "app.kubernetes.io/component" $component) -}}
+{{- end -}}
+
+{{/* Output formatted labels */}}
 {{- if len $merged -}}
 labels:
 {{- $merged | toYaml | nindent 2 -}}
-{{- end -}}
-{{- else -}}
-{{- $merged := mergeOverwrite
-     (include "cloudzero-agent.baseLabels" .globals | fromYaml)
-     (.globals.Values.defaults.labels | default (dict))
-     (.globals.Values.commonMetaLabels | default (dict))
-     (.labels | default (dict))
--}}
-{{- if len $merged -}}
-labels:
-{{- $merged | toYaml | nindent 2 -}}
-{{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Generate annotations
+Generate annotations with merge support.
+
+Parameters (dict):
+- root: Chart context (.) (required)
+- annotations: List of annotation dicts to merge in order, from lowest to highest priority (required)
+
+Returns: Formatted "annotations:\n  key: value" output
+
+Merge behavior:
+- Merges each dict in the annotations list in order (later values override earlier)
+- The caller controls the priority order by arranging the annotations list
+
+Example:
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.agent.annotations
+        .Values.server.podAnnotations
+        (dict "checksum/config" (include "cloudzero-agent.configChecksum" .))
+      )
+    ) | nindent 8 }}
 */}}
 {{- define "cloudzero-agent.generateAnnotations" -}}
-{{- if . -}}
+{{- $root := .root | required "root context required" -}}
+{{- $annotationsList := .annotations | required "annotations list required" -}}
+
+{{- $merged := dict -}}
+
+{{/* Merge each annotation dict in order (lowest to highest priority) */}}
+{{- range $annotDict := $annotationsList -}}
+  {{- if $annotDict -}}
+    {{- $merged = mergeOverwrite $merged $annotDict -}}
+  {{- end -}}
+{{- end -}}
+
+{{/* Output formatted annotations */}}
+{{- if len $merged -}}
 annotations:
-{{- . | toYaml | nindent 2 -}}
+{{- $merged | toYaml | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 
@@ -981,8 +1049,20 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
   namespace: {{ .root.Release.Namespace }}
-  {{- include "cloudzero-agent.generateLabels" (dict "globals" .root "component" .componentName) | nindent 2 }}
-  {{- include "cloudzero-agent.generateAnnotations" .root.Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .root
+      "name" .componentName
+      "labels" (list
+        .root.Values.defaults.labels
+        .root.Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .root
+      "annotations" (list
+        .root.Values.defaults.annotations
+      )
+    ) | nindent 2 }}
 spec:
   {{- if $pdb.minAvailable }}
   {{- if lt $replicas (int $pdb.minAvailable) -}}

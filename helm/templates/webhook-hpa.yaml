@@ -18,11 +18,21 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
   namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge
-      (deepCopy .Values.defaults.annotations)
-      (.Values.insightsController.server.podAnnotations | default (dict))
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "webhook-server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.webhookServer.labels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.webhookServer.annotations
+      )
     ) | nindent 2 }}
 spec:
   scaleTargetRef:

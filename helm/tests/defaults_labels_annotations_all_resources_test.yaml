@@ -17,7 +17,7 @@ templates:
   - agent-clusterrole.yaml
   - agent-clusterrolebinding.yaml
   - agent-cm.yaml
-  # agent-daemonset-cm.yaml and agent-daemonset.yaml only render in federated mode
+  # agent-daemonset-cm.yaml and agent-daemonset.yaml are tested in component_labels_hierarchy_test.yaml
   - agent-deploy.yaml
   - agent-pdb.yaml
   - agent-pvc.yaml
@@ -84,4 +84,190 @@ tests:
     asserts:
       - equal:
           path: metadata.annotations.foo
+          value: "bar"
+
+  # Pod template metadata tests - ensuring defaults propagate to pod-level metadata
+  # These tests verify that defaults.labels and defaults.annotations appear not just
+  # on resource metadata, but also on spec.template.metadata for workload resources.
+
+  - it: should apply defaults.labels to agent deployment pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+      components.agent.mode: agent
+    template: agent-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  # agent daemonset tests are in component_labels_hierarchy_test.yaml
+
+  - it: should apply defaults.labels to aggregator deployment pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+    template: aggregator-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to webhook deployment pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+      insightsController.enabled: true
+    template: webhook-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to config-loader job pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+    template: config-loader-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to helmless job pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+    template: helmless-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to init-cert job pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+      initCertJob.enabled: true
+    template: init-cert-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to backfill cronjob pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+      insightsController.enabled: true
+      initBackfillJob.enabled: true
+    template: backfill-job.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.labels to backfill onetime job pod template metadata
+    set:
+      defaults.labels:
+        foo: "bar"
+      insightsController.enabled: true
+      initBackfillJob.enabled: true
+    template: backfill-job.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to agent deployment pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+      components.agent.mode: agent
+    template: agent-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  # agent daemonset tests are in component_labels_hierarchy_test.yaml
+
+  - it: should apply defaults.annotations to aggregator deployment pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+    template: aggregator-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to webhook deployment pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+      insightsController.enabled: true
+    template: webhook-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to config-loader job pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+    template: config-loader-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to helmless job pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+    template: helmless-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to backfill cronjob pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+      insightsController.enabled: true
+      initBackfillJob.enabled: true
+    template: backfill-job.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to backfill onetime job pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+      insightsController.enabled: true
+      initBackfillJob.enabled: true
+    template: backfill-job.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
+          value: "bar"
+
+  - it: should apply defaults.annotations to init-cert job pod template metadata
+    set:
+      defaults.annotations:
+        foo: "bar"
+      initCertJob.enabled: true
+    template: init-cert-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.foo
           value: "bar"

@@ -4,13 +4,35 @@ kind: Certificate
 metadata:
   name: {{ include "cloudzero-agent.certificateName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "labels" .Values.commonMetaLabels) | nindent 2 }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.secretAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "webhook-server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.webhookServer.labels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.secretAnnotations
+        .Values.components.webhookServer.annotations
+      )
+    ) | nindent 2 }}
 spec:
   secretName: {{ include "cloudzero-agent.tlsSecretName" .}}
   secretTemplate:
-    labels:
-      {{- include "cloudzero-agent.insightsController.labels" . | nindent 6 }}
+    {{- include "cloudzero-agent.generateLabels" (dict
+        "root" .
+        "name" "webhook-server"
+        "labels" (list
+          .Values.defaults.labels
+          .Values.commonMetaLabels
+          .Values.components.webhookServer.labels
+        )
+      ) | nindent 4 }}
   privateKey:
     algorithm: RSA
     encoding: PKCS1

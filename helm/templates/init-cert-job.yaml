@@ -5,16 +5,45 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.initCertJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.initCertJob.annotations) | nindent 2 }}
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.initCertJob.annotations
+        .Values.components.miscellaneous.initCert.annotations
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "init-cert"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.miscellaneous.initCert.labels
+      )
+    ) | nindent 2 }}
 spec:
   template:
     metadata:
       name: {{ include "cloudzero-agent.initCertJobName" . }}
-      labels:
-        {{- include "cloudzero-agent.insightsController.initCertJob.matchLabels" . | nindent 8 }}
-      {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateLabels" (dict
+          "root" .
+          "name" "init-cert"
+          "labels" (list
+            .Values.defaults.labels
+            .Values.commonMetaLabels
+            .Values.components.miscellaneous.initCert.labels
+            .Values.components.miscellaneous.initCert.podLabels
+          )
+        ) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (dict
+          "root" .
+          "annotations" (list
+            .Values.defaults.annotations
+            .Values.components.miscellaneous.initCert.annotations
+            .Values.components.miscellaneous.initCert.podAnnotations
+          )
+        ) | nindent 6 }}
     spec:
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" (.Values.initCertJob.nodeSelector | default .Values.insightsController.server.nodeSelector)) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.insightsController.server.affinity) | nindent 6 }}

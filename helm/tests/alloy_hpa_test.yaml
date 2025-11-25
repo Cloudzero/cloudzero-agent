@@ -177,7 +177,7 @@ tests:
           value: Max
 
   # Test HPA labels
-  - it: should have correct labels including component label
+  - it: should have correct labels including name label
     set:
       components.agent.mode: clustered
       components.agent.autoscaling.enabled: true
@@ -185,7 +185,7 @@ tests:
       - isNotEmpty:
           path: metadata.labels
       - equal:
-          path: metadata.labels["app.kubernetes.io/component"]
+          path: metadata.labels["app.kubernetes.io/name"]
           value: server
 
   # Test that HPA scaleTargetRef.name matches deployment name

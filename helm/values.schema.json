@@ -5759,6 +5759,9 @@
             }
           ],
           "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
             "autoscaling": {
               "oneOf": [
                 {
@@ -5787,6 +5790,18 @@
             "federatedNode": {
               "additionalProperties": false,
               "properties": {
+                "annotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "labels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
+                "podAnnotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "podLabels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -5799,6 +5814,9 @@
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"
             },
+            "labels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+            },
             "mode": {
               "default": null,
               "oneOf": [
@@ -5810,6 +5828,9 @@
                 }
               ]
             },
+            "podAnnotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
             "podDisruptionBudget": {
               "oneOf": [
                 {
@@ -5819,6 +5840,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "podLabels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
             },
             "reloader": {
               "additionalProperties": false,
@@ -5879,6 +5903,12 @@
                 }
               ]
             },
+            "labels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+            },
+            "podAnnotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
             "podDisruptionBudget": {
               "oneOf": [
                 {
@@ -5888,6 +5918,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "podLabels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
             },
             "replicas": {
               "additionalProperties": false,
@@ -5943,6 +5976,12 @@
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
                 },
+                "podAnnotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "podLabels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -5961,6 +6000,12 @@
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
                 },
+                "podAnnotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "podLabels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -5973,6 +6018,18 @@
             "initCert": {
               "additionalProperties": false,
               "properties": {
+                "annotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "labels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
+                "podAnnotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "podLabels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -6006,6 +6063,12 @@
         "validator": {
           "additionalProperties": false,
           "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "labels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+            },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
             }
@@ -6015,6 +6078,9 @@
         "webhookServer": {
           "additionalProperties": false,
           "properties": {
+            "annotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
             "autoscaling": {
               "oneOf": [
                 {
@@ -6028,6 +6094,18 @@
             "backfill": {
               "additionalProperties": false,
               "properties": {
+                "annotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "labels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
+                "podAnnotations": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "podLabels": {
+                  "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -6041,6 +6119,12 @@
               },
               "type": "object"
             },
+            "labels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+            },
+            "podAnnotations": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
             "podDisruptionBudget": {
               "oneOf": [
                 {
@@ -6050,6 +6134,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "podLabels": {
+              "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
             },
             "replicas": {
               "additionalProperties": false,

@@ -2,9 +2,22 @@
 apiVersion: {{ template "cloudzero-agent.rbac.apiVersion" . }}
 kind: ClusterRoleBinding
 metadata:
-  labels:
-    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
-  {{- include "cloudzero-agent.generateAnnotations" .Values.defaults.annotations | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.agent.labels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.agent.annotations
+      )
+    ) | nindent 2 }}
   name: {{ include "cloudzero-agent.clusterRoleName" . }}
 subjects:
   - kind: ServiceAccount

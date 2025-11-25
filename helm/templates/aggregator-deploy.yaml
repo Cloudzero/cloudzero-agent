@@ -26,16 +26,23 @@ metadata:
   namespace: {{ .Release.Namespace }}
   # Annotations: Merge default annotations with aggregator-specific annotations
   # Enables custom metadata for monitoring, backup policies, and operational tooling
-  {{- include "cloudzero-agent.generateAnnotations" (merge
-      (deepCopy .Values.defaults.annotations)
-      .Values.components.aggregator.annotations
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.aggregator.annotations
+      )
     ) | nindent 2 }}
   # Labels: Combine standard aggregator labels with user-defined metadata labels
   # Provides consistent labeling for service discovery, monitoring, and resource management
   {{- include "cloudzero-agent.generateLabels" (dict
-      "globals" .
-      "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
-      "component" "aggregator"
+      "root" .
+      "name" "aggregator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.aggregator.labels
+      )
     ) | nindent 2 }}
 spec:
   selector:
@@ -44,14 +51,24 @@ spec:
   replicas: {{ .Values.components.aggregator.replicas | default .Values.defaults.replicas }}
   template:
     metadata:
-      {{- include "cloudzero-agent.generateAnnotations" (merge
-          (deepCopy .Values.defaults.annotations)
-          (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+      {{- include "cloudzero-agent.generateAnnotations" (dict
+          "root" .
+          "annotations" (list
+            .Values.defaults.annotations
+            .Values.components.aggregator.annotations
+            .Values.components.aggregator.podAnnotations
+            (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+          )
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateLabels" (dict
-          "globals" .
-          "labels" (merge (include "cloudzero-agent.aggregator.matchLabels" . | fromYaml) .Values.commonMetaLabels)
-          "component" "aggregator"
+          "root" .
+          "name" "aggregator"
+          "labels" (list
+            .Values.defaults.labels
+            .Values.commonMetaLabels
+            .Values.components.aggregator.labels
+            .Values.components.aggregator.podLabels
+          )
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}

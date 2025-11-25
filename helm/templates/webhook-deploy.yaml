@@ -30,11 +30,25 @@ metadata:
   name: {{ include "cloudzero-agent.insightsController.deploymentName" . }}
   namespace: {{ .Release.Namespace }}
   # Standard webhook server labels for consistent resource identification
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "webhook-server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.webhookServer.labels
+      )
+    ) | nindent 2 }}
   # Deployment annotations: Merge defaults with webhook-specific annotations
   # Supports monitoring, backup policies, and operational tooling integration
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.insightsController.server.deploymentAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.insightsController.server.deploymentAnnotations
+        .Values.components.webhookServer.annotations
+      )
+    ) | nindent 2 }}
 spec:
   replicas: {{ .Values.insightsController.server.replicaCount | default .Values.components.webhookServer.replicas | default .Values.defaults.replicas }}
   selector:
@@ -42,20 +56,30 @@ spec:
       {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
   template:
     metadata:
-      labels:
-        {{- include "cloudzero-agent.insightsController.labels" . | nindent 8 }}
-        {{- with .Values.insightsController.server.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- include "cloudzero-agent.generateLabels" (dict
+          "root" .
+          "name" "webhook-server"
+          "labels" (list
+            .Values.defaults.labels
+            .Values.commonMetaLabels
+            .Values.components.webhookServer.labels
+            .Values.components.webhookServer.podLabels
+          )
+        ) | nindent 6 }}
       {{- $istioAnnotations := dict -}}
       {{- if not .Values.insightsController.server.suppressIstioAnnotations -}}
       {{- $istioAnnotations = dict "sidecar.istio.io/inject" "false" -}}
       {{- end -}}
-      {{- include "cloudzero-agent.generateAnnotations" (merge
-          (deepCopy .Values.defaults.annotations)
-          .Values.insightsController.server.podAnnotations
-          $istioAnnotations
-          (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+      {{- include "cloudzero-agent.generateAnnotations" (dict
+          "root" .
+          "annotations" (list
+            .Values.defaults.annotations
+            .Values.insightsController.server.podAnnotations
+            .Values.components.webhookServer.annotations
+            .Values.components.webhookServer.podAnnotations
+            $istioAnnotations
+            (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
+          )
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}

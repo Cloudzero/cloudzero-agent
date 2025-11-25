@@ -2,11 +2,27 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  labels:
-    {{- include "cloudzero-agent.server.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.agent.labels
+        .Values.components.agent.federatedNode.labels
+      )
+    ) | nindent 2 }}
   name: {{ .Release.Name }}-daemonset-cm
   namespace: {{ include "cloudzero-agent.namespace" . }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy .Values.defaults.annotations) .Values.prometheusConfig.configMapAnnotations) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.prometheusConfig.configMapAnnotations
+        .Values.components.agent.annotations
+        .Values.components.agent.federatedNode.annotations
+      )
+    ) | nindent 2 }}
 data:
   prometheus.yml.in: |-
     {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") .Values.prometheusConfig.configOverride }}

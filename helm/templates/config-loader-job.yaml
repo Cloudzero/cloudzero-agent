@@ -3,21 +3,45 @@ kind: Job
 metadata:
   name: {{ include "cloudzero-agent.configLoaderJobName" . }}
   namespace: {{ .Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge
-      (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
-      (.Values.components.miscellaneous.configLoader.annotations | default (dict))
-      (deepCopy .Values.defaults.annotations)
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.miscellaneous.configLoader.annotations
+        (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
+      )
     ) | nindent 2 }}
-  {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "config-loader" "labels" .Values.components.miscellaneous.configLoader.labels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "validator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.miscellaneous.configLoader.labels
+      )
+    ) | nindent 2 }}
 spec:
   template:
     metadata:
       name: {{ include "cloudzero-agent.configLoaderJobName" . }}
       namespace: {{ .Release.Namespace }}
-      {{- include "cloudzero-agent.generateLabels" (dict "globals" . "component" "config-loader" "labels" .Values.components.miscellaneous.configLoader.labels) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAnnotations" (merge
-          (.Values.components.miscellaneous.configLoader.annotations | default (dict))
-          (deepCopy .Values.defaults.annotations)
+      {{- include "cloudzero-agent.generateLabels" (dict
+          "root" .
+          "name" "validator"
+          "labels" (list
+            .Values.defaults.labels
+            .Values.commonMetaLabels
+            .Values.components.miscellaneous.configLoader.labels
+            .Values.components.miscellaneous.configLoader.podLabels
+          )
+        ) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (dict
+          "root" .
+          "annotations" (list
+            .Values.defaults.annotations
+            .Values.components.miscellaneous.configLoader.annotations
+            .Values.components.miscellaneous.configLoader.podAnnotations
+          )
         ) | nindent 6 }}
     spec:
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.validator.image) | nindent 6 }}

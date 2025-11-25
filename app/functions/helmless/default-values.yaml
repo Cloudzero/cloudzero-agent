@@ -255,6 +255,26 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Annotations to add to the agent component.
+    #
+    # These annotations are merged with defaults.annotations and apply to
+    # parent resources (Deployment/DaemonSet) and pods.
+    annotations: {}
+    # Labels to add to the agent component.
+    #
+    # These labels are merged with defaults.labels and apply to parent
+    # resources (Deployment/DaemonSet) and pods.
+    labels: {}
+    # Pod-specific annotations that apply ONLY to pod templates.
+    #
+    # These annotations are merged after component annotations and only
+    # appear in pod metadata, not on parent resources.
+    podAnnotations: {}
+    # Pod-specific labels that apply ONLY to pod templates.
+    #
+    # These labels are merged after component labels with highest priority
+    # and only appear in pod metadata, not on parent resources.
+    podLabels: {}
     # Security context for the agent pods.
     #
     # For details, see the Kubernetes documentation on security contexts:
@@ -274,6 +294,26 @@ components:
 
     # The agent federated node component runs on each node for federation.
     federatedNode:
+      # Annotations to add to the agent federated node component.
+      #
+      # These annotations are merged with defaults.annotations and
+      # components.agent.annotations, applying to the DaemonSet and pods.
+      annotations: {}
+      # Labels to add to the agent federated node component.
+      #
+      # These labels are merged with defaults.labels and components.agent.labels,
+      # applying to the DaemonSet and pods.
+      labels: {}
+      # Pod-specific annotations that apply ONLY to pod templates.
+      #
+      # These annotations are merged after federated node annotations and only
+      # appear in pod metadata, not on the DaemonSet.
+      podAnnotations: {}
+      # Pod-specific labels that apply ONLY to pod templates.
+      #
+      # These labels are merged after federated node labels with highest priority
+      # and only appear in pod metadata, not on the DaemonSet.
+      podLabels: {}
       # Security context for the agent federated node pods.
       #
       # For details, see the Kubernetes documentation on security contexts:
@@ -337,6 +377,14 @@ components:
   # The validator component performs validation checks and notifies the platform
   # of installation status changes.
   validator:
+    # Annotations to add to the validator component.
+    #
+    # These annotations are merged with defaults.annotations.
+    annotations: {}
+    # Labels to add to the validator component.
+    #
+    # These labels are merged with defaults.labels.
+    labels: {}
     # Resource requirements and limits for the validator component.
     #
     # For details, see the Kubernetes documentation on resource management:
@@ -371,12 +419,24 @@ components:
       securityContext: {}
       # Annotations to add to the config loader job.
       #
-      # These annotations are merged with defaults.annotations.
+      # These annotations are merged with defaults.annotations and apply to
+      # the Job and pods.
       annotations: {}
       # Labels to add to the config loader job.
       #
-      # These labels are merged with defaults.labels.
+      # These labels are merged with defaults.labels and apply to the
+      # Job and pods.
       labels: {}
+      # Pod-specific annotations that apply ONLY to pod templates.
+      #
+      # These annotations are merged after component annotations and only
+      # appear in pod metadata, not on the Job.
+      podAnnotations: {}
+      # Pod-specific labels that apply ONLY to pod templates.
+      #
+      # These labels are merged after component labels with highest priority
+      # and only appear in pod metadata, not on the Job.
+      podLabels: {}
     # The helmless job component generates configuration without Helm.
     helmless:
       # Resource requirements and limits for the helmless job component.
@@ -397,14 +457,46 @@ components:
       securityContext: {}
       # Annotations to add to the helmless job.
       #
-      # These annotations are merged with defaults.annotations.
+      # These annotations are merged with defaults.annotations and apply to
+      # the Job and pods.
       annotations: {}
       # Labels to add to the helmless job.
       #
-      # These labels are merged with defaults.labels.
+      # These labels are merged with defaults.labels and apply to the
+      # Job and pods.
       labels: {}
+      # Pod-specific annotations that apply ONLY to pod templates.
+      #
+      # These annotations are merged after component annotations and only
+      # appear in pod metadata, not on the Job.
+      podAnnotations: {}
+      # Pod-specific labels that apply ONLY to pod templates.
+      #
+      # These labels are merged after component labels with highest priority
+      # and only appear in pod metadata, not on the Job.
+      podLabels: {}
     # The init cert job component initializes TLS certificates.
     initCert:
+      # Annotations to add to the init cert job component.
+      #
+      # These annotations are merged with defaults.annotations and apply to
+      # the Job and pods.
+      annotations: {}
+      # Labels to add to the init cert job component.
+      #
+      # These labels are merged with defaults.labels and apply to the
+      # Job and pods.
+      labels: {}
+      # Pod-specific annotations that apply ONLY to pod templates.
+      #
+      # These annotations are merged after component annotations and only
+      # appear in pod metadata, not on the Job.
+      podAnnotations: {}
+      # Pod-specific labels that apply ONLY to pod templates.
+      #
+      # These labels are merged after component labels with highest priority
+      # and only appear in pod metadata, not on the Job.
+      podLabels: {}
       # Resource requirements and limits for the init cert job component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -450,7 +542,26 @@ components:
       # minAvailable:
       # maxUnavailable:
     tolerations: []
+    # Annotations to add to the aggregator component.
+    #
+    # These annotations are merged with defaults.annotations and apply to
+    # the Deployment and pods.
     annotations: {}
+    # Labels to add to the aggregator component.
+    #
+    # These labels are merged with defaults.labels and apply to the
+    # Deployment and pods.
+    labels: {}
+    # Pod-specific annotations that apply ONLY to pod templates.
+    #
+    # These annotations are merged after component annotations and only
+    # appear in pod metadata, not on the Deployment.
+    podAnnotations: {}
+    # Pod-specific labels that apply ONLY to pod templates.
+    #
+    # These labels are merged after component labels with highest priority
+    # and only appear in pod metadata, not on the Deployment.
+    podLabels: {}
     # Security context for the aggregator pods.
     #
     # For details, see the Kubernetes documentation on security contexts:
@@ -504,6 +615,26 @@ components:
       # enabled:
       # minAvailable:
       # maxUnavailable:
+    # Annotations to add to the webhook server component.
+    #
+    # These annotations are merged with defaults.annotations and apply to
+    # the Deployment and pods.
+    annotations: {}
+    # Labels to add to the webhook server component.
+    #
+    # These labels are merged with defaults.labels and apply to the
+    # Deployment and pods.
+    labels: {}
+    # Pod-specific annotations that apply ONLY to pod templates.
+    #
+    # These annotations are merged after component annotations and only
+    # appear in pod metadata, not on the Deployment.
+    podAnnotations: {}
+    # Pod-specific labels that apply ONLY to pod templates.
+    #
+    # These labels are merged after component labels with highest priority
+    # and only appear in pod metadata, not on the Deployment.
+    podLabels: {}
     # Security context for the webhook server pods.
     #
     # For details, see the Kubernetes documentation on security contexts:
@@ -522,6 +653,26 @@ components:
         cpu: "500m"
     # The backfill job component performs initial data backfilling.
     backfill:
+      # Annotations to add to the backfill job component.
+      #
+      # These annotations are merged with defaults.annotations and
+      # components.webhookServer.annotations, applying to the CronJob/Job and pods.
+      annotations: {}
+      # Labels to add to the backfill job component.
+      #
+      # These labels are merged with defaults.labels and
+      # components.webhookServer.labels, applying to the CronJob/Job and pods.
+      labels: {}
+      # Pod-specific annotations that apply ONLY to pod templates.
+      #
+      # These annotations are merged after backfill annotations and only
+      # appear in pod metadata, not on the CronJob/Job.
+      podAnnotations: {}
+      # Pod-specific labels that apply ONLY to pod templates.
+      #
+      # These labels are merged after backfill labels with highest priority
+      # and only appear in pod metadata, not on the CronJob/Job.
+      podLabels: {}
       # Schedule for the backfill CronJob. Defaults to every 12 hours. Use standard cron format.
       schedule: "0 */12 * * *"
       # Resource requirements and limits for the backfill job component.

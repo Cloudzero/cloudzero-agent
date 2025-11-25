@@ -25,20 +25,33 @@
   specifications.
 */ -}}
 {{- range $jobType := list "CronJob" "Job" }}
+{{- $jobCategory := ternary "cronjob" "onetime" (eq $jobType "CronJob") }}
 apiVersion: batch/v1
 kind: {{ $jobType }}
 metadata:
   name: {{ if eq $jobType "CronJob" }}{{ include "cloudzero-agent.initBackfillCronJobName" $ }}{{ else }}{{ include "cloudzero-agent.initBackfillJobName" $ }}{{ end }}
   namespace: {{ $.Release.Namespace }}
-  {{- include "cloudzero-agent.generateAnnotations" (merge (deepCopy $.Values.defaults.annotations) $.Values.initBackfillJob.annotations) | nindent 2 }}
-  labels:
-    {{- include "cloudzero-agent.insightsController.labels" $ | nindent 4 }}
-    job-type: backfill
-    {{- if eq $jobType "CronJob" }}
-    job-category: cronjob
-    {{- else }}
-    job-category: onetime
-    {{- end }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" $
+      "annotations" (list
+        $.Values.defaults.annotations
+        $.Values.initBackfillJob.annotations
+        $.Values.components.webhookServer.annotations
+        $.Values.components.webhookServer.backfill.annotations
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" $
+      "name" "backfill"
+      "labels" (list
+        $.Values.defaults.labels
+        $.Values.commonMetaLabels
+        $.Values.components.webhookServer.labels
+        $.Values.components.webhookServer.backfill.labels
+        (dict "job-type" "backfill")
+        (dict "job-category" $jobCategory)
+      )
+    ) | nindent 2 }}
 spec:
   {{- if eq $jobType "CronJob" }}
   schedule: {{ $.Values.components.webhookServer.backfill.schedule | default "0 */3 * * *" | quote }}
@@ -51,22 +64,56 @@ spec:
         metadata:
           name: {{ include "cloudzero-agent.initBackfillCronJobName" $ }}
           namespace: {{ $.Release.Namespace }}
-          labels:
-            {{- include "cloudzero-agent.insightsController.initBackfillJob.matchLabels" $ | nindent 12 }}
-            job-type: backfill
-            job-category: cronjob
-          {{- include "cloudzero-agent.generateAnnotations" $.Values.defaults.annotations | nindent 10 }}
+          {{- include "cloudzero-agent.generateLabels" (dict
+              "root" $
+              "name" "backfill"
+              "labels" (list
+                $.Values.defaults.labels
+                $.Values.commonMetaLabels
+                $.Values.components.webhookServer.labels
+                $.Values.components.webhookServer.backfill.labels
+                $.Values.components.webhookServer.backfill.podLabels
+                (dict "job-type" "backfill")
+                (dict "job-category" "cronjob")
+              )
+            ) | nindent 10 }}
+          {{- include "cloudzero-agent.generateAnnotations" (dict
+              "root" $
+              "annotations" (list
+                $.Values.defaults.annotations
+                $.Values.components.webhookServer.annotations
+                $.Values.components.webhookServer.backfill.annotations
+                $.Values.components.webhookServer.backfill.podAnnotations
+              )
+            ) | nindent 10 }}
         spec:
   {{- else }}
   template:
     metadata:
       name: {{ include "cloudzero-agent.initBackfillJobName" $ }}
       namespace: {{ $.Release.Namespace }}
-      labels:
-        {{- include "cloudzero-agent.insightsController.initBackfillJob.matchLabels" $ | nindent 8 }}
-        job-type: backfill
-        job-category: onetime
-      {{- include "cloudzero-agent.generateAnnotations" $.Values.defaults.annotations | nindent 6 }}
+      {{- include "cloudzero-agent.generateLabels" (dict
+          "root" $
+          "name" "backfill"
+          "labels" (list
+            $.Values.defaults.labels
+            $.Values.commonMetaLabels
+            $.Values.components.webhookServer.labels
+            $.Values.components.webhookServer.backfill.labels
+            $.Values.components.webhookServer.backfill.podLabels
+            (dict "job-type" "backfill")
+            (dict "job-category" "onetime")
+          )
+        ) | nindent 6 }}
+      {{- include "cloudzero-agent.generateAnnotations" (dict
+          "root" $
+          "annotations" (list
+            $.Values.defaults.annotations
+            $.Values.components.webhookServer.annotations
+            $.Values.components.webhookServer.backfill.annotations
+            $.Values.components.webhookServer.backfill.podAnnotations
+          )
+        ) | nindent 6 }}
     spec:
   {{- end }}
           serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" $ }}

@@ -196,12 +196,12 @@ tests:
           path: metadata.annotations["another"]
           value: "annotation"
 
-  # Test app.kubernetes.io/component label is set correctly
-  - it: should set app.kubernetes.io/component label to config-loader
+  # Test app.kubernetes.io/name label is set correctly
+  - it: should set app.kubernetes.io/name label to validator
     asserts:
       - equal:
-          path: metadata.labels["app.kubernetes.io/component"]
-          value: "config-loader"
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: "validator"
       - equal:
-          path: spec.template.metadata.labels["app.kubernetes.io/component"]
-          value: "config-loader"
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: "validator"
