@@ -16,6 +16,7 @@ DOCKER      ?= docker
 GREP        ?= grep
 KUBECTL     ?= kubectl
 NPM         ?= npm
+NPM_INSTALL ?= install
 PROTOC      ?= protoc
 RM          ?= rm
 XARGS       ?= xargs
@@ -117,7 +118,7 @@ install-tools-go:
 .PHONY: install-tools-node
 install-tools: install-tools-node
 install-tools-node:
-	@$(NPM) install --prefix ./.tools
+	@$(NPM) $(NPM_INSTALL) --prefix ./.tools
 
 # This is for installing tools using Homebrew that we assume are installed
 # system-wide.

@@ -481,7 +481,6 @@ When contacting support, include:
    ```
 
 2. **Configuration:**
-
    - Helm values used for installation
    - Any custom network policies
    - Service mesh configuration (if applicable)

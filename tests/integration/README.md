@@ -11,7 +11,6 @@ Integration tests verify that multiple components work together correctly and th
 ### Core Integration Tests
 
 - **`integration_test.go`** - Main integration test suite (currently commented out)
-
   - Tests HTTP API endpoints and routing
   - Validates request/response handling
   - Tests authentication and authorization flows

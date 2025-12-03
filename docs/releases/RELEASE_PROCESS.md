@@ -233,16 +233,13 @@ External approvals are a critical part of the release process to ensure that all
 ### Approval Workflow
 
 1. **Initiate Approval:**
-
    - After triggering the Manual Release workflow, stakeholders receive a notification to review the release.
 
 2. **Review Process:**
-
    - Stakeholders evaluate the functionality, documentation, and overall readiness of the release.
    - Any feedback or required changes are communicated back to the release manager or developer.
 
 3. **Provide Approval:**
-
    - Once satisfied, stakeholders provide manual approval within the workflow interface.
    - The release process proceeds to publication upon receiving all necessary approvals.
 

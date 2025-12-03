@@ -90,7 +90,6 @@ Kind (Kubernetes in Docker) uses your Docker Desktop to create Kubernetes cluste
 **Setup Steps:**
 
 1. **Ensure Docker Desktop is Running**
-
    - Make sure Docker Desktop is running on your machine
    - Kind will use Docker Desktop's Docker daemon
 
@@ -259,13 +258,11 @@ This test was created to validate the fix for a critical webhook configuration i
 ### Common Issues
 
 1. **Kind cluster creation fails**:
-
    - Check if Docker Desktop is running
    - Ensure Kind is properly installed
    - Check available disk space
 
 2. **Test timeout**:
-
    - Increase timeout in test configuration
    - Check if Kind cluster starts successfully
 
