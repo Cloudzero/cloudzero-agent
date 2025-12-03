@@ -5,7 +5,7 @@ go 1.25.4
 require (
 	github.com/homeport/dyff v1.10.2
 	github.com/itchyny/gojq v0.12.17
-	github.com/kudobuilder/kuttl v0.23.0
+	github.com/kudobuilder/kuttl v0.24.0
 	github.com/rhysd/actionlint v1.7.9
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
