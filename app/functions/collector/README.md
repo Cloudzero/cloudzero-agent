@@ -264,9 +264,11 @@ logging:
    - Ensure directory exists and is writable
 
 3. **API Key Authentication**
+
    ```text
    failed to validate API key
    ```
+
    - Verify `CLOUDZERO_API_KEY` environment variable
    - Check API key validity and permissions
    - Ensure network connectivity to CloudZero API

@@ -107,7 +107,6 @@ We'll create a secret in AWS Secrets Manager that we want to sync to Kubernetes.
      - The secret is named `dev/cloudzero-secret-api-key`, which includes a path (`dev/`) for organizational purposes.
 
 2. **Understand Secret Naming**
-
    - Using paths like `dev/` helps in organizing secrets and controlling access via IAM policies.
    - The ARN of this secret will be used when defining IAM policies in the next steps.
 
@@ -339,7 +338,6 @@ We'll now use the synced secret in deploying the CloudZero agent.
    - **Note**: Ensure you have the CloudZero Helm repository added to your Helm client.
 
 3. **Verify the Deployment**
-
    - **Check the Pods**
 
      ```bash
@@ -391,7 +389,6 @@ If you encounter issues, here are steps to help diagnose and resolve them.
    ```
 
 2. **Verify the Trust Policy**
-
    - **Ensure** the OIDC provider ARN matches your cluster's OIDC provider.
    - **Confirm** the `Condition` includes the correct `StringEquals` for your service account's namespace and name.
 

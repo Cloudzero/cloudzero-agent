@@ -223,21 +223,18 @@ Different resource patterns to test various scenarios:
 ### Common Performance Issues
 
 1. **High response times**:
-
    - Check CPU and memory usage
    - Look for garbage collection pressure
    - Verify network connectivity is stable
    - Review webhook logic for bottlenecks
 
 2. **Memory leaks**:
-
    - Monitor memory usage over time
    - Check for goroutine leaks
    - Review object lifecycle management
    - Analyze garbage collection patterns
 
 3. **Error rate increases**:
-
    - Check API server rate limiting
    - Verify webhook certificates are valid
    - Review network policies and connectivity

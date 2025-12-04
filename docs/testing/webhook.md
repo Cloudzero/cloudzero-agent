@@ -102,12 +102,10 @@ This outputs the certificate's full details, including SANs, validity, and finge
 When deploying the webhook in production, consider the following TLS configurations:
 
 1. **Self-signed certificates**
-
    - Use `-k` in tests or import the CA into your trust store.
    - Ensure the certificate is issued for `cloudzero-agent-webhook-server-svc.cloudzero-agent.svc`.
 
 2. **cert-manager**
-
    - Use cert-manager to issue a certificate for `cloudzero-agent-webhook-server-svc.cloudzero-agent.svc`.
 
 3. **Istio**

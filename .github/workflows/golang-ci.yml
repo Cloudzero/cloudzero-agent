@@ -2,6 +2,9 @@ name: CI
 
 on: [push]
 
+env:
+  NPM_INSTALL: ci
+
 jobs:
   # Dump the GitHub context for debugging purposes.
   dump-context:

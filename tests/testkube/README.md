@@ -208,9 +208,11 @@ TestKube results can integrate with:
    - Or configure proper certificates for production
 
 4. **Permission denied**:
+
    ```text
    curl: (7) Failed to connect: Permission denied
    ```
+
    - Check RBAC permissions for TestKube service accounts
    - Verify network policies allow communication
    - Check if services are exposed on correct ports
