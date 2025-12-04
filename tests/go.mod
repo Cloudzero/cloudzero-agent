@@ -11,7 +11,7 @@ require (
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/prometheus/prometheus v0.307.3
+	github.com/prometheus/prometheus v0.308.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
@@ -70,7 +70,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0 // indirect
@@ -104,7 +104,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.3 // indirect
+	github.com/prometheus/common v0.67.4 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.10 // indirect
