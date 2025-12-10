@@ -13,8 +13,8 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.10
-	k8s.io/api v0.34.2
-	k8s.io/apimachinery v0.34.2
+	k8s.io/api v0.34.3
+	k8s.io/apimachinery v0.34.3
 	k8s.io/client-go v0.34.2
 )
 
