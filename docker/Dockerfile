@@ -67,7 +67,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
     BUILD_TIME="${BUILD_TIME}"
 
 # Stage 4: Access current certs
-FROM gcr.io/distroless/static-debian12:debug@sha256:7dc183cc0aea6abd9d105135e49d37b7474a79391ebea7eb55557cd4486d2225 AS certs
+FROM gcr.io/distroless/static-debian12:debug@sha256:4ca65de9063e5b25e07b8585cc9d70d4aca9e28dfc6dcdcfcc9bb79acda55678 AS certs
 
 # Stage 5: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
