@@ -10,3 +10,6 @@
 
 # Go template files that render to YAML - don't format template syntax
 /tests/kind/testdata/kind-config.yaml
+
+# Helm plugins (like helm unittest) are copied into this directory.
+/.tools/helm-plugins/
