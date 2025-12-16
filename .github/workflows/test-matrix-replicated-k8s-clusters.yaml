@@ -115,7 +115,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            make install-tools
+            make install-tools V=1
 
       - name: Install Krew and Plugins
         uses: nick-fields/retry@v3
@@ -253,21 +253,21 @@ jobs:
           echo "=== Cluster Overrides File Contents ==="
           cat clusters/${{ env.CLUSTER_NAME }}-overrides.yaml
           echo "=== Testing Makefile Functions ==="
-          make -n helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }}
+          make -n helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }} V=1
 
       - name: Install CloudZero Agent using Makefile
         env:
           CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
         run: |
-          make helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }}
+          make helm-install CLUSTER_NAME=${{ env.CLUSTER_NAME }} V=1
 
       - name: Wait for CloudZero Agent to be ready
         run: |
-          make helm-wait CLUSTER_NAME=${{ env.CLUSTER_NAME }}
+          make helm-wait CLUSTER_NAME=${{ env.CLUSTER_NAME }} V=1
 
       - name: Run KUTTL Tests
         run: |
-          make helm-test-kuttl CLUSTER_NAME=${{ env.CLUSTER_NAME }}
+          make helm-test-kuttl CLUSTER_NAME=${{ env.CLUSTER_NAME }} V=1
 
       - name: Collect Logs
         id: logs
@@ -350,7 +350,7 @@ jobs:
       - name: Uninstall CloudZero Agent
         if: always()
         run: |
-          make helm-uninstall "CLUSTER_NAME=${{ env.CLUSTER_NAME }}" || true
+          make helm-uninstall "CLUSTER_NAME=${{ env.CLUSTER_NAME }}" V=1 || true
 
       # It wouldn't be a bad idea to do a security pattern scan of these logs and redact them if a
       # potential secret it detected, since they will be publicly available if uploaded.
