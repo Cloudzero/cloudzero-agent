@@ -52,6 +52,9 @@ REGENERATE     ?= auto
 CLOUDZERO_HOST        ?= dev-api.cloudzero.com
 CLOUD_ACCOUNT_ID      ?= "123456789012"
 CSP_REGION            ?= "us-east-1"
+HELM_PLUGINS_DIR      := $(PWD)/.tools/helm-plugins
+HELM_ENV              ?= HELM_PLUGINS="$(HELM_PLUGINS_DIR)"
+HELM_CMD              := $(HELM_ENV) $(HELM)
 
 # Colors
 ERROR_COLOR ?= \033[1;31m
@@ -139,14 +142,18 @@ install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
 	@$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b .tools/bin $(GOLANGCI_LINT_VERSION)
 
+# Helm unittest plugin installation (pinned to v1.0.2 due to platformHooks bug in v1.0.3)
+# See: https://github.com/helm-unittest/helm-unittest/issues/790
+HELM_UNITTEST_VERSION := v1.0.2
+HELM_UNITTEST_PLUGIN  := $(HELM_PLUGINS_DIR)/helm-unittest/untt
+
+$(HELM_UNITTEST_PLUGIN): | $(HELM)
+	mkdir -p "$(HELM_PLUGINS_DIR)"
+	$(HELM_CMD) plugin install https://github.com/helm-unittest/helm-unittest --version $(HELM_UNITTEST_VERSION)
+
 .PHONY: install-tools-helm-unittest
 install-tools: install-tools-helm-unittest
-install-tools-helm-unittest: install-tools-go # For helm.
-install-tools-helm-unittest:
-	@if ! $(HELM) plugin list | grep -q unittest; then \
-		echo "$(INFO_COLOR)Installing helm unittest plugin...$(NO_COLOR)"; \
-		$(HELM) plugin install https://github.com/helm-unittest/helm-unittest; \
-	fi
+install-tools-helm-unittest: $(HELM_UNITTEST_PLUGIN)
 
 # Generate the secrets file used by the `act` tool for local GitHub Action development.
 secrets-act:
@@ -300,7 +307,7 @@ GO_BINARIES = \
 # Generate embedded defaults for helmless (conditional on REGENERATE setting)
 ifneq ($(REGENERATE),never)
 app/functions/helmless/default-values.yaml: helm/values.yaml $(wildcard helm/*.yaml helm/templates/*.yaml helm/templates/*.tpl helm/*.yaml)
-	$(HELM) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
+	$(HELM_CMD) show values ./helm | $(PRETTIER) --stdin-filepath $@ > $@
 
 bin/cloudzero-helmless: app/functions/helmless/default-values.yaml
 
@@ -564,7 +571,7 @@ endef
 # Usage: $(call invoke-helm) install my-release ./chart
 # Note: Uses --kube-context (not --context) as required by helm
 define invoke-helm
-$(call get-kubeconfig-env) $(HELM) $(call get-kubectx-arg,--kube-context) --namespace "$(call get-cluster-property,.namespace)"
+$(call get-kubeconfig-env) $(HELM_CMD) $(call get-kubectx-arg,--kube-context) --namespace "$(call get-cluster-property,.namespace)"
 endef
 
 # invoke-kuttl - Generate kuttl command with kubeconfig only
@@ -577,9 +584,9 @@ endef
 
 # Use a timestamp file to track helm dependency installation
 helm/charts/.stamp: helm/Chart.yaml
-	$(HELM) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
-	$(HELM) repo update prometheus-community
-	$(HELM) dependency build ./helm
+	$(HELM_CMD) repo add --force-update prometheus-community $(PROMETHEUS_COMMUNITY_REPO)
+	$(HELM_CMD) repo update prometheus-community
+	$(HELM_CMD) dependency build ./helm
 	@touch helm/charts/.stamp
 
 .PHONY: helm-install-deps
@@ -646,7 +653,7 @@ $(filter %fail,$(SCHEMA_TEST_TARGETS)): %: %-template
 tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
 	expected_result=$$(echo "$$file" | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-	output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>&1); \
+	output=$$($(HELM_CMD) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>&1); \
 	if [ $$? -eq 0 ]; then \
 		result="pass"; \
 	else \
@@ -663,7 +670,7 @@ tests/helm/schema/%-template: tests/helm/schema/%.yaml helm/charts/.stamp helm/v
 # Pattern rule for kubeconform validation (only for .pass tests)
 tests/helm/schema/%-kubeconform: tests/helm/schema/%.yaml helm/charts/.stamp helm/values.schema.json
 	@file="tests/helm/schema/$*.yaml"; \
-	kubeconform_output=$$($(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
+	kubeconform_output=$$($(HELM_CMD) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" ./helm --values "$$file" --set apiKey="not-a-real-key" 2>/dev/null | $(KUBECONFORM) \
 		-kubernetes-version "$(KUBE_VERSION)" \
 		-schema-location default \
 		-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
@@ -703,7 +710,7 @@ helm-test-subchart: helm/values.schema.json
 	@for dir in tests/helm/subchart/*/; do \
 		if [ -d "$$dir/chart" ]; then \
 			echo "$(INFO_COLOR)Building dependencies for $$(basename $$dir)...$(NO_COLOR)"; \
-			$(HELM) dependency build "$$dir/chart"; \
+			$(HELM_CMD) dependency build "$$dir/chart"; \
 		fi; \
 	done
 	@for dir in tests/helm/subchart/*/; do \
@@ -711,7 +718,7 @@ helm-test-subchart: helm/values.schema.json
 			for file in $$dir*.yaml; do \
 				if [ -f "$$file" ]; then \
 					expected_result=$$(echo $$file | grep -q "\.pass\.yaml$$" && echo "pass" || echo "fail"); \
-					output=$$($(HELM) template parent-test "$$dir/chart" --values "$$file" 2>&1); \
+					output=$$($(HELM_CMD) template parent-test "$$dir/chart" --values "$$file" 2>&1); \
 					if [ $$? -eq 0 ]; then \
 						result="pass"; \
 					else \
@@ -733,20 +740,20 @@ helm-test-subchart: helm/values.schema.json
 		fi; \
 	done
 
-helm/tests/%.yaml-unittest: helm/tests/%.yaml
-	@$(HELM) unittest ./helm --values helm/tests/values.yaml --file 'tests/$*.yaml'
+helm/tests/%.yaml-unittest: helm/tests/%.yaml $(HELM_UNITTEST_PLUGIN)
+	@$(HELM_CMD) unittest ./helm --values helm/tests/values.yaml --file 'tests/$*.yaml'
 
 .PHONY: helm-test-unittest
 helm-test-unittest: ## Run Helm unittest tests
-helm-test-unittest: install-tools-helm-unittest helm/charts/.stamp
-	$(HELM) unittest ./helm --values helm/tests/values.yaml
+helm-test-unittest: $(HELM_UNITTEST_PLUGIN) helm/charts/.stamp
+	$(HELM_CMD) unittest ./helm --values helm/tests/values.yaml
 
 .PHONY: helm-test
 helm-test: ## Run all Helm validation tests
 helm-test: helm-test-schema helm-test-subchart helm-test-unittest helm-test-template
 
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
-	$(HELM) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" --namespace "$(HELM_SCHEMA_TEST_NAMESPACE)" ./helm --values $< > $@
+	$(HELM_CMD) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" --namespace "$(HELM_SCHEMA_TEST_NAMESPACE)" ./helm --values $< > $@
 
 helm-test-template: $(patsubst %-overrides.yml,%.yaml,$(wildcard tests/helm/template/*-overrides.yml))
 generate: helm-test-template
