@@ -19,9 +19,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/google/uuid"
+	remoteapi "github.com/prometheus/client_golang/exp/api/remote"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	prom "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
@@ -58,10 +58,10 @@ const (
 // These correspond to the official Prometheus remote_write specification.
 var (
 	// v1ContentType identifies Prometheus remote_write v1 protocol format.
-	v1ContentType = string(prom.RemoteWriteProtoMsgV1)
+	v1ContentType = string(remoteapi.WriteV1MessageType)
 
 	// v2ContentType identifies Prometheus remote_write v2 protocol format.
-	v2ContentType = string(prom.RemoteWriteProtoMsgV2)
+	v2ContentType = string(remoteapi.WriteV2MessageType)
 )
 
 // Prometheus metrics for monitoring the collector's ingestion and classification performance.
@@ -320,7 +320,7 @@ func parseProtoMsg(contentType string) (string, error) {
 			return "", fmt.Errorf("as per https://www.rfc-editor.org/rfc/rfc9110#parameter expected parameters to be key-values, got %v in %v content-type", p, contentType)
 		}
 		if pair[0] == "proto" {
-			ret := prom.RemoteWriteProtoMsg(pair[1])
+			ret := remoteapi.WriteMessageType(pair[1])
 			if err := ret.Validate(); err != nil {
 				return "", fmt.Errorf("got %v content type; %w", contentType, err)
 			}
@@ -328,7 +328,7 @@ func parseProtoMsg(contentType string) (string, error) {
 		}
 	}
 	// No "proto=" parameter, assuming v1.
-	return string(prom.RemoteWriteProtoMsgV1), nil
+	return string(remoteapi.WriteV1MessageType), nil
 }
 
 func formatFloat(value float64) string {

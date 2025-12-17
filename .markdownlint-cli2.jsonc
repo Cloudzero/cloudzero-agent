@@ -15,6 +15,7 @@
   "globs": [
     "**/*.md",
     "!.tools/node_modules/**",
+    "!.tools/helm-plugins/**",
     "!scratch/**",
     "!docs/releases/**",
     "!helm/docs/releases/**",

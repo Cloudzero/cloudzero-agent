@@ -42,11 +42,11 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install golangci-lint
-        run: make install-tools-golangci-lint
+        run: make install-tools-golangci-lint V=1
       - name: Install Node.js linters
-        run: make install-tools-node
+        run: make install-tools-node V=1
       - name: Run linters
-        run: make lint
+        run: make lint V=1
 
   analyze: # Run static analysis
     runs-on: ubuntu-latest
@@ -58,13 +58,13 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install tools
-        run: make install-tools
+        run: make install-tools V=1
       - name: Install Checkov
         run: |
           command -v pip3 || (sudo apt update && sudo apt install python3-pip -y)
           pip3 install checkov
       - name: Run static analysis
-        run: make analyze
+        run: make analyze V=1
 
   # Run govulncheck
   #
@@ -94,9 +94,9 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install tools
-        run: make install-tools
+        run: make install-tools V=1
       - name: Format code
-        run: make format
+        run: make format V=1
       - name: Check file format
         run: git diff --exit-code --color
 
@@ -128,15 +128,15 @@ jobs:
           version: "29.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Clean generated files
-        run: make maintainer-clean
+        run: make maintainer-clean V=1
       - name: Install tools
-        run: make install-tools
+        run: make install-tools V=1
       - name: Generate code
-        run: make generate
+        run: make generate V=1
         env:
           PROTOC: ${{ steps.setup-protoc.outputs.path }}/bin/protoc
       - name: Format code
-        run: make format
+        run: make format V=1
       - name: Check file format
         run: git diff --exit-code --color
 
@@ -166,7 +166,7 @@ jobs:
           # a good reminder to fix any flaky tests.
           max_attempts: ${{ startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && 3 || 1 }}
           timeout_minutes: 30
-          command: make test
+          command: make test V=1
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -191,7 +191,7 @@ jobs:
         # There's an issue with some of the other Tests running in a Linux container,
         # so the command only runs the single test for now.
       - name: Run integration tests
-        run: make test-integration
+        run: make test-integration V=1
 
   smoke-tests:
     runs-on: ubuntu-latest
@@ -239,4 +239,4 @@ jobs:
 
       # smoke tests hit alfa.
       - name: Run smoke tests
-        run: GO="$(which go)" sudo -E make test-smoke
+        run: GO="$(which go)" sudo -E make test-smoke V=1

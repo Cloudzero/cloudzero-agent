@@ -120,7 +120,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 4
           command: |
-            make install-tools
+            make install-tools V=1
 
       - name: Run Complete Chart Tests
         env:
@@ -130,12 +130,12 @@ jobs:
           # Create unique cluster name based on matrix (using valid characters only)
           CLUSTER_NAME="kind-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
           # Clean up any existing cluster using Make target
-          make kind-down "CLUSTER_NAME=$CLUSTER_NAME" || true
+          make kind-down "CLUSTER_NAME=$CLUSTER_NAME" V=1 || true
           # Create cluster configuration files for this test run
           cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
           cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
           # Run the complete test workflow using Kind
-          make kind-test "CLUSTER_NAME=$CLUSTER_NAME"
+          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" V=1
 
       - name: Set version output
         id: set-output
@@ -178,7 +178,7 @@ jobs:
           echo "Cleaning up Kind cluster..."
           CLUSTER_NAME="kind-${{ matrix.kver.platform == 'linux/amd64' && 'amd64' || matrix.kver.platform == 'linux/arm64' && 'arm64' || matrix.kver.platform }}-${{ matrix.kver.k8s }}"
           # kind-test handles its own cleanup, but ensure cluster is deleted using Make target
-          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME V=1 || true
 
   specialized-config-test:
     name: config-test-${{ matrix.config.name }}
@@ -235,7 +235,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 4
           command: |
-            make install-tools
+            make install-tools V=1
 
       - name: Create Specialized Configuration Override File
         run: |
@@ -259,12 +259,12 @@ jobs:
           # Create unique cluster name for this configuration test
           CLUSTER_NAME="kind-config-${{ matrix.config.name }}"
           # Clean up any existing cluster using Make target
-          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME V=1 || true
           # Create cluster configuration files for this test run
           cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
           cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
           # Run the complete test workflow using Kind with extra overrides
-          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES"
+          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES" V=1
 
       - name: Set config output
         id: set-output
@@ -304,6 +304,6 @@ jobs:
           echo "Cleaning up Kind cluster..."
           CLUSTER_NAME="kind-config-${{ matrix.config.name }}"
           # kind-test handles its own cleanup, but ensure cluster is deleted using Make target
-          make kind-down CLUSTER_NAME=$CLUSTER_NAME || true
+          make kind-down CLUSTER_NAME=$CLUSTER_NAME V=1 || true
           # Clean up temporary override file
           rm -f "$HELM_EXTRA_OVERRIDES" || true

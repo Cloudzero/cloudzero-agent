@@ -54,7 +54,7 @@ jobs:
           go-version-file: go.mod
 
       - name: SETUP - Install tools
-        run: make install-tools
+        run: make install-tools V=1
 
       - name: Install Checkov
         run: |
@@ -64,7 +64,7 @@ jobs:
       - name: TEST - Run helm tests
         env:
           CLOUDZERO_DEV_API_KEY: "fake-api-key"
-        run: make -j helm-test
+        run: make -j helm-test V=1
 
   # This job tests the chart on a KinD cluster
   # and if we are in the develop or tag branch, it will
