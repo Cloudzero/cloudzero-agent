@@ -132,18 +132,27 @@ insightsController:
     useCertManager: false
 ```
 
-### Mandatory Values
+### Cluster identity & mandatory values
 
-There are several mandatory values that must be specified for the chart to install properly. Below are the required settings along with strategies for providing custom values during installation:
+The agent uses the cloud provider Instance Metadata Service (IMDS) to discover cluster identity where possible. This means some values only need to be set explicitly when IMDS is unavailable/blocked or when you want to override the detected values.
 
-| Key                | Type   | Default               | Description                                                                                                                                    |
-| ------------------ | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| cloudAccountId     | string | `nil`                 | Account ID in AWS or Subscription ID in Azure or Project Number in GCP where the cluster is running. Must be a string due to Helm limitations. |
-| clusterName        | string | `nil`                 | Name of the cluster. Must be RFC 1123 compliant.                                                                                               |
-| host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to.                                                                                                             |
-| apiKey             | string | `nil`                 | The CloudZero API key to use for exporting metrics. Only used if `existingSecretName` is not set.                                              |
-| existingSecretName | string | `nil`                 | Name of the secret that contains the CloudZero API key. Required if not providing the API key via `apiKey`.                                    |
-| region             | string | `nil`                 | Region where the cluster is running (e.g., `us-east-1`, `eastus`). For more information, see AWS or Azure documentation.                       |
+- **clusterName**
+  - **EKS / AKS**: must be set explicitly; it cannot be discovered from IMDS.
+  - **GKE**: auto-detected from IMDS; set only if you need to override.
+- **cloudAccountId / region**
+  - Auto-detected via IMDS on EKS, AKS, and GKE.
+  - Must be set explicitly if IMDS is blocked or unavailable.
+
+Below is a summary of these settings and how they are used:
+
+| Key                | Type   | Default               | Detection & requirements                                                                                                                             |
+| ------------------ | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, or project number in GCP. Auto-detected via IMDS when available; required if IMDS is blocked.           |
+| clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS and AKS; auto-detected on GKE; required on any provider if IMDS is blocked.                         |
+| host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                          |
+| apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` is set.                                                           |
+| existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                        |
+| region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
 
 > It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
 
