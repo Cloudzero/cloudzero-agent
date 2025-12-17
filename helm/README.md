@@ -145,13 +145,13 @@ The agent uses the cloud provider Instance Metadata Service (IMDS) to discover c
 
 Below is a summary of these settings and how they are used:
 
-| Key                | Type   | Default               | Detection & requirements                                                                                                                         |
-| ------------------ | ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, or project number in GCP. Auto-detected via IMDS when available; required if IMDS is blocked.      |
-| clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS and AKS; auto-detected on GKE; required on any provider if IMDS is blocked.                    |
-| host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                     |
-| apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` is set.                                                      |
-| existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                   |
+| Key                | Type   | Default               | Detection & requirements                                                                                                                             |
+| ------------------ | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, or project number in GCP. Auto-detected via IMDS when available; required if IMDS is blocked.           |
+| clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS and AKS; auto-detected on GKE; required on any provider if IMDS is blocked.                         |
+| host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                          |
+| apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` is set.                                                           |
+| existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                        |
 | region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
 
 > It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
