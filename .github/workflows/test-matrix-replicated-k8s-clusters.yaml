@@ -356,7 +356,7 @@ jobs:
       # potential secret it detected, since they will be publicly available if uploaded.
 
       - name: Upload Failure Logs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always() && steps.logs.conclusion == 'success'
         with:
           name: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
