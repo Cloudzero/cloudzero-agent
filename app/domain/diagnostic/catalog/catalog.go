@@ -11,6 +11,7 @@ import (
 	config "github.com/cloudzero/cloudzero-agent/app/config/validator"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/cz"
+	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/istio"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/namespace"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/provider"
 	"github.com/cloudzero/cloudzero-agent/app/domain/diagnostic/k8s/version"
@@ -55,6 +56,7 @@ func createRegistry(ctx context.Context, c *config.Settings) *registry {
 	r.add(config.DiagnosticScrapeConfig, false, promcfg.NewProvider(ctx, c))
 	r.add(config.DiagnosticPrometheusVersion, false, promver.NewProvider(ctx, c))
 	r.add(config.DiagnosticInsightsIngress, false, webhook.NewProvider(ctx, c))
+	r.add(config.DiagnosticIstioXClusterLB, false, istio.NewProvider(ctx, c))
 
 	// Internal diagnostics emitted based on stage
 	r.add(config.DiagnosticInternalInitStart, true, stage.NewProvider(ctx, c, status.StatusType_STATUS_TYPE_INIT_STARTED))

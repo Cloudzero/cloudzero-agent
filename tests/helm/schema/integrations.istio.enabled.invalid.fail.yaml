@@ -1,0 +1,4 @@
+# enabled must be null, true, or false - not a string
+integrations:
+  istio:
+    enabled: "yes"

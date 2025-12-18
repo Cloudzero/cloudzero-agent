@@ -6646,8 +6646,16 @@
               "default": "1m"
             },
             "suppressIstioAnnotations": {
-              "default": false,
-              "type": "boolean"
+              "default": null,
+              "deprecated": true,
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
             },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations"
@@ -6749,6 +6757,33 @@
               "$ref": "#/$defs/io.k8s.api.admissionregistration.v1.ValidatingWebhook/properties/timeoutSeconds",
               "default": 1,
               "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "integrations": {
+      "additionalProperties": false,
+      "properties": {
+        "istio": {
+          "additionalProperties": false,
+          "properties": {
+            "clusterID": {
+              "default": null,
+              "type": ["string", "null"]
+            },
+            "enabled": {
+              "default": null,
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
             }
           },
           "type": "object"

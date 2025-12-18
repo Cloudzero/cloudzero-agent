@@ -66,18 +66,33 @@ spec:
             .Values.components.webhookServer.podLabels
           )
         ) | nindent 6 }}
+      {{- /*
+        Istio mTLS Port Exclusion
+
+        When Istio is detected and cert-manager is not in use, exclude port 8443
+        from Envoy proxying. The Kubernetes API server sends admission webhook
+        requests expecting the webhook's self-signed TLS certificate. Without this
+        exclusion, Istio intercepts the traffic and presents its own mTLS certificate,
+        which the API server doesn't trust, causing webhook calls to fail.
+
+        Port 8443 is excluded (not 443) because Istio's sidecar intercepts inbound
+        traffic at the pod level, where traffic arrives on the target port (8443),
+        not the service port (443).
+
+        See helm/docs/istio.md for full documentation.
+      */ -}}
       {{- $istioAnnotations := dict -}}
-      {{- if not .Values.insightsController.server.suppressIstioAnnotations -}}
-      {{- $istioAnnotations = dict "sidecar.istio.io/inject" "false" -}}
+      {{- if and (include "cloudzero-agent.Values.integrations.istio.enabled" .) (not .Values.insightsController.tls.useCertManager) -}}
+      {{- $istioAnnotations = dict "traffic.sidecar.istio.io/excludeInboundPorts" "8443" -}}
       {{- end -}}
       {{- include "cloudzero-agent.generateAnnotations" (dict
           "root" .
           "annotations" (list
+            $istioAnnotations
             .Values.defaults.annotations
             .Values.insightsController.server.podAnnotations
             .Values.components.webhookServer.annotations
             .Values.components.webhookServer.podAnnotations
-            $istioAnnotations
             (dict "checksum/config" (include "cloudzero-agent.configurationChecksum" .))
           )
         ) | nindent 6 }}

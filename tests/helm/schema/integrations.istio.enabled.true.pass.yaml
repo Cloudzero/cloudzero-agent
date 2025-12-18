@@ -1,0 +1,3 @@
+integrations:
+  istio:
+    enabled: true

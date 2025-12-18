@@ -1105,7 +1105,6 @@ data:
         replicaCount: null
         send_interval: 1m
         send_timeout: 1m
-        suppressIstioAnnotations: false
         tolerations: []
         write_timeout: 10s
       service:
@@ -1129,6 +1128,10 @@ data:
         namespaceSelector: {}
         path: /validate
         timeoutSeconds: 1
+    integrations:
+      istio:
+        clusterID: null
+        enabled: null
     jobConfigID: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
     kubeStateMetrics:
       affinity: {}
@@ -1548,6 +1551,12 @@ data:
       insights_service:  cz-agent-cz-webhook-svc
       collector_service: cz-agent-cz-aggregator
 
+    integrations:
+      istio:
+        # Use explicit value only (no fallback) so validator can distinguish user intent
+        # The validator receives clusterName separately via deployment.cluster_name
+        cluster_id: 
+
     prometheus:
       kube_state_metrics_service_endpoint: http://cz-agent-cz-ksm.cz-agent.svc.cluster.local:8080
       executable: /bin/prometheus
@@ -1578,6 +1587,7 @@ data:
             - prometheus_version
             - scrape_cfg
             - webhook_server_reachable
+            - istio_xcluster_lb
         - name: pre-stop
           enforce: false
           checks:
@@ -2234,6 +2244,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ISTIO_AMBIENT_REDIRECTION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['ambient.istio.io/redirection']
+            - name: ISTIO_TOPOLOGY_CLUSTER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['topology.istio.io/cluster']
           command:
             - /app/cloudzero-agent-validator
             - install
@@ -2269,6 +2287,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ISTIO_AMBIENT_REDIRECTION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['ambient.istio.io/redirection']
+            - name: ISTIO_TOPOLOGY_CLUSTER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['topology.istio.io/cluster']
           command:
             - /checks/bin/cloudzero-agent-validator
             - diagnose
@@ -2639,7 +2665,6 @@ spec:
         helm.sh/chart: cloudzero-agent-1.1.0-dev
       annotations:
         checksum/config: DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E
-        sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: cz-agent-cz-server
       
@@ -2856,6 +2881,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ISTIO_AMBIENT_REDIRECTION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['ambient.istio.io/redirection']
+            - name: ISTIO_TOPOLOGY_CLUSTER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['topology.istio.io/cluster']
           command:
             - /app/cloudzero-cluster-config
             - load

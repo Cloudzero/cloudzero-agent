@@ -26,6 +26,25 @@
 */ -}}
 {{- range $jobType := list "CronJob" "Job" }}
 {{- $jobCategory := ternary "cronjob" "onetime" (eq $jobType "CronJob") }}
+{{- /*
+  Istio mTLS Port Exclusion
+
+  When Istio is detected and cert-manager is not in use, exclude port 443 from
+  Envoy proxying. The backfill job connects to the webhook service on port 443
+  (the service port, which Kubernetes routes to pod port 8443). Without this
+  exclusion, Istio wraps the connection in mTLS, but the webhook uses a
+  self-signed certificate that Istio doesn't recognize, causing TLS failures.
+
+  Port 443 is excluded (not 8443) because Istio's sidecar intercepts outbound
+  traffic based on the destination port the application connects to - the
+  service port, not the pod's target port.
+
+  See helm/docs/istio.md for full documentation.
+*/ -}}
+{{- $istioAnnotations := dict -}}
+{{- if and (include "cloudzero-agent.Values.integrations.istio.enabled" $) (not $.Values.insightsController.tls.useCertManager) -}}
+{{- $istioAnnotations = dict "traffic.sidecar.istio.io/excludeOutboundPorts" "443" -}}
+{{- end }}
 apiVersion: batch/v1
 kind: {{ $jobType }}
 metadata:
@@ -80,6 +99,7 @@ spec:
           {{- include "cloudzero-agent.generateAnnotations" (dict
               "root" $
               "annotations" (list
+                $istioAnnotations
                 $.Values.defaults.annotations
                 $.Values.components.webhookServer.annotations
                 $.Values.components.webhookServer.backfill.annotations
@@ -108,6 +128,7 @@ spec:
       {{- include "cloudzero-agent.generateAnnotations" (dict
           "root" $
           "annotations" (list
+            $istioAnnotations
             $.Values.defaults.annotations
             $.Values.components.webhookServer.annotations
             $.Values.components.webhookServer.backfill.annotations

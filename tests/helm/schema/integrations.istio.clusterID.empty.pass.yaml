@@ -1,0 +1,4 @@
+# Empty string is valid - means no cluster ID configured
+integrations:
+  istio:
+    clusterID: ""

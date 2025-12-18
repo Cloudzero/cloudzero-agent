@@ -1,0 +1,5 @@
+# integrations.istio does not allow additional properties
+integrations:
+  istio:
+    enabled: true
+    unknownProperty: "should fail"
