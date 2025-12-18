@@ -1,0 +1,105 @@
+# Test defaults.* properties for HorizontalPodAutoscaler resources
+#
+# This test validates that HorizontalPodAutoscaler resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# HPAs only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to HPAs.
+#
+# Templates tested:
+# - agent-hpa.yaml (only renders when components.agent.mode is "clustered" and autoscaling enabled)
+# - webhook-hpa.yaml (only renders when insightsController and autoscaling enabled)
+suite: defaults.* properties apply to HorizontalPodAutoscaler resources
+templates:
+  - agent-hpa.yaml
+  - webhook-hpa.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to all HorizontalPodAutoscaler metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: HorizontalPodAutoscaler
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      components.agent.mode: clustered
+      components.agent.autoscaling.enabled: true
+      insightsController.enabled: true
+      components.webhookServer.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to agent-hpa metadata
+    template: agent-hpa.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      components.agent.mode: clustered
+      components.agent.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to webhook-hpa metadata
+    template: webhook-hpa.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+      components.webhookServer.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to all HorizontalPodAutoscaler metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: HorizontalPodAutoscaler
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      components.agent.mode: clustered
+      components.agent.autoscaling.enabled: true
+      insightsController.enabled: true
+      components.webhookServer.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to agent-hpa metadata
+    template: agent-hpa.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      components.agent.mode: clustered
+      components.agent.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to webhook-hpa metadata
+    template: webhook-hpa.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+      components.webhookServer.autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

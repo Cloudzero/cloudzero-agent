@@ -83,7 +83,7 @@ spec:
         ) | nindent 6 }}
     spec:
       serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" . }}
-      {{- include "cloudzero-agent.insightsController.server.imagePullSecrets" . | nindent 6 }}
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.agent.image) | nindent 6 }}
       {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
             (.Values.defaults.securityContext | default (dict))
             (.Values.components.webhookServer.securityContext | default (dict))

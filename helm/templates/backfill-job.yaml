@@ -119,7 +119,7 @@ spec:
           serviceAccountName: {{ include "cloudzero-agent.serviceAccountName" $ }}
           restartPolicy: OnFailure
           {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" $.Values.defaults.dns) | nindent 10 }}
-          {{- include  "cloudzero-agent.initBackfillJob.imagePullSecrets" $ | nindent 10 }}
+          {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" $ "image" $.Values.components.agent.image) | nindent 10 }}
           {{- include "cloudzero-agent.generatePriorityClassName" $.Values.defaults.priorityClassName | nindent 10 }}
           {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
               ($.Values.defaults.securityContext | default (dict))

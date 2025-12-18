@@ -1,0 +1,41 @@
+# Test defaults.* properties for Certificate resources
+#
+# This test validates that Certificate resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# Certificates only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to Certificates.
+#
+# Templates tested:
+# - webhook-certificate.yaml (only renders when insightsController.tls.useCertManager is true)
+suite: defaults.* properties apply to Certificate resources
+templates:
+  - webhook-certificate.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to Certificate metadata
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+      insightsController.tls.useCertManager: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to Certificate metadata
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+      insightsController.tls.useCertManager: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

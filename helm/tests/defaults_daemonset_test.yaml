@@ -1,0 +1,177 @@
+# Test defaults.* properties for DaemonSet resources
+#
+# This test validates that DaemonSet resources properly inherit all applicable
+# defaults from the chart's defaults section, including:
+# - Metadata defaults: labels, annotations
+# - PodSpec defaults: affinity, tolerations, nodeSelector, priorityClassName,
+#   dns.policy, dns.config, securityContext, image settings
+#
+# Note: DaemonSets do not support replicas (they run on all matching nodes).
+#
+# Templates tested:
+# - agent-daemonset.yaml (only renders when components.agent.mode is "federated")
+suite: defaults.* properties apply to DaemonSet resources
+templates:
+  - agent-daemonset.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to DaemonSet metadata
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to DaemonSet metadata
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  # ============================================================================
+  # defaults.affinity tests
+  # ============================================================================
+  - it: should apply defaults.affinity to DaemonSet resources
+    set:
+      defaults.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: test-defaults-affinity
+                    operator: In
+                    values:
+                      - test-value
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: test-defaults-affinity
+
+  # ============================================================================
+  # defaults.tolerations tests
+  # ============================================================================
+  - it: should apply defaults.tolerations to DaemonSet resources
+    set:
+      defaults.tolerations:
+        - key: test-defaults-toleration
+          operator: Equal
+          value: test-value
+          effect: NoSchedule
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: test-defaults-toleration
+
+  # ============================================================================
+  # defaults.nodeSelector tests
+  # ============================================================================
+  - it: should apply defaults.nodeSelector to DaemonSet resources
+    set:
+      defaults.nodeSelector:
+        test-defaults-node-selector: test-value
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.test-defaults-node-selector
+          value: test-value
+
+  # ============================================================================
+  # defaults.priorityClassName tests
+  # ============================================================================
+  - it: should apply defaults.priorityClassName to DaemonSet resources
+    set:
+      defaults.priorityClassName: test-defaults-priority-class
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: test-defaults-priority-class
+
+  # ============================================================================
+  # defaults.dns.policy tests
+  # ============================================================================
+  - it: should apply defaults.dns.policy to DaemonSet resources
+    set:
+      defaults.dns.policy: None
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: None
+
+  # ============================================================================
+  # defaults.dns.config tests
+  # ============================================================================
+  - it: should apply defaults.dns.config to DaemonSet resources
+    set:
+      defaults.dns.config:
+        nameservers:
+          - "1.2.3.4"
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsConfig.nameservers[0]
+          value: "1.2.3.4"
+
+  # ============================================================================
+  # defaults.securityContext tests
+  # ============================================================================
+  - it: should apply defaults.securityContext to DaemonSet pod specs
+    set:
+      defaults.securityContext:
+        runAsUser: 12345
+        runAsNonRoot: true
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 12345
+
+  # ============================================================================
+  # defaults.image.pullPolicy tests
+  # ============================================================================
+  - it: should apply defaults.image.pullPolicy to DaemonSet containers
+    set:
+      defaults.image.pullPolicy: Always
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  # ============================================================================
+  # defaults.image.pullSecrets tests
+  # ============================================================================
+  - it: should apply defaults.image.pullSecrets to DaemonSet resources
+    set:
+      defaults.image.pullSecrets:
+        - name: test-defaults-pull-secret
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets[0].name
+          value: test-defaults-pull-secret
+
+  - it: should fall back to deprecated imagePullSecrets when defaults.image.pullSecrets is not set
+    set:
+      imagePullSecrets:
+        - name: deprecated-pull-secret
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets[0].name
+          value: deprecated-pull-secret

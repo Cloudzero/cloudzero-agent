@@ -156,7 +156,7 @@ spec:
           (.Values.components.aggregator.securityContext | default (dict))
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
-      {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.agent.image) | nindent 6 }}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.aggregator.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations) | nindent 6 }}

@@ -1,0 +1,93 @@
+# Test defaults.* properties for Service resources
+#
+# This test validates that Service resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# Services only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to Services.
+#
+# Templates tested:
+# - aggregator-service.yaml
+# - webhook-service.yaml
+suite: defaults.* properties apply to Service resources
+templates:
+  - aggregator-service.yaml
+  - webhook-service.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to all Service metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: Service
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to aggregator-service metadata
+    template: aggregator-service.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to webhook-service metadata
+    template: webhook-service.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to all Service metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: Service
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to aggregator-service metadata
+    template: aggregator-service.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to webhook-service metadata
+    template: webhook-service.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

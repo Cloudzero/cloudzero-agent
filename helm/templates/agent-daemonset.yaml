@@ -187,7 +187,7 @@ spec:
           (.Values.components.agent.federatedNode.securityContext | default (dict))
         ) | nindent 6 }}
       {{- include "cloudzero-agent.generateDNSInfo" (dict "defaults" .Values.defaults.dns) | nindent 6 }}
-      {{- include "cloudzero-agent.server.imagePullSecrets" . | nindent 6 -}}
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.prometheus.image) | nindent 6 }}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.server.tolerations) | nindent 6 }}
       {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}

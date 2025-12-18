@@ -1122,6 +1122,12 @@ Example usage:
 {{/*
 Generate imagePullSecrets block
 Accepts a dictionary with "root" (the top-level chart context) and "image" (the component's image configuration object)
+
+Fallback chain:
+1. Component-specific: .image.pullSecrets
+2. Defaults: .root.Values.defaults.image.pullSecrets
+3. Deprecated root-level: .root.Values.imagePullSecrets
+
 Example usage:
 {{- include "cloudzero-agent.generateImagePullSecrets" (dict
       "root" .
@@ -1131,7 +1137,7 @@ Example usage:
 {{- define "cloudzero-agent.generateImagePullSecrets" -}}
 {{- include "cloudzero-agent.maybeGenerateSection" (dict
       "name" "imagePullSecrets"
-      "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets)
+      "value" (.image.pullSecrets | default .root.Values.defaults.image.pullSecrets | default .root.Values.imagePullSecrets)
     ) -}}
 {{- end -}}
 
