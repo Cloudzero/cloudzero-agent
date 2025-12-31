@@ -6,7 +6,7 @@ require (
 	github.com/homeport/dyff v1.10.2
 	github.com/itchyny/gojq v0.12.18
 	github.com/kudobuilder/kuttl v0.24.0
-	github.com/rhysd/actionlint v1.7.9
+	github.com/rhysd/actionlint v1.7.10
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.11
@@ -166,8 +166,8 @@ require (
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
