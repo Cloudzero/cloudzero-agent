@@ -47,6 +47,36 @@ function info() {
     echo "==> $*"
 }
 
+# Run a diagnostic command and track results
+# Usage: run_diagnostic "description" "output_file" "command..."
+function run_diagnostic() {
+    local description="$1"
+    local output_file="$2"
+    shift 2
+    local cmd="$*"
+
+    if eval "$cmd" > "${output_file}" 2>&1; then
+        echo "[SUCCESS] ${description}" >> "${COMMAND_RESULTS_FILE}"
+        return 0
+    else
+        local exit_code=$?
+        echo "[FAILED]  ${description} (exit code: ${exit_code})" >> "${COMMAND_RESULTS_FILE}"
+        # Prepend failure notice to output file
+        local temp_file
+        temp_file=$(mktemp)
+        {
+            echo "[FAILED] Command failed with exit code ${exit_code}"
+            echo "Command: ${cmd}"
+            echo "=========================================="
+            echo ""
+            cat "${output_file}"
+        } > "${temp_file}"
+        mv "${temp_file}" "${output_file}"
+        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+        return 0  # Don't fail the script
+    fi
+}
+
 # Parse arguments
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
     usage
@@ -74,6 +104,18 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 info "Creating diagnostic bundle in: ${OUTPUT_DIR}"
 
+# Initialize command tracking
+COMMAND_RESULTS_FILE="${OUTPUT_DIR}/command-results.txt"
+FAILED_COMMANDS=0
+
+# Initialize results file
+{
+    echo "Command Results Summary"
+    echo "======================="
+    echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+    echo ""
+} > "${COMMAND_RESULTS_FILE}"
+
 # Save collection metadata
 cat > "${OUTPUT_DIR}/metadata.txt" <<EOF
 Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -84,18 +126,17 @@ Script Version: anaximander.sh
 EOF
 
 info "Gathering Helm release information..."
-helm --kube-context "${KUBECTX}" -n "${KUBENS}" list > "${OUTPUT_DIR}/helm-list.txt" 2>&1 || {
-    echo "Failed to get Helm releases (this may be expected if not using Helm)" > "${OUTPUT_DIR}/helm-list.txt"
-}
+run_diagnostic "helm list" "${OUTPUT_DIR}/helm-list.txt" \
+    "helm --kube-context '${KUBECTX}' -n '${KUBENS}' list"
 
 info "Gathering resource listings..."
-eval "${KUBECMD} get all" > "${OUTPUT_DIR}/get-all.txt" 2>&1
+run_diagnostic "kubectl get all" "${OUTPUT_DIR}/get-all.txt" "${KUBECMD} get all"
 
 info "Gathering secrets list..."
-eval "${KUBECMD} get secrets" > "${OUTPUT_DIR}/get-secrets.txt" 2>&1
+run_diagnostic "kubectl get secrets" "${OUTPUT_DIR}/get-secrets.txt" "${KUBECMD} get secrets"
 
 info "Gathering resource descriptions..."
-eval "${KUBECMD} describe all" > "${OUTPUT_DIR}/describe-all.txt" 2>&1
+run_diagnostic "kubectl describe all" "${OUTPUT_DIR}/describe-all.txt" "${KUBECMD} describe all"
 
 info "Calculating secret sizes..."
 {
@@ -106,51 +147,76 @@ info "Calculating secret sizes..."
     # Get all secret names
     SECRET_NAMES=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secrets -o jsonpath='{.items[*].metadata.name}')
 
-    for SECRET in ${SECRET_NAMES}; do
-        # Get the secret and calculate total bytes in .data
-        SIZE=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secret "${SECRET}" -o json | \
-            jq '[.data | to_entries[] | .value | length] | add // 0')
+    if [ -z "${SECRET_NAMES}" ]; then
+        echo "No secrets found or failed to list secrets"
+        echo "[FAILED]  Calculate secret sizes (no secrets found)" >> "${COMMAND_RESULTS_FILE}"
+        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+    else
+        for SECRET in ${SECRET_NAMES}; do
+            # Get the secret and calculate total bytes in .data
+            SIZE=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secret "${SECRET}" -o json | \
+                jq '[.data | to_entries[] | .value | length] | add // 0')
 
-        echo "${SECRET}: ${SIZE} bytes"
-    done
+            echo "${SECRET}: ${SIZE} bytes"
+        done
+        echo "[SUCCESS] Calculate secret sizes" >> "${COMMAND_RESULTS_FILE}"
+    fi
 } > "${OUTPUT_DIR}/secret-sizes.txt" 2>&1
 
 info "Gathering pod logs..."
 # Get all pods in the namespace
-PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods -o jsonpath='{.items[*].metadata.name}')
+PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
-for POD in ${PODS}; do
-    # Get container names for this pod
-    CONTAINERS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pod "${POD}" -o jsonpath='{.spec.containers[*].name}')
+if [ -z "${PODS}" ]; then
+    echo "No pods found in namespace" > "${OUTPUT_DIR}/pod-logs-summary.txt"
+    echo "[FAILED]  Gather pod logs (no pods found)" >> "${COMMAND_RESULTS_FILE}"
+    FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+else
+    POD_LOG_FAILURES=0
+    for POD in ${PODS}; do
+        # Get container names for this pod
+        CONTAINERS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pod "${POD}" -o jsonpath='{.spec.containers[*].name}' 2>/dev/null || echo "")
 
-    for CONTAINER in ${CONTAINERS}; do
-        info "  Collecting logs for ${POD}/${CONTAINER}..."
-        OUTPUT_FILE="${OUTPUT_DIR}/${POD}-${CONTAINER}-logs.txt"
+        for CONTAINER in ${CONTAINERS}; do
+            info "  Collecting logs for ${POD}/${CONTAINER}..."
+            OUTPUT_FILE="${OUTPUT_DIR}/${POD}-${CONTAINER}-logs.txt"
 
-        {
-            echo "==================================="
-            echo "Pod: ${POD}"
-            echo "Container: ${CONTAINER}"
-            echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
-            echo "==================================="
-            echo ""
+            {
+                echo "==================================="
+                echo "Pod: ${POD}"
+                echo "Container: ${CONTAINER}"
+                echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+                echo "==================================="
+                echo ""
 
-            # Get current logs
-            echo "--- Current Logs ---"
-            kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" 2>&1 || echo "Failed to get current logs"
+                # Get current logs
+                echo "--- Current Logs ---"
+                if ! kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" 2>&1; then
+                    echo "Failed to get current logs"
+                    POD_LOG_FAILURES=$((POD_LOG_FAILURES + 1))
+                fi
 
-            echo ""
-            echo "--- Previous Logs (if available) ---"
-            kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" --previous 2>&1 || echo "No previous logs available"
-        } > "${OUTPUT_FILE}"
+                echo ""
+                echo "--- Previous Logs (if available) ---"
+                kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" --previous 2>&1 || echo "No previous logs available"
+            } > "${OUTPUT_FILE}"
+        done
     done
-done
+
+    if [ "${POD_LOG_FAILURES}" -gt 0 ]; then
+        echo "[FAILED]  Gather pod logs (${POD_LOG_FAILURES} container(s) failed)" >> "${COMMAND_RESULTS_FILE}"
+        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+    else
+        echo "[SUCCESS] Gather pod logs" >> "${COMMAND_RESULTS_FILE}"
+    fi
+fi
 
 info "Gathering job logs..."
 # Get all jobs in the namespace
 JOBS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get jobs -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
 if [ -n "${JOBS}" ]; then
+    JOB_LOG_FAILURES=0
     for JOB in ${JOBS}; do
         info "  Collecting logs for job ${JOB}..."
         OUTPUT_FILE="${OUTPUT_DIR}/job-${JOB}-logs.txt"
@@ -163,32 +229,46 @@ if [ -n "${JOBS}" ]; then
             echo ""
 
             # Get the pods for this job
-            JOB_PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods --selector=job-name="${JOB}" -o jsonpath='{.items[*].metadata.name}')
+            JOB_PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods --selector=job-name="${JOB}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
-            for JOB_POD in ${JOB_PODS}; do
-                echo "--- Logs from pod ${JOB_POD} ---"
-                kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${JOB_POD}" 2>&1 || echo "Failed to get logs for ${JOB_POD}"
-                echo ""
-            done
+            if [ -z "${JOB_PODS}" ]; then
+                echo "No pods found for job ${JOB}"
+                JOB_LOG_FAILURES=$((JOB_LOG_FAILURES + 1))
+            else
+                for JOB_POD in ${JOB_PODS}; do
+                    echo "--- Logs from pod ${JOB_POD} ---"
+                    if ! kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${JOB_POD}" 2>&1; then
+                        echo "Failed to get logs for ${JOB_POD}"
+                        JOB_LOG_FAILURES=$((JOB_LOG_FAILURES + 1))
+                    fi
+                    echo ""
+                done
+            fi
         } > "${OUTPUT_FILE}"
     done
+
+    if [ "${JOB_LOG_FAILURES}" -gt 0 ]; then
+        echo "[FAILED]  Gather job logs (${JOB_LOG_FAILURES} job(s) failed)" >> "${COMMAND_RESULTS_FILE}"
+        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+    else
+        echo "[SUCCESS] Gather job logs" >> "${COMMAND_RESULTS_FILE}"
+    fi
 else
     echo "No jobs found in namespace" > "${OUTPUT_DIR}/job-logs.txt"
+    echo "[SUCCESS] Gather job logs (no jobs in namespace)" >> "${COMMAND_RESULTS_FILE}"
 fi
 
 info "Gathering events..."
-eval "${KUBECMD} get events --sort-by='.lastTimestamp'" > "${OUTPUT_DIR}/events.txt" 2>&1
+run_diagnostic "kubectl get events" "${OUTPUT_DIR}/events.txt" "${KUBECMD} get events --sort-by='.lastTimestamp'"
 
 info "Gathering ConfigMaps..."
-eval "${KUBECMD} get configmaps" > "${OUTPUT_DIR}/get-configmaps.txt" 2>&1
+run_diagnostic "kubectl get configmaps" "${OUTPUT_DIR}/get-configmaps.txt" "${KUBECMD} get configmaps"
 
 info "Gathering network policies..."
-eval "${KUBECMD} get networkpolicies -o yaml" > "${OUTPUT_DIR}/network-policies.yaml" 2>&1
+run_diagnostic "kubectl get networkpolicies" "${OUTPUT_DIR}/network-policies.yaml" "${KUBECMD} get networkpolicies -o yaml"
 
 info "Gathering pod resource usage (kubectl top)..."
-eval "${KUBECMD} top pods" > "${OUTPUT_DIR}/top-pods.txt" 2>&1 || {
-    echo "Failed to get pod resource usage (metrics-server may not be installed)" > "${OUTPUT_DIR}/top-pods.txt"
-}
+run_diagnostic "kubectl top pods" "${OUTPUT_DIR}/top-pods.txt" "${KUBECMD} top pods"
 
 info "Detecting service mesh configuration..."
 {
@@ -270,6 +350,7 @@ info "Detecting service mesh configuration..."
     echo ""
 
 } > "${OUTPUT_DIR}/service-mesh-detection.txt" 2>&1
+echo "[SUCCESS] Detect service mesh configuration" >> "${COMMAND_RESULTS_FILE}"
 
 info "Gathering scrape configuration..."
 {
@@ -281,7 +362,7 @@ info "Gathering scrape configuration..."
 
     # Find server pod (the one that runs Prometheus/Alloy)
     echo "Looking for CloudZero Agent server pod..."
-    SERVER_POD=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods -l app.kubernetes.io/component=server -o jsonpath='{.items[0].metadata.name}' 2>&1)
+    SERVER_POD=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 
     if [ -z "${SERVER_POD}" ]; then
         echo "No server pod found"
@@ -389,27 +470,42 @@ info "Gathering scrape configuration..."
     echo ""
 
 } > "${OUTPUT_DIR}/scrape-config-info.txt" 2>&1
+echo "[SUCCESS] Gather scrape configuration" >> "${COMMAND_RESULTS_FILE}"
 
 info "Gathering cAdvisor metrics (from first node)..."
 # Get first node name for configuration verification
-NODE=$(kubectl --context "${KUBECTX}" get nodes -o jsonpath='{.items[0].metadata.name}' 2>&1)
+NODE=$(kubectl --context "${KUBECTX}" get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 
 if [ -n "${NODE}" ]; then
     info "  Collecting cAdvisor metrics from node ${NODE}..."
-    OUTPUT_FILE="${OUTPUT_DIR}/cadvisor-metrics.txt"
 
+    # Create final output file with header
     {
         echo "==================================="
         echo "Node: ${NODE}"
         echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
         echo "==================================="
         echo ""
+    } > "${OUTPUT_DIR}/cadvisor-metrics.txt"
 
-        kubectl --context "${KUBECTX}" get --raw "/api/v1/nodes/${NODE}/proxy/metrics/cadvisor" 2>&1 || echo "Failed to get cAdvisor metrics for ${NODE}"
-    } > "${OUTPUT_FILE}"
+    # Collect metrics and append (track via run_diagnostic)
+    CADVISOR_TEMP=$(mktemp)
+    run_diagnostic "Get cAdvisor metrics from node ${NODE}" "${CADVISOR_TEMP}" \
+        "kubectl --context '${KUBECTX}' get --raw '/api/v1/nodes/${NODE}/proxy/metrics/cadvisor'"
+    cat "${CADVISOR_TEMP}" >> "${OUTPUT_DIR}/cadvisor-metrics.txt"
+    rm -f "${CADVISOR_TEMP}"
 else
-    echo "Failed to get node" > "${OUTPUT_DIR}/cadvisor-metrics.txt"
+    echo "[FAILED] Could not determine node name - cAdvisor metrics not collected" > "${OUTPUT_DIR}/cadvisor-metrics.txt"
+    echo "[FAILED]  Get node name for cAdvisor metrics" >> "${COMMAND_RESULTS_FILE}"
+    FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
 fi
+
+# Finalize command results summary
+{
+    echo ""
+    echo "======================="
+    echo "Total failed: ${FAILED_COMMANDS}"
+} >> "${COMMAND_RESULTS_FILE}"
 
 info "Creating archive..."
 ARCHIVE_NAME="${OUTPUT_DIR}.tar.gz"
@@ -419,6 +515,12 @@ info "Diagnostic collection complete!"
 echo ""
 echo "Output directory: ${OUTPUT_DIR}"
 echo "Archive created: ${ARCHIVE_NAME}"
+
+if [ "${FAILED_COMMANDS}" -gt 0 ]; then
+    echo ""
+    echo "WARNING: ${FAILED_COMMANDS} diagnostic command(s) failed. See command-results.txt for details."
+fi
+
 echo ""
 echo "Please provide the archive file (${ARCHIVE_NAME}) to CloudZero support."
 echo "Note: Review the contents before sharing to ensure no sensitive information is included."
