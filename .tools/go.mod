@@ -13,7 +13,7 @@ require (
 	helm.sh/helm/v3 v3.19.4
 	honnef.co/go/tools v0.6.1
 	mvdan.cc/gofumpt v0.9.2
-	sigs.k8s.io/kind v0.30.0
+	sigs.k8s.io/kind v0.31.0
 )
 
 require (
