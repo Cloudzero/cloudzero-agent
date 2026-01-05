@@ -1,0 +1,101 @@
+# Test defaults.* properties for ClusterRole resources
+#
+# This test validates that ClusterRole resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# ClusterRoles only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to ClusterRoles.
+#
+# Templates tested:
+# - agent-clusterrole.yaml
+# - init-cert-clusterrole.yaml
+suite: defaults.* properties apply to ClusterRole resources
+templates:
+  - agent-clusterrole.yaml
+  - init-cert-clusterrole.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to all ClusterRole metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: ClusterRole
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      rbac.create: true
+      initCertJob.enabled: true
+      initCertJob.rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to agent-clusterrole metadata
+    template: agent-clusterrole.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to init-cert-clusterrole metadata
+    template: init-cert-clusterrole.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      initCertJob.enabled: true
+      initCertJob.rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to all ClusterRole metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: ClusterRole
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      rbac.create: true
+      initCertJob.enabled: true
+      initCertJob.rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to agent-clusterrole metadata
+    template: agent-clusterrole.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to init-cert-clusterrole metadata
+    template: init-cert-clusterrole.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      initCertJob.enabled: true
+      initCertJob.rbac.create: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

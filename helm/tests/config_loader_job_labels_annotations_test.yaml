@@ -1,35 +1,12 @@
-suite: test config-loader job labels and annotations
+# Test config-loader job label/annotation merge and override behavior
+#
+# This file tests that component-specific labels/annotations properly merge with
+# and override defaults. For basic "defaults apply" tests, see defaults_job_test.yaml
+# and defaults_labels_annotations_all_resources_test.yaml.
+suite: test config-loader job labels and annotations merge behavior
 templates:
   - templates/config-loader-job.yaml
 tests:
-  # Test default labels are applied
-  - it: should apply default labels to Job metadata
-    set:
-      defaults.labels:
-        custom-label: "default-value"
-        team: "platform"
-    asserts:
-      - equal:
-          path: metadata.labels["custom-label"]
-          value: "default-value"
-      - equal:
-          path: metadata.labels["team"]
-          value: "platform"
-
-  # Test default labels are applied to Pod template
-  - it: should apply default labels to Pod template metadata
-    set:
-      defaults.labels:
-        custom-label: "default-value"
-        team: "platform"
-    asserts:
-      - equal:
-          path: spec.template.metadata.labels["custom-label"]
-          value: "default-value"
-      - equal:
-          path: spec.template.metadata.labels["team"]
-          value: "platform"
-
   # Test component-specific labels override defaults
   - it: should merge component-specific labels with defaults on Job metadata
     set:
@@ -69,34 +46,6 @@ tests:
       - equal:
           path: spec.template.metadata.labels["environment"]
           value: "production"
-
-  # Test default annotations are applied
-  - it: should apply default annotations to Job metadata
-    set:
-      defaults.annotations:
-        prometheus.io/scrape: "true"
-        monitoring.io/alert: "critical"
-    asserts:
-      - equal:
-          path: metadata.annotations["prometheus.io/scrape"]
-          value: "true"
-      - equal:
-          path: metadata.annotations["monitoring.io/alert"]
-          value: "critical"
-
-  # Test default annotations are applied to Pod template
-  - it: should apply default annotations to Pod template metadata
-    set:
-      defaults.annotations:
-        prometheus.io/scrape: "true"
-        monitoring.io/alert: "critical"
-    asserts:
-      - equal:
-          path: spec.template.metadata.annotations["prometheus.io/scrape"]
-          value: "true"
-      - equal:
-          path: spec.template.metadata.annotations["monitoring.io/alert"]
-          value: "critical"
 
   # Test component-specific annotations override defaults
   - it: should merge component-specific annotations with defaults on Job metadata

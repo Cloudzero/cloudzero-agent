@@ -3,8 +3,15 @@ kind: Service
 metadata:
   namespace: {{ .Release.Namespace }}
   name: {{ include "cloudzero-agent.aggregator.name" . }}
-  labels:
-    {{- include "cloudzero-agent.aggregator.labels" . | nindent 4 }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "aggregator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.aggregator.labels
+      )
+    ) | nindent 2 }}
   {{- include "cloudzero-agent.generateAnnotations" (dict
       "root" .
       "annotations" (list

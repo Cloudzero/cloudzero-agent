@@ -1,0 +1,39 @@
+# Test defaults.* properties for ValidatingWebhookConfiguration resources
+#
+# This test validates that ValidatingWebhookConfiguration resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# ValidatingWebhookConfigurations only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to ValidatingWebhookConfigurations.
+#
+# Templates tested:
+# - webhook-validating-config.yaml
+suite: defaults.* properties apply to ValidatingWebhookConfiguration resources
+templates:
+  - webhook-validating-config.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to ValidatingWebhookConfiguration metadata
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to ValidatingWebhookConfiguration metadata
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

@@ -1,0 +1,185 @@
+# Test defaults.* properties for ConfigMap resources
+#
+# This test validates that ConfigMap resources properly inherit
+# defaults.labels and defaults.annotations from the chart's defaults section.
+#
+# ConfigMaps only support metadata-level defaults (labels and annotations).
+# PodSpec defaults (affinity, tolerations, etc.) do not apply to ConfigMaps.
+#
+# Templates tested:
+# - agent-cm.yaml
+# - aggregator-cm.yaml
+# - webhook-cm.yaml
+# - validator-cm.yaml
+# - helmless-cm.yaml
+# - agent-daemonset-cm.yaml
+suite: defaults.* properties apply to ConfigMap resources
+templates:
+  - agent-cm.yaml
+  - aggregator-cm.yaml
+  - webhook-cm.yaml
+  - validator-cm.yaml
+  - helmless-cm.yaml
+  - agent-daemonset-cm.yaml
+tests:
+  # ============================================================================
+  # defaults.labels tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.labels to all ConfigMap metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: ConfigMap
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to agent-cm metadata
+    template: agent-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to aggregator-cm metadata
+    template: aggregator-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to webhook-cm metadata
+    template: webhook-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to validator-cm metadata
+    template: validator-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to helmless-cm metadata
+    template: helmless-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  - it: should apply defaults.labels to agent-daemonset-cm metadata
+    template: agent-daemonset-cm.yaml
+    set:
+      defaults.labels:
+        test-defaults-label: sentinel-value-label
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.labels.test-defaults-label
+          value: sentinel-value-label
+
+  # ============================================================================
+  # defaults.annotations tests (resource metadata)
+  # ============================================================================
+  - it: should apply defaults.annotations to all ConfigMap metadata
+    documentSelector:
+      matchMany: true
+      path: kind
+      skipEmptyTemplates: true
+      value: ConfigMap
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to agent-cm metadata
+    template: agent-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to aggregator-cm metadata
+    template: aggregator-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to webhook-cm metadata
+    template: webhook-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to validator-cm metadata
+    template: validator-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to helmless-cm metadata
+    template: helmless-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation
+
+  - it: should apply defaults.annotations to agent-daemonset-cm metadata
+    template: agent-daemonset-cm.yaml
+    set:
+      defaults.annotations:
+        test-defaults-annotation: sentinel-value-annotation
+      components.agent.mode: federated
+    asserts:
+      - equal:
+          path: metadata.annotations.test-defaults-annotation
+          value: sentinel-value-annotation

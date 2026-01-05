@@ -2095,10 +2095,9 @@ metadata:
   namespace: cz-agent
   name: cz-agent-cz-aggregator
   labels:
-    app.kubernetes.io/component: aggregator
     app.kubernetes.io/instance: cz-agent
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cz-agent-cz-aggregator
+    app.kubernetes.io/name: aggregator
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.7.3
     helm.sh/chart: cloudzero-agent-1.1.0-dev
