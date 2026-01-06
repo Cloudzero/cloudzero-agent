@@ -147,7 +147,7 @@ This keeps the cluster and chart deployment running for debugging. You can then:
 
 ```bash
 # Access webhook metrics
-kubectl port-forward -n cz-webhook-test svc/webhook-chart-test-cloudzero-agent-webhook-server-svc 8080:443
+kubectl port-forward -n cloudzero-agent svc/webhook-chart-test-cloudzero-agent-webhook-server-svc 8080:443
 
 # View metrics in browser (note: HTTPS with self-signed cert)
 open https://localhost:8080/metrics

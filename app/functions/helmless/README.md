@@ -26,7 +26,7 @@ The tool now includes embedded default values from the Helm chart, so you can us
 1. Extract the current values from a deployed Helm release:
 
    ```sh
-   kubectl -n cza get cm/cz-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
+   kubectl -n cloudzero-agent get cm/cloudzero-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
    ```
 
 2. Compare the values and generate a minimal overrides file:
@@ -43,7 +43,7 @@ If you need to use a different version of defaults or want explicit control:
 1. Extract the current values from a deployed Helm release:
 
    ```sh
-   kubectl -n cza get cm/cz-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
+   kubectl -n cloudzero-agent get cm/cloudzero-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
    ```
 
 2. Get the default values from the Helm chart:

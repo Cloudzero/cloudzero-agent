@@ -92,7 +92,7 @@ kubectl get pods -n monitoring  # or appropriate namespace
 
 ```bash
 # Ensure agent is deployed
-kubectl get pods -n cz-agent
+kubectl get pods -n cloudzero-agent
 
 # Verify monitoring is working
 kubectl port-forward -n monitoring svc/prometheus 9090:9090
@@ -111,11 +111,11 @@ cd tests/load
 kubectl apply -f manifests/
 
 # Monitor webhook performance
-kubectl top pods -n cz-agent
-kubectl logs -n cz-agent -l app=cloudzero-agent-webhook-server -f
+kubectl top pods -n cloudzero-agent
+kubectl logs -n cloudzero-agent -l app=cloudzero-agent-webhook-server -f
 
 # Check webhook metrics
-kubectl port-forward -n cz-agent svc/webhook-service 8080:443
+kubectl port-forward -n cloudzero-agent svc/webhook-service 8080:443
 curl -k https://localhost:8080/metrics
 ```
 
@@ -129,7 +129,7 @@ for i in {1..100}; do
 done
 
 # Monitor resource usage
-watch "kubectl top pods -n cz-agent"
+watch "kubectl top pods -n cloudzero-agent"
 
 # Clean up after testing
 kubectl delete -f manifests/
@@ -250,13 +250,13 @@ Different resource patterns to test various scenarios:
 
 ```bash
 # Check webhook pod resource usage
-kubectl top pod -n cz-agent --containers
+kubectl top pod -n cloudzero-agent --containers
 
 # Get detailed pod metrics
-kubectl describe pod -n cz-agent <webhook-pod-name>
+kubectl describe pod -n cloudzero-agent <webhook-pod-name>
 
 # Check webhook logs for errors
-kubectl logs -n cz-agent -l app=webhook --tail=100
+kubectl logs -n cloudzero-agent -l app=webhook --tail=100
 
 # Monitor API server performance
 kubectl top nodes
