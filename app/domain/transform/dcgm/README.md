@@ -345,7 +345,7 @@ Future enhancements may include:
 
 3. Check aggregator logs for DCGM metrics:
    ```bash
-   kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+   kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
      | grep "DCGM_FI_DEV"
    ```
 
@@ -356,7 +356,7 @@ Future enhancements may include:
 **Diagnosis**: Check for missing required labels:
 
 ````bash
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   | grep "dropping DCGM metric missing required labels"
 ```text
 
@@ -369,7 +369,7 @@ kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
 **Diagnosis**: Check for incomplete pairs:
 
 ```bash
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   | grep "incomplete DCGM memory metric pair"
 ```text
 

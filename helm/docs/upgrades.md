@@ -42,7 +42,7 @@ Error: UPGRADE FAILED: failed to replace object: Job.batch "cloudzero-agent-back
 1. **Manually delete the running Jobs and retry the upgrade**
 
    ```sh
-   kubectl delete job -n <NAMESPACE> -l app.kubernetes.io/component=webhook-server
+   kubectl delete job -n <NAMESPACE> -l app.kubernetes.io/part-of=cloudzero-agent
    helm upgrade --install <RELEASE_NAME> cloudzero/cloudzero-agent -n <NAMESPACE> --version <version> --force
    ```
 

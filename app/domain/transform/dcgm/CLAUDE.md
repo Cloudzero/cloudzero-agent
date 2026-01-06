@@ -270,15 +270,15 @@ aggregator:
 
 ```bash
 # Check if DCGM metrics are being received
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   | grep "DCGM_FI_DEV"
 
 # Check if transformed metrics are produced
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   | grep "container_resources_gpu"
 
 # Check for dropped metrics
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   | grep "dropping"
 ```text
 
@@ -555,7 +555,7 @@ make build
 CLUSTER_NAME=brahms make helm-install helm-wait
 
 # Check logs for GPU metrics
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=aggregator \
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=aggregator \
   --tail=100 | grep -E "(DCGM|container_resources_gpu)"
 ```text
 

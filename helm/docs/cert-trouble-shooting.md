@@ -181,10 +181,9 @@ Ensure that the certificate management configuration in your `values.yaml` or `c
     Secret Name:   cloudzero-agent-webhook-server-tls
     Secret Template:
       Labels:
-        app.kubernetes.io/component:   webhook-server
         app.kubernetes.io/instance:    cloudzero-agent
         app.kubernetes.io/managed-by:  Helm
-        app.kubernetes.io/name:        cloudzero-agent
+        app.kubernetes.io/name:        webhook-server
         app.kubernetes.io/part-of:     cloudzero-agent
         app.kubernetes.io/version:     v2.50.1
         helm.sh/chart:                 cloudzero-agent-1.0.0-beta-5
