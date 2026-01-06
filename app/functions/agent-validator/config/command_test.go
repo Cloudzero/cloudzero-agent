@@ -22,7 +22,7 @@ func TestGenerateByName(t *testing.T) {
 	namespace := "test-namespace"
 
 	// Create a fake clientset with a service named "kube-state-metrics"
-	clientset := fake.NewSimpleClientset(
+	clientset := fake.NewClientset(
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-state-metrics",
@@ -92,7 +92,7 @@ func TestGenerateByLabel(t *testing.T) {
 	namespace := "test-namespace"
 
 	// Create a fake clientset with a service having Helm-specific labels
-	clientset := fake.NewSimpleClientset(
+	clientset := fake.NewClientset(
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "custom-service-name",

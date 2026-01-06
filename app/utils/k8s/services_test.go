@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetKubeStateMetricsURLByName(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	ctx := context.TODO()
 	namespace := "test-namespace"
 
@@ -43,7 +43,7 @@ func TestGetKubeStateMetricsURLByName(t *testing.T) {
 }
 
 func TestGetKubeStateMetricsURLByLabel(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	ctx := context.TODO()
 	namespace := "test-namespace"
 
@@ -73,7 +73,7 @@ func TestGetKubeStateMetricsURLByLabel(t *testing.T) {
 }
 
 func TestUpdateConfigMap(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	ctx := context.TODO()
 	namespace := "test-namespace"
 
