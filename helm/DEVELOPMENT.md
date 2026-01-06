@@ -183,8 +183,8 @@ aggregator:
 
 ```bash
 # Verify HPA configuration in deployed cluster
-kubectl get hpa cloudzero-aggregator -n cza
-kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/cza/pods/*/czo_cost_metrics_shipping_progress"
+kubectl get hpa cloudzero-aggregator -n cloudzero-agent
+kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/cloudzero-agent/pods/*/czo_cost_metrics_shipping_progress"
 ```
 
 ## Schema Testing

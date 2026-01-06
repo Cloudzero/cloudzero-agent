@@ -26,7 +26,7 @@ The tool now includes embedded default values from the Helm chart, so you can us
 1. Extract the current values from a deployed Helm release:
 
    ```sh
-   kubectl -n cza get cm/cz-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
+   kubectl -n cloudzero-agent get cm/cloudzero-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
    ```
 
 2. Compare the values and generate a minimal overrides file:
@@ -43,7 +43,7 @@ If you need to use a different version of defaults or want explicit control:
 1. Extract the current values from a deployed Helm release:
 
    ```sh
-   kubectl -n cza get cm/cz-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
+   kubectl -n cloudzero-agent get cm/cloudzero-agent-helmless-cm -o jsonpath='{.data.values\.yaml}' > configured-values.yaml
    ```
 
 2. Get the default values from the Helm chart:
@@ -68,7 +68,7 @@ defaults, making it easy to understand what has been customized.
 When the helmless job runs as part of a Helm deployment, you can view its logs without needing to know the chart name by using the job's component label:
 
 ```sh
-kubectl logs -l app.kubernetes.io/component=helmless -n <namespace> --tail=100
+kubectl logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=helmless -n <namespace> --tail=100
 ```
 
 ## Build System Integration

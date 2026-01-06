@@ -206,7 +206,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cloudzero-agent-webhook-server-init-cert
-  namespace: cza # Limited to specific namespace
+  namespace: cloudzero-agent # Limited to specific namespace
 ```
 
 The service account is bound to the ClusterRole using a ClusterRoleBinding:
@@ -219,7 +219,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: cloudzero-agent-webhook-server-init-cert
-    namespace: cza
+    namespace: cloudzero-agent
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

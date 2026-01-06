@@ -27,28 +27,28 @@ The validator runs in multiple phases. To see the validation results:
 **For pre-start validation (most common):**
 
 ```sh
-kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -c env-validator-run
+kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -c env-validator-run
 ```
 
 **For lifecycle validation logs:**
 
 ```sh
 # Get the agent server pod name, then exec into it
-AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
+AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log
 ```
 
 **To check for validation errors quickly:**
 
 ```sh
-AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
+AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log | jq -r 'select(.checks) | .checks[] | select(.error) | "\(.name): \(.error)"'
 ```
 
 **To capture full diagnostics for support:**
 
 ```sh
-AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
+AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log > cloudzero-diagnostics.log
 ```
 
@@ -65,7 +65,7 @@ Diagnostics are run at 3 lifecycle phases of the `cloudzero-agent` pod deploymen
 If needed, you can also access the logs from the prometheus container directly:
 
 ```sh
-AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/component=server,app.kubernetes.io/name=cloudzero-agent -o jsonpath='{.items[0].metadata.name}')
+AGENT_POD=$(kubectl -n cloudzero-agent get pods -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=server -o jsonpath='{.items[0].metadata.name}')
 kubectl -n cloudzero-agent exec -ti $AGENT_POD -c cloudzero-agent-server -- cat cloudzero-agent-validator.log
 ```
 
@@ -93,7 +93,7 @@ Based on these 5 requirements, the checks have been designed to help identify pr
 3. Any error output from the error checking command
 4. Helmless job output (configuration and setup information):
    ```sh
-   kubectl -n cloudzero-agent logs -l app.kubernetes.io/component=helmless --tail=10000
+   kubectl -n cloudzero-agent logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=helmless --tail=10000
    ```
 
 Contact support@cloudzero.com with this information for assistance.

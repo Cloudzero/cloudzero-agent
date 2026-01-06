@@ -221,10 +221,10 @@ TestKube results can integrate with:
 
 ```bash
 # Check agent pod status
-kubectl get pods -n cz-agent
+kubectl get pods -n cloudzero-agent
 
 # Check service endpoints
-kubectl get endpoints -n cz-agent
+kubectl get endpoints -n cloudzero-agent
 
 # Test connectivity from within cluster
 kubectl run debug --image=curlimages/curl --rm -it -- /bin/sh
