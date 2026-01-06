@@ -36,7 +36,7 @@ func TestNewCertificateClient(t *testing.T) {
 
 func TestNewCertificateClientWithConfig(t *testing.T) {
 	config := &rest.Config{}
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 
 	client := k8s.NewCertificateClientWithConfig(config, clientset)
 
@@ -85,7 +85,7 @@ func TestCertificateClient_GetTLSSecret(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 
 			// Add secret to fake clientset if provided
 			if tt.secret != nil {
@@ -217,7 +217,7 @@ func TestCertificateClient_GetWebhookCABundle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 
 			// Add webhook to fake clientset if provided
 			if tt.webhook != nil {
@@ -306,7 +306,7 @@ func TestCertificateClient_PatchSecret(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 
 			// Add secret to fake clientset if provided
 			if tt.secret != nil {
@@ -425,7 +425,7 @@ func TestCertificateClient_PatchWebhookConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 
 			// Add webhook to fake clientset if provided
 			if tt.webhook != nil {
@@ -480,7 +480,7 @@ func TestCertificateClient_PatchWebhookConfiguration(t *testing.T) {
 }
 
 func TestCertificateClient_PatchDataMarshalError(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	client := k8s.NewCertificateClientWithConfig(&rest.Config{}, clientset)
 
 	// Create a secret first so we can patch it
@@ -520,7 +520,7 @@ func TestCertificateClient_PatchDataMarshalError(t *testing.T) {
 func TestCertificateClient_GetTLSSecretMarshalError(t *testing.T) {
 	// Test the case where JSON marshaling fails
 	// This is hard to trigger with real data, but we can test the error handling
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	client := k8s.NewCertificateClientWithConfig(&rest.Config{}, clientset)
 
 	// Create a secret with data that might cause marshaling issues
@@ -554,7 +554,7 @@ func TestCertificateClient_GetTLSSecretMarshalError(t *testing.T) {
 }
 
 func TestCertificateClient_PatchesMarshalError(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	client := k8s.NewCertificateClientWithConfig(&rest.Config{}, clientset)
 
 	// Create a webhook first so we can patch it
