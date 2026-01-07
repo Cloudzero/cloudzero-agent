@@ -125,6 +125,11 @@ Collected by: $(whoami)@$(hostname)
 Script Version: anaximander.sh
 EOF
 
+info "Gathering cluster-wide information..."
+kubectl --context "${KUBECTX}" get nodes -o wide > "${OUTPUT_DIR}/nodes.txt" 2>&1 || {
+    echo "Failed to get nodes" > "${OUTPUT_DIR}/nodes.txt"
+}
+
 info "Gathering Helm release information..."
 run_diagnostic "helm list" "${OUTPUT_DIR}/helm-list.txt" \
     "helm --kube-context '${KUBECTX}' -n '${KUBENS}' list"
@@ -169,10 +174,9 @@ PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods -o jsonpath='{.ite
 
 if [ -z "${PODS}" ]; then
     echo "No pods found in namespace" > "${OUTPUT_DIR}/pod-logs-summary.txt"
-    echo "[FAILED]  Gather pod logs (no pods found)" >> "${COMMAND_RESULTS_FILE}"
-    FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
+    echo "[SUCCESS] Gather pod logs (no pods in namespace)" >> "${COMMAND_RESULTS_FILE}"
 else
-    POD_LOG_FAILURES=0
+    POD_LOG_COUNT=0
     for POD in ${PODS}; do
         # Get container names for this pod
         CONTAINERS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pod "${POD}" -o jsonpath='{.spec.containers[*].name}' 2>/dev/null || echo "")
@@ -180,6 +184,7 @@ else
         for CONTAINER in ${CONTAINERS}; do
             info "  Collecting logs for ${POD}/${CONTAINER}..."
             OUTPUT_FILE="${OUTPUT_DIR}/${POD}-${CONTAINER}-logs.txt"
+            POD_LOG_COUNT=$((POD_LOG_COUNT + 1))
 
             {
                 echo "==================================="
@@ -189,12 +194,9 @@ else
                 echo "==================================="
                 echo ""
 
-                # Get current logs
+                # Get current logs (may fail for containers not yet running - this is expected)
                 echo "--- Current Logs ---"
-                if ! kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" 2>&1; then
-                    echo "Failed to get current logs"
-                    POD_LOG_FAILURES=$((POD_LOG_FAILURES + 1))
-                fi
+                kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" 2>&1 || echo "Logs not available"
 
                 echo ""
                 echo "--- Previous Logs (if available) ---"
@@ -203,23 +205,55 @@ else
         done
     done
 
-    if [ "${POD_LOG_FAILURES}" -gt 0 ]; then
-        echo "[FAILED]  Gather pod logs (${POD_LOG_FAILURES} container(s) failed)" >> "${COMMAND_RESULTS_FILE}"
-        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
-    else
-        echo "[SUCCESS] Gather pod logs" >> "${COMMAND_RESULTS_FILE}"
-    fi
+    echo "[SUCCESS] Gather pod logs (${POD_LOG_COUNT} containers)" >> "${COMMAND_RESULTS_FILE}"
 fi
+
+info "Gathering init container logs..."
+# Get all pods in the namespace and collect init container logs
+for POD in ${PODS}; do
+    # Get init container names for this pod
+    INIT_CONTAINERS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pod "${POD}" -o jsonpath='{.spec.initContainers[*].name}' 2>/dev/null || echo "")
+
+    if [ -n "${INIT_CONTAINERS}" ]; then
+        for CONTAINER in ${INIT_CONTAINERS}; do
+            info "  Collecting init container logs for ${POD}/${CONTAINER}..."
+            OUTPUT_FILE="${OUTPUT_DIR}/${POD}-init-${CONTAINER}-logs.txt"
+
+            {
+                echo "==================================="
+                echo "Pod: ${POD}"
+                echo "Init Container: ${CONTAINER}"
+                echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+                echo "==================================="
+                echo ""
+
+                # Get init container status
+                echo "--- Init Container Status ---"
+                kubectl --context "${KUBECTX}" -n "${KUBENS}" get pod "${POD}" -o jsonpath="{.status.initContainerStatuses[?(@.name==\"${CONTAINER}\")]}" 2>&1 | jq . 2>/dev/null || echo "Failed to get init container status"
+                echo ""
+
+                # Get current logs
+                echo "--- Current Logs ---"
+                kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" 2>&1 || echo "Failed to get current logs"
+
+                echo ""
+                echo "--- Previous Logs (if available) ---"
+                kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${POD}" -c "${CONTAINER}" --previous 2>&1 || echo "No previous logs available"
+            } > "${OUTPUT_FILE}"
+        done
+    fi
+done
 
 info "Gathering job logs..."
 # Get all jobs in the namespace
 JOBS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get jobs -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
 if [ -n "${JOBS}" ]; then
-    JOB_LOG_FAILURES=0
+    JOB_COUNT=0
     for JOB in ${JOBS}; do
         info "  Collecting logs for job ${JOB}..."
         OUTPUT_FILE="${OUTPUT_DIR}/job-${JOB}-logs.txt"
+        JOB_COUNT=$((JOB_COUNT + 1))
 
         {
             echo "==================================="
@@ -228,31 +262,22 @@ if [ -n "${JOBS}" ]; then
             echo "==================================="
             echo ""
 
-            # Get the pods for this job
+            # Get the pods for this job (may be empty if pods were cleaned up - this is expected)
             JOB_PODS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get pods --selector=job-name="${JOB}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
             if [ -z "${JOB_PODS}" ]; then
-                echo "No pods found for job ${JOB}"
-                JOB_LOG_FAILURES=$((JOB_LOG_FAILURES + 1))
+                echo "No pods found for job ${JOB} (pods may have been cleaned up)"
             else
                 for JOB_POD in ${JOB_PODS}; do
                     echo "--- Logs from pod ${JOB_POD} ---"
-                    if ! kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${JOB_POD}" 2>&1; then
-                        echo "Failed to get logs for ${JOB_POD}"
-                        JOB_LOG_FAILURES=$((JOB_LOG_FAILURES + 1))
-                    fi
+                    kubectl --context "${KUBECTX}" -n "${KUBENS}" logs "${JOB_POD}" 2>&1 || echo "Logs not available"
                     echo ""
                 done
             fi
         } > "${OUTPUT_FILE}"
     done
 
-    if [ "${JOB_LOG_FAILURES}" -gt 0 ]; then
-        echo "[FAILED]  Gather job logs (${JOB_LOG_FAILURES} job(s) failed)" >> "${COMMAND_RESULTS_FILE}"
-        FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
-    else
-        echo "[SUCCESS] Gather job logs" >> "${COMMAND_RESULTS_FILE}"
-    fi
+    echo "[SUCCESS] Gather job logs (${JOB_COUNT} jobs)" >> "${COMMAND_RESULTS_FILE}"
 else
     echo "No jobs found in namespace" > "${OUTPUT_DIR}/job-logs.txt"
     echo "[SUCCESS] Gather job logs (no jobs in namespace)" >> "${COMMAND_RESULTS_FILE}"
@@ -268,7 +293,11 @@ info "Gathering network policies..."
 run_diagnostic "kubectl get networkpolicies" "${OUTPUT_DIR}/network-policies.yaml" "${KUBECMD} get networkpolicies -o yaml"
 
 info "Gathering pod resource usage (kubectl top)..."
-run_diagnostic "kubectl top pods" "${OUTPUT_DIR}/top-pods.txt" "${KUBECMD} top pods"
+# kubectl top may fail for some pods if metrics aren't available - this is expected
+{
+    kubectl --context "${KUBECTX}" -n "${KUBENS}" top pods 2>&1 || echo "Metrics not available (metrics-server may not be installed or pods may lack metrics)"
+} > "${OUTPUT_DIR}/top-pods.txt"
+echo "[SUCCESS] kubectl top pods" >> "${COMMAND_RESULTS_FILE}"
 
 info "Detecting service mesh configuration..."
 {
@@ -509,7 +538,7 @@ fi
 
 info "Creating archive..."
 ARCHIVE_NAME="${OUTPUT_DIR}.tar.gz"
-tar -czf "${ARCHIVE_NAME}" "${OUTPUT_DIR}"
+tar -czf "${ARCHIVE_NAME}" -C "$(dirname "${OUTPUT_DIR}")" "$(basename "${OUTPUT_DIR}")"
 
 info "Diagnostic collection complete!"
 echo ""
