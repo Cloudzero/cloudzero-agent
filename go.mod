@@ -76,7 +76,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/parquet-go/parquet-go v0.26.3
+	github.com/parquet-go/parquet-go v0.26.4
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_golang/exp v0.0.0-20251212205219-7ba246a648ca
 	github.com/prometheus/prometheus v0.308.1
