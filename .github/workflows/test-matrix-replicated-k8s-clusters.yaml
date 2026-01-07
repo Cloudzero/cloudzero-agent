@@ -274,78 +274,12 @@ jobs:
         if: failure()
         continue-on-error: true
         run: |
-          LOG_FILE="${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log"
-          rm -f "$LOG_FILE"
+          # Get the current kubectl context
+          KUBE_CONTEXT=$(kubectl config current-context)
+          OUTPUT_DIR="${{ runner.temp }}/cloudzero-diagnostics-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}"
 
-          # All log output consolidated into single block to avoid SC2129 warnings
-          {
-            echo "---Cluster Information------------------------------------------------"
-            echo "Cluster: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}-${{ matrix.cluster.version }}"
-            echo "Instance Type: ${{ matrix.cluster.instance-type }}"
-
-            echo "---Kubectl Nodes-------------------------------------------------------"
-            kubectl get nodes -o wide || echo "[ERROR] Kubectl get nodes command exited error."
-
-            echo "---Kubectl Storage Info------------------------------------------------"
-            kubectl get storageclasses || echo "[ERROR] Kubectl get storageclasses command exited error."
-            kubectl get pv -A || echo "[ERROR] Kubectl get pv command exited error."
-            kubectl get pvc -A || echo "[ERROR] Kubectl get pvc command exited error."
-
-            echo "---Kubectl Get All-----------------------------------------------------"
-            kubectl get all -A || echo "[ERROR] Kubectl get all command exited error."
-
-            echo "---Kubectl Describe All Resources (cloudzero-agent)-------------------"
-            kubectl describe all -l app.kubernetes.io/part-of=cloudzero-agent -n cz-agent || echo "[ERROR] Kubectl describe all (cloudzero-agent) command exited error."
-
-            echo "---Kubectl Describe Pods (cz-agent)------------------------------------"
-            kubectl describe pods -n cz-agent || echo "[ERROR] Kubectl describe pods (cz-agent) command exited error."
-
-            echo "---Kubectl Describe Deployments (cz-agent)----------------------------"
-            kubectl describe deployments -n cz-agent || echo "[ERROR] Kubectl describe deployments (cz-agent) command exited error."
-
-            echo "---Kubectl Describe ReplicaSets (cz-agent)---------------------------"
-            kubectl describe replicasets -n cz-agent || echo "[ERROR] Kubectl describe replicasets (cz-agent) command exited error."
-
-            echo "---Kubectl Events (All)------------------------------------------------"
-            kubectl events -A || echo "[ERROR] Kubectl events command exited error."
-
-            echo "---Kubectl Events (CloudZero Agent)------------------------------------"
-            kubectl events -n cz-agent --sort-by='.lastTimestamp' | grep -E "(cz-agent|cloudzero)" || echo "[ERROR] Kubectl events (cloudzero-agent) command exited error."
-
-            echo "---Kubectl Secrets (cz-agent)-------------------------------------------"
-            kubectl get secrets -n cz-agent || echo "[ERROR] Kubectl get secrets (cz-agent) command exited error."
-
-            echo "---Stern Logs (cz-agent)------------------------------------------------"
-            kubectl stern -n cz-agent --since=3m --no-follow -t . | sort -k4 || echo "[ERROR] Stern log command exited error."
-
-            echo "---Container Logs (cz-agent)--------------------------------------------"
-            kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read -r pod_name; do
-              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
-              echo "---Logs for pod: $pod_name"
-              kubectl logs -n cz-agent "$pod_name" --all-containers=true --previous=false --since=5m 2>&1 || echo "[ERROR] Failed to get logs for pod $pod_name"
-            done
-
-            echo "---Previous Container Logs (cz-agent)------------------------------------"
-            kubectl get pods -n cz-agent --no-headers -o name 2>/dev/null | while read -r pod_name; do
-              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
-              echo "---Previous logs for pod: $pod_name"
-              kubectl logs -n cz-agent "$pod_name" --all-containers=true --previous=true --since=5m 2>&1 || echo "[ERROR] Failed to get previous logs for pod $pod_name"
-            done
-
-            echo "---Container Logs (ALL NAMESPACES)---------------------------------------"
-            kubectl get pods -A --no-headers -o name 2>/dev/null | while read -r pod_name; do
-              namespace=$(echo "$pod_name" | cut -d'/' -f1)
-              pod_name=$(echo "$pod_name" | cut -d'/' -f2)
-              echo "---Logs for pod: $namespace/$pod_name"
-              kubectl logs -n "$namespace" "$pod_name" --all-containers=true --previous=false --since=5m 2>&1 || echo "[ERROR] Failed to get logs for pod $namespace/$pod_name"
-            done
-
-            echo "---Helm Status--------------------------------------------------------"
-            helm status cz-agent -n cz-agent || echo "[ERROR] Helm status command exited error."
-
-            echo "---Helm Values--------------------------------------------------------"
-            helm get values cz-agent -n cz-agent || echo "[ERROR] Helm get values command exited error."
-          } >> "$LOG_FILE"
+          # Run Anaximander to collect comprehensive diagnostics
+          ./scripts/anaximander.sh "${KUBE_CONTEXT}" cz-agent "${OUTPUT_DIR}"
 
       - name: Uninstall CloudZero Agent
         if: always()
@@ -359,8 +293,8 @@ jobs:
         uses: actions/upload-artifact@v5
         if: always() && steps.logs.conclusion == 'success'
         with:
-          name: ${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
-          path: ${{ runner.temp }}/${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.log
+          name: diagnostics-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}
+          path: ${{ runner.temp }}/cloudzero-diagnostics-${{ matrix.cluster.distribution }}-${{ matrix.cluster.arch }}.tar.gz
           retention-days: 1
           if-no-files-found: warn
 
