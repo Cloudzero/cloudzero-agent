@@ -17,13 +17,12 @@ import (
 // provider information from configuration variables which may or may not
 // already contain values.
 //
-// It is designed for use when loading configuration. If any fields are empty,
-// an auto scout (see the auto subpackage) will be used to attempt to detect the
-// correct values. If the fields are not empty, they will be treated as
-// overrides and left intact, but a warning will be logged if they don't match
-// the detected values.
+// It is designed for use when loading configuration. When Scout is able to
+// detect a value, it will override any customer-provided value (logging a
+// warning if they differ). Customer-provided values are only used as a
+// fallback when Scout cannot detect a value.
 //
-// If any of the fields are unable to be auto-detected AND are required (empty),
+// If any of the fields are unable to be auto-detected AND are not provided,
 // an error will be returned. If all required fields are already provided,
 // detection failures will only result in warning logs.
 //
@@ -68,59 +67,65 @@ func DetectConfiguration(ctx context.Context, logger *zerolog.Logger, scout type
 
 	// Handle region configuration
 	if region != nil {
-		if *region == "" {
-			// Empty field - set with detected value
-			if ei.Region == "" {
-				return errors.New("region could not be auto-detected, manual configuration (setting region in the Helm chart) may be required")
+		if ei.Region != "" {
+			// Detected value available - use it (override customer-provided if different)
+			if *region != "" && *region != ei.Region {
+				// Log warning when overriding customer-provided value
+				if logger != nil {
+					logger.Warn().
+						Str("provided", *region).
+						Str("detected", ei.Region).
+						Msg("provided region does not match detected region; using detected value")
+				}
 			}
 			*region = ei.Region
-		} else if ei.Region != "" && *region != ei.Region {
-			// Non-empty field that doesn't match detected value - log warning
-			if logger != nil {
-				logger.Warn().
-					Str("provided", *region).
-					Str("detected", ei.Region).
-					Msg("provided region does not match detected region")
-			}
+		} else if *region == "" {
+			// Not detected AND not provided - error
+			return errors.New("region could not be auto-detected, manual configuration (setting region in the Helm chart) may be required")
 		}
+		// If detected is empty but customer provided: keep customer value (implicit)
 	}
 
 	// Handle account ID configuration
 	if accountID != nil {
-		if *accountID == "" {
-			// Empty field - set with detected value
-			if ei.AccountID == "" {
-				return errors.New("account ID could not be auto-detected, manual configuration (setting cloudAccountId in the Helm chart) may be required")
+		if ei.AccountID != "" {
+			// Detected value available - use it (override customer-provided if different)
+			if *accountID != "" && *accountID != ei.AccountID {
+				// Log warning when overriding customer-provided value
+				if logger != nil {
+					logger.Warn().
+						Str("provided", *accountID).
+						Str("detected", ei.AccountID).
+						Msg("provided account ID does not match detected account ID; using detected value")
+				}
 			}
 			*accountID = ei.AccountID
-		} else if ei.AccountID != "" && *accountID != ei.AccountID {
-			// Non-empty field that doesn't match detected value - log warning
-			if logger != nil {
-				logger.Warn().
-					Str("provided", *accountID).
-					Str("detected", ei.AccountID).
-					Msg("provided account ID does not match detected account ID")
-			}
+		} else if *accountID == "" {
+			// Not detected AND not provided - error
+			return errors.New("account ID could not be auto-detected, manual configuration (setting cloudAccountId in the Helm chart) may be required")
 		}
+		// If detected is empty but customer provided: keep customer value (implicit)
 	}
 
 	// Handle cluster name configuration
 	if clusterName != nil {
-		if *clusterName == "" {
-			// Empty field - set with detected value
-			if ei.ClusterName == "" {
-				return errors.New("cluster name could not be auto-detected, manual configuration (setting clusterName in the Helm chart) may be required")
+		if ei.ClusterName != "" {
+			// Detected value available - use it (override customer-provided if different)
+			if *clusterName != "" && *clusterName != ei.ClusterName {
+				// Log warning when overriding customer-provided value
+				if logger != nil {
+					logger.Warn().
+						Str("provided", *clusterName).
+						Str("detected", ei.ClusterName).
+						Msg("provided cluster name does not match detected cluster name; using detected value")
+				}
 			}
 			*clusterName = ei.ClusterName
-		} else if ei.ClusterName != "" && *clusterName != ei.ClusterName {
-			// Non-empty field that doesn't match detected value - log warning
-			if logger != nil {
-				logger.Warn().
-					Str("provided", *clusterName).
-					Str("detected", ei.ClusterName).
-					Msg("provided cluster name does not match detected cluster name")
-			}
+		} else if *clusterName == "" {
+			// Not detected AND not provided - error
+			return errors.New("cluster name could not be auto-detected, manual configuration (setting clusterName in the Helm chart) may be required")
 		}
+		// If detected is empty but customer provided: keep customer value (implicit)
 	}
 
 	return nil
