@@ -49,12 +49,12 @@ func TestDetectConfiguration_Success(t *testing.T) {
 			},
 		},
 		{
-			name:                "detect only region and cluster when account is already set",
+			name:                "detect all - existing account overridden by detected",
 			inputRegion:         stringPtr(""),
 			inputAccountID:      stringPtr("existing-account"),
 			inputClusterName:    stringPtr(""),
 			expectedRegion:      "eu-west-1",
-			expectedAccountID:   "existing-account",
+			expectedAccountID:   "987654321098", // Detected value overrides customer-provided
 			expectedClusterName: "detected-cluster",
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
@@ -64,11 +64,11 @@ func TestDetectConfiguration_Success(t *testing.T) {
 			},
 		},
 		{
-			name:                "detect only account and cluster when region is already set",
+			name:                "detect all - existing region overridden by detected",
 			inputRegion:         stringPtr("existing-region"),
 			inputAccountID:      stringPtr(""),
 			inputClusterName:    stringPtr(""),
-			expectedRegion:      "existing-region",
+			expectedRegion:      "us-central1", // Detected value overrides customer-provided
 			expectedAccountID:   "detected-account",
 			expectedClusterName: "production-cluster",
 			environmentInfo: &types.EnvironmentInfo{
@@ -79,12 +79,12 @@ func TestDetectConfiguration_Success(t *testing.T) {
 			},
 		},
 		{
-			name:                "detect only cluster when region and account are already set",
+			name:                "detect all - existing region and account overridden by detected",
 			inputRegion:         stringPtr("existing-region"),
 			inputAccountID:      stringPtr("existing-account"),
 			inputClusterName:    stringPtr(""),
-			expectedRegion:      "existing-region",
-			expectedAccountID:   "existing-account",
+			expectedRegion:      "us-west-2",    // Detected value overrides customer-provided
+			expectedAccountID:   "123456789012", // Detected value overrides customer-provided
 			expectedClusterName: "staging-cluster",
 			environmentInfo: &types.EnvironmentInfo{
 				CloudProvider: types.CloudProviderAWS,
@@ -409,7 +409,7 @@ func TestDetectConfiguration_AllEmptyStringValues(t *testing.T) {
 	}
 }
 
-func TestDetectConfiguration_PartialDetection(t *testing.T) {
+func TestDetectConfiguration_DetectedValuesOverrideProvided(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -425,24 +425,24 @@ func TestDetectConfiguration_PartialDetection(t *testing.T) {
 			ClusterName:   "detected-cluster",
 		}, nil)
 
-	region := "existing-region"       // Already set
-	accountID := "existing-account"   // Already set
-	clusterName := "existing-cluster" // Already set
+	region := "existing-region"       // Already set - will be overridden
+	accountID := "existing-account"   // Already set - will be overridden
+	clusterName := "existing-cluster" // Already set - will be overridden
 
 	err := scout.DetectConfiguration(context.Background(), nil, mockScout, &region, &accountID, &clusterName)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 
-	// Values should remain unchanged
-	if region != "existing-region" {
-		t.Errorf("Expected region to remain unchanged, got: %s", region)
+	// Detected values should override customer-provided values
+	if region != "detected-region" {
+		t.Errorf("Expected region to be overridden to 'detected-region', got: %s", region)
 	}
-	if accountID != "existing-account" {
-		t.Errorf("Expected accountID to remain unchanged, got: %s", accountID)
+	if accountID != "detected-account" {
+		t.Errorf("Expected accountID to be overridden to 'detected-account', got: %s", accountID)
 	}
-	if clusterName != "existing-cluster" {
-		t.Errorf("Expected clusterName to remain unchanged, got: %s", clusterName)
+	if clusterName != "detected-cluster" {
+		t.Errorf("Expected clusterName to be overridden to 'detected-cluster', got: %s", clusterName)
 	}
 }
 
@@ -663,15 +663,15 @@ func TestDetectConfiguration_NilScout(t *testing.T) {
 	}
 }
 
-func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
+func TestDetectConfiguration_ScoutAlwaysCalledAndOverrides(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Test that Scout is still invoked even when all values are already
-	// provided. This allows for mismatch warnings to be logged.
+	// Test that Scout is always invoked, and when it returns values,
+	// those values override customer-provided values.
 	mockScout := mocks.NewMockScout(ctrl)
 
-	// Scout should be called to allow comparison and warning logs
+	// Scout should be called and its values should override customer-provided
 	mockScout.EXPECT().
 		EnvironmentInfo(gomock.Any()).
 		Return(&types.EnvironmentInfo{
@@ -690,15 +690,120 @@ func TestDetectConfiguration_NoDetectionWhenValuesProvided(t *testing.T) {
 		t.Errorf("Expected no error when values are pre-set, got: %v", err)
 	}
 
-	// Verify values weren't changed
-	if region != "pre-set-region" {
-		t.Errorf("Expected region to remain unchanged, got: %s", region)
+	// Verify detected values override pre-set values
+	if region != "detected-region" {
+		t.Errorf("Expected region to be overridden to 'detected-region', got: %s", region)
 	}
-	if accountID != "pre-set-account" {
-		t.Errorf("Expected accountID to remain unchanged, got: %s", accountID)
+	if accountID != "detected-account" {
+		t.Errorf("Expected accountID to be overridden to 'detected-account', got: %s", accountID)
 	}
-	if clusterName != "pre-set-cluster" {
-		t.Errorf("Expected clusterName to remain unchanged, got: %s", clusterName)
+	if clusterName != "detected-cluster" {
+		t.Errorf("Expected clusterName to be overridden to 'detected-cluster', got: %s", clusterName)
+	}
+}
+
+func TestDetectConfiguration_CustomerValuesFallbackWhenDetectedEmpty(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name                string
+		inputRegion         *string
+		inputAccountID      *string
+		inputClusterName    *string
+		environmentInfo     *types.EnvironmentInfo
+		expectedRegion      string
+		expectedAccountID   string
+		expectedClusterName string
+	}{
+		{
+			name:                "all detected values empty - use customer values as fallback",
+			inputRegion:         stringPtr("customer-region"),
+			inputAccountID:      stringPtr("customer-account"),
+			inputClusterName:    stringPtr("customer-cluster"),
+			expectedRegion:      "customer-region",  // Fallback to customer value
+			expectedAccountID:   "customer-account", // Fallback to customer value
+			expectedClusterName: "customer-cluster", // Fallback to customer value
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "", // Empty - cannot detect
+				AccountID:     "", // Empty - cannot detect
+				ClusterName:   "", // Empty - cannot detect
+			},
+		},
+		{
+			name:                "region detected empty - use customer value as fallback",
+			inputRegion:         stringPtr("customer-region"),
+			inputAccountID:      stringPtr("customer-account"),
+			inputClusterName:    stringPtr("customer-cluster"),
+			expectedRegion:      "customer-region",  // Fallback to customer value
+			expectedAccountID:   "detected-account", // Detected overrides
+			expectedClusterName: "detected-cluster", // Detected overrides
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "", // Empty - cannot detect
+				AccountID:     "detected-account",
+				ClusterName:   "detected-cluster",
+			},
+		},
+		{
+			name:                "account detected empty - use customer value as fallback",
+			inputRegion:         stringPtr("customer-region"),
+			inputAccountID:      stringPtr("customer-account"),
+			inputClusterName:    stringPtr("customer-cluster"),
+			expectedRegion:      "detected-region",  // Detected overrides
+			expectedAccountID:   "customer-account", // Fallback to customer value
+			expectedClusterName: "detected-cluster", // Detected overrides
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "", // Empty - cannot detect
+				ClusterName:   "detected-cluster",
+			},
+		},
+		{
+			name:                "cluster detected empty - use customer value as fallback",
+			inputRegion:         stringPtr("customer-region"),
+			inputAccountID:      stringPtr("customer-account"),
+			inputClusterName:    stringPtr("customer-cluster"),
+			expectedRegion:      "detected-region",  // Detected overrides
+			expectedAccountID:   "detected-account", // Detected overrides
+			expectedClusterName: "customer-cluster", // Fallback to customer value
+			environmentInfo: &types.EnvironmentInfo{
+				CloudProvider: types.CloudProviderAWS,
+				Region:        "detected-region",
+				AccountID:     "detected-account",
+				ClusterName:   "", // Empty - cannot detect
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockScout := mocks.NewMockScout(ctrl)
+
+			mockScout.EXPECT().
+				EnvironmentInfo(gomock.Any()).
+				Return(tt.environmentInfo, nil)
+
+			err := scout.DetectConfiguration(context.Background(), nil, mockScout, tt.inputRegion, tt.inputAccountID, tt.inputClusterName)
+			if err != nil {
+				t.Errorf("Expected no error, got: %v", err)
+			}
+
+			// Verify results
+			if tt.inputRegion != nil && *tt.inputRegion != tt.expectedRegion {
+				t.Errorf("Expected region %q, got %q", tt.expectedRegion, *tt.inputRegion)
+			}
+
+			if tt.inputAccountID != nil && *tt.inputAccountID != tt.expectedAccountID {
+				t.Errorf("Expected accountID %q, got %q", tt.expectedAccountID, *tt.inputAccountID)
+			}
+
+			if tt.inputClusterName != nil && *tt.inputClusterName != tt.expectedClusterName {
+				t.Errorf("Expected clusterName %q, got %q", tt.expectedClusterName, *tt.inputClusterName)
+			}
+		})
 	}
 }
 
@@ -727,7 +832,7 @@ func TestDetectConfiguration_WarningLogsForMismatchedValues(t *testing.T) {
 				ClusterName:   "detected-cluster",
 			},
 			expectedWarnings: []string{
-				"provided region does not match detected region",
+				"provided region does not match detected region; using detected value",
 				`"provided":"provided-region"`,
 				`"detected":"detected-region"`,
 			},
@@ -748,7 +853,7 @@ func TestDetectConfiguration_WarningLogsForMismatchedValues(t *testing.T) {
 				ClusterName:   "detected-cluster",
 			},
 			expectedWarnings: []string{
-				"provided account ID does not match detected account ID",
+				"provided account ID does not match detected account ID; using detected value",
 				`"provided":"provided-account"`,
 				`"detected":"detected-account"`,
 			},
@@ -769,7 +874,7 @@ func TestDetectConfiguration_WarningLogsForMismatchedValues(t *testing.T) {
 				ClusterName:   "detected-cluster",
 			},
 			expectedWarnings: []string{
-				"provided cluster name does not match detected cluster name",
+				"provided cluster name does not match detected cluster name; using detected value",
 				`"provided":"provided-cluster"`,
 				`"detected":"detected-cluster"`,
 			},
@@ -790,9 +895,9 @@ func TestDetectConfiguration_WarningLogsForMismatchedValues(t *testing.T) {
 				ClusterName:   "detected-cluster",
 			},
 			expectedWarnings: []string{
-				"provided region does not match detected region",
-				"provided account ID does not match detected account ID",
-				"provided cluster name does not match detected cluster name",
+				"provided region does not match detected region; using detected value",
+				"provided account ID does not match detected account ID; using detected value",
+				"provided cluster name does not match detected cluster name; using detected value",
 				`"provided":"provided-region"`,
 				`"detected":"detected-region"`,
 				`"provided":"provided-account"`,
