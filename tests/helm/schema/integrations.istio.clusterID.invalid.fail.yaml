@@ -1,0 +1,4 @@
+# clusterID must be a string or null - not a number
+integrations:
+  istio:
+    clusterID: 12345

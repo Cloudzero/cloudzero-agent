@@ -1,0 +1,70 @@
+{{/*
+DestinationRule for Cluster-Local Aggregator Service Isolation
+
+In a multi-cluster Istio mesh, the Istio control plane (Istiod) discovers service
+endpoints across all connected clusters and shares this information with every
+sidecar proxy. This enables cross-cluster load balancing, which can cause traffic
+intended for the local aggregator to be routed to aggregator instances in remote
+clusters.
+
+This DestinationRule, combined with a VirtualService, overrides Istio's default
+cross-cluster load balancing behavior for the aggregator service. It works by:
+
+1. Defining a subset called "local-cluster" that matches only pods with the
+   `topology.istio.io/cluster` label equal to the configured cluster ID
+2. The VirtualService routes 100% of traffic to this subset, ensuring only
+   local pods receive traffic
+
+Key configuration:
+- `host`: The aggregator service's FQDN
+- `subsets[].labels`: Matches pods in the local cluster via the topology label
+  that Istio automatically injects on all pods
+
+This template requires BOTH conditions to be met:
+1. Istio is detected (via CRD presence) or explicitly enabled via integrations.istio.enabled
+2. A cluster ID is configured (via clusterName or integrations.istio.clusterID)
+
+When Istio is enabled but clusterID is not set, this template is skipped. The
+validator will detect cross-cluster load balancing at runtime and warn if
+clusterID should be configured.
+
+For more details, see helm/docs/istio.md
+*/}}
+{{- if and (include "cloudzero-agent.Values.integrations.istio.enabled" .) (ne (include "cloudzero-agent.istio.clusterID" .) "") }}
+{{- $istioApiVersion := "networking.istio.io/v1" -}}
+{{- if and (not (.Capabilities.APIVersions.Has "networking.istio.io/v1")) (.Capabilities.APIVersions.Has "networking.istio.io/v1beta1") -}}
+  {{- $istioApiVersion = "networking.istio.io/v1beta1" -}}
+{{- end -}}
+apiVersion: {{ $istioApiVersion }}
+kind: DestinationRule
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-cluster-local
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" (include "cloudzero-agent.aggregator.name" .)
+      "component" "aggregator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+        .Values.components.aggregator.labels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+        .Values.components.aggregator.annotations
+      )
+    ) | nindent 2 }}
+spec:
+  # The service FQDN we are configuring routing for
+  host: {{ include "cloudzero-agent.aggregator.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  # Define a subset that matches only pods in the local cluster
+  subsets:
+    - name: local-cluster
+      labels:
+        # Istio automatically adds this label to all pods with the cluster ID
+        # This ensures we only route to pods in our local cluster
+        topology.istio.io/cluster: {{ include "cloudzero-agent.istio.clusterID" . }}
+{{- end }}

@@ -45,6 +45,12 @@ data:
       insights_service:  {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
       collector_service: {{ include "cloudzero-agent.aggregator.name" . }}
 
+    integrations:
+      istio:
+        # Use explicit value only (no fallback) so validator can distinguish user intent
+        # The validator receives clusterName separately via deployment.cluster_name
+        cluster_id: {{ .Values.integrations.istio.clusterID | quote }}
+
     prometheus:
       {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
       kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
@@ -74,6 +80,7 @@ data:
             - prometheus_version
             - scrape_cfg
             - webhook_server_reachable
+            - istio_xcluster_lb
         - name: pre-stop
           enforce: false
           checks:

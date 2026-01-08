@@ -180,14 +180,16 @@ jobs:
 
           # Create overrides file with test-specific values
           cat <<EOF > clusters/${{ env.CLUSTER_NAME }}-overrides.yaml
-          # Test image configuration
+          # Test image and component configuration
           components:
             agent:
               image:
                 repository: ${{ inputs.image-repo }}/${{ inputs.image-path }}
                 tag: ${{ inputs.image-tag }}
+            aggregator:
+              replicas: 1
 
-          # Test API configuration  
+          # Test API configuration
           cloudAccountId: "123456789012"
           clusterName: "${{ env.CLUSTER_NAME }}"
           region: us-east-1
@@ -202,9 +204,6 @@ jobs:
           insightsController:
             server:
               replicaCount: 1
-          components:
-            aggregator:
-              replicas: 1
           EOF
 
       - name: Add CloudZero Agent Tolerations for GKE/ARM64

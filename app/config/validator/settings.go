@@ -15,13 +15,26 @@ import (
 
 type Settings struct {
 	ExecutionContext Context
-	Logging          Logging     `yaml:"logging"`
-	Deployment       Deployment  `yaml:"deployment"`
-	Versions         Versions    `yaml:"versions"`
-	Cloudzero        Cloudzero   `yaml:"cloudzero"`
-	Prometheus       Prometheus  `yaml:"prometheus"`
-	Diagnostics      Diagnostics `yaml:"diagnostics"`
-	Services         Services    `yaml:"services"`
+	Logging          Logging      `yaml:"logging"`
+	Deployment       Deployment   `yaml:"deployment"`
+	Versions         Versions     `yaml:"versions"`
+	Cloudzero        Cloudzero    `yaml:"cloudzero"`
+	Prometheus       Prometheus   `yaml:"prometheus"`
+	Diagnostics      Diagnostics  `yaml:"diagnostics"`
+	Services         Services     `yaml:"services"`
+	Integrations     Integrations `yaml:"integrations"`
+}
+
+// Integrations contains configuration for third-party integrations
+type Integrations struct {
+	Istio Istio `yaml:"istio"`
+}
+
+// Istio contains Istio service mesh integration settings
+type Istio struct {
+	// ClusterID is the Istio cluster ID from Helm values (integrations.istio.clusterID).
+	// Used to validate cluster-local routing configuration in multi-cluster meshes.
+	ClusterID string `yaml:"cluster_id"`
 }
 
 type Services struct {

@@ -1,0 +1,547 @@
+suite: test Istio integration
+templates:
+  - aggregator-destinationrule.yaml
+  - aggregator-virtualservice.yaml
+  - webhook-deploy.yaml
+  - backfill-job.yaml
+tests:
+  # ============================================================================
+  # DestinationRule Auto-Detection Tests
+  # ============================================================================
+  - it: should create aggregator DestinationRule when Istio CRDs detected (auto mode)
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: DestinationRule
+      - equal:
+          path: spec.subsets[0].name
+          value: local-cluster
+      - equal:
+          path: spec.subsets[0].labels["topology.istio.io/cluster"]
+          value: "test-cluster"
+
+  - it: should NOT create aggregator DestinationRule when no Istio CRDs (auto mode)
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # VirtualService Auto-Detection Tests
+  # ============================================================================
+  - it: should create aggregator VirtualService when Istio CRDs detected (auto mode)
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: spec.http[0].route[0].destination.subset
+          value: local-cluster
+      - equal:
+          path: spec.http[0].route[0].weight
+          value: 100
+
+  - it: should NOT create aggregator VirtualService when no Istio CRDs (auto mode)
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # Explicit Enable/Disable Tests
+  # ============================================================================
+  - it: should create aggregator DestinationRule when explicitly enabled
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      integrations.istio.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: DestinationRule
+
+  - it: should NOT create aggregator DestinationRule when explicitly disabled (with CRDs)
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      integrations.istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create aggregator VirtualService when explicitly enabled
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      integrations.istio.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: VirtualService
+
+  - it: should NOT create aggregator VirtualService when explicitly disabled (with CRDs)
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      integrations.istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # Cluster ID Configuration Tests
+  # ============================================================================
+  - it: should use integrations.istio.clusterID when set
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "my-cluster-name"
+      integrations.istio.clusterID: "my-istio-cluster-id"
+    asserts:
+      - equal:
+          path: spec.subsets[0].labels["topology.istio.io/cluster"]
+          value: "my-istio-cluster-id"
+
+  - it: should fall back to clusterName when integrations.istio.clusterID is not set
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "fallback-cluster-name"
+    asserts:
+      - equal:
+          path: spec.subsets[0].labels["topology.istio.io/cluster"]
+          value: "fallback-cluster-name"
+
+  # ============================================================================
+  # Optional Cluster ID Tests (no clusterID = no routing rules, but no error)
+  # ============================================================================
+  - it: should NOT create DestinationRule when Istio detected but no clusterID and no clusterName
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: ""
+      integrations.istio.clusterID: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should NOT create VirtualService when Istio detected but no clusterID and no clusterName
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: ""
+      integrations.istio.clusterID: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should NOT create DestinationRule when explicitly enabled but no clusterID
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: ""
+      integrations.istio.enabled: true
+      integrations.istio.clusterID: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should NOT create VirtualService when explicitly enabled but no clusterID
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: ""
+      integrations.istio.enabled: true
+      integrations.istio.clusterID: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # Webhook Port Exclusion Annotation Tests
+  # ============================================================================
+  - it: webhook should have excludeInboundPorts annotation when Istio detected and useCertManager=false
+    template: webhook-deploy.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: false
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeInboundPorts"]
+          value: "8443"
+
+  - it: webhook should NOT have excludeInboundPorts annotation when Istio detected and useCertManager=true
+    template: webhook-deploy.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: true
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeInboundPorts"]
+
+  - it: webhook should NOT have excludeInboundPorts annotation when Istio not detected
+    template: webhook-deploy.yaml
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      insightsController.tls.useCertManager: false
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeInboundPorts"]
+
+  - it: webhook should NOT have excludeInboundPorts annotation when Istio explicitly disabled
+    template: webhook-deploy.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      insightsController.tls.useCertManager: false
+      integrations.istio.enabled: false
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeInboundPorts"]
+
+  # ============================================================================
+  # Backfill Job Port Exclusion Annotation Tests (CronJob)
+  # ============================================================================
+  - it: backfill cronjob should have excludeOutboundPorts annotation when Istio detected and useCertManager=false
+    template: backfill-job.yaml
+    documentIndex: 0
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: false
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+          value: "443"
+
+  - it: backfill cronjob should NOT have excludeOutboundPorts annotation when Istio detected and useCertManager=true
+    template: backfill-job.yaml
+    documentIndex: 0
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: true
+      insightsController.enabled: true
+    asserts:
+      - isNull:
+          path: spec.jobTemplate.spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+
+  - it: backfill cronjob should NOT have excludeOutboundPorts annotation when Istio not detected
+    template: backfill-job.yaml
+    documentIndex: 0
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      insightsController.tls.useCertManager: false
+      insightsController.enabled: true
+    asserts:
+      - isNull:
+          path: spec.jobTemplate.spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+
+  # ============================================================================
+  # Backfill Job Port Exclusion Annotation Tests (Job)
+  # ============================================================================
+  - it: backfill job should have excludeOutboundPorts annotation when Istio detected and useCertManager=false
+    template: backfill-job.yaml
+    documentIndex: 1
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: false
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+          value: "443"
+
+  - it: backfill job should NOT have excludeOutboundPorts annotation when Istio detected and useCertManager=true
+    template: backfill-job.yaml
+    documentIndex: 1
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: true
+      insightsController.enabled: true
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+
+  - it: backfill job should NOT have excludeOutboundPorts annotation when Istio not detected
+    template: backfill-job.yaml
+    documentIndex: 1
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      insightsController.tls.useCertManager: false
+      insightsController.enabled: true
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+
+  # ============================================================================
+  # Annotation Priority Tests (user can override Istio annotations)
+  # ============================================================================
+  - it: webhook podAnnotations should override auto-generated Istio annotations
+    template: webhook-deploy.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: false
+      components.webhookServer.podAnnotations:
+        traffic.sidecar.istio.io/excludeInboundPorts: "8443,9090"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeInboundPorts"]
+          value: "8443,9090"
+
+  - it: backfill podAnnotations should override auto-generated Istio annotations
+    template: backfill-job.yaml
+    documentIndex: 0
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      insightsController.tls.useCertManager: false
+      insightsController.enabled: true
+      components.webhookServer.backfill.podAnnotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: "443,8443"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations["traffic.sidecar.istio.io/excludeOutboundPorts"]
+          value: "443,8443"
+
+  # ============================================================================
+  # Alternative CRD Detection Tests
+  # ============================================================================
+  - it: should detect Istio via networking.istio.io/v1 CRD
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should detect Istio via security.istio.io/v1 CRD
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - security.istio.io/v1
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # ============================================================================
+  # API Version Selection Tests
+  # ============================================================================
+  - it: should use networking.istio.io/v1 when available
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - equal:
+          path: apiVersion
+          value: networking.istio.io/v1
+
+  - it: should use networking.istio.io/v1beta1 when v1 not available
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - equal:
+          path: apiVersion
+          value: networking.istio.io/v1beta1
+
+  - it: should prefer networking.istio.io/v1 when both v1 and v1beta1 are available
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1
+        - networking.istio.io/v1beta1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - equal:
+          path: apiVersion
+          value: networking.istio.io/v1
+
+  # ============================================================================
+  # DestinationRule/VirtualService Content Validation Tests
+  # ============================================================================
+  - it: aggregator DestinationRule should have correct host
+    template: aggregator-destinationrule.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    release:
+      name: my-release
+      namespace: my-namespace
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - equal:
+          path: spec.host
+          value: my-release-cz-aggregator.my-namespace.svc.cluster.local
+
+  - it: aggregator VirtualService should have correct hosts and destinations
+    template: aggregator-virtualservice.yaml
+    capabilities:
+      apiVersions:
+        - networking.istio.io/v1beta1
+    release:
+      name: my-release
+      namespace: my-namespace
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+    asserts:
+      - contains:
+          path: spec.hosts
+          content: my-release-cz-aggregator.my-namespace.svc.cluster.local
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: my-release-cz-aggregator.my-namespace.svc.cluster.local

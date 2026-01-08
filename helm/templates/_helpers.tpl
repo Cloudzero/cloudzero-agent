@@ -121,6 +121,14 @@ Returns: string (e.g., "cloudzero-webhook.default.svc")
   valueFrom:
     fieldRef:
       fieldPath: metadata.name
+- name: ISTIO_AMBIENT_REDIRECTION
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.annotations['ambient.istio.io/redirection']
+- name: ISTIO_TOPOLOGY_CLUSTER
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.labels['topology.istio.io/cluster']
 {{- end}}
 
 {{/*
@@ -1410,4 +1418,61 @@ Returns: string (either "--agent", "--enable-feature=agent", or empty string)
       --agent
     {{- end -}}
   {{- end -}}
+{{- end -}}
+
+{{/*
+Istio Integration Detection Helper
+
+Determines whether Istio integration should be enabled based on configuration
+and cluster capabilities. Supports three modes:
+
+- null (default): Auto-detect Istio via CRD presence in the cluster
+- true: Force Istio integration enabled
+- false: Force Istio integration disabled
+
+When Istio is detected/enabled:
+- If cluster ID is set: DestinationRule and VirtualService are created for cluster-local service isolation
+- Webhook/backfill pods get port exclusion annotations (when not using cert-manager)
+
+When Istio is NOT detected/disabled:
+- No DestinationRule/VirtualService are created
+- No Istio-specific annotations are added
+
+Usage: {{ if include "cloudzero-agent.Values.integrations.istio.enabled" . }}...{{ end }}
+Returns: "true" (truthy) when enabled, empty string (falsy) when disabled
+*/}}
+{{- define "cloudzero-agent.Values.integrations.istio.enabled" -}}
+{{- $istioSetting := .Values.integrations.istio.enabled -}}
+{{- if kindIs "invalid" $istioSetting -}}
+  {{- /* null/not set = auto-detect via CRD presence */ -}}
+  {{- if or (.Capabilities.APIVersions.Has "networking.istio.io/v1") (.Capabilities.APIVersions.Has "networking.istio.io/v1beta1") -}}
+    {{- true -}}
+  {{- end -}}
+{{- else if $istioSetting -}}
+  {{- /* true = force enabled */ -}}
+  {{- true -}}
+{{- end -}}
+{{- /* false = force disabled, returns empty string */ -}}
+{{- end -}}
+
+{{/*
+Istio Cluster ID Helper
+
+Returns the Istio cluster ID to use for multicluster mesh configurations.
+Falls back from integrations.istio.clusterID to clusterName.
+
+This value is OPTIONAL. When set, DestinationRule and VirtualService resources
+are created to ensure aggregator traffic stays within the local cluster.
+
+If not explicitly set, falls back to clusterName. This allows automatic traffic
+fencing in sidecar mode where we can validate the effective value at runtime.
+
+The validator includes a runtime check that detects cross-cluster load balancing
+and validates the effective cluster ID matches Istio's configuration.
+
+Usage: {{ include "cloudzero-agent.istio.clusterID" . }}
+Returns: The Istio cluster ID string (explicit or fallback to clusterName)
+*/}}
+{{- define "cloudzero-agent.istio.clusterID" -}}
+{{- .Values.integrations.istio.clusterID | default .Values.clusterName -}}
 {{- end -}}

@@ -206,6 +206,42 @@ defaults:
     runAsGroup: 65534
     fsGroup: 65534
 
+# Integration configuration for external systems and service meshes.
+integrations:
+  # Istio service mesh integration settings.
+  istio:
+    # Controls Istio integration behavior.
+    #
+    # Possible values:
+    # - null (default): Auto-detect Istio via CRD presence in the cluster
+    # - true: Force Istio integration enabled
+    # - false: Force Istio integration disabled
+    enabled: null
+    # Istio cluster ID for multicluster mesh environments.
+    #
+    # In an Istio multicluster mesh, each cluster has a unique cluster ID that
+    # identifies it within the mesh. This value is used by the DestinationRule
+    # to pin traffic to pods in the local cluster using the
+    # `topology.istio.io/cluster` label that Istio automatically adds to pods.
+    #
+    # If not set, falls back to the top-level `clusterName` value. At least one
+    # of these must be set when Istio integration is enabled.
+    #
+    # Note that, if cross-cluster load balancing is enabled on your cluster,
+    # this *MUST* be set to the correct value.
+    #
+    # To find your Istio cluster ID, use istioctl to query any Istio-injected
+    # pod's bootstrap config:
+    #
+    #   istioctl proxy-config bootstrap <pod>.<namespace> -o yaml | \
+    #     grep 'CLUSTER_ID:' | awk '{print $2}'
+    #
+    # Or check the istiod deployment (assumes istio-system namespace):
+    #
+    #   kubectl -n istio-system get deploy istiod \
+    #     -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="CLUSTER_ID")].value}'
+    clusterID: null
+
 # Component-specific configuration settings.
 components:
   # The agent here refers to the CloudZero Agent, which is the component that
@@ -598,7 +634,6 @@ components:
         limits:
           memory: "1024Mi"
           cpu: "2000m"
-
   # Settings for the webhook server.
   webhookServer:
     replicas: null
@@ -1213,13 +1248,6 @@ insightsController:
     deploymentAnnotations: {}
     # Annotations to add to the webhook server pods.
     podAnnotations: {}
-    # Whether to suppress Istio-related annotations on webhook server pods. When
-    # false (default), the sidecar.istio.io/inject: "false" annotation is added
-    # to prevent Istio sidecar injection which can interfere with webhook TLS.
-    # Set to true to disable this behavior and allow Istio sidecar injection.
-    # For additional information, see:
-    # https://github.com/Cloudzero/cloudzero-charts/blob/develop/charts/cloudzero-agent/docs/istio.md
-    suppressIstioAnnotations: false
   # Additional volume mounts to add to the insights controller pods.
   volumeMounts: []
   # Additional volumes to add to the insights controller pods.

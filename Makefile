@@ -813,6 +813,13 @@ helm-test-unittest: $(HELM_UNITTEST_PLUGIN) helm/charts/.stamp
 helm-test: ## Run all Helm validation tests
 helm-test: helm-test-schema helm-test-subchart helm-test-unittest helm-test-template
 
+# Istio template test requires Istio CRD API versions to be available
+tests/helm/template/istio.yaml: tests/helm/template/istio-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
+	$(call LOG,HELM,template $@)
+	$(Q)$(HELM_CMD) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" --namespace "$(HELM_SCHEMA_TEST_NAMESPACE)" \
+		--api-versions networking.istio.io/v1 \
+		./helm --values $< > $@
+
 tests/helm/template/%.yaml: tests/helm/template/%-overrides.yml helm/charts/.stamp helm/values.schema.json $(wildcard helm/templates/*.yaml) $(wildcard helm/templates/*.tpl) helm/values.yaml
 	$(call LOG,HELM,template $@)
 	$(Q)$(HELM_CMD) template --kube-version "$(KUBE_VERSION)" "$(HELM_SCHEMA_TEST_TARGET)" --namespace "$(HELM_SCHEMA_TEST_NAMESPACE)" ./helm --values $< > $@

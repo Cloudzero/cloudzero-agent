@@ -1895,13 +1895,18 @@ properties:
               Annotations to add to the webhook server pods.
             $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
           suppressIstioAnnotations:
+            deprecated: true
             description: |
-              Whether to suppress Istio-related annotations on webhook server pods.
-              When false (default), the sidecar.istio.io/inject: "false" annotation is added
-              to prevent Istio sidecar injection which can interfere with webhook TLS.
-              Set to true to disable this behavior and allow Istio sidecar injection.
-            type: boolean
-            default: false
+              **DEPRECATED**: This setting no longer has any effect and will be removed
+              in a future release.
+
+              Istio integration is now controlled via `integrations.istio.enabled` and
+              the chart automatically detects Istio and applies appropriate port exclusion
+              annotations when needed. See helm/docs/istio.md for details.
+            oneOf:
+              - type: "null"
+              - type: boolean
+            default: null
       volumeMounts:
         description: |
           Additional volume mounts to add to the insights controller pods.
@@ -1985,6 +1990,70 @@ properties:
           - "null"
         description: |
           Override the name of the ConfigMap used for configuration.
+
+  integrations:
+    type: object
+    additionalProperties: false
+    description: |
+      Integration configuration for external systems and service meshes.
+
+      These settings control how the CloudZero Agent integrates with other
+      infrastructure components like Istio service mesh.
+    properties:
+      istio:
+        type: object
+        additionalProperties: false
+        description: |
+          Istio service mesh integration settings.
+
+          When Istio is detected or enabled, the chart:
+          - Creates a DestinationRule and VirtualService for cluster-local service
+            isolation (prevents cross-cluster load balancing in multi-cluster mesh environments)
+          - Allows Istio sidecar injection on webhook pods
+
+          For more details, see helm/docs/istio.md
+        properties:
+          enabled:
+            oneOf:
+              - type: "null"
+              - type: boolean
+            default: null
+            description: |
+              Controls Istio integration behavior.
+
+              Possible values:
+              - null (default): Auto-detect Istio via CRD presence in the cluster
+              - true: Force Istio integration enabled
+              - false: Force Istio integration disabled
+          clusterID:
+            type:
+              - string
+              - "null"
+            default: null
+            description: |
+              Istio cluster ID for multicluster mesh environments.
+
+              In an Istio multicluster mesh, each cluster has a unique cluster ID that
+              identifies it within the mesh. This value is used by the DestinationRule
+              to pin traffic to pods in the local cluster using the
+              `topology.istio.io/cluster` label that Istio automatically adds to pods.
+
+              If not set, falls back to the top-level `clusterName` value. At least one
+              of these must be set when Istio integration is enabled.
+
+              Note that, if cross-cluster load balancing is enabled on your cluster,
+              this *MUST* be set to the correct value.
+
+              To find your Istio cluster ID, use istioctl to query any Istio-injected
+              pod's bootstrap config:
+
+                istioctl proxy-config bootstrap <pod>.<namespace> -o yaml | \
+                  grep 'CLUSTER_ID:' | awk '{print $2}'
+
+              Or check the istiod deployment (assumes istio-system namespace):
+
+                kubectl -n istio-system get deploy istiod \
+                  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="CLUSTER_ID")].value}'
 
   kubeStateMetrics:
     type: object

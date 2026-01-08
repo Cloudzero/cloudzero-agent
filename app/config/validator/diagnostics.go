@@ -18,6 +18,7 @@ const (
 	DiagnosticScrapeConfig      string = "scrape_cfg"
 	DiagnosticInsightsIngress   string = "webhook_server_reachable"
 	DiagnosticAgentSettings     string = "agent_settings"
+	DiagnosticIstioXClusterLB   string = "istio_xcluster_lb"
 )
 
 const (
@@ -36,7 +37,7 @@ func IsValidDiagnostic(d string) bool {
 		DiagnosticK8sNamespace, DiagnosticK8sProvider,
 		DiagnosticKMS, DiagnosticScrapeConfig,
 		DiagnosticPrometheusVersion, DiagnosticInsightsIngress,
-		DiagnosticAgentSettings:
+		DiagnosticAgentSettings, DiagnosticIstioXClusterLB:
 		return true
 	}
 	return false
