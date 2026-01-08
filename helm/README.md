@@ -21,7 +21,7 @@ For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-ch
 - Each Kubernetes cluster must permit egress traffic from the agent to the following endpoints on port 443:
   - CloudZero collector endpoint: `https://api.cloudzero.com`
   - AWS S3 addresses: `*.s3.amazonaws.com`
-- Each Kubernetes cluster must allow traffic from the Kubernetes API server to services in the `cloudzero-agent` namespace.
+- Each Kubernetes cluster must allow traffic from the Kubernetes API server to services in the namespace where the CloudZero agent is deployed.
 
 ### Recommended Knowledge
 
