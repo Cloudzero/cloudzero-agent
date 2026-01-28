@@ -1301,7 +1301,6 @@ properties:
                 description: |
                   Whether to enable the cadvisor scrape job.
                 type: boolean
-                enum: [true]
               scrapeInterval:
                 description: |
                   Scrape interval for nodesCadvisor job.

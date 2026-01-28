@@ -6846,7 +6846,6 @@
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "enum": [true],
                   "type": "boolean"
                 },
                 "scrapeInterval": {
