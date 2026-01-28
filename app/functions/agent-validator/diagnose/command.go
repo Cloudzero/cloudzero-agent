@@ -87,7 +87,7 @@ func NewCommand() *cli.Command {
 
 					report, err := engine.Run(ctx)
 					if err != nil {
-						logrus.WithError(err).Fatal("Failed to run diagnostics")
+						logrus.WithError(err).Warn("diagnostics encountered error (continuing)")
 					}
 
 					report.ReadFromReport(func(cs *status.ClusterStatus) {
@@ -178,7 +178,7 @@ func runDiagnostics(c *cli.Context, stage string) error {
 
 	report, err := engine.Run(ctx)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to run diagnostics")
+		logrus.WithError(err).Warn("diagnostics encountered error (continuing)")
 	}
 
 	report.ReadFromReport(func(cs *status.ClusterStatus) {
