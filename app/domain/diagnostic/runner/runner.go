@@ -23,18 +23,26 @@ import (
 type Engine interface {
 	// Run executes the engine
 	Run(context.Context) (status.Accessor, error)
+	// ShouldFail returns true if enforce is enabled and any check failed
+	ShouldFail() bool
+	// IsEnforced returns true if enforcement is enabled for this runner's stage
+	IsEnforced() bool
 }
 
 type runner struct {
-	stage  string
-	cfg    *config.Settings
-	logger *logrus.Entry
-	client *http.Client
-	reg    catalog.Registry
+	stage   string
+	enforce bool
+	cfg     *config.Settings
+	logger  *logrus.Entry
+	client  *http.Client
+	reg     catalog.Registry
 
 	pre  []diagnostic.Provider
 	plan []diagnostic.Provider
 	post []diagnostic.Provider
+
+	// hasFailures is set after Run() completes if any checks failed
+	hasFailures bool
 }
 
 func NewRunner(c *config.Settings, reg catalog.Registry, stage string) Engine {
@@ -56,6 +64,7 @@ func NewRunner(c *config.Settings, reg catalog.Registry, stage string) Engine {
 		if s.Name != stage {
 			continue
 		}
+		r.enforce = s.Enforce
 		r.AddStep(reg.Get(s.Checks...)...)
 	}
 
@@ -81,6 +90,18 @@ func (r *runner) AddStep(providers ...diagnostic.Provider) {
 
 func (r *runner) AddPostStep(providers ...diagnostic.Provider) {
 	r.post = append(r.post, providers...)
+}
+
+// ShouldFail returns true if enforcement is enabled and any diagnostic check failed.
+// This should be called after Run() completes to determine if the process should exit
+// with an error code.
+func (r *runner) ShouldFail() bool {
+	return r.enforce && r.hasFailures
+}
+
+// IsEnforced returns true if enforcement is enabled for this runner's stage.
+func (r *runner) IsEnforced() bool {
+	return r.enforce
 }
 
 func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
@@ -131,6 +152,16 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 
 	// check the results (and set correct end code)
 	processFailures(ctx, recorder, r)()
+
+	// Track if any checks failed for enforcement evaluation
+	recorder.ReadFromReport(func(cs *status.ClusterStatus) {
+		for _, c := range cs.Checks {
+			if !c.Passing {
+				r.hasFailures = true
+				break
+			}
+		}
+	})
 
 	return recorder, nil
 }

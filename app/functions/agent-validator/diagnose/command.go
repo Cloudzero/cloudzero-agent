@@ -178,7 +178,10 @@ func runDiagnostics(c *cli.Context, stage string) error {
 
 	report, err := engine.Run(ctx)
 	if err != nil {
-		logrus.WithError(err).Warn("diagnostics encountered error (continuing)")
+		if engine.IsEnforced() {
+			logrus.WithError(err).Fatal("Failed to run diagnostics")
+		}
+		logrus.WithError(err).Warn("diagnostics encountered error (enforcement disabled, continuing)")
 	}
 
 	report.ReadFromReport(func(cs *status.ClusterStatus) {
@@ -196,6 +199,22 @@ func runDiagnostics(c *cli.Context, stage string) error {
 			logrus.WithError(err).Warn("failed to post status")
 		}
 	}
+
+	// Check if enforcement is enabled and any checks failed
+	if engine.ShouldFail() {
+		report.ReadFromReport(func(cs *status.ClusterStatus) {
+			for _, check := range cs.Checks {
+				if !check.Passing {
+					logrus.WithFields(logrus.Fields{
+						"check": check.Name,
+						"error": check.Error,
+					}).Error("enforced diagnostic check failed")
+				}
+			}
+		})
+		return fmt.Errorf("one or more enforced diagnostic checks failed for stage %s", stage)
+	}
+
 	return nil
 }
 
