@@ -941,6 +941,7 @@ data:
           tag: v0.87.0
       validator:
         annotations: {}
+        enforce: false
         labels: {}
         resources:
           limits:
@@ -1613,7 +1614,7 @@ data:
     diagnostics:
       stages:
         - name: pre-start
-          enforce: true
+          enforce: false
           checks:
             - api_key_valid
         - name: post-start

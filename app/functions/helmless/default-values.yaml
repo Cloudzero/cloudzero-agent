@@ -413,6 +413,14 @@ components:
   # The validator component performs validation checks and notifies the platform
   # of installation status changes.
   validator:
+    # Whether to enforce pre-start diagnostic checks.
+    #
+    # When true, the validator will exit with an error if any pre-start checks
+    # fail (e.g., invalid API key), causing the pod to fail to start.
+    #
+    # When false (default), failures are logged and reported via telemetry but
+    # the pod continues starting normally.
+    enforce: false
     # Annotations to add to the validator component.
     #
     # These annotations are merged with defaults.annotations.

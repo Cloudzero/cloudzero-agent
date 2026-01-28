@@ -67,7 +67,7 @@ data:
     diagnostics:
       stages:
         - name: pre-start
-          enforce: true
+          enforce: {{ .Values.components.validator.enforce }}
           checks:
             - api_key_valid
         - name: post-start
