@@ -188,21 +188,33 @@ helmless --config values.yaml --output manifests/
 scout --provider aws --region us-west-2 --output resources.json
 ```
 
-#### [jsonbr2parquet/](./jsonbr2parquet/) - Data Format Conversion
+#### [regurgitator/](./regurgitator/) - Multi-Format Metric Transcoding
 
-**Purpose**: Converts JSON-Brotli files to Parquet format for analytics
+**Purpose**: Reads metrics from multiple sources and outputs to various destinations
 
 **Key Features**:
 
-- High-performance streaming conversion
-- Schema inference and validation
-- Batch processing support
-- Memory-efficient processing
+- Supports CSV, Parquet, JSON, and JSON.br input formats
+- Outputs to files or Prometheus remote_write endpoints
+- Fan-out to multiple outputs simultaneously
+- HTTP server mode to receive and forward remote_write requests
+- Recursive directory processing
+- Parallel file readers and writers
 
 **Usage**:
 
 ```sh
-jsonbr2parquet --input /data/metrics --output /data/parquet --workers 4
+# Ingest files to remote_write endpoint
+regurgitator -o http://mimir:9009/api/v1/push /path/to/metrics/*.parquet
+
+# Convert between formats
+regurgitator -o output.parquet input.json.br
+
+# Fan-out to multiple outputs
+regurgitator -o output.parquet -o http://mimir:9009/api/v1/push input.csv
+
+# Recursive directory processing
+regurgitator -r -o output.json /path/to/metrics/
 ```
 
 ## Common Patterns
@@ -305,7 +317,11 @@ Long-running services that handle ongoing operations:
 
 One-time or periodic execution tools:
 
-- agent-validator, scout, jsonbr2parquet
+- agent-validator
+
+#### Utilities
+
+- scout, regurgitator
 - Run as Jobs or CronJobs in Kubernetes
 - Exit with appropriate status codes
 - Support batch processing
