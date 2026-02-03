@@ -24,7 +24,7 @@ function check_go_version() {
             echo "${DOCKERFILE} does not have the desired Go version (${DESIRED_GO_VERSION})" >&2
             FAILED=true
         }
-    done < <(find . -type f -iname 'Dockerfile*' -not -path '*/node_modules/*' -print0)
+    done < <(find . -type f -iname 'Dockerfile*' -not -path '*/node_modules/*' -not -path './.tools/*' -print0)
 
     # go.mod
     for GO_MOD in \
