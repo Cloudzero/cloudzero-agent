@@ -118,8 +118,18 @@ discovery.kubernetes "cadvisor" {
   role = "node"
 }
 
+// Add node label to targets before scraping
+discovery.relabel "cadvisor" {
+  targets = discovery.kubernetes.cadvisor.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "node"
+  }
+}
+
 prometheus.scrape "cadvisor" {
-  targets    = discovery.kubernetes.cadvisor.targets
+  targets    = discovery.relabel.cadvisor.output
   forward_to = [prometheus.relabel.cadvisor.receiver]
   scrape_interval = "{{ .Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}"
   metrics_path = "/metrics/cadvisor"
@@ -152,12 +162,6 @@ prometheus.relabel "cadvisor" {
   rule {
     regex  = "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
     action = "labelkeep"
-  }
-
-  // Map node name for cost allocation
-  rule {
-    source_labels = ["__meta_kubernetes_node_name"]
-    target_label  = "node"
   }
 }
 {{- end -}}
