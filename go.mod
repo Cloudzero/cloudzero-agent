@@ -1,6 +1,6 @@
 module github.com/cloudzero/cloudzero-agent
 
-go 1.25.5
+go 1.25.6
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -8,7 +8,7 @@ require (
 	github.com/itchyny/gojq v0.12.18
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/mock v0.6.0
@@ -68,14 +68,14 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/ccoveille/go-safecast v1.8.2
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-obvious/server v0.1.15
 	github.com/go-obvious/timestamp v0.0.1
 	github.com/golang/snappy v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.0
-	github.com/minio/minio-go/v7 v7.0.97
-	github.com/parquet-go/parquet-go v0.26.4
+	github.com/minio/minio-go/v7 v7.0.98
+	github.com/parquet-go/parquet-go v0.27.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_golang/exp v0.0.0-20251212205219-7ba246a648ca
 	github.com/prometheus/prometheus v0.309.1
@@ -157,7 +157,7 @@ require (
 	github.com/knadh/koanf/providers/confmap v1.0.0 // indirect
 	github.com/knadh/koanf/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/minio/crc64nvme v1.1.0 // indirect
+	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -178,7 +178,8 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/tinylib/msgp v1.3.0 // indirect
+	github.com/tinylib/msgp v1.6.1 // indirect
+	github.com/twpayne/go-geom v1.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/component v1.48.0 // indirect

@@ -491,8 +491,9 @@ Container metrics collected:
 - Storage usage: Container filesystem usage for storage cost analysis
 
 Scraping modes supported:
-- Local node scraping: DaemonSet mode scraping only the local node's cAdvisor
-- Cluster-wide scraping: Central scraping of all nodes via Kubernetes API proxy
+- Federated mode: Local node scraping only (each pod scrapes its own node)
+- Direct node access: Scrape all nodes directly via kubelet (bypasses API proxy)
+- API server proxy: Scrape all nodes via Kubernetes API proxy (default)
 - Authentication: ServiceAccount token-based authentication for secure access
 - TLS configuration: Proper certificate handling for secure cAdvisor endpoints
 
@@ -508,6 +509,9 @@ and optimization recommendations across Kubernetes workloads.
 */}}
 {{- define "cloudzero-agent.prometheus.scrapeCAdvisor" -}}
 {{- $scrapeLocal := .scrapeLocalNodeOnly | default false -}}
+{{- $directNodeAccess := .root.Values.integrations.cAdvisor.directNodeAccess.enabled | default false -}}
+{{- $kubeletPort := .root.Values.integrations.cAdvisor.port | default 10250 -}}
+{{- $insecureSkipVerify := .root.Values.integrations.cAdvisor.tls.insecureSkipVerify -}}
 # cAdvisor Scrape Job cloudzero-nodes-cadvisor
 #
 # This job scrapes metrics about container resource usage (CPU, memory,
@@ -524,10 +528,10 @@ and optimization recommendations across Kubernetes workloads.
     credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    insecure_skip_verify: true
+    insecure_skip_verify: {{ $insecureSkipVerify }}
 
   {{- if $scrapeLocal }}
-  # Scrape metrics directly from cAdvisor endpoint.
+  # Scrape metrics directly from local node's cAdvisor endpoint (federated mode).
   metrics_path: /metrics/cadvisor
 
   # Scrape metrics from cAdvisor
@@ -551,10 +555,22 @@ and optimization recommendations across Kubernetes workloads.
     # Add port number to __address__ in "__meta_kubernetes_node_address_InternalIP"
     - source_labels: [__meta_kubernetes_node_address_InternalIP]
       target_label: __address__
-      replacement: ${1}:10250
-  {{- else }}
+      replacement: ${1}:{{ $kubeletPort }}
+  {{- else if $directNodeAccess }}
+  # Scrape metrics directly from all node kubelets (direct node access mode).
+  # This bypasses the API server proxy and only requires nodes/metrics RBAC.
+  # Requires network connectivity from collector pod to all nodes on port {{ $kubeletPort }}.
+  metrics_path: /metrics/cadvisor
 
-  # Scrape metrics from cAdvisor.
+  relabel_configs:
+
+    # Connect directly to node's internal IP on kubelet port
+    - source_labels: [__meta_kubernetes_node_address_InternalIP]
+      target_label: __address__
+      replacement: ${1}:{{ $kubeletPort }}
+  {{- else }}
+  # Scrape metrics via API server proxy (default mode).
+  # Requires nodes/proxy RBAC permission.
   relabel_configs:
 
     # Replace the value of __address__ labels with "kubernetes.default.svc.cluster.local:443"

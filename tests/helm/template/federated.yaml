@@ -346,7 +346,7 @@ data:
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: true
-        # Scrape metrics directly from cAdvisor endpoint.
+        # Scrape metrics directly from local node's cAdvisor endpoint (federated mode).
         metrics_path: /metrics/cadvisor
       
         # Scrape metrics from cAdvisor
@@ -1196,6 +1196,13 @@ data:
         path: /validate
         timeoutSeconds: 1
     integrations:
+      cAdvisor:
+        directNodeAccess:
+          enabled: false
+        enabled: true
+        port: 10250
+        tls:
+          insecureSkipVerify: true
       istio:
         clusterID: null
         enabled: null
@@ -1462,7 +1469,7 @@ data:
           enabled: true
           scrapeInterval: 120s
         cadvisor:
-          enabled: true
+          enabled: null
           scrapeInterval: 60s
         gpu:
           enabled: false
@@ -1615,7 +1622,7 @@ data:
 
     services:
       namespace: cz-agent
-      insights_service:  cz-agent-cz-webhook-svc
+      insights_service: cz-agent-cz-webhook
       collector_service: cz-agent-cz-aggregator
 
     integrations:

@@ -1,0 +1,63 @@
+# Test validator ConfigMap insights_service matches webhook service name
+#
+# This test ensures the validator can reach the webhook server by validating
+# the insights_service value in the validator ConfigMap matches the actual
+# webhook Service metadata.name.
+#
+# This is a regression test for a bug where insights_service had a spurious
+# "-svc" suffix that caused DNS lookup failures and ~70 second delays on
+# every deployment due to retry logic.
+#
+# Bug origin: commit 90e1bce8 (April 17, 2025)
+# Templates tested:
+# - validator-cm.yaml
+# - webhook-service.yaml
+suite: validator insights_service matches webhook service
+templates:
+  - validator-cm.yaml
+  - webhook-service.yaml
+tests:
+  # ============================================================================
+  # Service name consistency tests
+  # ============================================================================
+  - it: insights_service should use serviceName helper (default release)
+    template: validator-cm.yaml
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "insights_service: RELEASE-NAME-cz-webhook\\n"
+
+  - it: webhook service name should match (default release)
+    template: webhook-service.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-webhook
+
+  - it: insights_service should match with custom release name
+    release:
+      name: my-custom-agent
+    template: validator-cm.yaml
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "insights_service: my-custom-agent-cz-webhook\\n"
+
+  - it: webhook service name should match with custom release name
+    release:
+      name: my-custom-agent
+    template: webhook-service.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-custom-agent-cz-webhook
+
+  # ============================================================================
+  # Regression test - no -svc suffix
+  # ============================================================================
+  - it: insights_service should NOT have -svc suffix (regression test)
+    template: validator-cm.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "insights_service:.*-svc"

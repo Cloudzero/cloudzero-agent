@@ -42,7 +42,7 @@ data:
 
     services:
       namespace: {{ .Release.Namespace }}
-      insights_service:  {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}-svc
+      insights_service: {{ include "cloudzero-agent.serviceName" . }}
       collector_service: {{ include "cloudzero-agent.aggregator.name" . }}
 
     integrations:
