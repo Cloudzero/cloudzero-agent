@@ -1563,7 +1563,7 @@ data:
 
     services:
       namespace: cz-agent
-      insights_service:  cz-agent-cz-webhook-svc
+      insights_service: cz-agent-cz-webhook
       collector_service: cz-agent-cz-aggregator
 
     integrations:
