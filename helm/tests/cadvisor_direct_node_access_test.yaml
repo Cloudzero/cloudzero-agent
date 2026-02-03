@@ -1,0 +1,452 @@
+suite: test cAdvisor direct node access configuration
+templates:
+  - agent-cm.yaml
+  - agent-clusterrole.yaml
+tests:
+  # ============================================================================
+  # Default behavior tests (API server proxy mode)
+  # ============================================================================
+
+  - it: should use API server proxy by default
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "kubernetes.default.svc.cluster.local:443"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "/api/v1/nodes/\\$1/proxy/metrics/cadvisor"
+
+  - it: should NOT use direct node access when directNodeAccess.enabled is false
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "kubernetes.default.svc.cluster.local:443"
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "__meta_kubernetes_node_address_InternalIP.*10250"
+
+  # ============================================================================
+  # Direct node access mode tests
+  # ============================================================================
+
+  - it: should use direct kubelet access when directNodeAccess.enabled is true
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "metrics_path: /metrics/cadvisor"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "__meta_kubernetes_node_address_InternalIP"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "replacement: \\$\\{1\\}:10250"
+
+  - it: should NOT use API server proxy when directNodeAccess.enabled is true
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "kubernetes.default.svc.cluster.local:443"
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "/api/v1/nodes/\\$1/proxy/metrics/cadvisor"
+
+  # ============================================================================
+  # Custom port configuration tests
+  # ============================================================================
+
+  - it: should use custom kubelet port when specified
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+      integrations.cAdvisor.port: 10255
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "replacement: \\$\\{1\\}:10255"
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "replacement: \\$\\{1\\}:10250"
+
+  - it: should use default port 10250 when not specified
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "replacement: \\$\\{1\\}:10250"
+
+  # ============================================================================
+  # Common configuration tests (both modes)
+  # ============================================================================
+
+  - it: should use bearer token authentication in both modes
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token"
+
+  - it: should use kubernetes node service discovery
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "role: node"
+
+  - it: should apply metric filtering in direct mode
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "metric_relabel_configs"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "action: labelkeep"
+
+  # ============================================================================
+  # Alloy configuration tests
+  # ============================================================================
+
+  - it: should use API server proxy in Alloy config by default
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "kubernetes.default.svc.cluster.local:443"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "/api/v1/nodes/\\$1/proxy/metrics/cadvisor"
+
+  - it: should use direct kubelet access in Alloy config when directNodeAccess.enabled is true
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.relabel "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "__meta_kubernetes_node_address_InternalIP"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "\\$1:10250"
+
+  - it: should NOT use API server proxy in Alloy config when directNodeAccess.enabled is true
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: "kubernetes.default.svc.cluster.local:443"
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: "/api/v1/nodes/\\$1/proxy/metrics/cadvisor"
+
+  - it: should preserve clustering in Alloy config with direct node access
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "clustering \\{"
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "enabled = true"
+
+  - it: should use custom kubelet port in Alloy config when specified
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+      integrations.cAdvisor.port: 10255
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "\\$1:10255"
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: "\\$1:10250"
+
+  # ============================================================================
+  # integrations.cAdvisor.enabled fallback tests
+  # ============================================================================
+
+  - it: should enable cadvisor scraping by default (integrations.cAdvisor.enabled=true)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      # prometheusConfig.scrapeJobs.cadvisor.enabled is null by default
+      # integrations.cAdvisor.enabled is true by default
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+
+  - it: should disable cadvisor scraping when integrations.cAdvisor.enabled=false
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      integrations.cAdvisor.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+
+  - it: should allow prometheusConfig.scrapeJobs.cadvisor.enabled=true to override integrations.cAdvisor.enabled=false
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      integrations.cAdvisor.enabled: false
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+
+  - it: should allow prometheusConfig.scrapeJobs.cadvisor.enabled=false to override integrations.cAdvisor.enabled=true
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      integrations.cAdvisor.enabled: true
+      prometheusConfig.scrapeJobs.cadvisor.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+
+  - it: should enable cadvisor in Alloy config by default (integrations.cAdvisor.enabled=true)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      # prometheusConfig.scrapeJobs.cadvisor.enabled is null by default
+      # integrations.cAdvisor.enabled is true by default
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+
+  - it: should disable cadvisor in Alloy config when integrations.cAdvisor.enabled=false
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      integrations.cAdvisor.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+
+  # ============================================================================
+  # TLS insecureSkipVerify tests
+  # ============================================================================
+
+  - it: should use insecure_skip_verify=true by default (Prometheus)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "insecure_skip_verify: true"
+
+  - it: should use insecure_skip_verify=true by default in direct node access mode (Prometheus)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "job_name: cloudzero-nodes-cadvisor"
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "insecure_skip_verify: true"
+
+  - it: should allow explicit insecureSkipVerify=false override (Prometheus)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.tls.insecureSkipVerify: false
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "insecure_skip_verify: false"
+
+  - it: should use insecure_skip_verify=true by default (Alloy)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "insecure_skip_verify = true"
+
+  - it: should use insecure_skip_verify=true by default in direct node access mode (Alloy)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "insecure_skip_verify = true"
+
+  - it: should allow explicit insecureSkipVerify=false override (Alloy)
+    template: agent-cm.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: true
+      integrations.cAdvisor.tls.insecureSkipVerify: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "insecure_skip_verify = false"
+
+  # ============================================================================
+  # RBAC tests - nodes/proxy permission
+  # ============================================================================
+
+  - it: should include nodes/proxy permission by default (API server proxy mode)
+    template: agent-clusterrole.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+    asserts:
+      - contains:
+          path: rules[2].resources
+          content: nodes/proxy
+
+  - it: should NOT include nodes/proxy permission when directNodeAccess.enabled is true
+    template: agent-clusterrole.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - notContains:
+          path: rules[2].resources
+          content: nodes/proxy
+
+  - it: should always include nodes/metrics permission regardless of mode
+    template: agent-clusterrole.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      integrations.cAdvisor.directNodeAccess.enabled: true
+    asserts:
+      - contains:
+          path: rules[2].resources
+          content: nodes/metrics

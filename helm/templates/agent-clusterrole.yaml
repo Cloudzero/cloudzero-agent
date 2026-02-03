@@ -43,7 +43,9 @@ rules:
       - endpoints
       - namespaces
       - nodes
+      {{- if not .Values.integrations.cAdvisor.directNodeAccess.enabled }}
       - nodes/proxy
+      {{- end }}
       - nodes/metrics
       - services
       - pods

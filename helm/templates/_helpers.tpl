@@ -1456,6 +1456,21 @@ Returns: "true" (truthy) when enabled, empty string (falsy) when disabled
 {{- end -}}
 
 {{/*
+cAdvisor Integration Enabled Helper
+
+Returns "true" if enabled, empty string if disabled (for use in conditionals).
+- prometheusConfig.scrapeJobs.cadvisor.enabled takes priority if explicitly set
+- integrations.cAdvisor.enabled is the fallback when null
+*/}}
+{{- define "cloudzero-agent.Values.integrations.cAdvisor.enabled" -}}
+{{- $enabled := .Values.integrations.cAdvisor.enabled -}}
+{{- if not (kindIs "invalid" .Values.prometheusConfig.scrapeJobs.cadvisor.enabled) -}}
+{{- $enabled = .Values.prometheusConfig.scrapeJobs.cadvisor.enabled -}}
+{{- end -}}
+{{- if $enabled }}true{{- end -}}
+{{- end -}}
+
+{{/*
 Istio Cluster ID Helper
 
 Returns the Istio cluster ID to use for multicluster mesh configurations.

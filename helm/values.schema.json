@@ -6767,6 +6767,42 @@
     "integrations": {
       "additionalProperties": false,
       "properties": {
+        "cAdvisor": {
+          "additionalProperties": false,
+          "properties": {
+            "directNodeAccess": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "port": {
+              "default": 10250,
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "tls": {
+              "additionalProperties": false,
+              "properties": {
+                "insecureSkipVerify": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
         "istio": {
           "additionalProperties": false,
           "properties": {
@@ -6846,13 +6882,21 @@
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean"
+                  "default": null,
+                  "deprecated": true,
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
                 },
                 "scrapeInterval": {
                   "$ref": "#/$defs/com.cloudzero.agent.duration"
                 }
               },
-              "required": ["enabled"],
               "type": "object"
             },
             "gpu": {
