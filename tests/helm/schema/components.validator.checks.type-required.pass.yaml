@@ -2,4 +2,4 @@ components:
   validator:
     checks:
       pre-start:
-        api_key_valid: false
+        api_key_valid: required

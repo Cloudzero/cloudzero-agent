@@ -30,6 +30,26 @@ const (
 	DiagnosticInternalConfigLoad string = "config_load"
 )
 
+// CheckType represents the severity/handling of a diagnostic check
+type CheckType string
+
+const (
+	// CheckTypeRequired causes the validator to exit with error on failure
+	CheckTypeRequired CheckType = "required"
+	// CheckTypeOptional emits warnings on failure but doesn't affect exit code
+	CheckTypeOptional CheckType = "optional"
+	// CheckTypeInformative is for information gathering only - always reports passing
+	CheckTypeInformative CheckType = "informative"
+)
+
+func IsValidCheckType(t string) bool {
+	switch CheckType(strings.ToLower(t)) {
+	case CheckTypeRequired, CheckTypeOptional, CheckTypeInformative:
+		return true
+	}
+	return false
+}
+
 func IsValidDiagnostic(d string) bool {
 	d = strings.ToLower(strings.TrimSpace(d))
 	switch d {
@@ -56,10 +76,30 @@ func (s *Diagnostics) Validate() error {
 	return nil
 }
 
+// CheckConfig defines a single check with its type (as parsed from ConfigMap)
+type CheckConfig struct {
+	Name string    `yaml:"name"`
+	Type CheckType `yaml:"type" default:"optional"`
+}
+
+func (c *CheckConfig) Validate() error {
+	c.Name = strings.ToLower(strings.TrimSpace(c.Name))
+	if !IsValidDiagnostic(c.Name) {
+		return fmt.Errorf("unknown diagnostic check: %s", c.Name)
+	}
+	c.Type = CheckType(strings.ToLower(strings.TrimSpace(string(c.Type))))
+	if c.Type == "" {
+		c.Type = CheckTypeOptional
+	}
+	if !IsValidCheckType(string(c.Type)) {
+		return fmt.Errorf("invalid check type for %s: %s", c.Name, c.Type)
+	}
+	return nil
+}
+
 type Stage struct {
-	Name    string   `yaml:"name"`
-	Enforce bool     `yaml:"enforce" default:"false"`
-	Checks  []string `yaml:"checks"`
+	Name   string        `yaml:"name"`
+	Checks []CheckConfig `yaml:"checks"`
 }
 
 func (s *Stage) Validate() error {
@@ -68,12 +108,10 @@ func (s *Stage) Validate() error {
 		return fmt.Errorf("invalid stage: %s", s.Name)
 	}
 
-	for i, check := range s.Checks {
-		check = strings.ToLower(strings.TrimSpace(check))
-		if !IsValidDiagnostic(check) {
-			return fmt.Errorf("unknown diagnostic check: %s", check)
+	for i := range s.Checks {
+		if err := s.Checks[i].Validate(); err != nil {
+			return err
 		}
-		s.Checks[i] = check
 	}
 	return nil
 }

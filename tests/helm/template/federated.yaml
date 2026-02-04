@@ -969,8 +969,25 @@ data:
           tag: v0.87.0
       validator:
         annotations: {}
-        checks: {}
-        enforce: false
+        checks:
+          config-load:
+            api_key_valid: optional
+            k8s_namespace: informative
+            k8s_provider: informative
+            k8s_version: informative
+            kube_state_metrics_reachable: optional
+          post-start:
+            k8s_namespace: informative
+            k8s_provider: informative
+            k8s_version: informative
+            kube_state_metrics_reachable: optional
+            prometheus_version: informative
+            scrape_cfg: optional
+            webhook_server_reachable: optional
+          pre-start:
+            api_key_valid: optional
+            istio_xcluster_lb: required
+          pre-stop: {}
         labels: {}
         resources:
           limits:
@@ -1642,34 +1659,51 @@ data:
 
     diagnostics:
       stages:
-        - name: pre-start
-          enforce: false
-          checks:
-            - api_key_valid
-        - name: post-start
-          enforce: false
-          checks:
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - prometheus_version
-            - scrape_cfg
-            - webhook_server_reachable
-            - istio_xcluster_lb
-        - name: pre-stop
-          enforce: false
-          checks:
+        -
+          
+          name: pre-start
+          checks: 
+            - name: api_key_valid
+              type: optional
+            - name: istio_xcluster_lb
+              type: required
+        -
+          
+          name: post-start
+          checks: 
+            - name: k8s_namespace
+              type: informative
+            - name: k8s_provider
+              type: informative
+            - name: k8s_version
+              type: informative
+            - name: kube_state_metrics_reachable
+              type: optional
+            - name: prometheus_version
+              type: informative
+            - name: scrape_cfg
+              type: optional
+            - name: webhook_server_reachable
+              type: optional
+        -
+          
+          name: pre-stop
+          checks: 
             []
-        - name: config-load
-          enforce: false
-          checks:
-            - api_key_valid
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - agent_settings
+        -
+          
+          name: config-load
+          checks: 
+            - name: api_key_valid
+              type: optional
+            - name: k8s_namespace
+              type: informative
+            - name: k8s_provider
+              type: informative
+            - name: k8s_version
+              type: informative
+            - name: kube_state_metrics_reachable
+              type: optional
 ---
 # Source: cloudzero-agent/templates/webhook-cm.yaml
 apiVersion: v1

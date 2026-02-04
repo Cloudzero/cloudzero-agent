@@ -110,86 +110,110 @@ func TestRunner_Run(t *testing.T) {
 }
 
 func TestRunner_ShouldFail(t *testing.T) {
+	// ShouldFail returns true only when requiredFailures is true
 	tests := []struct {
-		name        string
-		enforce     bool
-		hasFailures bool
-		expected    bool
+		name             string
+		requiredFailures bool
+		expected         bool
 	}{
 		{
-			name:        "enforce false, no failures - should not fail",
-			enforce:     false,
-			hasFailures: false,
-			expected:    false,
+			name:             "no required failures - should not fail",
+			requiredFailures: false,
+			expected:         false,
 		},
 		{
-			name:        "enforce false, has failures - should not fail",
-			enforce:     false,
-			hasFailures: true,
-			expected:    false,
-		},
-		{
-			name:        "enforce true, no failures - should not fail",
-			enforce:     true,
-			hasFailures: false,
-			expected:    false,
-		},
-		{
-			name:        "enforce true, has failures - should fail",
-			enforce:     true,
-			hasFailures: true,
-			expected:    true,
+			name:             "has required failures - should fail",
+			requiredFailures: true,
+			expected:         true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &runner{
-				enforce:     tt.enforce,
-				hasFailures: tt.hasFailures,
+				requiredFailures: tt.requiredFailures,
 			}
 			assert.Equal(t, tt.expected, r.ShouldFail())
 		})
 	}
 }
 
-func TestRunner_EnforceSetFromStageConfig(t *testing.T) {
+func TestRunner_CheckTypesFromConfig(t *testing.T) {
 	tests := []struct {
-		name            string
-		stages          []config.Stage
-		targetStage     string
-		expectedEnforce bool
+		name              string
+		stages            []config.Stage
+		targetStage       string
+		expectedCheckType map[string]config.CheckType
 	}{
 		{
-			name: "enforce true from matching stage",
+			name: "required check type from config",
 			stages: []config.Stage{
-				{Name: config.ContextStageInit, Enforce: true, Checks: []string{}},
+				{
+					Name: config.ContextStageStart,
+					Checks: []config.CheckConfig{
+						{Name: "api_key_valid", Type: config.CheckTypeRequired},
+					},
+				},
 			},
-			targetStage:     config.ContextStageInit,
-			expectedEnforce: true,
+			targetStage: config.ContextStageStart,
+			expectedCheckType: map[string]config.CheckType{
+				"api_key_valid": config.CheckTypeRequired,
+			},
 		},
 		{
-			name: "enforce false from matching stage",
+			name: "optional check type from config",
 			stages: []config.Stage{
-				{Name: config.ContextStageInit, Enforce: false, Checks: []string{}},
+				{
+					Name: config.ContextStageStart,
+					Checks: []config.CheckConfig{
+						{Name: "k8s_version", Type: config.CheckTypeOptional},
+					},
+				},
 			},
-			targetStage:     config.ContextStageInit,
-			expectedEnforce: false,
+			targetStage: config.ContextStageStart,
+			expectedCheckType: map[string]config.CheckType{
+				"k8s_version": config.CheckTypeOptional,
+			},
 		},
 		{
-			name: "enforce from correct stage when multiple stages exist",
+			name: "informative check type from config",
 			stages: []config.Stage{
-				{Name: config.ContextStageInit, Enforce: true, Checks: []string{}},
-				{Name: config.ContextStageStart, Enforce: false, Checks: []string{}},
+				{
+					Name: config.ContextStageStart,
+					Checks: []config.CheckConfig{
+						{Name: "k8s_provider", Type: config.CheckTypeInformative},
+					},
+				},
 			},
-			targetStage:     config.ContextStageStart,
-			expectedEnforce: false,
+			targetStage: config.ContextStageStart,
+			expectedCheckType: map[string]config.CheckType{
+				"k8s_provider": config.CheckTypeInformative,
+			},
 		},
 		{
-			name:            "enforce defaults to false when no matching stage",
-			stages:          []config.Stage{},
-			targetStage:     config.ContextStageInit,
-			expectedEnforce: false,
+			name: "multiple check types from config",
+			stages: []config.Stage{
+				{
+					Name: config.ContextStageStart,
+					Checks: []config.CheckConfig{
+						{Name: "api_key_valid", Type: config.CheckTypeRequired},
+						{Name: "k8s_version", Type: config.CheckTypeOptional},
+						{Name: "k8s_provider", Type: config.CheckTypeInformative},
+					},
+				},
+			},
+			targetStage: config.ContextStageStart,
+			expectedCheckType: map[string]config.CheckType{
+				"api_key_valid": config.CheckTypeRequired,
+				"k8s_version":   config.CheckTypeOptional,
+				"k8s_provider":  config.CheckTypeInformative,
+			},
+		},
+		{
+			name:              "empty checkTypes when no matching stage",
+			stages:            []config.Stage{},
+			targetStage:       config.ContextStageStart,
+			expectedCheckType: map[string]config.CheckType{},
 		},
 	}
 
@@ -215,26 +239,53 @@ func TestRunner_EnforceSetFromStageConfig(t *testing.T) {
 			r := NewRunner(cfg, reg, tt.targetStage)
 			engine := r.(*runner)
 
-			assert.Equal(t, tt.expectedEnforce, engine.enforce)
+			assert.Equal(t, tt.expectedCheckType, engine.checkTypes)
 		})
 	}
 }
 
-func TestRunner_HasFailuresTracking(t *testing.T) {
+func TestRunner_RequiredFailuresTracking(t *testing.T) {
 	tests := []struct {
-		name                string
-		checkPassing        bool
-		expectedHasFailures bool
+		name                     string
+		checkType                config.CheckType
+		checkPassing             bool
+		expectedRequiredFailures bool
 	}{
 		{
-			name:                "hasFailures false when check passes",
-			checkPassing:        true,
-			expectedHasFailures: false,
+			name:                     "required check passing - no required failures",
+			checkType:                config.CheckTypeRequired,
+			checkPassing:             true,
+			expectedRequiredFailures: false,
 		},
 		{
-			name:                "hasFailures true when check fails",
-			checkPassing:        false,
-			expectedHasFailures: true,
+			name:                     "required check failing - has required failures",
+			checkType:                config.CheckTypeRequired,
+			checkPassing:             false,
+			expectedRequiredFailures: true,
+		},
+		{
+			name:                     "optional check passing - no required failures",
+			checkType:                config.CheckTypeOptional,
+			checkPassing:             true,
+			expectedRequiredFailures: false,
+		},
+		{
+			name:                     "optional check failing - no required failures",
+			checkType:                config.CheckTypeOptional,
+			checkPassing:             false,
+			expectedRequiredFailures: false,
+		},
+		{
+			name:                     "informative check passing - no required failures",
+			checkType:                config.CheckTypeInformative,
+			checkPassing:             true,
+			expectedRequiredFailures: false,
+		},
+		{
+			name:                     "informative check failing - no required failures",
+			checkType:                config.CheckTypeInformative,
+			checkPassing:             false,
+			expectedRequiredFailures: false,
 		},
 	}
 
@@ -254,13 +305,16 @@ func TestRunner_HasFailuresTracking(t *testing.T) {
 			defer func() { kms.NewProvider = originalNewProvider }()
 
 			reg := catalog.NewCatalog(context.Background(), cfg)
-			r := NewRunner(cfg, reg, config.ContextStageStart) // Use post-start to avoid init-specific logic
+			r := NewRunner(cfg, reg, config.ContextStageStart)
 			engine := r.(*runner)
 
 			// Clear any default providers
 			engine.pre = nil
 			engine.plan = nil
 			engine.post = nil
+
+			// Set the check type for our test check
+			engine.checkTypes["test-check"] = tt.checkType
 
 			// Add a mock provider that records a check result
 			mockProv := &mockProvider{
@@ -278,40 +332,52 @@ func TestRunner_HasFailuresTracking(t *testing.T) {
 
 			_, err := r.Run(context.Background())
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedHasFailures, engine.hasFailures)
+			assert.Equal(t, tt.expectedRequiredFailures, engine.requiredFailures)
 		})
 	}
 }
 
 func TestRunner_ShouldFailIntegration(t *testing.T) {
-	// Integration test: verify the full flow from config -> enforce -> hasFailures -> ShouldFail
+	// Integration test: verify the full flow from config -> checkTypes -> requiredFailures -> ShouldFail
 	tests := []struct {
 		name               string
-		enforceInConfig    bool
+		checkType          config.CheckType
 		checkPassing       bool
 		expectedShouldFail bool
 	}{
 		{
-			name:               "enforce true + failing check = should fail",
-			enforceInConfig:    true,
+			name:               "required check failing = should fail",
+			checkType:          config.CheckTypeRequired,
 			checkPassing:       false,
 			expectedShouldFail: true,
 		},
 		{
-			name:               "enforce true + passing check = should not fail",
-			enforceInConfig:    true,
+			name:               "required check passing = should not fail",
+			checkType:          config.CheckTypeRequired,
 			checkPassing:       true,
 			expectedShouldFail: false,
 		},
 		{
-			name:               "enforce false + failing check = should not fail",
-			enforceInConfig:    false,
+			name:               "optional check failing = should not fail",
+			checkType:          config.CheckTypeOptional,
 			checkPassing:       false,
 			expectedShouldFail: false,
 		},
 		{
-			name:               "enforce false + passing check = should not fail",
-			enforceInConfig:    false,
+			name:               "optional check passing = should not fail",
+			checkType:          config.CheckTypeOptional,
+			checkPassing:       true,
+			expectedShouldFail: false,
+		},
+		{
+			name:               "informative check failing = should not fail",
+			checkType:          config.CheckTypeInformative,
+			checkPassing:       false,
+			expectedShouldFail: false,
+		},
+		{
+			name:               "informative check passing = should not fail",
+			checkType:          config.CheckTypeInformative,
 			checkPassing:       true,
 			expectedShouldFail: false,
 		},
@@ -328,9 +394,10 @@ func TestRunner_ShouldFailIntegration(t *testing.T) {
 				Diagnostics: config.Diagnostics{
 					Stages: []config.Stage{
 						{
-							Name:    config.ContextStageStart,
-							Enforce: tt.enforceInConfig,
-							Checks:  []string{},
+							Name: config.ContextStageStart,
+							Checks: []config.CheckConfig{
+								{Name: "test-check", Type: tt.checkType},
+							},
 						},
 					},
 				},
@@ -366,34 +433,6 @@ func TestRunner_ShouldFailIntegration(t *testing.T) {
 			_, err := r.Run(context.Background())
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedShouldFail, r.ShouldFail())
-		})
-	}
-}
-
-func TestRunner_IsEnforced(t *testing.T) {
-	tests := []struct {
-		name     string
-		enforce  bool
-		expected bool
-	}{
-		{
-			name:     "IsEnforced returns true when enforce is true",
-			enforce:  true,
-			expected: true,
-		},
-		{
-			name:     "IsEnforced returns false when enforce is false",
-			enforce:  false,
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &runner{
-				enforce: tt.enforce,
-			}
-			assert.Equal(t, tt.expected, r.IsEnforced())
 		})
 	}
 }

@@ -1,0 +1,7 @@
+components:
+  validator:
+    checks:
+      config-load:
+        api_key_valid: required
+        k8s_version: optional
+        agent_settings: optional

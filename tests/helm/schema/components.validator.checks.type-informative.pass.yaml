@@ -2,4 +2,4 @@ components:
   validator:
     checks:
       post-start:
-        k8s_version: true
+        k8s_provider: informative

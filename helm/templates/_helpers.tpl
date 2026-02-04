@@ -1478,44 +1478,37 @@ Returns: The Istio cluster ID string (explicit or fallback to clusterName)
 {{- end -}}
 
 {{/*
-Validator Enabled Checks Helper
+Validator Stage Helper
 
-Filters a list of checks to only include enabled ones for a specific stage.
-Checks default to enabled unless explicitly set to false in the per-stage
-configuration at components.validator.checks.<stage>.<check>.
+Generates a complete diagnostic stage configuration from values.yaml.
+Each check value is one of: required, optional, informative, disabled.
 
-This helper also supports adding checks to stages they don't normally run in
-by explicitly setting them to true.
+Check types:
+  - "required": failures cause non-zero exit code
+  - "optional": failures logged but don't affect exit code
+  - "informative": information gathering only, always passes
+  - "disabled": check is not run
 
 Arguments (passed as dict):
-  - checksConfig: The checks configuration map (.Values.components.validator.checks)
   - stage: The stage name (e.g., "pre-start", "post-start", "config-load")
-  - allChecks: List of default checks for this stage
+  - checksConfig: The full checks map (.Values.components.validator.checks)
 
-Usage: {{ include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "pre-start" "allChecks" (list "api_key_valid")) }}
-Returns: YAML list of enabled check names
+Usage: {{ include "cloudzero-agent.validator.stageCheck" (dict "stage" "pre-start" "checksConfig" .Values.components.validator.checks) }}
+Returns: YAML stage object with name and checks fields
 */}}
-{{- define "cloudzero-agent.validator.enabledChecks" -}}
-{{- $checksConfig := .checksConfig | default dict -}}
-{{- $stageConfig := index $checksConfig .stage | default dict -}}
-{{- $enabledList := list -}}
-{{- $allChecksSet := dict -}}
-{{/* First pass: process default checks for this stage */}}
-{{- range .allChecks -}}
-  {{- $allChecksSet = set $allChecksSet . true -}}
-  {{- $enabled := true -}}
-  {{- if hasKey $stageConfig . -}}
-    {{- $enabled = index $stageConfig . -}}
-  {{- end -}}
-  {{- if $enabled -}}
-    {{- $enabledList = append $enabledList . -}}
+{{- define "cloudzero-agent.validator.stageCheck" -}}
+{{- $stage := .stage -}}
+{{- $stageChecks := index .checksConfig $stage | default dict -}}
+{{- $checks := list -}}
+{{- range $checkName, $checkType := $stageChecks -}}
+  {{/* Skip disabled checks */}}
+  {{- if ne $checkType "disabled" -}}
+    {{/* Default null/empty type to "optional" */}}
+    {{- $effectiveType := $checkType | default "optional" -}}
+    {{- $checks = append $checks (dict "name" $checkName "type" $effectiveType) -}}
   {{- end -}}
 {{- end -}}
-{{/* Second pass: add checks explicitly enabled in config but not in default list */}}
-{{- range $check, $enabled := $stageConfig -}}
-  {{- if and $enabled (not (hasKey $allChecksSet $check)) -}}
-    {{- $enabledList = append $enabledList $check -}}
-  {{- end -}}
-{{- end -}}
-{{- $enabledList | toYaml -}}
+{{/* Output with consistent field order: name first, then checks */}}
+name: {{ $stage }}
+checks: {{ $checks | toYaml | nindent 2 -}}
 {{- end -}}
