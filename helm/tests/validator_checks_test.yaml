@@ -1,0 +1,202 @@
+suite: validator per-check configuration
+templates:
+  - validator-cm.yaml
+tests:
+  # ============================================================================
+  # Default behavior tests - all checks enabled
+  # ============================================================================
+  - it: should include api_key_valid in pre-start by default
+    asserts:
+      # Pattern anchored to pre-start stage only (stops before next stage)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+
+  - it: should include all default checks in post-start
+    asserts:
+      # First check in the list
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- k8s_version"
+      # Last check in the list (istio_xcluster_lb)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start[\\s\\S]*?checks:[\\s\\S]*?- istio_xcluster_lb\\n\\s+- name: pre-stop"
+
+  - it: should include all default checks in config-load
+    asserts:
+      # First check in config-load
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: config-load\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+      # agent_settings is the last check in config-load (and config-load is the last stage)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: config-load[\\s\\S]*?checks:[\\s\\S]*?- agent_settings$"
+
+  # ============================================================================
+  # Disabling individual checks
+  # ============================================================================
+  - it: should exclude api_key_valid from pre-start when disabled
+    set:
+      components.validator.checks:
+        pre-start:
+          api_key_valid: false
+    asserts:
+      # pre-start should have empty checks list []
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+\\[\\]"
+
+  - it: should still include api_key_valid in config-load when only disabled in pre-start
+    set:
+      components.validator.checks:
+        pre-start:
+          api_key_valid: false
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: config-load\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+
+  - it: should exclude kube_state_metrics_reachable from post-start when disabled
+    set:
+      components.validator.checks:
+        post-start:
+          kube_state_metrics_reachable: false
+    asserts:
+      # post-start checks should NOT contain kube_state_metrics_reachable
+      # Match from post-start to the pre-stop stage and verify check is absent
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n(?:\\s+- [a-z_]+\\n)*\\s+- kube_state_metrics_reachable"
+
+  # ============================================================================
+  # Disabling checks in multiple stages
+  # ============================================================================
+  - it: should exclude api_key_valid from both pre-start and config-load when disabled in both
+    set:
+      components.validator.checks:
+        pre-start:
+          api_key_valid: false
+        config-load:
+          api_key_valid: false
+    asserts:
+      # pre-start should have empty checks list
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+\\[\\]"
+      # config-load should NOT start with api_key_valid (it's disabled)
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "name: config-load\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+
+  # ============================================================================
+  # Adding checks to stages they don't normally run in
+  # ============================================================================
+  - it: should add k8s_version to pre-start when explicitly enabled
+    set:
+      components.validator.checks:
+        pre-start:
+          k8s_version: true
+    asserts:
+      # pre-start should now contain k8s_version (in addition to api_key_valid)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n(?:\\s+- [a-z_]+\\n)*\\s+- k8s_version"
+
+  # ============================================================================
+  # Interaction with enforce flag
+  # ============================================================================
+  - it: should respect both enforce and checks configuration together
+    set:
+      components.validator.enforce: true
+      components.validator.checks:
+        pre-start:
+          api_key_valid: false
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce: true\\n\\s+checks:\\n\\s+\\[\\]"
+
+  # ============================================================================
+  # Edge cases
+  # ============================================================================
+  - it: should disable multiple checks in the same stage
+    set:
+      components.validator.checks:
+        post-start:
+          k8s_version: false
+          prometheus_version: false
+          scrape_cfg: false
+    asserts:
+      # post-start should NOT contain these disabled checks
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- k8s_version"
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start[\\s\\S]*?checks:[\\s\\S]*?- prometheus_version\\n\\s+- name: pre-stop"
+      # post-start should still contain remaining checks (starts with k8s_namespace now)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- k8s_namespace"
+
+  - it: should work with empty checks config (defaults preserved)
+    set:
+      components.validator.checks: {}
+    asserts:
+      # All defaults should still be present
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- k8s_version"
+
+  - it: should allow explicitly setting a default check to true (no-op)
+    set:
+      components.validator.checks:
+        pre-start:
+          api_key_valid: true
+        post-start:
+          k8s_version: true
+    asserts:
+      # Same as defaults - checks still present
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: post-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- k8s_version"
+
+  - it: should handle disabling all checks in config-load stage
+    set:
+      components.validator.checks:
+        config-load:
+          api_key_valid: false
+          k8s_version: false
+          k8s_namespace: false
+          k8s_provider: false
+          kube_state_metrics_reachable: false
+          agent_settings: false
+    asserts:
+      # config-load should have empty checks list
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: config-load\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+\\[\\]"
+
+  - it: should add multiple checks to a stage they do not normally run in
+    set:
+      components.validator.checks:
+        pre-start:
+          prometheus_version: true
+          scrape_cfg: true
+    asserts:
+      # pre-start should contain api_key_valid (default) plus the two added checks
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start\\n\\s+enforce:[^\\n]+\\n\\s+checks:\\n\\s+- api_key_valid"
+      # scrape_cfg should be the last check before post-start (added checks come after defaults)
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "name: pre-start[\\s\\S]*?checks:[\\s\\S]*?- scrape_cfg\\n\\s+- name: post-start"

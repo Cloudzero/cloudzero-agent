@@ -155,6 +155,16 @@ $defs:
       maxUnavailable:
         $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/maxUnavailable"
 
+  com.cloudzero.agent.StageChecks:
+    description: |
+      Per-check enable/disable configuration for a validator stage.
+      Keys are check names, values are booleans indicating whether
+      the check should run in this stage. Checks default to enabled
+      (true) unless explicitly set to false.
+    type: object
+    additionalProperties:
+      type: boolean
+
 type: object
 additionalProperties: false
 required:
@@ -677,6 +687,25 @@ properties:
               the pod continues starting normally.
             type: boolean
             default: false
+          checks:
+            description: |
+              Per-stage check configuration. Each stage can have checks enabled or
+              disabled individually. All checks default to enabled unless explicitly
+              set to false.
+
+              To disable a check in a stage, set it to false. To add a check to a
+              stage it doesn't normally run in, set it to true.
+            type: object
+            additionalProperties: false
+            properties:
+              pre-start:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              post-start:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              pre-stop:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              config-load:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
 
       miscellaneous:
         description: |

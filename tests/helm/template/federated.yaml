@@ -969,6 +969,7 @@ data:
           tag: v0.87.0
       validator:
         annotations: {}
+        checks: {}
         enforce: false
         labels: {}
         resources:
@@ -1659,6 +1660,7 @@ data:
         - name: pre-stop
           enforce: false
           checks:
+            []
         - name: config-load
           enforce: false
           checks:

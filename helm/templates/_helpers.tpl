@@ -1476,3 +1476,46 @@ Returns: The Istio cluster ID string (explicit or fallback to clusterName)
 {{- define "cloudzero-agent.istio.clusterID" -}}
 {{- .Values.integrations.istio.clusterID | default .Values.clusterName -}}
 {{- end -}}
+
+{{/*
+Validator Enabled Checks Helper
+
+Filters a list of checks to only include enabled ones for a specific stage.
+Checks default to enabled unless explicitly set to false in the per-stage
+configuration at components.validator.checks.<stage>.<check>.
+
+This helper also supports adding checks to stages they don't normally run in
+by explicitly setting them to true.
+
+Arguments (passed as dict):
+  - checksConfig: The checks configuration map (.Values.components.validator.checks)
+  - stage: The stage name (e.g., "pre-start", "post-start", "config-load")
+  - allChecks: List of default checks for this stage
+
+Usage: {{ include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "pre-start" "allChecks" (list "api_key_valid")) }}
+Returns: YAML list of enabled check names
+*/}}
+{{- define "cloudzero-agent.validator.enabledChecks" -}}
+{{- $checksConfig := .checksConfig | default dict -}}
+{{- $stageConfig := index $checksConfig .stage | default dict -}}
+{{- $enabledList := list -}}
+{{- $allChecksSet := dict -}}
+{{/* First pass: process default checks for this stage */}}
+{{- range .allChecks -}}
+  {{- $allChecksSet = set $allChecksSet . true -}}
+  {{- $enabled := true -}}
+  {{- if hasKey $stageConfig . -}}
+    {{- $enabled = index $stageConfig . -}}
+  {{- end -}}
+  {{- if $enabled -}}
+    {{- $enabledList = append $enabledList . -}}
+  {{- end -}}
+{{- end -}}
+{{/* Second pass: add checks explicitly enabled in config but not in default list */}}
+{{- range $check, $enabled := $stageConfig -}}
+  {{- if and $enabled (not (hasKey $allChecksSet $check)) -}}
+    {{- $enabledList = append $enabledList $check -}}
+  {{- end -}}
+{{- end -}}
+{{- $enabledList | toYaml -}}
+{{- end -}}

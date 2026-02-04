@@ -69,27 +69,16 @@ data:
         - name: pre-start
           enforce: {{ .Values.components.validator.enforce }}
           checks:
-            - api_key_valid
+            {{- include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "pre-start" "allChecks" (list "api_key_valid")) | nindent 12 }}
         - name: post-start
           enforce: false
           checks:
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - prometheus_version
-            - scrape_cfg
-            - webhook_server_reachable
-            - istio_xcluster_lb
+            {{- include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "post-start" "allChecks" (list "k8s_version" "k8s_namespace" "k8s_provider" "kube_state_metrics_reachable" "prometheus_version" "scrape_cfg" "webhook_server_reachable" "istio_xcluster_lb")) | nindent 12 }}
         - name: pre-stop
           enforce: false
           checks:
+            {{- include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "pre-stop" "allChecks" (list)) | nindent 12 }}
         - name: config-load
           enforce: false
           checks:
-            - api_key_valid
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - agent_settings
+            {{- include "cloudzero-agent.validator.enabledChecks" (dict "checksConfig" .Values.components.validator.checks "stage" "config-load" "allChecks" (list "api_key_valid" "k8s_version" "k8s_namespace" "k8s_provider" "kube_state_metrics_reachable" "agent_settings")) | nindent 12 }}

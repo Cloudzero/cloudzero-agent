@@ -421,6 +421,32 @@ components:
     # When false (default), failures are logged and reported via telemetry but
     # the pod continues starting normally.
     enforce: false
+    # Per-stage, per-check configuration for validator diagnostics.
+    #
+    # Each check can be individually enabled or disabled per stage. All checks
+    # are enabled by default. To disable a specific check in a stage:
+    #
+    #   components:
+    #     validator:
+    #       checks:
+    #         pre-start:
+    #           api_key_valid: false
+    #         config-load:
+    #           api_key_valid: false
+    #
+    # To add a check to a stage it doesn't normally run in, set it to true:
+    #
+    #   components:
+    #     validator:
+    #       checks:
+    #         pre-start:
+    #           k8s_version: true  # normally only in post-start and config-load
+    #
+    # Stages: pre-start, post-start, pre-stop, config-load
+    # Checks: api_key_valid, k8s_version, k8s_namespace, k8s_provider,
+    #         kube_state_metrics_reachable, prometheus_version, scrape_cfg,
+    #         webhook_server_reachable, istio_xcluster_lb, agent_settings
+    checks: {}
     # Annotations to add to the validator component.
     #
     # These annotations are merged with defaults.annotations.
