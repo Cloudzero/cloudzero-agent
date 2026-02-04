@@ -31,7 +31,7 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 {{- include "cloudzero-agent.alloy.scrapeKubeStateMetrics" . }}
 {{- end }}
 
-{{- if .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+{{- if include "cloudzero-agent.Values.integrations.cAdvisor.enabled" . }}
 {{- include "cloudzero-agent.alloy.scrapeCAdvisor" . }}
 {{- end }}
 
@@ -111,6 +111,9 @@ Generates River configuration for scraping cAdvisor metrics from Kubernetes node
 Usage: {{ include "cloudzero-agent.alloy.scrapeCAdvisor" . }}
 */}}
 {{- define "cloudzero-agent.alloy.scrapeCAdvisor" -}}
+{{- $directNodeAccess := .Values.integrations.cAdvisor.directNodeAccess.enabled | default false -}}
+{{- $kubeletPort := .Values.integrations.cAdvisor.port | default 10250 -}}
+{{- $insecureSkipVerify := .Values.integrations.cAdvisor.tls.insecureSkipVerify -}}
 // cAdvisor Scrape Job
 // Collects container resource usage metrics
 
@@ -118,8 +121,34 @@ discovery.kubernetes "cadvisor" {
   role = "node"
 }
 
+{{- if $directNodeAccess }}
+// Direct node access mode - connect directly to kubelets on port {{ $kubeletPort }}
+// Bypasses API server proxy, only requires nodes/metrics RBAC
+discovery.relabel "cadvisor" {
+  targets = discovery.kubernetes.cadvisor.targets
+
+  // Rewrite target address to node's internal IP on kubelet port
+  rule {
+    source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+    target_label  = "__address__"
+    replacement   = "$1:{{ $kubeletPort }}"
+  }
+
+  // Map node labels
+  rule {
+    regex  = "__meta_kubernetes_node_label_(.+)"
+    action = "labelmap"
+  }
+
+  // Map node name
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "node"
+  }
+}
+
 prometheus.scrape "cadvisor" {
-  targets    = discovery.kubernetes.cadvisor.targets
+  targets    = discovery.relabel.cadvisor.output
   forward_to = [prometheus.relabel.cadvisor.receiver]
   scrape_interval = "{{ .Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}"
   metrics_path = "/metrics/cadvisor"
@@ -129,13 +158,63 @@ prometheus.scrape "cadvisor" {
 
   tls_config {
     ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-    insecure_skip_verify = false
+    insecure_skip_verify = {{ $insecureSkipVerify }}
   }
 
   clustering {
     enabled = true
   }
 }
+{{- else }}
+// API server proxy mode (default) - route through Kubernetes API server
+// Requires nodes/proxy RBAC permission
+discovery.relabel "cadvisor" {
+  targets = discovery.kubernetes.cadvisor.targets
+
+  // Route through API server
+  rule {
+    target_label = "__address__"
+    replacement  = "kubernetes.default.svc.cluster.local:443"
+  }
+
+  // Set metrics path to API proxy endpoint
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "__metrics_path__"
+    replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+  }
+
+  // Map node labels
+  rule {
+    regex  = "__meta_kubernetes_node_label_(.+)"
+    action = "labelmap"
+  }
+
+  // Map node name
+  rule {
+    source_labels = ["__meta_kubernetes_node_name"]
+    target_label  = "node"
+  }
+}
+
+prometheus.scrape "cadvisor" {
+  targets    = discovery.relabel.cadvisor.output
+  forward_to = [prometheus.relabel.cadvisor.receiver]
+  scrape_interval = "{{ .Values.prometheusConfig.scrapeJobs.cadvisor.scrapeInterval }}"
+  scheme = "https"
+
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+  tls_config {
+    ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    insecure_skip_verify = {{ $insecureSkipVerify }}
+  }
+
+  clustering {
+    enabled = true
+  }
+}
+{{- end }}
 
 // Filter cAdvisor metrics - keep only CloudZero cost metrics
 prometheus.relabel "cadvisor" {
@@ -152,12 +231,6 @@ prometheus.relabel "cadvisor" {
   rule {
     regex  = "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
     action = "labelkeep"
-  }
-
-  // Map node name for cost allocation
-  rule {
-    source_labels = ["__meta_kubernetes_node_name"]
-    target_label  = "node"
   }
 }
 {{- end -}}

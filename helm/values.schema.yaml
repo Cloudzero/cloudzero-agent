@@ -1294,13 +1294,19 @@ properties:
               cadvisor scrape job configuration.
             type: object
             additionalProperties: false
-            required:
-              - enabled
             properties:
               enabled:
                 description: |
-                  Whether to enable the cadvisor scrape job.
-                type: boolean
+                  DEPRECATED: Use integrations.cAdvisor.enabled instead.
+
+                  Whether to enable the cadvisor scrape job. If set to a boolean
+                  value, it takes precedence over integrations.cAdvisor.enabled.
+                  If null (default), falls back to integrations.cAdvisor.enabled.
+                oneOf:
+                  - type: "null"
+                  - type: boolean
+                default: null
+                deprecated: true
               scrapeInterval:
                 description: |
                   Scrape interval for nodesCadvisor job.
@@ -2053,6 +2059,66 @@ properties:
 
                 kubectl -n istio-system get deploy istiod \
                   -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="CLUSTER_ID")].value}'
+      cAdvisor:
+        type: object
+        additionalProperties: false
+        description: |
+          cAdvisor container metrics integration settings.
+
+          Controls how cAdvisor metrics are collected from cluster nodes.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Enable cAdvisor metrics collection.
+              Default: true
+          port:
+            type: integer
+            default: 10250
+            minimum: 1
+            maximum: 65535
+            description: |
+              Kubelet port for direct kubelet connections.
+              Used by both federated mode and direct node access mode.
+              The standard default is 10250, but can be changed via --port on kubelet.
+          tls:
+            type: object
+            additionalProperties: false
+            description: |
+              TLS configuration for cAdvisor metrics collection.
+            properties:
+              insecureSkipVerify:
+                type: boolean
+                default: true
+                description: |
+                  Skip TLS certificate verification when scraping cAdvisor metrics.
+
+                  Default: true (required for most clusters where certificates may not
+                  have proper SANs or are self-signed).
+
+                  Set to false only if you have proper TLS certificates configured and
+                  want strict certificate verification.
+          directNodeAccess:
+            type: object
+            additionalProperties: false
+            description: |
+              Direct node access configuration for cAdvisor metrics collection.
+
+              When enabled, the agent connects directly to node kubelets instead of
+              routing through the Kubernetes API server proxy. This removes the need
+              for the dangerous nodes/proxy RBAC permission.
+
+              Requirements:
+              - Network connectivity from collector pod to all nodes on the kubelet port
+              - Will not work with strict NetworkPolicies blocking pod-to-node traffic
+            properties:
+              enabled:
+                type: boolean
+                default: false
+                description: |
+                  Enable direct node access mode.
+                  Default: false (uses API server proxy for maximum compatibility)
 
   kubeStateMetrics:
     type: object

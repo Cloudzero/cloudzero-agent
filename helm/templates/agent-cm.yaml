@@ -44,7 +44,7 @@ data:
       {{- include "cloudzero-agent.prometheus.scrapeKubeStateMetrics" . | nindent 6 }}
       {{- end }}{{/* End kubeStateMetrics scrape job */}}
 
-      {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") .Values.prometheusConfig.scrapeJobs.cadvisor.enabled }}
+      {{- if and (ne (include "cloudzero-agent.Values.components.agent.mode" .) "federated") (include "cloudzero-agent.Values.integrations.cAdvisor.enabled" .) }}
       {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" false) | nindent 6 }}
       {{- end }}{{/* End cadvisor scrape job */}}
 
