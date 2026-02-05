@@ -61,9 +61,9 @@ CADVISOR:
                                --> prometheus.remote_write
 
 WEBHOOK:
-  discovery.kubernetes (endpoints) --> prometheus.scrape (HTTPS)
-                                   --> prometheus.relabel (metrics filter)
-                                   --> prometheus.remote_write
+  discovery.kubernetes (endpointslice) --> prometheus.scrape (HTTPS)
+                                       --> prometheus.relabel (metrics filter)
+                                       --> prometheus.remote_write
 
 AGGREGATOR:
   Static target --> prometheus.scrape --> prometheus.relabel (metrics filter)
@@ -493,7 +493,7 @@ cost metrics.
 Pipeline flow:
   +---------------------+     +---------------------+     +---------------------+
   | discovery.kubernetes| --> | prometheus.scrape   | --> | prometheus.relabel  |
-  | (endpoints)         |     | (HTTPS, skip verify)|     | (filter metrics)    |
+  | (endpointslice)     |     | (HTTPS, skip verify)|     | (filter metrics)    |
   +---------------------+     +---------------------+     +---------------------+
                                                                    |
                                                                    v
@@ -511,18 +511,18 @@ Usage: {{ include "cloudzero-agent.alloy.scrapeWebhook" . }}
 // Purpose: Monitor CloudZero webhook server health (observability metrics)
 //
 // Data flow:
-//   discover endpoints -> scrape (HTTPS) -> filter metrics -> remote_write
+//   discover endpointslice -> scrape (HTTPS) -> filter metrics -> remote_write
 //
 // Note: Uses HTTPS with insecure_skip_verify because the webhook server
 // uses a self-signed certificate generated at deployment time.
 // ============================================================================
 
-// STEP 1: Discover webhook service endpoints
+// STEP 1: Discover webhook service via EndpointSlice
 discovery.kubernetes "webhook" {
-  role = "endpoints"
+  role = "endpointslice"
 
   selectors {
-    role  = "endpoints"
+    role  = "endpointslice"
     field = "metadata.name={{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}"
   }
 }
