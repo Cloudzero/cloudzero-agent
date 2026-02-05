@@ -599,7 +599,7 @@ visibility. These are observability metrics, not cost metrics.
 
 Data flow:
   kubernetes_sd    -->   relabel_configs     -->   SCRAPE
-  (endpoints)           (filter to webhook)       (HTTPS)
+  (endpointslice)       (filter to webhook)       (HTTPS)
                                                        |
                                                        v
                                              metric_relabel_configs
@@ -636,14 +636,14 @@ Usage: {{ include "cloudzero-agent.prometheus.scrapeWebhookJob" . }}
   tls_config:
     insecure_skip_verify: true
 
-  # Discover webhook service endpoints
+  # Discover webhook service via EndpointSlice
   kubernetes_sd_configs:
-    - role: endpoints
+    - role: endpointslice
       kubeconfig_file: ""
 
   # Filter to only the webhook service
   relabel_configs:
-    - source_labels: [__meta_kubernetes_endpoints_name]
+    - source_labels: [__meta_kubernetes_endpointslice_name]
       action: keep
       regex: {{ include "cloudzero-agent.insightsController.server.webhookFullname" . }}
 
@@ -667,7 +667,7 @@ observability metrics that help track the health of the data pipeline.
 
 Data flow:
   kubernetes_sd    -->   relabel_configs     -->   SCRAPE
-  (endpoints)           (filter to agg ports)     (HTTP)
+  (endpointslice)       (filter to agg ports)     (HTTP)
                                                        |
                                                        v
                                              metric_relabel_configs
@@ -696,9 +696,9 @@ Usage: {{ include "cloudzero-agent.prometheus.scrapeAggregator" . }}
 - job_name: cloudzero-aggregator-job
   scrape_interval: {{ .Values.prometheusConfig.scrapeJobs.prometheus.scrapeInterval }}
 
-  # Discover aggregator endpoints in this namespace
+  # Discover aggregator via EndpointSlice in this namespace
   kubernetes_sd_configs:
-    - role: endpoints
+    - role: endpointslice
       kubeconfig_file: ""
       namespaces:
         names:

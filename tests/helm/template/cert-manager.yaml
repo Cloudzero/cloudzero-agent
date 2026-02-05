@@ -353,14 +353,14 @@ data:
         tls_config:
           insecure_skip_verify: true
       
-        # Discover webhook service endpoints
+        # Discover webhook service via EndpointSlice
         kubernetes_sd_configs:
-          - role: endpoints
+          - role: endpointslice
             kubeconfig_file: ""
       
         # Filter to only the webhook service
         relabel_configs:
-          - source_labels: [__meta_kubernetes_endpoints_name]
+          - source_labels: [__meta_kubernetes_endpointslice_name]
             action: keep
             regex: cz-agent-cz-webhook
       
@@ -383,9 +383,9 @@ data:
       - job_name: cloudzero-aggregator-job
         scrape_interval: 120s
       
-        # Discover aggregator endpoints in this namespace
+        # Discover aggregator via EndpointSlice in this namespace
         kubernetes_sd_configs:
-          - role: endpoints
+          - role: endpointslice
             kubeconfig_file: ""
             namespaces:
               names:
