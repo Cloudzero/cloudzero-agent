@@ -16,7 +16,7 @@ This directory contains the individual CLI applications and services that make u
 - `helmless/` - Kubernetes deployment without Helm
 - `agent-inspector/` - Agent introspection and debugging
 - `certifik8s/` - Certificate management for Kubernetes
-- `jsonbr2parquet/` - JSON to Parquet data format conversion
+- `regurgitator/` - Multi-format metric transcoding (CSV, Parquet, JSON, remote_write)
 - `scout/` - Resource discovery and scanning
 - `cluster-config/` - Cluster configuration management
 
