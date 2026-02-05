@@ -66,30 +66,19 @@ data:
 
     diagnostics:
       stages:
-        - name: pre-start
-          enforce: true
-          checks:
-            - api_key_valid
-        - name: post-start
-          enforce: false
-          checks:
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - prometheus_version
-            - scrape_cfg
-            - webhook_server_reachable
-            - istio_xcluster_lb
-        - name: pre-stop
-          enforce: false
-          checks:
-        - name: config-load
-          enforce: false
-          checks:
-            - api_key_valid
-            - k8s_version
-            - k8s_namespace
-            - k8s_provider
-            - kube_state_metrics_reachable
-            - agent_settings
+        - {{- include "cloudzero-agent.validator.stageCheck" (dict
+                "stage"        "pre-start"
+                "checksConfig" .Values.components.validator.checks
+              ) | nindent 10 }}
+        - {{- include "cloudzero-agent.validator.stageCheck" (dict
+                "stage"        "post-start"
+                "checksConfig" .Values.components.validator.checks
+              ) | nindent 10 }}
+        - {{- include "cloudzero-agent.validator.stageCheck" (dict
+                "stage"        "pre-stop"
+                "checksConfig" .Values.components.validator.checks
+              ) | nindent 10 }}
+        - {{- include "cloudzero-agent.validator.stageCheck" (dict
+                "stage"        "config-load"
+                "checksConfig" .Values.components.validator.checks
+              ) | nindent 10 }}

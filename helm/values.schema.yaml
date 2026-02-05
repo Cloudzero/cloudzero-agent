@@ -155,6 +155,148 @@ $defs:
       maxUnavailable:
         $ref: "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/maxUnavailable"
 
+  com.cloudzero.agent.CheckConfig:
+    description: |
+      Configuration for a single diagnostic check. Specifies how check
+      failures are handled:
+      - required: failures cause non-zero exit code
+      - optional: failures are logged but don't affect exit code (default)
+      - informative: information gathering only, always passes
+      - disabled: check is not run at all
+
+      Note: Due to a Helm limitation (helm/helm#11588), null values cannot be
+      rejected at the schema level. A null value (e.g., "api_key_valid:")
+      is treated as "not configured" and the check uses its default type.
+    type: string
+    enum:
+      - required
+      - optional
+      - informative
+      - disabled
+    default: optional
+
+  com.cloudzero.agent.StageChecks:
+    description: |
+      Per-check configuration for a validator stage.
+      Keys are check names, values are check types (required, optional,
+      informative, or disabled). Checks default to "required" unless
+      explicitly configured otherwise.
+    type: object
+    additionalProperties: false
+    properties:
+      api_key_valid:
+        description: |
+          Validates the CloudZero API key by making an authenticated request
+          to the CloudZero API (/v2/insights endpoint). This is the most
+          critical check - without a valid API key, the agent cannot send
+          data to CloudZero.
+
+          Pass: API returns HTTP 200 with valid response
+          Fail: Connection error, authentication failure, or invalid response
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      k8s_version:
+        description: |
+          Retrieves and reports the Kubernetes cluster version (Major.Minor)
+          by querying the Kubernetes Discovery API. The version is included
+          in telemetry data sent to CloudZero.
+
+          Pass: Successfully queries K8s API and extracts version
+          Fail: Cannot connect to K8s API or parse version info
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      k8s_namespace:
+        description: |
+          Detects and reports the namespace where the CloudZero agent is
+          running. Uses the NAMESPACE environment variable set via the
+          Kubernetes Downward API.
+
+          Pass: Namespace environment variable is set
+          Fail: Cannot determine namespace from environment
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      k8s_provider:
+        description: |
+          Detects the cloud provider/infrastructure by examining the node's
+          provider ID (e.g., "aws://us-east-1/i-1234567890abcdef0"). Queries
+          the K8s API to get the node where the validator pod is running.
+
+          Pass: Successfully retrieves provider ID from node spec
+          Fail: Cannot query pod/node or provider ID unavailable
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      kube_state_metrics_reachable:
+        description: |
+          Validates connectivity to Kube State Metrics (KSM) and confirms
+          required metrics are available. Makes HTTP request to KSM /metrics
+          endpoint and checks for presence of configured required metrics.
+
+          Pass: KSM endpoint returns HTTP 200 and all required metrics present
+          Fail: Cannot reach KSM, non-200 response, or required metrics missing
+
+          Note: Retries up to 12 times with 10-second intervals (~2 min total)
+          to handle KSM startup timing.
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      prometheus_version:
+        description: |
+          Retrieves and reports the Prometheus binary version by executing
+          the prometheus binary with the --version flag. The version is
+          included in telemetry data.
+
+          Pass: Prometheus binary executes and returns version info
+          Fail: Binary not found, not executable, or execution fails
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      scrape_cfg:
+        description: |
+          Validates that Prometheus scrape configuration files exist and are
+          readable. Checks all configured scrape config file paths.
+
+          Pass: All configured config files exist and can be read
+          Fail: Config file missing, unreadable, or no configs configured
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      webhook_server_reachable:
+        description: |
+          Validates that the Kubernetes admission webhook (insights-admission)
+          can be reached and responds to validation requests. Sends a test
+          Pod admission request to the webhook endpoint.
+
+          Pass: Webhook returns HTTP 200 to test admission request
+          Fail: Cannot reach webhook or validation request fails
+
+          Note: Retries up to 6 times with exponential backoff (~70s total)
+          to handle webhook startup timing.
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      istio_xcluster_lb:
+        description: |
+          Detects Istio service mesh presence and validates cross-cluster
+          load balancing configuration. Supports both sidecar and ambient
+          mesh modes.
+
+          No Istio: Always passes (not in mesh)
+          Sidecar mode: Validates cluster ID matches Istio's effective cluster ID
+          Ambient mode: Requires explicit integrations.istio.clusterID setting
+
+          Pass: No Istio, or Istio cluster ID configuration is correct
+          Fail: Cluster ID mismatch (can cause cross-cluster traffic issues)
+
+          Note: Only relevant for Istio service mesh users. For non-Istio
+          clusters, this check passes immediately.
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+      agent_settings:
+        description: |
+          Validates agent configuration settings. (Currently not implemented -
+          reserved for future use.)
+
+          Pass: N/A (not implemented)
+          Fail: N/A (not implemented)
+        allOf:
+          - $ref: "#/$defs/com.cloudzero.agent.CheckConfig"
+
 type: object
 additionalProperties: false
 required:
@@ -666,6 +808,27 @@ properties:
               For details, see the Kubernetes documentation on resource management:
               https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
             $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+          checks:
+            description: |
+              Per-stage check configuration. Each check can be configured with:
+              - type: "required" (default), "optional", or "informative"
+              - enabled: true (default) or false
+
+              Check types control how failures are handled:
+              - required: failures cause non-zero exit code
+              - optional: failures are logged but don't affect exit code
+              - informative: information gathering only, always passes
+            type: object
+            additionalProperties: false
+            properties:
+              pre-start:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              post-start:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              pre-stop:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
+              config-load:
+                $ref: "#/$defs/com.cloudzero.agent.StageChecks"
 
       miscellaneous:
         description: |

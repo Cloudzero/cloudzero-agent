@@ -449,6 +449,39 @@ components:
   # The validator component performs validation checks and notifies the platform
   # of installation status changes.
   validator:
+    # Per-stage, per-check configuration for validator diagnostics.
+    #
+    # Each check value is one of:
+    #   - required: failures cause non-zero exit code
+    #   - optional: failures are logged but don't affect exit code
+    #   - informative: information gathering only, always passes
+    #   - disabled: check is not run at all
+    #
+    # To override a check, set its value in your values override file:
+    #   components:
+    #     validator:
+    #       checks:
+    #         pre-start:
+    #           api_key_valid: optional  # Make non-blocking for testing
+    checks:
+      pre-start:
+        api_key_valid: optional
+        istio_xcluster_lb: required
+      post-start:
+        k8s_version: informative
+        k8s_namespace: informative
+        k8s_provider: informative
+        kube_state_metrics_reachable: optional
+        prometheus_version: informative
+        scrape_cfg: optional
+        webhook_server_reachable: optional
+      pre-stop: {}
+      config-load:
+        api_key_valid: optional
+        k8s_version: informative
+        k8s_namespace: informative
+        k8s_provider: informative
+        kube_state_metrics_reachable: optional
     # Annotations to add to the validator component.
     #
     # These annotations are merged with defaults.annotations.

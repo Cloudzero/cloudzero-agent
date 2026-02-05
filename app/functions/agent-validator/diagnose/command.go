@@ -55,8 +55,8 @@ func NewCommand() *cli.Command {
 					&cli.BoolFlag{Name: "post", Usage: "if set to true, telemetry will be pushed", Required: false},
 				},
 				Action: func(c *cli.Context) error {
-					requestedChecks := c.StringSlice("check")
-					if len(requestedChecks) == 0 {
+					requestedCheckNames := c.StringSlice("check")
+					if len(requestedCheckNames) == 0 {
 						return nil
 					}
 					configs := c.StringSlice(config.FlagConfigFile)
@@ -74,12 +74,20 @@ func NewCommand() *cli.Command {
 						logrus.WithError(err).Fatal("Invalid configuration")
 					}
 
+					// Convert string slice to CheckConfig slice - all checks run as required by default
+					requestedChecks := make([]config.CheckConfig, 0, len(requestedCheckNames))
+					for _, name := range requestedCheckNames {
+						requestedChecks = append(requestedChecks, config.CheckConfig{
+							Name: name,
+							Type: config.CheckTypeRequired,
+						})
+					}
+
 					// modify the stages
 					cfg.Diagnostics.Stages = []config.Stage{
 						{
-							Name:    config.ContextStageInit,
-							Enforce: false,
-							Checks:  requestedChecks,
+							Name:   config.ContextStageInit,
+							Checks: requestedChecks,
 						},
 					}
 
@@ -178,7 +186,7 @@ func runDiagnostics(c *cli.Context, stage string) error {
 
 	report, err := engine.Run(ctx)
 	if err != nil {
-		logrus.WithError(err).Warn("diagnostics encountered error (continuing)")
+		logrus.WithError(err).Warn("diagnostics encountered runtime error")
 	}
 
 	report.ReadFromReport(func(cs *status.ClusterStatus) {
@@ -196,6 +204,22 @@ func runDiagnostics(c *cli.Context, stage string) error {
 			logrus.WithError(err).Warn("failed to post status")
 		}
 	}
+
+	// Check if any required checks failed
+	if engine.ShouldFail() {
+		report.ReadFromReport(func(cs *status.ClusterStatus) {
+			for _, check := range cs.Checks {
+				if !check.Passing {
+					logrus.WithFields(logrus.Fields{
+						"check": check.Name,
+						"error": check.Error,
+					}).Error("required diagnostic check failed")
+				}
+			}
+		})
+		return fmt.Errorf("one or more required diagnostic checks failed for stage %s", stage)
+	}
+
 	return nil
 }
 
@@ -218,7 +242,7 @@ func printClusterStatusHeader() {
 }
 
 func printClusterStatusRow(check *status.StatusCheck) {
-	if check.Name != "" || check.Passing || check.Error != "" {
+	if check.Name != "" {
 		fmt.Printf("%-30s %-10v %-50s\n", check.Name, check.Passing, check.Error)
 	}
 }

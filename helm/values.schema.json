@@ -41,6 +41,11 @@
       },
       "type": "object"
     },
+    "com.cloudzero.agent.CheckConfig": {
+      "default": "optional",
+      "enum": ["required", "optional", "informative", "disabled"],
+      "type": "string"
+    },
     "com.cloudzero.agent.PodDisruptionBudgetSpec": {
       "additionalProperties": false,
       "properties": {
@@ -52,6 +57,82 @@
         },
         "minAvailable": {
           "$ref": "#/$defs/io.k8s.api.policy.v1.PodDisruptionBudgetSpec/properties/minAvailable"
+        }
+      },
+      "type": "object"
+    },
+    "com.cloudzero.agent.StageChecks": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_settings": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "api_key_valid": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "istio_xcluster_lb": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "k8s_namespace": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "k8s_provider": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "k8s_version": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "kube_state_metrics_reachable": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "prometheus_version": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "scrape_cfg": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
+        },
+        "webhook_server_reachable": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/com.cloudzero.agent.CheckConfig"
+            }
+          ]
         }
       },
       "type": "object"
@@ -6065,6 +6146,24 @@
           "properties": {
             "annotations": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+            },
+            "checks": {
+              "additionalProperties": false,
+              "properties": {
+                "config-load": {
+                  "$ref": "#/$defs/com.cloudzero.agent.StageChecks"
+                },
+                "post-start": {
+                  "$ref": "#/$defs/com.cloudzero.agent.StageChecks"
+                },
+                "pre-start": {
+                  "$ref": "#/$defs/com.cloudzero.agent.StageChecks"
+                },
+                "pre-stop": {
+                  "$ref": "#/$defs/com.cloudzero.agent.StageChecks"
+                }
+              },
+              "type": "object"
             },
             "labels": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"

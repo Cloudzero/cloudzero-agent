@@ -69,7 +69,8 @@ func TestSettings_NewSettings(t *testing.T) {
 		assert.Equal(t, stage, stageInfo.Name)
 		assert.NotEmpty(t, stageInfo.Checks)
 		for _, check := range stageInfo.Checks {
-			assert.True(t, config.IsValidDiagnostic(check))
+			assert.True(t, config.IsValidDiagnostic(check.Name))
+			assert.True(t, config.IsValidCheckType(string(check.Type)))
 		}
 	}
 }

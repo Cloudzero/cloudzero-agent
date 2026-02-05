@@ -1,0 +1,6 @@
+components:
+  validator:
+    checks:
+      invalid-stage:
+        api_key_valid:
+          enabled: false

@@ -1,0 +1,7 @@
+components:
+  validator:
+    checks:
+      pre-start:
+        invalid_check_name:
+          enabled: true
+          type: required

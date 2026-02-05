@@ -32,16 +32,18 @@ prometheus:
 diagnostics:
   stages:
     - name: pre-start
-      enforce: true
       checks:
-        - api_key_valid
+        - name: api_key_valid
+          type: required
     - name: post-start
-      enforce: false
       checks:
-        - k8s_version
-        - kube_state_metrics_reachable
-        - scrape_cfg
+        - name: k8s_version
+          type: optional
+        - name: kube_state_metrics_reachable
+          type: optional
+        - name: scrape_cfg
+          type: optional
     - name: pre-stop
-      enforce: false
       checks:
-        - api_key_valid
+        - name: api_key_valid
+          type: required

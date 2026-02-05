@@ -23,6 +23,8 @@ import (
 type Engine interface {
 	// Run executes the engine
 	Run(context.Context) (status.Accessor, error)
+	// ShouldFail returns true if any required check failed
+	ShouldFail() bool
 }
 
 type runner struct {
@@ -35,15 +37,22 @@ type runner struct {
 	pre  []diagnostic.Provider
 	plan []diagnostic.Provider
 	post []diagnostic.Provider
+
+	// checkTypes maps check names to their types for exit code determination
+	checkTypes map[string]config.CheckType
+
+	// requiredFailures is set after Run() completes if any required checks failed
+	requiredFailures bool
 }
 
 func NewRunner(c *config.Settings, reg catalog.Registry, stage string) Engine {
 	r := &runner{
-		cfg:    c,
-		stage:  stage,
-		reg:    reg,
-		logger: logging.NewLogger().WithField(logging.OpField, "runner"),
-		client: http.DefaultClient,
+		cfg:        c,
+		stage:      stage,
+		reg:        reg,
+		logger:     logging.NewLogger().WithField(logging.OpField, "runner"),
+		client:     http.DefaultClient,
+		checkTypes: make(map[string]config.CheckType),
 	}
 
 	// Add actions needed to run before the main diagnostic checks
@@ -56,7 +65,13 @@ func NewRunner(c *config.Settings, reg catalog.Registry, stage string) Engine {
 		if s.Name != stage {
 			continue
 		}
-		r.AddStep(reg.Get(s.Checks...)...)
+		// Extract check names and build checkTypes map
+		checkNames := make([]string, 0, len(s.Checks))
+		for _, check := range s.Checks {
+			checkNames = append(checkNames, check.Name)
+			r.checkTypes[check.Name] = check.Type
+		}
+		r.AddStep(reg.Get(checkNames...)...)
 	}
 
 	// Add actions needed to run after the main diagnostic checks
@@ -81,6 +96,13 @@ func (r *runner) AddStep(providers ...diagnostic.Provider) {
 
 func (r *runner) AddPostStep(providers ...diagnostic.Provider) {
 	r.post = append(r.post, providers...)
+}
+
+// ShouldFail returns true if any required diagnostic check failed.
+// This should be called after Run() completes to determine if the process should exit
+// with an error code.
+func (r *runner) ShouldFail() bool {
+	return r.requiredFailures
 }
 
 func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
@@ -131,6 +153,15 @@ func (r *runner) Run(ctx context.Context) (status.Accessor, error) {
 
 	// check the results (and set correct end code)
 	processFailures(ctx, recorder, r)()
+
+	// Track if any required checks failed for exit code determination
+	recorder.ReadFromReport(func(cs *status.ClusterStatus) {
+		for _, c := range cs.Checks {
+			if !c.Passing && r.checkTypes[c.Name] == config.CheckTypeRequired {
+				r.requiredFailures = true
+			}
+		}
+	})
 
 	return recorder, nil
 }

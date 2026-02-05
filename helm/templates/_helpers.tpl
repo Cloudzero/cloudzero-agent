@@ -1491,3 +1491,39 @@ Returns: The Istio cluster ID string (explicit or fallback to clusterName)
 {{- define "cloudzero-agent.istio.clusterID" -}}
 {{- .Values.integrations.istio.clusterID | default .Values.clusterName -}}
 {{- end -}}
+
+{{/*
+Validator Stage Helper
+
+Generates a complete diagnostic stage configuration from values.yaml.
+Each check value is one of: required, optional, informative, disabled.
+
+Check types:
+  - "required": failures cause non-zero exit code
+  - "optional": failures logged but don't affect exit code
+  - "informative": information gathering only, always passes
+  - "disabled": check is not run
+
+Arguments (passed as dict):
+  - stage: The stage name (e.g., "pre-start", "post-start", "config-load")
+  - checksConfig: The full checks map (.Values.components.validator.checks)
+
+Usage: {{ include "cloudzero-agent.validator.stageCheck" (dict "stage" "pre-start" "checksConfig" .Values.components.validator.checks) }}
+Returns: YAML stage object with name and checks fields
+*/}}
+{{- define "cloudzero-agent.validator.stageCheck" -}}
+{{- $stage := .stage -}}
+{{- $stageChecks := index .checksConfig $stage | default dict -}}
+{{- $checks := list -}}
+{{- range $checkName, $checkType := $stageChecks -}}
+  {{/* Skip disabled checks */}}
+  {{- if ne $checkType "disabled" -}}
+    {{/* Default null/empty type to "optional" */}}
+    {{- $effectiveType := $checkType | default "optional" -}}
+    {{- $checks = append $checks (dict "name" $checkName "type" $effectiveType) -}}
+  {{- end -}}
+{{- end -}}
+{{/* Output with consistent field order: name first, then checks */}}
+name: {{ $stage }}
+checks: {{ $checks | toYaml | nindent 2 -}}
+{{- end -}}
