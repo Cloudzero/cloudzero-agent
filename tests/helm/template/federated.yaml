@@ -185,16 +185,30 @@ data:
         out_of_order_time_window: 5m
 
     scrape_configs:
-      # Kube State Metrics Scrape Job
-      # static-kube-state-metrics
+      # ============================================================================
+      # KUBE-STATE-METRICS SCRAPE JOB
+      # ============================================================================
       #
-      # Kube State Metrics provides the CloudZero Agent with information
-      # regarding the configuration and state of various Kubernetes objects
-      # (nodes, pods, etc.), including where they are located in the cluster.
+      # Purpose: Collect Kubernetes object state for cost allocation
+      #
+      # KSM provides information about the configuration and state of Kubernetes
+      # objects (nodes, pods, etc.), including resource requests, limits, and
+      # placement. This data is essential for accurate cost attribution.
+      #
+      # Data flow:
+      #   static target -> relabel (extract metadata) -> scrape ->
+      #   metric_relabel (filter) -> remote_write
+      # ============================================================================
       - job_name: static-kube-state-metrics
         scrape_interval: 60s
       
-        # Given a Kubernetes resource with a structure like:
+        # -------------------------------------------------------------------------
+        # STEP 1: relabel_configs - Extract Kubernetes metadata BEFORE scraping
+        # -------------------------------------------------------------------------
+        # These run BEFORE the scrape, operating on target metadata (__meta_* labels).
+        # This is where we extract service discovery information into metric labels.
+        #
+        # Given a Kubernetes Service like:
         #
         #   apiVersion: v1
         #   kind: Service
@@ -203,110 +217,168 @@ data:
         #     namespace: my-namespace
         #     labels:
         #       app: my-app
-        #       environment: production
         #
-        # Kube State Metrics should provide labels such as:
+        # Service discovery provides labels like:
+        #   __meta_kubernetes_service_name: my-service
+        #   __meta_kubernetes_namespace: my-namespace
+        #   __meta_kubernetes_service_label_app: my-app
         #
-        #   __meta_kubernetes_service_name:               my-name
-        #   __meta_kubernetes_namespace:                  my-namespace
-        #   __meta_kubernetes_service_label_app:          my-app
-        #   __meta_kubernetes_service_label_environment:  production
-        #
-        # We read these into the CloudZero Agent as:
-        #
-        #   service: my-name
-        #   namespace: my-namespace
-        #   app: my-app
-        #   environment: production
+        # We transform these into metric labels for cost attribution.
         relabel_configs:
-      
-          # Relabel __meta_kubernetes_service_label_(.+) labels to $1.
+          # Copy all service labels to metric labels
+          # __meta_kubernetes_service_label_app -> app
           - regex: __meta_kubernetes_service_label_(.+)
             action: labelmap
       
-          # Replace __meta_kubernetes_namespace labels with "namespace"
+          # Extract namespace for cost attribution
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
       
-          # Replace __meta_kubernetes_service_name labels with "service"
+          # Extract service name
           - source_labels: [__meta_kubernetes_service_name]
             target_label: service
       
-          # Replace "__meta_kubernetes_pod_node_name" labels to "node"
+          # Extract node name for node-level cost correlation
           - source_labels: [__meta_kubernetes_pod_node_name]
             target_label: node
-        # We filter out all but a select few metrics and labels.
-        metric_relabel_configs:
       
-          # Metric names to keep.
+        # -------------------------------------------------------------------------
+        # STEP 2: metric_relabel_configs - Filter metrics AFTER scraping
+        # -------------------------------------------------------------------------
+        # These run AFTER the scrape, operating on the actual metrics.
+        # Note: __meta_* labels are NOT available here!
+        metric_relabel_configs:
+          # Keep only the Kubernetes state metrics needed for cost allocation
           - source_labels: [__name__]
             regex: ^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info)$
             action: keep
       
-          # Metric labels to keep.
+          # Keep only labels needed for cost attribution
+          # This reduces cardinality and storage requirements
           - regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
             action: labelkeep
       
+        # -------------------------------------------------------------------------
+        # STEP 3: Target configuration
+        # -------------------------------------------------------------------------
+        # KSM is typically a single service, so we use a static target
         static_configs:
           - targets:
             - cz-agent-cz-ksm.cz-agent.svc.cluster.local:8080
+      # ============================================================================
+      # WEBHOOK SCRAPE JOB
+      # ============================================================================
+      #
+      # Purpose: Monitor CloudZero webhook server health (observability metrics)
+      #
+      # The webhook server handles Kubernetes admission webhooks. Monitoring it
+      # ensures visibility into admission processing latency and throughput.
+      #
+      # Uses HTTPS with insecure_skip_verify because the webhook uses a self-signed
+      # certificate generated at deployment time.
+      # ============================================================================
       - job_name: cloudzero-webhook-job
         scheme: https
         tls_config:
           insecure_skip_verify: true
       
+        # Discover webhook service endpoints
         kubernetes_sd_configs:
           - role: endpoints
             kubeconfig_file: ""
       
+        # Filter to only the webhook service
         relabel_configs:
-          # Keep __meta_kubernetes_endpoints_name labels.
           - source_labels: [__meta_kubernetes_endpoints_name]
             action: keep
             regex: cz-agent-cz-webhook
       
+        # Keep only CloudZero observability metrics
         metric_relabel_configs:
-          # Metrics to keep.
           - source_labels: [__name__]
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total)$"
             action: keep
+      # ============================================================================
+      # AGGREGATOR SCRAPE JOB
+      # ============================================================================
+      #
+      # Purpose: Monitor CloudZero aggregator health (observability metrics)
+      #
+      # The aggregator receives metrics via remote_write and ships them to
+      # CloudZero. Monitoring it provides visibility into the data pipeline.
+      #
+      # Scrapes both collector and shipper ports for comprehensive monitoring.
+      # ============================================================================
       - job_name: cloudzero-aggregator-job
         scrape_interval: 120s
+      
+        # Discover aggregator endpoints in this namespace
         kubernetes_sd_configs:
           - role: endpoints
             kubeconfig_file: ""
             namespaces:
               names:
                 - cz-agent
+      
         relabel_configs:
+          # Filter to only the aggregator service
           - source_labels: [__meta_kubernetes_service_name]
             action: keep
             regex: cz-agent-cz-aggregator
+      
+          # Filter to collector and shipper ports
           - source_labels: [__meta_kubernetes_pod_container_port_name]
             action: keep
             regex: port-(shipper|collector)
+      
+        # Keep cost + observability metrics
         metric_relabel_configs:
           - source_labels: [__name__]
             regex: "^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_resources_gpu_usage_percent|container_resources_gpu_memory_usage_percent|kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|go_gc_duration_seconds|go_gc_duration_seconds_count|go_gc_duration_seconds_sum|go_gc_gogc_percent|go_gc_gomemlimit_bytes|go_goroutines|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_stack_inuse_bytes|go_threads|http_request_duration_seconds_bucket|http_request_duration_seconds_count|http_request_duration_seconds_sum|http_requests_total|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_exemplars_in_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_in_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_remote_storage_string_interner_zero_reference_releases_total|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds|promhttp_metric_handler_requests_in_flight|promhttp_metric_handler_requests_total|remote_write_db_failures_total|remote_write_failures_total|remote_write_payload_size_bytes|remote_write_records_processed_total|remote_write_response_codes_total|remote_write_timeseries_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total|function_execution_seconds|shipper_shutdown_total|shipper_new_files_error_total|shipper_new_files_processing_current|shipper_handle_request_file_count|shipper_handle_request_success_total|shipper_presigned_url_error_total|shipper_replay_request_total|shipper_replay_request_current|shipper_replay_request_file_count|shipper_replay_request_error_total|shipper_replay_request_abandon_files_total|shipper_replay_request_abandon_files_error_total|shipper_disk_total_size_bytes|shipper_current_disk_usage_bytes|shipper_current_disk_usage_percentage|shipper_current_disk_unsent_file|shipper_current_disk_sent_file|shipper_disk_replay_request_current|shipper_disk_cleanup_failure_total|shipper_disk_cleanup_success_total|shipper_disk_cleanup_percentage)$|^(cloudzero_|czo_)"
             action: keep
+      # ============================================================================
+      # PROMETHEUS SELF-SCRAPE JOB
+      # ============================================================================
+      #
+      # Purpose: Monitor Prometheus's own health and performance (observability)
+      #
+      # Scrapes localhost:9090 to collect Prometheus operational metrics.
+      # This provides visibility into scrape success, remote write health,
+      # and resource usage.
+      # ============================================================================
       - job_name: static-prometheus
         scrape_interval: 120s
+      
         static_configs:
           - targets:
               - localhost:9090
+      
+        # Keep only Prometheus operational metrics needed for monitoring
         metric_relabel_configs:
           - source_labels: [__name__]
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
+    # ============================================================================
+    # REMOTE WRITE TO CLOUDZERO AGGREGATOR
+    # ============================================================================
+    #
+    # Sends all collected metrics to the CloudZero Aggregator for processing
+    # and forwarding to the CloudZero platform.
+    #
+    # The write_relabel_configs provides a final filter to ensure only
+    # cost-relevant metrics are transmitted.
+    # ============================================================================
     remote_write:
       - url: 'http://cz-agent-cz-aggregator.cz-agent.svc.cluster.local/collector'
         authorization:
           credentials_file: /etc/config/secrets/value
         write_relabel_configs:
+          # Final filter: only send metrics matching the cost/observability patterns
           - source_labels: [__name__]
             regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_resources_gpu_usage_percent|container_resources_gpu_memory_usage_percent|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
         metadata_config:
+          # Disable metadata - not needed for CloudZero cost metrics
           send: false
 ---
 # Source: cloudzero-agent/templates/agent-daemonset-cm.yaml
@@ -329,90 +401,143 @@ data:
       scrape_interval: 60s
 
     scrape_configs:
-      # cAdvisor Scrape Job cloudzero-nodes-cadvisor
+      # ============================================================================
+      # CADVISOR SCRAPE JOB
+      # ============================================================================
       #
-      # This job scrapes metrics about container resource usage (CPU, memory,
-      # network, etc.).
+      # Purpose: Collect container resource usage for cost allocation
+      #
+      # cAdvisor (Container Advisor) provides actual resource consumption metrics
+      # for containers. This is the foundation of container cost allocation.
+      #
+      # Mode: FEDERATED (DaemonSet)
+      # - Each Prometheus instance scrapes only its local node's kubelet
+      # - Uses direct kubelet access at <node-ip>:10250/metrics/cadvisor
+      # - ${NODE_NAME} is replaced by init container with actual node name
+      #
+      # CRITICAL: The node label must be added in relabel_configs (not
+      # metric_relabel_configs) because __meta_kubernetes_node_name is only
+      # available BEFORE scraping!
+      # ============================================================================
       - job_name: cloudzero-nodes-cadvisor
-      
         scrape_interval: 60s
         scheme: https
       
-        # cAdvisor endpoints are protected. In order to access them we need the
-        # credentials for the ServiceAccount.
+        # -------------------------------------------------------------------------
+        # Authentication and TLS
+        # -------------------------------------------------------------------------
+        # Kubelets require authentication. We use the ServiceAccount token mounted
+        # in the pod for bearer token authentication.
         authorization:
           type: Bearer
           credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      
+        # TLS configuration for secure kubelet communication:
+        # - ca_file: Cluster CA validates kubelet identity
+        # - insecure_skip_verify: true handles self-signed kubelet certificates
+        #   (common in many Kubernetes distributions)
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: true
-        # Scrape metrics directly from local node's cAdvisor endpoint (federated mode).
+        # -------------------------------------------------------------------------
+        # LOCAL NODE MODE: Direct kubelet access
+        # -------------------------------------------------------------------------
         metrics_path: /metrics/cadvisor
       
-        # Scrape metrics from cAdvisor
         relabel_configs:
-      
-          # Replace "__meta_kubernetes_node_name" labels with "node_name"
+          # Extract node name to "node_name" label
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node_name
       
-          # Only scrape metrics for the node we are running on.
-          #
-          #
-          # Note that Prometheus does not handle the regex being a variable. In order
-          # to get this to work, we run a sed command in an initContainer to replace
-          # '${NODE_NAME}' with the name of the node we are running on. See the agent
-          # DaemonSet configuration for details.
+          # Filter to only the local node
+          # NOTE: ${NODE_NAME} is a placeholder replaced by an init container
+          # with the actual node name using sed. This is necessary because
+          # Prometheus doesn't support environment variable substitution.
           - source_labels: [__meta_kubernetes_node_name]
             regex: ${NODE_NAME}
             action: keep
       
-          # Add port number to __address__ in "__meta_kubernetes_node_address_InternalIP"
+          # Set target address to node's internal IP on kubelet port
           - source_labels: [__meta_kubernetes_node_address_InternalIP]
             target_label: __address__
             replacement: ${1}:10250
       
-          # Remove "__meta_kubernetes_node_label_" prefix from labels.
+          # -------------------------------------------------------------------------
+          # Common relabel_configs (both modes)
+          # -------------------------------------------------------------------------
+          # Copy node labels to metric labels for cost correlation
+          # e.g., node_kubernetes_io_instance_type for EC2 instance type
           - regex: __meta_kubernetes_node_label_(.+)
             action: labelmap
       
-          # Replace __meta_kubernetes_node_name labels with "node"
+          # Add "node" label for cost attribution
+          # CRITICAL: This must be in relabel_configs, not metric_relabel_configs,
+          # because __meta_kubernetes_node_name is only available BEFORE scraping!
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
       
-        # We only want to keep a select few labels.
+        # -------------------------------------------------------------------------
+        # metric_relabel_configs - Filter AFTER scraping
+        # -------------------------------------------------------------------------
         metric_relabel_configs:
-      
-          # Labels to keep.
+          # Keep only labels needed for cost attribution
           - action: labelkeep
             regex: ^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|label_.*|app.kubernetes.io/*|k8s.*)$
       
-          # Metrics to keep.
+          # Keep only container metrics needed for cost allocation
           - source_labels: [__name__]
             regex: ^(container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_resources_gpu_usage_percent|container_resources_gpu_memory_usage_percent)$
             action: keep
       
+        # -------------------------------------------------------------------------
+        # Service Discovery
+        # -------------------------------------------------------------------------
         kubernetes_sd_configs:
           - role: node
             kubeconfig_file: ""
+      # ============================================================================
+      # PROMETHEUS SELF-SCRAPE JOB
+      # ============================================================================
+      #
+      # Purpose: Monitor Prometheus's own health and performance (observability)
+      #
+      # Scrapes localhost:9090 to collect Prometheus operational metrics.
+      # This provides visibility into scrape success, remote write health,
+      # and resource usage.
+      # ============================================================================
       - job_name: static-prometheus
         scrape_interval: 120s
+      
         static_configs:
           - targets:
               - localhost:9090
+      
+        # Keep only Prometheus operational metrics needed for monitoring
         metric_relabel_configs:
           - source_labels: [__name__]
             regex: "^(go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
+    # ============================================================================
+    # REMOTE WRITE TO CLOUDZERO AGGREGATOR
+    # ============================================================================
+    #
+    # Sends all collected metrics to the CloudZero Aggregator for processing
+    # and forwarding to the CloudZero platform.
+    #
+    # The write_relabel_configs provides a final filter to ensure only
+    # cost-relevant metrics are transmitted.
+    # ============================================================================
     remote_write:
       - url: 'http://cz-agent-cz-aggregator.cz-agent.svc.cluster.local/collector'
         authorization:
           credentials_file: /etc/config/secrets/value
         write_relabel_configs:
+          # Final filter: only send metrics matching the cost/observability patterns
           - source_labels: [__name__]
             regex: "^(kube_node_info|kube_node_status_capacity|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_labels|kube_pod_info|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_resources_gpu_usage_percent|container_resources_gpu_memory_usage_percent|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|remote_write_timeseries_total|remote_write_response_codes_total|remote_write_payload_size_bytes|remote_write_failures_total|remote_write_records_processed_total|remote_write_db_failures_total|http_requests_total|storage_write_failure_total|czo_webhook_types_total|czo_storage_types_total|czo_ingress_types_total|czo_gateway_types_total|go_memstats_alloc_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_objects|go_memstats_last_gc_time_seconds|go_memstats_alloc_bytes|go_memstats_stack_inuse_bytes|go_goroutines|process_cpu_seconds_total|process_max_fds|process_open_fds|process_resident_memory_bytes|process_start_time_seconds|process_virtual_memory_bytes|process_virtual_memory_max_bytes|prometheus_agent_corruptions_total|prometheus_api_remote_read_queries|prometheus_http_requests_total|prometheus_notifications_alertmanagers_discovered|prometheus_notifications_dropped_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_histograms_failed_total|prometheus_remote_storage_histograms_total|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_metadata_failed_total|prometheus_remote_storage_metadata_retried_total|prometheus_remote_storage_metadata_total|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_in_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_sd_azure_cache_hit_total|prometheus_sd_azure_failures_total|prometheus_sd_discovered_targets|prometheus_sd_dns_lookup_failures_total|prometheus_sd_failed_configs|prometheus_sd_file_read_errors_total|prometheus_sd_file_scan_duration_seconds|prometheus_sd_file_watcher_errors_total|prometheus_sd_http_failures_total|prometheus_sd_kubernetes_events_total|prometheus_sd_kubernetes_http_request_duration_seconds|prometheus_sd_kubernetes_http_request_total|prometheus_sd_kubernetes_workqueue_depth|prometheus_sd_kubernetes_workqueue_items_total|prometheus_sd_kubernetes_workqueue_latency_seconds|prometheus_sd_kubernetes_workqueue_longest_running_processor_seconds|prometheus_sd_kubernetes_workqueue_unfinished_work_seconds|prometheus_sd_kubernetes_workqueue_work_duration_seconds|prometheus_sd_received_updates_total|prometheus_sd_updates_delayed_total|prometheus_sd_updates_total|prometheus_target_scrape_pool_reloads_failed_total|prometheus_target_scrape_pool_reloads_total|prometheus_target_scrape_pool_sync_total|prometheus_target_scrape_pools_failed_total|prometheus_target_scrape_pools_total|prometheus_target_sync_failed_total|prometheus_target_sync_length_seconds)$"
             action: keep
         metadata_config:
+          # Disable metadata - not needed for CloudZero cost metrics
           send: false
 ---
 # Source: cloudzero-agent/templates/aggregator-cm.yaml

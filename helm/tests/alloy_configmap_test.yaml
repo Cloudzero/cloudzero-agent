@@ -111,7 +111,7 @@ tests:
           pattern: 'prometheus.relabel "dcgm_provenance"'
       - matchRegex:
           path: data["alloy-config.river"]
-          pattern: 'prometheus.relabel "dcgm_metrics"'
+          pattern: 'prometheus.relabel "dcgm_filter"'
       - matchRegex:
           path: data["alloy-config.river"]
           pattern: 'prometheus.relabel "dcgm_attribution"'
