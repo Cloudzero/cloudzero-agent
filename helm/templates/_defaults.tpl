@@ -143,6 +143,7 @@ prometheusMetrics:
   - prometheus_remote_storage_shards_desired
   - prometheus_remote_storage_shards_max
   - prometheus_remote_storage_shards_min
+  - prometheus_remote_write_wal_storage_active_series
   - prometheus_sd_azure_cache_hit_total
   - prometheus_sd_azure_failures_total
   - prometheus_sd_discovered_targets
@@ -325,6 +326,7 @@ metricFilters:
         - prometheus_remote_storage_shards_max
         - prometheus_remote_storage_shards_min
         - prometheus_remote_storage_string_interner_zero_reference_releases_total
+        - prometheus_remote_write_wal_storage_active_series
         - prometheus_sd_azure_cache_hit_total
         - prometheus_sd_azure_failures_total
         - prometheus_sd_discovered_targets
