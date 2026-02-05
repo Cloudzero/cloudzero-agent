@@ -49,7 +49,7 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
@@ -80,7 +80,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_golang/exp v0.0.0-20251212205219-7ba246a648ca
 	github.com/prometheus/prometheus v0.309.1
-	github.com/shirou/gopsutil/v4 v4.25.12
+	github.com/shirou/gopsutil/v4 v4.26.1
 	github.com/stretchr/testify v1.11.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a

@@ -119,7 +119,7 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/shirou/gopsutil/v4 v4.25.12 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
@@ -139,7 +139,7 @@ require (
 	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
