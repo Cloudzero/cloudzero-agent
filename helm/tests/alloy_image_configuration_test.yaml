@@ -2,36 +2,33 @@ suite: test Alloy image configuration
 templates:
   - templates/agent-deploy.yaml
 tests:
-  # Test default Alloy image
-  - it: should use default Alloy image from components.agent.clusteredNode.image
+  # Test that Alloy container uses the agent image (Alloy binary is embedded)
+  - it: should use the agent image for the Alloy container
     set:
       components.agent.mode: clustered
     asserts:
       - matchRegex:
           path: spec.template.spec.containers[1].image
-          pattern: docker.io/grafana/alloy:v1.11.3
+          pattern: cloudzero-agent
 
-  # Test custom Alloy image
-  - it: should use custom Alloy image when specified
+  # Test custom agent image applies to Alloy container
+  - it: should use custom agent image when specified
     set:
       components.agent.mode: clustered
-      components.agent.clusteredNode.image:
-        repository: custom.registry.io/custom/alloy
+      components.agent.image:
+        repository: custom.registry.io/custom/agent
         tag: v2.0.0
     asserts:
       - matchRegex:
           path: spec.template.spec.containers[1].image
-          pattern: custom.registry.io/custom/alloy:v2.0.0
+          pattern: custom.registry.io/custom/agent:v2.0.0
 
-  # Test that alloy image is only used for Alloy
+  # Test that Alloy image config does not affect Prometheus image
   - it: should not affect Prometheus image
     set:
       components.agent.mode: agent
       components.agent.autoscaling:
         enabled: false
-      components.agent.clusteredNode.image:
-        repository: custom.registry.io/custom/alloy
-        tag: v2.0.0
     asserts:
       - matchRegex:
           path: spec.template.spec.containers[1].image
@@ -40,11 +37,11 @@ tests:
           path: spec.template.spec.containers[1].image
           pattern: alloy
 
-  # Test image pull policy from components.agent.clusteredNode.image
-  - it: should respect pullPolicy from components.agent.clusteredNode.image
+  # Test image pull policy from components.agent.image
+  - it: should respect pullPolicy from components.agent.image
     set:
       components.agent.mode: clustered
-      components.agent.clusteredNode.image:
+      components.agent.image:
         pullPolicy: Always
     asserts:
       - equal:
