@@ -898,9 +898,10 @@ data:
         annotations: {}
         autoscaling: null
         clusteredNode:
+          command: null
           image:
-            repository: docker.io/grafana/alloy
-            tag: v1.11.3
+            repository: null
+            tag: null
           resources:
             limits:
               cpu: 100m

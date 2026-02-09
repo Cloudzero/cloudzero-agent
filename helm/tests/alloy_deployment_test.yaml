@@ -32,7 +32,7 @@ tests:
         template: templates/agent-deploy.yaml
       - matchRegex:
           path: spec.template.spec.containers[1].image
-          pattern: grafana/alloy
+          pattern: cloudzero-agent
         template: templates/agent-deploy.yaml
       - isNull:
           path: data["prometheus.yml"]
@@ -84,6 +84,10 @@ tests:
     set:
       components.agent.mode: clustered
     asserts:
+      - contains:
+          path: spec.template.spec.containers[1].command
+          content: /app/cloudzero-alloy
+        template: templates/agent-deploy.yaml
       - contains:
           path: spec.template.spec.containers[1].args
           content: run

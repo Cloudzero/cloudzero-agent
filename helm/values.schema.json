@@ -5856,6 +5856,16 @@
             "clusteredNode": {
               "additionalProperties": false,
               "properties": {
+                "command": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/io.k8s.api.core.v1.Container/properties/command"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "image": {
                   "$ref": "#/$defs/com.cloudzero.agent.image"
                 },

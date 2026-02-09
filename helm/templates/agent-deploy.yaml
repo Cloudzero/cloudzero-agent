@@ -236,10 +236,10 @@ spec:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
         {{- end }}{{/* End Prometheus container */}}
         {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
-        # Grafana Alloy container
+        # CloudZero Alloy container (binary embedded in agent image)
         - name: {{ template "cloudzero-agent.name" . }}-alloy
-          {{- $alloyImage := include "cloudzero-agent.agentCollectorImage" . | fromYaml }}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" $alloyImage) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.components.agent.clusteredNode.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateContainerCommand" (dict "command" .Values.components.agent.clusteredNode.command "default" (list "/app/cloudzero-alloy")) | nindent 10 }}
           args:
             - run
             - /etc/alloy/alloy-config.river
