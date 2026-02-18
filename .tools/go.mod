@@ -11,7 +11,7 @@ require (
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.11
 	helm.sh/helm/v3 v3.20.0
-	honnef.co/go/tools v0.6.1
+	honnef.co/go/tools v0.7.0
 	mvdan.cc/gofumpt v0.9.2
 	sigs.k8s.io/kind v0.31.0
 )
@@ -166,7 +166,6 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
