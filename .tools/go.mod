@@ -6,7 +6,7 @@ require (
 	github.com/homeport/dyff v1.10.4
 	github.com/itchyny/gojq v0.12.18
 	github.com/kudobuilder/kuttl v0.24.0
-	github.com/rhysd/actionlint v1.7.10
+	github.com/rhysd/actionlint v1.7.11
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.11
@@ -33,7 +33,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
