@@ -21,7 +21,7 @@ func (t *testContext) StartShipper() *testcontainers.Container {
 		shipperReq := testcontainers.ContainerRequest{
 			FromDockerfile: testcontainers.FromDockerfile{
 				Context:    "../..",
-				Dockerfile: "tests/docker/Dockerfile.shipper",
+				Dockerfile: "tests/docker/Dockerfile.smoke-tests",
 				KeepImage:  true,
 			},
 			Name:     t.shipperName,

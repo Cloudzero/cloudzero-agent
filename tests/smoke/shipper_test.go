@@ -14,6 +14,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	// testSendInterval is the interval between shipper cycles in smoke tests.
+	// Keep this short to minimize test execution time.
+	testSendInterval = 5 * time.Second
+
+	// testCycleCount is the number of shipper cycles to wait for in multi-cycle tests.
+	// Two cycles is sufficient to prove loop continuation.
+	testCycleCount = 2
+)
+
 func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -35,7 +45,7 @@ func TestSmoke_Shipper_WithRemoteLambdaAPI(t *testing.T) {
 		})
 		require.NoError(t, err, "failed to find log message")
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 	}))
 }
 
@@ -80,7 +90,7 @@ func TestSmoke_Shipper_WithMockRemoteWrite(t *testing.T) {
 		// (divide by 2 since t.WriteTestMetrics creates half metric files half observability files)
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles/2)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.UseHTTP = true
 	}))
 }
@@ -107,18 +117,17 @@ func TestSmoke_Shipper_Upload_Error(t *testing.T) {
 		require.NotNil(t, shipper, "shipper is null")
 
 		// wait for the log message
-		// with a timeout of 120 seconds and an interval of 30, we should see at least 3 instances of this message
-		// 3 instances of this message means that the shipper loop successfully stays active with upload errors
+		// 2 instances of this message means that the shipper loop successfully stays active with upload errors
 		err := utils.ContainerWaitForLog(t.ctx, &utils.WaitForLogInput{
 			Container:  shipper,
 			Log:        "failed to ship the metrics",
-			Timeout:    time.Second * 120,
+			Timeout:    time.Second * 30,
 			AllowError: true,
-			N:          3,
+			N:          testCycleCount,
 		})
 		require.NoError(t, err, "failed to find log message")
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 30
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.UseHTTP = true
 	}))
 }
@@ -174,7 +183,7 @@ func TestSmoke_Shipper_ReplayRequest_OK(t *testing.T) {
 		// ensure all files were uploaded, but account for the shipper purging up to 20% of the files
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.UseHTTP = true
 	}))
 }
@@ -223,7 +232,7 @@ func TestSmoke_Shipper_ReplayRequest_Invalid_Payload(t *testing.T) {
 		// (divide by 2 since t.WriteTestMetrics creates half metric files half observability files)
 		require.GreaterOrEqual(t, len(uploaded), int(float64(numMetricFiles/2)*0.8))
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.UseHTTP = true
 	}))
 }
@@ -244,12 +253,12 @@ func TestSmoke_Shipper_NoDeadLock(t *testing.T) {
 			Container:  shipper,
 			Log:        "Successfully ran the shipper cycle",
 			AllowError: true,
-			N:          3,
-			Timeout:    time.Minute * 2,
+			N:          testCycleCount,
+			Timeout:    time.Minute,
 		})
 		require.NoError(t, err, "failed to find log message")
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.UseHTTP = true
 	}))
 }
@@ -279,12 +288,12 @@ func TestSmoke_Shipper_RemoteWrite_HTTPTimeout(t *testing.T) {
 			Container:  shipper,
 			Log:        "context deadline exceeded",
 			AllowError: true,
-			N:          3,
-			Timeout:    time.Minute * 2,
+			N:          testCycleCount,
+			Timeout:    time.Minute,
 		})
 		require.NoError(t, err, "failed to find log message")
 	}, withConfigOverride(func(settings *config.Settings) {
-		settings.Cloudzero.SendInterval = time.Second * 10
+		settings.Cloudzero.SendInterval = testSendInterval
 		settings.Cloudzero.SendTimeout = time.Second // set duration very low to timeout http requests
 		settings.Cloudzero.UseHTTP = true
 	}))

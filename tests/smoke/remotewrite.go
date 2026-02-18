@@ -59,7 +59,7 @@ func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 		remotewriteReq := testcontainers.ContainerRequest{
 			FromDockerfile: testcontainers.FromDockerfile{
 				Context:    "../..",
-				Dockerfile: "tests/docker/Dockerfile.remotewrite",
+				Dockerfile: "tests/docker/Dockerfile.smoke-tests",
 				KeepImage:  true,
 			},
 			Name:         t.remotewriteName,

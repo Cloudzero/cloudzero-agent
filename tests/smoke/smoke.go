@@ -169,6 +169,14 @@ func newTestContext(t *testing.T, opts ...testContextOption) *testContext {
 		opt(tx)
 	}
 
+	// Re-write the config file after options are applied. This ensures that
+	// config overrides (via withConfigOverride) are actually reflected in the
+	// file that containers read.
+	modifiedConfig, err = yaml.Marshal(tx.cfg)
+	require.NoError(t, err, "failed to marshal the config file after options")
+	err = os.WriteFile(configFile, modifiedConfig, 0o777)
+	require.NoError(t, err, "failed to write the modified config file after options")
+
 	if tx.uploadDelayMs == "" {
 		tx.uploadDelayMs = "0"
 	}
