@@ -21,7 +21,7 @@ func (t *testContext) StartCollector() *testcontainers.Container {
 		collectorReq := testcontainers.ContainerRequest{
 			FromDockerfile: testcontainers.FromDockerfile{
 				Context:    "../..",
-				Dockerfile: "tests/docker/Dockerfile.collector",
+				Dockerfile: "tests/docker/Dockerfile.smoke-tests",
 				KeepImage:  true,
 			},
 			Name:     t.collectorName,

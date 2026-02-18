@@ -25,7 +25,7 @@ func (t *testContext) StartController(args controllerArgs) *testcontainers.Conta
 		controllerReq := testcontainers.ContainerRequest{
 			FromDockerfile: testcontainers.FromDockerfile{
 				Context:    "../..",
-				Dockerfile: "tests/docker/Dockerfile.controller",
+				Dockerfile: "tests/docker/Dockerfile.smoke-tests",
 				KeepImage:  true,
 			},
 			Name:       t.controllerName,

@@ -1,0 +1,68 @@
+# Smoke test image - builds all production binaries plus mocks
+#
+# This Dockerfile creates a single image containing both the production
+# CloudZero agent binaries (collector, shipper) and the mock services
+# (controller, remotewrite) needed for smoke testing.
+#
+# Tests use this one image with different entrypoints to run different
+# components, avoiding the need to build and coordinate multiple images.
+
+# Stage 1: Base tools installation
+FROM golang:1.25.7-alpine AS base-tools
+WORKDIR /app
+
+# Install system packages needed for building
+RUN apk add --no-cache \
+    binutils-gold \
+    build-base \
+    git \
+    make
+
+# Stage 2: Dependencies - download Go modules
+FROM base-tools AS dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Stage 3: Build production binaries (collector, shipper)
+FROM dependencies AS builder
+COPY app/ app/
+COPY Makefile ./
+
+# Build only the binaries we need for smoke tests
+RUN make /go/bin/cloudzero-collector /go/bin/cloudzero-shipper \
+    OUTPUT_BIN_DIR=/go/bin \
+    REGENERATE=never
+
+# Stage 4: Build mock binaries (controller, remotewrite)
+FROM dependencies AS mock-builder
+COPY app/ app/
+COPY mock/ mock/
+
+# Build controller mock
+RUN CGO_ENABLED=0 go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /go/bin/controller \
+    ./mock/controller/*.go
+
+# Build remotewrite mock
+RUN CGO_ENABLED=0 go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /go/bin/remotewrite \
+    ./mock/remotewrite/*.go
+
+# Stage 5: Final image with all binaries
+FROM alpine:latest
+WORKDIR /app
+
+# Production binaries
+COPY --from=builder /go/bin/cloudzero-collector /app/cloudzero-collector
+COPY --from=builder /go/bin/cloudzero-shipper /app/cloudzero-shipper
+
+# Mock binaries
+COPY --from=mock-builder /go/bin/controller /app/controller
+COPY --from=mock-builder /go/bin/remotewrite /app/remotewrite
+
+# Default entrypoint - tests override this per container
+ENTRYPOINT ["/app/cloudzero-collector"]
