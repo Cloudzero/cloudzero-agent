@@ -153,8 +153,14 @@ spec:
         {{- if ne (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
         # Prometheus server container
         - name: {{ template "cloudzero-agent.name" . }}-server
-          {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict
+            "defaults" .Values.defaults.image
+            "image" .Values.components.prometheus.image
+            "compat" (dict
+              "repository" .Values.server.image.repository
+              "tag" (include "cloudzero-agent.Values.components.prometheus.image.tag" .)
+              "digest" .Values.server.image.digest
+              "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
           {{- if .Values.server.env }}
           env:
 {{ toYaml .Values.server.env | indent 12}}
@@ -182,6 +188,9 @@ spec:
             {{- $agentFlag := include "cloudzero-agent.prometheusAgentFlag" . }}
             {{- if $agentFlag }}
             - {{ $agentFlag }}
+            - --storage.agent.path={{ .Values.server.persistentVolume.mountPath }}
+            {{- else }}
+            - --storage.tsdb.path={{ .Values.server.persistentVolume.mountPath }}
             {{- end }}
             - --log.level={{ .Values.server.logging.level | default "info" }}
           ports:

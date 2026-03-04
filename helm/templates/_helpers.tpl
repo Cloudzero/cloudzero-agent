@@ -1390,6 +1390,23 @@ prometheus.yml
 {{- end -}}
 
 {{/*
+Resolve the Prometheus image tag.
+
+Resolves the tag from components.prometheus.image.tag, falling back to
+Chart.AppVersion with "-distroless" appended to use the official distroless
+image variant (no shell, minimal attack surface).
+
+Note: the deprecated server.image.tag compat override is handled by
+generateImage's compat layer at the call site, not here.
+
+Usage: {{ include "cloudzero-agent.Values.components.prometheus.image.tag" . }}
+Returns: string (e.g., "v3.10.0-distroless", "v3.7.3")
+*/}}
+{{- define "cloudzero-agent.Values.components.prometheus.image.tag" -}}
+  {{- .Values.components.prometheus.image.tag | default (printf "%s-distroless" .Chart.AppVersion) -}}
+{{- end -}}
+
+{{/*
 Get the appropriate Prometheus agent mode flag based on version and mode
 
 Determines whether Prometheus should run in agent mode and which flag to use:
@@ -1401,8 +1418,8 @@ The cloudzero-agent.Values.components.agent.mode helper already handles all the
 complex mode derivation logic, so we just check if it returns "agent" or "federated"
 and then determine the appropriate version-specific flag.
 
-Uses the same tag fallback chain as image generation:
-server.image.tag -> components.prometheus.image.tag -> Chart.AppVersion
+Uses the same tag fallback chain as image generation via
+cloudzero-agent.Values.components.prometheus.image.tag
 
 Usage: {{ include "cloudzero-agent.prometheusAgentFlag" . }}
 Returns: string (either "--agent", "--enable-feature=agent", or empty string)
@@ -1410,8 +1427,7 @@ Returns: string (either "--agent", "--enable-feature=agent", or empty string)
 {{- define "cloudzero-agent.prometheusAgentFlag" -}}
   {{- $mode := include "cloudzero-agent.Values.components.agent.mode" . -}}
   {{- if or (eq $mode "agent") (eq $mode "federated") -}}
-    {{- /* Use same fallback chain as image generation: server.image.tag -> components.prometheus.image.tag -> Chart.AppVersion */ -}}
-    {{- $tag := .Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion -}}
+    {{- $tag := include "cloudzero-agent.Values.components.prometheus.image.tag" . -}}
     {{- if hasPrefix "v2." $tag -}}
       --enable-feature=agent
     {{- else -}}
