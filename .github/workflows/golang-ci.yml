@@ -141,6 +141,10 @@ jobs:
         run: git diff --exit-code --color
 
   validate-dependabot: # Validate Dependabot configuration
+    # Disabled: marocchino/validate-dependabot@v3 fails due to a schemastore.org
+    # schema change (base.json#/definitions/timezone reference can't be resolved).
+    # See https://json.schemastore.org/dependabot-2.0.json
+    if: github.event_name == 'disabled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
