@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
@@ -51,7 +52,7 @@ func TestGatewayClassHandler_Metrics(t *testing.T) {
 		}
 
 		admissionReview := &types.AdmissionReview{
-			NewObjectRaw: getRawObject(gatewayv1.SchemeGroupVersion, gatewayObj),
+			NewObjectRaw: getRawObject(schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version}, gatewayObj),
 		}
 
 		// Reset metrics for testing
