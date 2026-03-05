@@ -24,6 +24,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
@@ -96,7 +97,7 @@ func EncodeRuntimeObject(runtimeObj runtime.Object) ([]byte, error) {
 		batchv1.SchemeGroupVersion,
 		batchv1beta1.SchemeGroupVersion,
 		corev1.SchemeGroupVersion,
-		gatewayv1.SchemeGroupVersion,
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
 		networkingv1.SchemeGroupVersion,
 		networkingv1beta1.SchemeGroupVersion,
 		storagev1.SchemeGroupVersion,
