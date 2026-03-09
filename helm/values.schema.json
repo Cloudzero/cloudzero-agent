@@ -7051,7 +7051,16 @@
       "type": "object"
     },
     "region": {
-      "type": ["string", "null"]
+      "oneOf": [
+        {
+          "minLength": 4,
+          "pattern": "^(([a-z]+-[a-z]+-?[0-9]+)|([a-z]{4,}[0-9]*))$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "secretAnnotations": {
       "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",

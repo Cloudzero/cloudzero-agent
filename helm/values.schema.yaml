@@ -344,9 +344,33 @@ properties:
 
       The name of the Kubernetes cluster.
   region:
-    type:
-      - string
-      - "null"
+    oneOf:
+      - type: string
+        minLength: 4
+        # Cloud providers use distinct region naming conventions:
+        #
+        #   AWS:   {area}-{locality}-{number}    e.g., us-east-1, ap-southeast-2
+        #   GCP:   {area}-{locality}{number}     e.g., us-central1, europe-west10
+        #   Azure: {lowercase words}[{number}]   e.g., eastus, westeurope, eastus2
+        #
+        # The pattern uses alternation to cover all three:
+        #
+        #   [a-z]+-[a-z]+-?[0-9]+   AWS/GCP: lowercase alpha groups separated
+        #                            by hyphens, ending with digits. The optional
+        #                            hyphen before the digits handles both AWS
+        #                            (us-east-1) and GCP (us-central1).
+        #
+        #   [a-z]{4,}[0-9]*         Azure: lowercase alpha (no hyphens), at
+        #                            least 4 characters, with optional trailing
+        #                            digits (e.g., eastus2).
+        #
+        # This intentionally rejects:
+        #   - Availability zones (us-east-1a, us-central1-a)
+        #   - Display names (US East, "US East (N. Virginia)")
+        #   - Uppercase, spaces, underscores
+        #   - Hyphenated strings without trailing digits (test-region)
+        pattern: "^(([a-z]+-[a-z]+-?[0-9]+)|([a-z]{4,}[0-9]*))$"
+      - type: "null"
     description: |
       *WARNING*: use of this property is generally discouraged as in most cases
       it can be detected automatically.
