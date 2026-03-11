@@ -168,7 +168,7 @@ install-tools-homebrew:
 
 # golangci-lint is intentionally not installed via tools.go; see
 # https://golangci-lint.run/welcome/install/#install-from-sources for details.
-GOLANGCI_LINT_VERSION ?= v2.4.0
+GOLANGCI_LINT_VERSION ?= v2.11.3
 .PHONY: install-tools-golangci-lint
 install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
