@@ -33,9 +33,10 @@ func NewCommand() *cli.Command {
 }
 
 func installExecutable(destination string) error {
+	destination = filepath.Clean(destination)
 	fmt.Printf("Installing executable from %s to %s\n", os.Args[0], destination)
 
-	source := os.Args[0]
+	source := filepath.Clean(os.Args[0])
 	sourceFile, err := os.Open(source)
 	if err != nil {
 		return err

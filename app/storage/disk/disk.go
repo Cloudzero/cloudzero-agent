@@ -289,7 +289,8 @@ func (d *DiskStore) Pending() int {
 
 func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 	// set to root path
-	allPaths := []string{d.dirPath}
+	allPaths := make([]string, 0, 1+len(paths)+1)
+	allPaths = append(allPaths, d.dirPath)
 
 	// add specified location
 	allPaths = append(allPaths, paths...)
@@ -308,7 +309,8 @@ func (d *DiskStore) GetFiles(paths ...string) ([]string, error) {
 }
 
 func (d *DiskStore) ListFiles(paths ...string) ([]os.DirEntry, error) {
-	allPaths := []string{d.dirPath}
+	allPaths := make([]string, 0, 1+len(paths))
+	allPaths = append(allPaths, d.dirPath)
 	allPaths = append(allPaths, paths...)
 	return os.ReadDir(filepath.Join(allPaths...))
 }
