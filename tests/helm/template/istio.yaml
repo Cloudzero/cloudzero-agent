@@ -1366,6 +1366,7 @@ data:
       kubeTargetVersionOverride: ""
       kubeconfig:
         enabled: false
+        secret: null
       labels: {}
       livenessProbe:
         failureThreshold: 3
@@ -1511,6 +1512,7 @@ data:
         automountServiceAccountToken: true
         create: true
         imagePullSecrets: []
+        name: null
       startupProbe:
         enabled: false
         failureThreshold: 3
