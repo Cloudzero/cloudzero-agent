@@ -86,7 +86,7 @@ require (
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
-	sigs.k8s.io/gateway-api v1.5.0
+	sigs.k8s.io/gateway-api v1.5.1
 )
 
 require (
