@@ -21,9 +21,8 @@ We employ multiple layers of automated security scanning to maintain a strong se
 
 #### Container Image Scanning
 
-All container images are automatically scanned for vulnerabilities using two complementary tools:
+All container images are automatically scanned for vulnerabilities:
 
-- **[Trivy](https://trivy.dev/latest/)**: Comprehensive vulnerability scanner that detects OS and library vulnerabilities
 - **[Grype](https://github.com/anchore/grype)**: Fast vulnerability scanner with high accuracy
 
 **Scanning Configuration**:

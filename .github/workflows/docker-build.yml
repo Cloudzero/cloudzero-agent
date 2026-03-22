@@ -293,16 +293,6 @@ jobs:
           fail-build: true
           severity-cutoff: high
 
-      - name: SECURITY - Trivy Docker Image Scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          format: "table"
-          exit-code: "1"
-          ignore-unfixed: true
-          vuln-type: "os,library"
-          severity: "CRITICAL,HIGH"
-
   k8s-version-matrix-tests:
     # These should match the permissions in the called workflow.
     permissions:
