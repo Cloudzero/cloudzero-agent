@@ -127,8 +127,7 @@ spec:
               readOnly: true
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
-          {{/* This is a little special because we want to fall back on the .Chart.AppVersion */}}
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (.Values.server.image.tag | default .Values.components.prometheus.image.tag | default .Chart.AppVersion) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (include "cloudzero-agent.Values.components.prometheus.image.tag" .) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
           env:
             - name: NODE_NAME
               valueFrom:
@@ -145,6 +144,9 @@ spec:
             {{- $agentFlag := include "cloudzero-agent.prometheusAgentFlag" . }}
             {{- if $agentFlag }}
             - {{ $agentFlag }}
+            - --storage.agent.path=/data
+            {{- else }}
+            - --storage.tsdb.path=/data
             {{- end }}
           ports:
             - containerPort: 9090
