@@ -1,0 +1,11 @@
+# Valid: kubeState enabled with custom reemitInterval
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: clustered
+    kubeState:
+      enabled: true
+      reemitInterval: 10m
+kubeStateMetrics:
+  enabled: false

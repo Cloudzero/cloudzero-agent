@@ -1,0 +1,18 @@
+# KubeState plugin test configuration
+# Tests clustered mode with the KubeState plugin enabled and KSM disabled
+cloudAccountId: "1234567890"
+clusterName: "kubestate-test-cluster"
+region: "us-east-1"
+apiKey: "kubestate-test-api-key"
+jobConfigID: "DEADBEEF-FEED-FACE-CAFE-FEE10D15EA5E"
+
+components:
+  agent:
+    mode: clustered
+    replicas: 2
+    kubeState:
+      enabled: true
+      reemitInterval: 5m
+
+kubeStateMetrics:
+  enabled: false

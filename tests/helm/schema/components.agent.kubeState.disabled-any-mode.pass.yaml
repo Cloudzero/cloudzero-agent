@@ -1,0 +1,9 @@
+# Valid: kubeState disabled (default) with any mode
+# When kubeState is disabled, it has no mode constraints
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: null
+    kubeState:
+      enabled: false

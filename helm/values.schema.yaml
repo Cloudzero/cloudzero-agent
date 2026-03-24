@@ -681,6 +681,27 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          kubeState:
+            description: |
+              KubeState plugin configuration. When enabled, the CloudZero Alloy
+              KubeState plugin replaces the kube-state-metrics (KSM) subchart for
+              collecting Kubernetes state metrics. Requires clustered mode and
+              kubeStateMetrics.enabled to be false.
+            additionalProperties: false
+            type: object
+            properties:
+              enabled:
+                description: |
+                  Enable the KubeState plugin in Alloy to replace the
+                  kube-state-metrics subchart. When true, kubeStateMetrics.enabled
+                  must be false.
+                type: boolean
+              reemitInterval:
+                description: |
+                  How often to re-emit metrics for all watched resources. Ensures
+                  metrics are periodically refreshed even when no Kubernetes events
+                  occur. Set to "0" to disable.
+                $ref: "#/$defs/com.cloudzero.agent.duration"
           clusteredNode:
             description: |
               The agent clustered node component configuration for Alloy-based metrics collection.
@@ -816,6 +837,23 @@ properties:
                   oneOf:
                     - type: "null"
                     - $ref: "#/$defs/com.cloudzero.agent.AutoscalingSpec"
+
+          # Conditional: KubeState plugin requires clustered mode
+          #
+          # If kubeState.enabled is true, then mode must be "clustered".
+          # The KubeState plugin runs inside Alloy, which only operates in
+          # clustered mode.
+          - if:
+              properties:
+                kubeState:
+                  type: object
+                  properties:
+                    enabled:
+                      const: true
+            then:
+              properties:
+                mode:
+                  const: clustered
 
       validator:
         description: |

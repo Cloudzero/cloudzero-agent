@@ -245,6 +245,9 @@ spec:
             - /etc/alloy/alloy-config.river
             - --server.http.listen-addr=0.0.0.0:9090
             - --storage.path=/tmp/alloy
+            {{- if .Values.components.agent.kubeState.enabled }}
+            - --stability.level=public-preview
+            {{- end }}
             {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated" }}
             - --cluster.enabled=true
             - --cluster.name={{ .Values.clusterName }}

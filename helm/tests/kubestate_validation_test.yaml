@@ -1,0 +1,227 @@
+suite: test kubeState plugin configuration
+templates:
+  - templates/agent-cm.yaml
+  - templates/validator-cm.yaml
+tests:
+  # =========================================================================
+  # Mutual exclusion: kubeState.enabled and kubeStateMetrics.enabled
+  # =========================================================================
+
+  # Validation: kubeState.enabled and kubeStateMetrics.enabled cannot both be true
+  - it: should fail when both kubeState and kubeStateMetrics are enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "cannot both be true"
+
+  # Valid: kubeState enabled with kubeStateMetrics disabled
+  - it: should succeed when kubeState is enabled and kubeStateMetrics is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+
+  # Valid: both disabled (requires targetOverride since subchart isn't providing KSM)
+  - it: should succeed when both kubeState and kubeStateMetrics are disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: false
+      kubeStateMetrics.enabled: false
+      kubeStateMetrics.targetOverride: "external-ksm.monitoring.svc:8080"
+    asserts:
+      - isNotEmpty:
+          path: data["alloy-config.river"]
+
+  # =========================================================================
+  # Alloy config: kubeState vs KSM scrape job selection
+  # =========================================================================
+
+  # kubeState enabled should include discovery.kubestate in config
+  - it: should include discovery.kubestate config when kubeState is enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery\.kubestate "cluster_metrics"'
+
+  # kubeState enabled should NOT include KSM scrape job
+  - it: should not include KSM scrape job when kubeState is enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus\.scrape "kube_state_metrics"'
+
+  # kubeState disabled (default) with kubeStateMetrics enabled uses KSM scrape
+  - it: should use KSM scrape job when kubeState is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus\.scrape "kube_state_metrics"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery\.kubestate'
+
+  # =========================================================================
+  # Alloy config: reemission_interval and sanitize_label_names
+  # =========================================================================
+
+  # Verify reemission_interval is rendered from reemitInterval value
+  - it: should render default reemission_interval of 5m
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'reemission_interval = "5m"'
+
+  # Verify custom reemitInterval is rendered
+  - it: should render custom reemission_interval
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      components.agent.kubeState.reemitInterval: 10m
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'reemission_interval = "10m"'
+
+  # Verify sanitize_label_names is set to false
+  - it: should set sanitize_label_names to false
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "sanitize_label_names = false"
+
+  # =========================================================================
+  # Alloy config: metric_allowlist and clustering
+  # =========================================================================
+
+  # Verify metric_allowlist includes the required kube metrics
+  - it: should include kube_node_info in metric_allowlist
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_node_info"'
+
+  - it: should include kube_pod_info in metric_allowlist
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_pod_info"'
+
+  # Verify clustering is enabled in kubeState config
+  - it: should enable clustering in kubeState config
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "clustering \\{"
+
+  # Verify resource types are limited to nodes and pods
+  - it: should watch only nodes and pods resources
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resources = \["nodes", "pods"\]'
+
+  # Verify the label filter relabel step exists
+  - it: should include kubestate_labels relabel step
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus\.relabel "kubestate_labels"'
+
+  # Verify the relabel step forwards to remote_write
+  - it: should forward kubestate_labels to remote_write
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'forward_to = \[prometheus\.remote_write\.cloudzero\.receiver\]'
+
+  # =========================================================================
+  # Validator ConfigMap: KSM endpoint handling
+  # =========================================================================
+
+  # When kubeState is enabled, the validator should NOT have a KSM endpoint
+  - it: should omit KSM endpoint from validator config when kubeState is enabled
+    template: templates/validator-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "kube_state_metrics_service_endpoint"
+
+  # When kubeState is disabled, the validator should have a KSM endpoint
+  - it: should include KSM endpoint in validator config when kubeState is disabled
+    template: templates/validator-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "kube_state_metrics_service_endpoint"

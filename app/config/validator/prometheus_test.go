@@ -31,12 +31,12 @@ func TestPrometheus_Validate(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "MissingKubeStateMetricsServiceEndpoint",
+			name: "OmittedKubeStateMetricsServiceEndpoint_KubeStatePluginMode",
 			prom: config.Prometheus{
 				Configurations: []string{scrapeConfigFile},
 				KubeMetrics:    []string{"kube_node_info", "kube_pod_info"},
 			},
-			expected: errors.New(config.ErrNoKubeStateMetricsServiceEndpointMsg),
+			expected: nil,
 		},
 		{
 			name: "MissingScrapeConfigLocation",

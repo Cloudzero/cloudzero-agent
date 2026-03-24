@@ -5837,6 +5837,27 @@
                   }
                 }
               }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kubeState": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "mode": {
+                    "const": "clustered"
+                  }
+                }
+              }
             }
           ],
           "properties": {
@@ -5904,6 +5925,18 @@
             },
             "image": {
               "$ref": "#/$defs/com.cloudzero.agent.image"
+            },
+            "kubeState": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "reemitInterval": {
+                  "$ref": "#/$defs/com.cloudzero.agent.duration"
+                }
+              },
+              "type": "object"
             },
             "labels": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"

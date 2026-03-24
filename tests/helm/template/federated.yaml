@@ -998,6 +998,9 @@ data:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.9
+        kubeState:
+          enabled: false
+          reemitInterval: 5m
         labels: {}
         mode: federated
         podAnnotations: {}

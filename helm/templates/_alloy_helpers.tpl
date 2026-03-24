@@ -48,9 +48,13 @@ in a discovery.relabel component BEFORE the prometheus.scrape component.
                          DATA FLOW PER SCRAPE JOB
 ================================================================================
 
-KUBE-STATE-METRICS (KSM):
+KUBE-STATE-METRICS (KSM) - when kubeState.enabled is false:
   Static target --> prometheus.scrape --> prometheus.relabel (metrics filter)
                                       --> prometheus.relabel (labels filter)
+                                      --> prometheus.remote_write
+
+KUBESTATE PLUGIN - when kubeState.enabled is true (replaces KSM):
+  discovery.kubestate (watch K8s API) --> prometheus.relabel (labels filter)
                                       --> prometheus.remote_write
 
 CADVISOR:
@@ -136,6 +140,7 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 //
 // Configuration sections:
 // 1. Kube-State-Metrics  - Kubernetes object state (pods, nodes, resources)
+//    OR KubeState Plugin - Same metrics via embedded Alloy plugin (no KSM needed)
 // 2. cAdvisor            - Container resource usage (CPU, memory, network)
 // 3. Webhook             - CloudZero webhook server health (observability)
 // 4. Aggregator          - CloudZero aggregator health (observability)
@@ -144,7 +149,9 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 // 7. Remote Write        - Sends all metrics to CloudZero aggregator
 // ============================================================================
 
-{{- if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
+{{- if .Values.components.agent.kubeState.enabled }}
+{{ include "cloudzero-agent.alloy.kubeState" . }}
+{{- else if .Values.prometheusConfig.scrapeJobs.kubeStateMetrics.enabled }}
 {{ include "cloudzero-agent.alloy.scrapeKubeStateMetrics" . }}
 {{- end }}
 
@@ -260,7 +267,97 @@ prometheus.relabel "kube_state_metrics_labels" {
 
 
 {{/* =========================================================================
-                              CADVISOR SCRAPE JOB
+                          KUBESTATE PLUGIN (KSM REPLACEMENT)
+============================================================================ */}}
+
+{{/*
+cloudzero-agent.alloy.kubeState - Collect Kubernetes state via the KubeState plugin
+
+The KubeState plugin is an embedded alternative to kube-state-metrics (KSM). It
+runs inside the Alloy process, watches the Kubernetes API via informers, and
+produces KSM-compatible metrics without requiring an HTTP scrape. This eliminates
+the need for a separate KSM deployment.
+
+Key differences from the KSM scrape pipeline:
+  - Event-driven (push) instead of poll-based (pull)
+  - No separate KSM service/deployment needed
+  - Metrics forwarded directly through the Alloy pipeline
+  - Supports Alloy clustering for horizontal scaling
+  - Emits StaleNaN markers when resources are deleted
+
+Pipeline flow:
+  +---------------------+     +---------------------+
+  | discovery.kubestate | --> | prometheus.relabel  |
+  | (watch K8s API,     |     | (keep cost labels)  |
+  |  emit KSM metrics)  |     |                     |
+  +---------------------+     +---------------------+
+                                       |
+                                       v
+                              [remote_write]
+
+Usage: {{ include "cloudzero-agent.alloy.kubeState" . }}
+*/}}
+{{- define "cloudzero-agent.alloy.kubeState" -}}
+// ============================================================================
+// KUBESTATE PLUGIN (KSM REPLACEMENT)
+// ============================================================================
+//
+// Purpose: Collect Kubernetes object state for cost allocation using the
+//          embedded KubeState plugin instead of an external KSM deployment
+//
+// Data flow:
+//   watch K8s API -> emit metrics -> filter labels -> remote_write
+//
+// The KubeState plugin produces KSM-compatible metrics:
+//   - kube_node_info, kube_node_status_capacity (node cost attribution)
+//   - kube_pod_info, kube_pod_labels (pod cost attribution)
+//   - kube_pod_container_resource_* (resource requests/limits)
+// ============================================================================
+
+// STEP 1: KubeState plugin - watch Kubernetes API and emit metrics
+// Unlike the KSM scrape job, this directly watches the K8s API via informers
+// and pushes metrics through the pipeline without HTTP scraping.
+discovery.kubestate "cluster_metrics" {
+  // Only watch resource types that produce metrics we need for cost allocation
+  resources = ["nodes", "pods"]
+
+  // Filter to only the metrics required for CloudZero cost allocation
+  metric_allowlist = [{{ range $i, $m := (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics }}{{ if $i }}, {{ end }}"{{ $m }}"{{ end }}]
+
+  // Periodically re-emit all metrics to prevent staleness in the remote write
+  // pipeline. Without this, metrics are only emitted on K8s events, and quiet
+  // clusters could appear stale to downstream consumers.
+  reemission_interval = "{{ .Values.components.agent.kubeState.reemitInterval }}"
+
+  // Preserve original characters (dots, slashes, hyphens) in Kubernetes label
+  // and annotation names instead of replacing them with underscores. This keeps
+  // label names like "app.kubernetes.io/name" intact rather than mangling them
+  // to "app_kubernetes_io_name".
+  sanitize_label_names = false
+
+  // Enable clustering for distributed metric generation across Alloy replicas
+  clustering {
+    enabled = true
+  }
+
+  forward_to = [prometheus.relabel.kubestate_labels.receiver]
+}
+
+// STEP 2: Filter labels - keep only labels needed for cost attribution
+// This ensures consistent label sets matching the KSM scrape pipeline output
+prometheus.relabel "kubestate_labels" {
+  forward_to = [prometheus.remote_write.cloudzero.receiver]
+
+  rule {
+    regex  = "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
+    action = "labelkeep"
+  }
+}
+{{- end -}}
+
+
+{{/* =========================================================================
+                               CADVISOR SCRAPE JOB
 ============================================================================ */}}
 
 {{/*

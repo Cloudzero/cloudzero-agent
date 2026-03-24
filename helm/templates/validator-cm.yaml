@@ -52,11 +52,13 @@ data:
         cluster_id: {{ .Values.integrations.istio.clusterID | quote }}
 
     prometheus:
+      {{- if not .Values.components.agent.kubeState.enabled }}
       {{- if .Values.validator.serviceEndpoints.kubeStateMetrics }}
       kube_state_metrics_service_endpoint: http://{{ .Values.validator.serviceEndpoints.kubeStateMetrics }}/
       {{- else }}
       kube_state_metrics_service_endpoint: http://{{ include "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" . }}
       {{- end }}
+      {{- end }}{{/* KubeState plugin provides metrics directly; no KSM endpoint needed */}}
       executable: /bin/prometheus
       kube_metrics:
         {{- (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics | toYaml | nindent 8 }}

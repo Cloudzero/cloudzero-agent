@@ -483,6 +483,8 @@ The name of the KSM service target that will be used in the scrape config and va
 {{- define "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" -}}
 {{- if .Values.kubeStateMetrics.targetOverride -}}
 {{- .Values.kubeStateMetrics.targetOverride -}}
+{{- else if .Values.components.agent.kubeState.enabled -}}
+{{/* KubeState plugin is enabled; no KSM service to target */}}
 {{- else if not .Values.kubeStateMetrics.enabled -}}
 {{- required "You must set a targetOverride for kubeStateMetrics" .Values.kubeStateMetrics.targetOverride -}}
 {{- else -}}

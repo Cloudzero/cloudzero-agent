@@ -1,3 +1,6 @@
+{{- if and .Values.components.agent.kubeState.enabled .Values.kubeStateMetrics.enabled }}
+{{- fail "components.agent.kubeState.enabled and kubeStateMetrics.enabled cannot both be true. The KubeState plugin replaces kube-state-metrics; set kubeStateMetrics.enabled to false when using kubeState." }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
