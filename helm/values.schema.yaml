@@ -690,8 +690,19 @@ properties:
             properties:
               image:
                 description: |
-                  Container image configuration for Grafana Alloy.
+                  Container image override for the Alloy container. By default, the Alloy
+                  container uses the agent image (components.agent.image) which embeds the
+                  CloudZero Alloy binary. Set repository/tag here to override separately.
                 $ref: "#/$defs/com.cloudzero.agent.image"
+              command:
+                description: |
+                  Command to run in the Alloy container.
+                  - null (default): Uses /app/cloudzero-alloy (CloudZero Alloy binary)
+                  - [] (empty array): Uses the image's default entrypoint
+                  - ["/custom/path"]: Uses the specified command
+                oneOf:
+                  - $ref: "#/$defs/io.k8s.api.core.v1.Container/properties/command"
+                  - type: "null"
               resources:
                 description: |
                   Resource requirements and limits for the Alloy container.

@@ -839,6 +839,26 @@ configuration will not overwrite values from the first configuration.
 {{- end -}}
 
 {{/*
+Generate container command with special handling:
+- null/not set: Uses provided default command array
+- empty array []: No command output (uses image's default entrypoint)
+- non-empty array: Uses the specified command
+
+Usage: {{ include "cloudzero-agent.generateContainerCommand" (dict "command" .Values.components.agent.clusteredNode.command "default" (list "/app/cloudzero-alloy")) | nindent 10 }}
+*/}}
+{{- define "cloudzero-agent.generateContainerCommand" -}}
+{{- $isEmptyArray := and (kindIs "slice" .command) (empty .command) -}}
+{{- if not $isEmptyArray -}}
+command:
+  {{- if kindIs "invalid" .command }}
+  {{- toYaml .default | nindent 2 }}
+  {{- else }}
+  {{- toYaml .command | nindent 2 }}
+  {{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate image configuration with defaults.
 */}}
 {{- define "cloudzero-agent.generateImage" -}}

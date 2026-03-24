@@ -966,9 +966,10 @@ data:
         annotations: {}
         autoscaling: null
         clusteredNode:
+          command: null
           image:
-            repository: docker.io/grafana/alloy
-            tag: v1.11.3
+            repository: null
+            tag: null
           resources:
             limits:
               cpu: 100m
@@ -2603,10 +2604,12 @@ spec:
             - name: config-volume
               mountPath: /etc/config
               readOnly: true
-        # Grafana Alloy container
+        # CloudZero Alloy container (binary embedded in agent image)
         - name: cloudzero-agent-alloy
-          image: "docker.io/grafana/alloy:v1.11.3"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.9"
           imagePullPolicy: "IfNotPresent"
+          command:
+            - /app/cloudzero-alloy
           args:
             - run
             - /etc/alloy/alloy-config.river

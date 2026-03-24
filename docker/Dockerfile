@@ -5,7 +5,8 @@ ARG DEPLOY_IMAGE=scratch
 # 2. dependencies: Download Go modules (cached per platform)
 # 3. builder: Build Go binaries (cached per platform)
 # 4. certs: Extract certificates from distroless image
-# 5. final: Minimal runtime image with compiled binaries
+# 5. alloy: Extract Alloy binary from CloudZero Alloy image
+# 6. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
 FROM --platform=$BUILDPLATFORM golang:1.26.1-alpine AS base-tools
@@ -69,7 +70,10 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
 # Stage 4: Access current certs
 FROM gcr.io/distroless/static-debian12:debug@sha256:7985579713fb1171e707d74659c67af3605642d1c9db305304c2998a99032615 AS certs
 
-# Stage 5: Final runtime image
+# Stage 5: Extract Alloy binary from CloudZero Alloy image
+FROM ghcr.io/cloudzero/alloy:v1.14.1 AS alloy
+
+# Stage 6: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
 # passing in something like this to 'docker build':
 #
@@ -112,6 +116,9 @@ COPY --from=builder /go/bin/cloudzero-cluster-config /app/cloudzero-cluster-conf
 COPY --from=builder /go/bin/cloudzero-helmless /app/cloudzero-helmless
 COPY --from=builder /go/bin/cloudzero-scout /app/cloudzero-scout
 COPY --from=builder /go/bin/cloudzero-certifik8s /app/cloudzero-certifik8s
+
+# Copy the Alloy binary from the alloy stage
+COPY --from=alloy /bin/cloudzero-alloy /app/cloudzero-alloy
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

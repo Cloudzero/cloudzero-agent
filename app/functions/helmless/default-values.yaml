@@ -304,9 +304,9 @@ components:
     #   per node. This is equivalent to setting defaults.federation.enabled to true.
     #   Uses Prometheus in server mode for metrics collection.
     #
-    # - "clustered": EXPERIMENTAL. Uses Grafana Alloy instead of Prometheus for
-    #   metrics collection. Alloy provides better performance and native
-    #   horizontal scalability.
+    # - "clustered": EXPERIMENTAL. Uses the embedded CloudZero Alloy binary for
+    #   metrics collection instead of Prometheus. Alloy provides better
+    #   performance and native horizontal scalability.
     #
     # - null means automatic mode (currently defaults to "agent").
     mode: null
@@ -406,10 +406,29 @@ components:
     # The agent clustered node component configuration.
     # Only applies when components.agent.mode is set to "clustered".
     clusteredNode:
-      # Container image configuration for Grafana Alloy.
+      # Container image override for the Alloy container.
+      #
+      # By default, the CloudZero Alloy binary is embedded in the agent
+      # image and the Alloy container uses the same image as other agent
+      # containers (components.agent.image). Set repository/tag here only
+      # if you need to override the Alloy container image separately.
       image:
-        repository: docker.io/grafana/alloy
-        tag: v1.11.3
+        repository: null
+        tag: null
+      # Command to run in the Alloy container.
+      #
+      # - null (default): Uses /app/cloudzero-alloy (CloudZero Alloy binary)
+      # - []: Uses the image's default entrypoint (for official Alloy image)
+      # - ["/custom/path"]: Uses the specified command
+      #
+      # To use the official Grafana Alloy image instead of the embedded binary:
+      #
+      #   image:
+      #     repository: docker.io/grafana/alloy
+      #     tag: vX.Y.Z
+      #   command: []
+      #
+      command:
 
       # Resource requirements and limits for the container.
       #
