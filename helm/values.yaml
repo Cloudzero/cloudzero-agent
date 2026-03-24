@@ -403,6 +403,31 @@ components:
           memory: "1024Mi"
           cpu: "1000m"
 
+    # KubeState plugin configuration.
+    #
+    # When enabled, the CloudZero Alloy KubeState plugin replaces the
+    # kube-state-metrics (KSM) subchart for collecting Kubernetes state
+    # metrics. The KubeState plugin runs inside the Alloy process and
+    # watches the Kubernetes API directly, eliminating the need for a
+    # separate KSM deployment.
+    #
+    # Requirements:
+    # - components.agent.mode must be set to "clustered"
+    # - kubeStateMetrics.enabled must be set to false
+    #
+    # The plugin produces KSM-compatible metrics (kube_node_info,
+    # kube_pod_info, etc.) and forwards them directly through the Alloy
+    # pipeline without HTTP scraping.
+    kubeState:
+      enabled: false
+      # How often to re-emit metrics for all watched resources. This ensures
+      # metrics are periodically refreshed even when no Kubernetes events occur,
+      # preventing staleness in the remote write pipeline.
+      #
+      # Set to "0" to disable periodic re-emission (metrics are only emitted
+      # on Kubernetes add/update/delete events).
+      reemitInterval: 5m
+
     # The agent clustered node component configuration.
     # Only applies when components.agent.mode is set to "clustered".
     clusteredNode:

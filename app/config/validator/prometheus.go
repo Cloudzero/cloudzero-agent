@@ -12,17 +12,21 @@ import (
 
 type Prometheus struct {
 	Executable                      string   `yaml:"executable" default:"/bin/prometheus" env:"PROMETHEUS_EXECUTABLE" env-description:"Prometheus Executable Path"`
-	KubeStateMetricsServiceEndpoint string   `yaml:"kube_state_metrics_service_endpoint" env:"KMS_EP_URL" required:"true" env-description:"Kube State Metrics Service Endpoint"`
+	KubeStateMetricsServiceEndpoint string   `yaml:"kube_state_metrics_service_endpoint" env:"KMS_EP_URL" env-description:"Kube State Metrics Service Endpoint"`
 	Configurations                  []string `yaml:"configurations"`
 	KubeMetrics                     []string `yaml:"kube_metrics"`
 }
 
 func (s *Prometheus) Validate() error {
-	if s.KubeStateMetricsServiceEndpoint == "" {
-		return errors.New(ErrNoKubeStateMetricsServiceEndpointMsg)
-	}
-	if !isValidURL(s.KubeStateMetricsServiceEndpoint) {
-		return fmt.Errorf("invalid %s", s.KubeStateMetricsServiceEndpoint)
+	// The KSM endpoint is optional when the KubeState plugin is enabled
+	// (components.agent.kubeState.enabled), since the plugin provides
+	// metrics directly inside the Alloy process without a separate KSM
+	// service. When the endpoint is omitted from the validator config,
+	// we skip reachability validation.
+	if s.KubeStateMetricsServiceEndpoint != "" {
+		if !isValidURL(s.KubeStateMetricsServiceEndpoint) {
+			return fmt.Errorf("invalid %s", s.KubeStateMetricsServiceEndpoint)
+		}
 	}
 
 	if len(s.Configurations) == 0 {

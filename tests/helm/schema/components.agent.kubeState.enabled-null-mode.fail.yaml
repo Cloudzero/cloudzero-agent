@@ -1,0 +1,9 @@
+# Invalid: kubeState enabled with null (automatic) mode
+# The KubeState plugin requires mode to be explicitly set to "clustered"
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: null
+    kubeState:
+      enabled: true

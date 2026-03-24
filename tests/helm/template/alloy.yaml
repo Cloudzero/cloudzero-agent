@@ -187,6 +187,7 @@ data:
     //
     // Configuration sections:
     // 1. Kube-State-Metrics  - Kubernetes object state (pods, nodes, resources)
+    //    OR KubeState Plugin - Same metrics via embedded Alloy plugin (no KSM needed)
     // 2. cAdvisor            - Container resource usage (CPU, memory, network)
     // 3. Webhook             - CloudZero webhook server health (observability)
     // 4. Aggregator          - CloudZero aggregator health (observability)
@@ -993,6 +994,9 @@ data:
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
           tag: 1.2.9
+        kubeState:
+          enabled: false
+          reemitInterval: 5m
         labels: {}
         mode: clustered
         podAnnotations: {}

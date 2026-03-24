@@ -1,0 +1,9 @@
+# Invalid: kubeState enabled with server mode
+# The KubeState plugin requires mode to be "clustered"
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: server
+    kubeState:
+      enabled: true

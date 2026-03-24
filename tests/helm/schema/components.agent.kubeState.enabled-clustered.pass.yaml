@@ -1,0 +1,11 @@
+# Valid: kubeState enabled with clustered mode
+# The KubeState plugin requires clustered mode since it runs inside Alloy
+apiKey: "test-key-123"
+existingSecretName: null
+components:
+  agent:
+    mode: clustered
+    kubeState:
+      enabled: true
+kubeStateMetrics:
+  enabled: false
