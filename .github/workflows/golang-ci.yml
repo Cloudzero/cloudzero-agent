@@ -162,7 +162,7 @@ jobs:
         run: |
           go mod download
       - name: Run go tests
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           # Retry up to 3 times if we are running in the merge queue to
           # (hopefully) get past any flaky tests. Otherwise, only try once. We

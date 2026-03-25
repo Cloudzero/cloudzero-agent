@@ -96,7 +96,7 @@ jobs:
           version: ${{ matrix.kver.k8s }}
 
       - name: Install Krew and Plugins
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 4
@@ -115,7 +115,7 @@ jobs:
             kubectl krew install stern
 
       - name: Install Dependencies
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 4
@@ -211,7 +211,7 @@ jobs:
       - uses: azure/setup-kubectl@v4
 
       - name: Install Krew and Plugins
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 4
@@ -230,7 +230,7 @@ jobs:
             kubectl krew install stern
 
       - name: Install Dependencies
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 4
