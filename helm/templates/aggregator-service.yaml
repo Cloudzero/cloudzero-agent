@@ -17,13 +17,19 @@ metadata:
       "annotations" (list
         .Values.defaults.annotations
         .Values.components.aggregator.annotations
+        (dict "prometheus.io/scrape" "true" "prometheus.io/port" (.Values.aggregator.collector.port | quote) "prometheus.io/path" "/metrics")
       )
     ) | nindent 2 }}
 spec:
   selector:
     {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 4 }}
   ports:
-    - protocol: TCP
+    - name: metrics
+      protocol: TCP
       port: 80
       targetPort: {{ .Values.aggregator.collector.port }}
+    - name: shipper-metrics
+      protocol: TCP
+      port: 8081
+      targetPort: {{ .Values.aggregator.shipper.port }}
   type: ClusterIP

@@ -1,0 +1,686 @@
+suite: test monitoring integration
+templates:
+  - prometheusrule.yaml
+  - servicemonitor-agent.yaml
+  - servicemonitor-collector.yaml
+  - servicemonitor-shipper.yaml
+  - servicemonitor-webhook.yaml
+tests:
+  # ============================================================================
+  # enabled=null (release default, currently maps to disabled)
+  # ============================================================================
+  - it: "null: should NOT create PrometheusRule (release default is disabled)"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "null: should NOT create ServiceMonitor for agent"
+    template: servicemonitor-agent.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "null: should NOT create ServiceMonitor for collector"
+    template: servicemonitor-collector.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "null: should NOT create ServiceMonitor for shipper"
+    template: servicemonitor-shipper.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "null: should NOT create ServiceMonitor for webhook"
+    template: servicemonitor-webhook.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # enabled=false (explicit disable)
+  # ============================================================================
+  - it: "false: should NOT create PrometheusRule even with CRDs present"
+    template: prometheusrule.yaml
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "false: should NOT create any ServiceMonitors even with CRDs present"
+    template: servicemonitor-agent.yaml
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # enabled=true (force enable)
+  # ============================================================================
+  - it: "true: should create PrometheusRule"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PrometheusRule
+
+  - it: "true: should create ServiceMonitor for agent"
+    template: servicemonitor-agent.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  - it: "true: should create ServiceMonitor for collector"
+    template: servicemonitor-collector.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  - it: "true: should create ServiceMonitor for shipper"
+    template: servicemonitor-shipper.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  - it: "true: should create ServiceMonitor for webhook"
+    template: servicemonitor-webhook.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  # ============================================================================
+  # enabled="auto" with CRDs present (should create)
+  # ============================================================================
+  - it: "auto: should create PrometheusRule when Prometheus Operator CRDs present"
+    template: prometheusrule.yaml
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: auto
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PrometheusRule
+
+  - it: "auto: should create all ServiceMonitors when CRDs present"
+    template: servicemonitor-agent.yaml
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: auto
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  # ============================================================================
+  # enabled="auto" without CRDs (should NOT create)
+  # ============================================================================
+  - it: "auto: should NOT create PrometheusRule when no CRDs"
+    template: prometheusrule.yaml
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: auto
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "auto: should NOT create ServiceMonitors when no CRDs"
+    template: servicemonitor-agent.yaml
+    capabilities:
+      apiVersions: []
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: auto
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ============================================================================
+  # PrometheusRule content validation
+  # ============================================================================
+  - it: "should use Helm-generated service names in alert job labels"
+    template: prometheusrule.yaml
+    release:
+      name: my-release
+      namespace: my-ns
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - matchRegex:
+          path: spec.groups[0].rules[0].expr
+          pattern: 'job="my-release-cz-server"'
+
+  - it: "should include all expected alert names"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.groups[0].rules
+          count: 14
+
+  # ============================================================================
+  # Aggregator Down alert
+  # ============================================================================
+  - it: "should include CloudZeroAggregatorDown alert with correct job label"
+    template: prometheusrule.yaml
+    release:
+      name: my-release
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - matchRegex:
+          path: spec.groups[0].rules[3].expr
+          pattern: 'job="my-release-cz-aggregator"'
+      - equal:
+          path: spec.groups[0].rules[3].alert
+          value: CloudZeroAggregatorDown
+
+  # ============================================================================
+  # Dynamic shipper thresholds (based on costMaxInterval)
+  # ============================================================================
+  - it: "shipper alerts should use 2x and 1.5x of default costMaxInterval (30m)"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      # ShipperUploadFailures (critical, index 4) = 3.1x 30m = 5580s
+      - matchRegex:
+          path: spec.groups[0].rules[4].expr
+          pattern: '\[5580s\]'
+      - equal:
+          path: spec.groups[0].rules[4].for
+          value: "5580s"
+      # ShipperNoSuccessfulUploads (warning, index 6) = 1.5x 30m = 2700s
+      - matchRegex:
+          path: spec.groups[0].rules[6].expr
+          pattern: '\[2700s\]'
+      - equal:
+          path: spec.groups[0].rules[6].for
+          value: "2700s"
+
+  - it: "shipper alerts should scale with custom costMaxInterval"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      aggregator.database.costMaxInterval: "1h"
+    asserts:
+      # ShipperUploadFailures (critical, index 4) = 3.1x 1h = 11160s
+      - matchRegex:
+          path: spec.groups[0].rules[4].expr
+          pattern: '\[11160s\]'
+      - equal:
+          path: spec.groups[0].rules[4].for
+          value: "11160s"
+      # ShipperNoSuccessfulUploads (warning, index 6) = 1.5x 1h = 5400s
+      - matchRegex:
+          path: spec.groups[0].rules[6].expr
+          pattern: '\[5400s\]'
+      - equal:
+          path: spec.groups[0].rules[6].for
+          value: "5400s"
+
+  - it: "shipper alerts should handle compound Go durations (1h30m)"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      aggregator.database.costMaxInterval: "1h30m"
+    asserts:
+      # ShipperUploadFailures (critical, index 4) = 3.1x 1h30m = 3.1x 5400 = 16740s
+      - matchRegex:
+          path: spec.groups[0].rules[4].expr
+          pattern: '\[16740s\]'
+      - equal:
+          path: spec.groups[0].rules[4].for
+          value: "16740s"
+
+  - it: "shipper alerts should handle small intervals (5m)"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      aggregator.database.costMaxInterval: "5m"
+    asserts:
+      # ShipperUploadFailures (critical, index 4) = 3.1x 5m = 930s
+      - matchRegex:
+          path: spec.groups[0].rules[4].expr
+          pattern: '\[930s\]'
+      - equal:
+          path: spec.groups[0].rules[4].for
+          value: "930s"
+      # ShipperNoSuccessfulUploads (warning, index 6) = 1.5x 5m = 450s
+      - matchRegex:
+          path: spec.groups[0].rules[6].expr
+          pattern: '\[450s\]'
+      - equal:
+          path: spec.groups[0].rules[6].for
+          value: "450s"
+
+  # ============================================================================
+  # Custom labels and namespace
+  # ============================================================================
+  - it: "should apply custom labels to ServiceMonitor"
+    template: servicemonitor-agent.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.labels:
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+
+  - it: "should apply custom labels to PrometheusRule"
+    template: prometheusrule.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.labels:
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+
+  - it: "should use custom namespace when set"
+    template: servicemonitor-agent.yaml
+    release:
+      namespace: cza
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cza
+
+  - it: "should default to release namespace when namespace not set"
+    template: servicemonitor-agent.yaml
+    release:
+      namespace: my-namespace
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: my-namespace
+
+  # ============================================================================
+  # Namespace override: ALL resources must respect the override
+  # ============================================================================
+  - it: "namespace override: PrometheusRule should use custom namespace"
+    template: prometheusrule.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+
+  - it: "namespace override: agent ServiceMonitor should use custom namespace"
+    template: servicemonitor-agent.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace override: collector ServiceMonitor should use custom namespace"
+    template: servicemonitor-collector.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace override: shipper ServiceMonitor should use custom namespace"
+    template: servicemonitor-shipper.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace override: webhook ServiceMonitor should use custom namespace"
+    template: servicemonitor-webhook.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  # ============================================================================
+  # Namespace default: ALL resources must use release namespace when not set
+  # ============================================================================
+  - it: "namespace null: PrometheusRule should use release namespace"
+    template: prometheusrule.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: null
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+
+  - it: "namespace null: agent ServiceMonitor should use release namespace"
+    template: servicemonitor-agent.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: null
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace null: collector ServiceMonitor should use release namespace"
+    template: servicemonitor-collector.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: null
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace null: shipper ServiceMonitor should use release namespace"
+    template: servicemonitor-shipper.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: null
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  - it: "namespace null: webhook ServiceMonitor should use release namespace"
+    template: servicemonitor-webhook.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: null
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  # Empty string should behave identically to null
+  - it: "namespace empty string: PrometheusRule should use release namespace"
+    template: prometheusrule.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: ""
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+
+  - it: "namespace empty string: agent ServiceMonitor should use release namespace"
+    template: servicemonitor-agent.yaml
+    release:
+      namespace: cloudzero
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.namespace: ""
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: cloudzero
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: cloudzero
+
+  # ============================================================================
+  # Webhook TLS configuration (sharedSecret toggle)
+  # ============================================================================
+  - it: "webhook ServiceMonitor should use insecureSkipVerify by default"
+    template: servicemonitor-webhook.yaml
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.sharedSecret: false
+    asserts:
+      - equal:
+          path: spec.endpoints[0].tlsConfig.insecureSkipVerify
+          value: true
+
+  - it: "webhook ServiceMonitor should use CA secret when sharedSecret=true"
+    template: servicemonitor-webhook.yaml
+    release:
+      name: my-release
+      namespace: my-ns
+    set:
+      apiKey: "test-key"
+      existingSecretName: null
+      clusterName: "test-cluster"
+      components.monitoring.enabled: true
+      components.monitoring.sharedSecret: true
+    asserts:
+      - equal:
+          path: spec.endpoints[0].tlsConfig.ca.secret.name
+          value: my-release-cz-webhook-tls
+      - equal:
+          path: spec.endpoints[0].tlsConfig.ca.secret.key
+          value: ca.crt
+      - equal:
+          path: spec.endpoints[0].tlsConfig.serverName
+          value: my-release-cz-webhook.my-ns.svc
+      - isNull:
+          path: spec.endpoints[0].tlsConfig.insecureSkipVerify

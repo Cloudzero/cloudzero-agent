@@ -1,0 +1,34 @@
+{{/*
+ServiceMonitor for the CloudZero Agent server (Prometheus agent).
+
+Tells the Prometheus Operator to scrape the internal Prometheus agent's own
+metrics on port 9090. These include prometheus_sd_discovered_targets,
+prometheus_remote_storage_* counters, and other Prometheus native metrics.
+
+See: Monitoring the CloudZero Agent > Monitoring Prometheus Agent Scrape Health
+*/}}
+{{- if include "cloudzero-agent.monitoring.enabled" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cloudzero-agent.server.fullname" . }}
+  namespace: {{ .Values.components.monitoring.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.baseLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+    {{- with .Values.components.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "cloudzero-agent.server.matchLabels" . | nindent 6 }}
+  endpoints:
+    - port: http-metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 10s
+{{- end }}

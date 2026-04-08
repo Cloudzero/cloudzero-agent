@@ -840,6 +840,78 @@ components:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
 
+  # Prometheus Operator monitoring integration.
+  #
+  # When enabled, the chart creates ServiceMonitor and PrometheusRule CRDs that
+  # allow the Prometheus Operator to automatically discover and scrape CloudZero
+  # Agent metrics, and to evaluate pre-configured alert rules.
+  #
+  # This follows the same null/true/false pattern as integrations.istio:
+  #
+  # - null (default): Follow the release default. Currently maps to "false"
+  #   (disabled) while this feature is being validated. In a future release,
+  #   null will map to "auto". Use null unless you have a reason to override.
+  # - "auto": Auto-detect. Creates monitoring CRDs only if the Prometheus
+  #   Operator CRDs (monitoring.coreos.com/v1) are available in the cluster.
+  # - true: Always create monitoring CRDs. Helm will fail if the Prometheus
+  #   Operator CRDs are not installed in the cluster.
+  # - false: Never create monitoring CRDs.
+  #
+  # To opt in now, set to "auto" or true.
+  #
+  # Regardless of this setting, prometheus.io/* annotations are always added to
+  # Services for customers using standard Prometheus service discovery.
+  monitoring:
+    enabled: null
+
+    # Namespace override for PrometheusRule and ServiceMonitor CRDs.
+    # null (default) = same namespace as the agent installation.
+    # Some Prometheus Operator deployments require CRDs to be in a specific
+    # namespace (e.g., the monitoring namespace) to be discovered.
+    namespace: null
+
+    # Additional labels to add to PrometheusRule and ServiceMonitor CRDs.
+    # Some Prometheus Operator deployments require specific labels for CRD
+    # discovery (e.g., release: kube-prometheus-stack).
+    labels: {}
+
+    # Controls how Prometheus verifies the webhook server's TLS certificate
+    # when scraping its metrics endpoint.
+    #
+    # Background: The webhook server serves metrics over HTTPS (port 8443)
+    # because the Kubernetes API server requires a TLS endpoint for admission
+    # webhooks. By default, the chart generates a self-signed certificate for
+    # this purpose (or uses cert-manager if configured). When Prometheus
+    # scrapes the webhook's /metrics endpoint, it needs to handle this TLS
+    # certificate somehow.
+    #
+    # The challenge is that the webhook's CA is private -- Prometheus doesn't
+    # trust it by default. There are two ways to handle this:
+    #
+    # - false (default): Skip TLS verification (insecureSkipVerify). This is
+    #   the most compatible option and works in all environments without any
+    #   additional configuration. The ServiceMonitor's label selector already
+    #   constrains which pods Prometheus connects to, so a man-in-the-middle
+    #   attack within the cluster would require compromising the Kubernetes
+    #   API itself. This is the approach used by most Helm charts that serve
+    #   metrics over HTTPS (including cert-manager's own chart).
+    #
+    # - true: Share the webhook's CA certificate with Prometheus so it can
+    #   verify the TLS connection properly. The ServiceMonitor will reference
+    #   the CA from the webhook's TLS Secret (the same Secret that the
+    #   webhook server itself uses). The Prometheus Operator reads this
+    #   Secret and mounts the CA into the Prometheus pod as a trusted
+    #   certificate for this specific scrape target only -- it does NOT
+    #   replace Prometheus's global CA configuration or affect any other
+    #   scrape targets.
+    #
+    #   This requires the Prometheus Operator's ServiceAccount to have RBAC
+    #   permissions to read Secrets in the agent's namespace. The standard
+    #   kube-prometheus-stack grants this cluster-wide by default, but
+    #   custom or locked-down installations may not. If the Operator cannot
+    #   read the Secret, the webhook scrape will fail silently.
+    sharedSecret: false
+
 # Due to limitations of Helm, we are unfortunately not able to automatically configure the
 # kube-state-metrics subchart using the configuration above, and instead need to configure
 # it here, often duplicating things.

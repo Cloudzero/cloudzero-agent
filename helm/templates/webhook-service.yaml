@@ -17,6 +17,7 @@ metadata:
         .Values.defaults.annotations
         .Values.components.webhookServer.annotations
         (dict "nginx.ingress.kubernetes.io/ssl-redirect" "false")
+        (dict "prometheus.io/scrape" "true" "prometheus.io/port" "8443" "prometheus.io/path" "/metrics" "prometheus.io/scheme" "https")
       )
     ) | nindent 2 }}
   namespace: {{ .Release.Namespace }}
