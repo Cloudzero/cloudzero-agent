@@ -1054,6 +1054,10 @@ data:
               cpu: 50m
               memory: 64Mi
           securityContext: {}
+      monitoring:
+        enabled: null
+        labels: {}
+        namespace: ""
       prometheus:
         image:
           repository: quay.io/prometheus/prometheus
@@ -1840,6 +1844,34 @@ roleRef:
   kind: ClusterRole
   name: cz-agent-cz-webhook-init-cert
 ---
+# Source: cloudzero-agent/templates/agent-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cz-agent-cz-server
+  namespace: cz-agent
+  labels:
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: server
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9090"
+    prometheus.io/scrape: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http-metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: cz-agent
+---
 # Source: cloudzero-agent/templates/aggregator-service.yaml
 apiVersion: v1
 kind: Service
@@ -1853,15 +1885,23 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.10.0
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: '"8080"'
+    prometheus.io/scrape: "true"
 spec:
   selector:
     app.kubernetes.io/name: aggregator
     app.kubernetes.io/instance: cz-agent
   ports:
-    - protocol: TCP
+    - name: metrics
+      protocol: TCP
       port: 80
       targetPort: 8080
+    - name: shipper-metrics
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
   type: ClusterIP
 ---
 # Source: cloudzero-agent/templates/webhook-service.yaml
@@ -1878,6 +1918,10 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8443"
+    prometheus.io/scheme: https
+    prometheus.io/scrape: "true"
   namespace: cz-agent
 spec:
   type: ClusterIP

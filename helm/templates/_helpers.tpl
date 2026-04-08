@@ -1565,3 +1565,94 @@ Returns: YAML stage object with name and checks fields
 name: {{ $stage }}
 checks: {{ $checks | toYaml | nindent 2 -}}
 {{- end -}}
+
+{{/*
+Prometheus Operator Monitoring Enabled Helper
+
+Determines whether Prometheus Operator CRDs (ServiceMonitor, PrometheusRule) should
+be created.
+
+  - null (default): Follow the release default. Currently maps to "false"
+    (disabled) while the feature is being validated in customer environments.
+    In a future release, null will map to "auto".
+  - "auto": Auto-detect via CRD presence in the cluster. Creates monitoring
+    resources only if the Prometheus Operator CRDs (monitoring.coreos.com/v1)
+    are available.
+  - true: Force enable (will fail if CRDs are not installed)
+  - false: Force disable
+
+Usage: {{ if include "cloudzero-agent.monitoring.enabled" . }}...{{ end }}
+Returns: "true" (truthy) when enabled, empty string (falsy) when disabled
+*/}}
+{{- define "cloudzero-agent.monitoring.enabled" -}}
+{{- $monitoringSetting := .Values.components.monitoring.enabled -}}
+{{- if kindIs "invalid" $monitoringSetting -}}
+  {{- /* null/not set = release default. Currently: disabled.
+         Change this block to auto-detect when promoting to GA:
+           if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1"
+             true
+           end
+  */ -}}
+{{- else if eq (toString $monitoringSetting) "auto" -}}
+  {{- /* "auto" = detect Prometheus Operator CRDs */ -}}
+  {{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
+    {{- true -}}
+  {{- end -}}
+{{- else if eq (toString $monitoringSetting) "true" -}}
+  {{- /* true = force enabled */ -}}
+  {{- true -}}
+{{- end -}}
+{{- /* false = force disabled, returns empty string */ -}}
+{{- end -}}
+
+{{/*
+Go Duration to Seconds
+
+Parses a Go duration string (as accepted by time.ParseDuration) into a total
+number of seconds. Supports compound durations like "1h30m", "2h45m30s", etc.
+Valid units: h, m, s, ms.
+
+Usage: {{ include "cloudzero-agent.durationToSeconds" "1h30m" }}
+Returns: "5400" (as a string, suitable for piping to float64 or int)
+*/}}
+{{- define "cloudzero-agent.durationToSeconds" -}}
+{{- $dur := . -}}
+{{- $total := 0.0 -}}
+{{- $segments := regexFindAll "([0-9.]+)([a-zA-Z]+)" $dur -1 -}}
+{{- range $segments -}}
+  {{- $num := float64 (regexReplaceAll "[a-zA-Z]+" . "") -}}
+  {{- $unit := regexReplaceAll "[0-9.]+" . "" -}}
+  {{- if eq $unit "h" }}{{ $total = addf $total (mulf $num 3600) }}
+  {{- else if eq $unit "m" }}{{ $total = addf $total (mulf $num 60) }}
+  {{- else if eq $unit "s" }}{{ $total = addf $total $num }}
+  {{- else if eq $unit "ms" }}{{ $total = addf $total (divf $num 1000) }}
+  {{- end -}}
+{{- end -}}
+{{- $total -}}
+{{- end -}}
+
+{{/*
+Scaled Duration
+
+Takes a Go duration string and a multiplier, and returns the result as an
+integer number of seconds with an "s" suffix. The output is valid for both
+Prometheus PromQL range selectors (rate(...[2700s])) and PrometheusRule
+"for" durations.
+
+This is used to make alert thresholds dynamic based on the configured
+flush/rotate interval, rather than hardcoding durations that may not match
+the user's configuration.
+
+Usage: {{ include "cloudzero-agent.scaledDuration" (list "30m" 1.5) }}
+Returns: "2700s"
+
+Usage: {{ include "cloudzero-agent.scaledDuration" (list "1h30m" 2.0) }}
+Returns: "10800s"
+*/}}
+{{- define "cloudzero-agent.scaledDuration" -}}
+{{- $dur := index . 0 -}}
+{{- $multiplier := index . 1 | float64 -}}
+{{- $seconds := include "cloudzero-agent.durationToSeconds" $dur | float64 -}}
+{{- $scaled := mulf $seconds $multiplier | int -}}
+{{- printf "%ds" $scaled -}}
+{{- end -}}
