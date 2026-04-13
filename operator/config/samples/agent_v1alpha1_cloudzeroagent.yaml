@@ -1,0 +1,17 @@
+apiVersion: agent.cloudzero.com/v1alpha1
+kind: CloudZeroAgent
+metadata:
+  name: cloudzero-agent
+  namespace: cloudzero
+spec:
+  tls:
+    # mode: managed means the operator generates and rotates certificates automatically.
+    # Use "cert-manager" if cert-manager is installed, or "user-supplied" to manage certs yourself.
+    mode: managed
+    secretName: cloudzero-agent-tls
+    webhookName: cloudzero-agent-webhook
+    serviceName: cloudzero-agent-webhook
+    algorithm: ECDSA
+    keySize: 256
+    validityDuration: "8760h"   # 1 year
+    renewalThreshold: "720h"    # renew when < 30 days remain

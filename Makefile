@@ -213,6 +213,7 @@ format-go:
 	$(Q)$(GO) mod tidy
 	$(Q)$(GO) -C .tools/ mod tidy
 	$(Q)$(GO) -C tests/ mod tidy
+	$(Q)$(GO) -C operator/ mod tidy
 
 PRETTIER_TARGET       ?= .
 
@@ -416,6 +417,33 @@ test-smoke: ## Run the smoke tests
 test-all: ## Run all tests
 test-all: helm-test test test-integration kind-test test-smoke
 
+# ----------- OPERATOR ------------
+
+.PHONY: operator-generate
+operator-generate: ## Generate operator CRD manifests and deepcopy methods
+	$(call LOG,OPERATOR,generate)
+	$(Q)$(MAKE) -C operator generate manifests
+
+.PHONY: operator-build
+operator-build: ## Build the operator binary
+	$(call LOG,OPERATOR,build)
+	$(Q)$(MAKE) -C operator build
+
+.PHONY: operator-test
+operator-test: ## Run operator unit tests
+	$(call LOG,OPERATOR,test)
+	$(Q)$(GO) -C operator test -test.short -timeout 120s -run TestReconcile ./internal/controller/... -race -cover
+
+.PHONY: operator-install-crds
+operator-install-crds: ## Install CloudZeroAgent CRDs into the current cluster
+	$(call LOG,OPERATOR,install CRDs)
+	$(Q)$(KUBECTL) apply -f operator/config/crd/bases/
+
+.PHONY: operator-run
+operator-run: ## Run the operator locally against the current cluster context
+	$(call LOG,OPERATOR,run)
+	$(Q)$(GO) -C operator run ./cmd/
+
 # ----------- LOCAL TESTING INFRASTRUCTURE ------------
 
 # Generic testing configuration
@@ -510,6 +538,31 @@ $(eval $(call generate-container-build-target,package-build,load,false))
 
 package-build-debug: ## Build a debugging version of the Docker image
 $(eval $(call generate-container-build-target,package-build-debug,load,true))
+
+# ----------- OPERATOR DOCKER IMAGE ------------
+
+OPERATOR_IMAGE_NAME ?= $(IMAGE_PREFIX)/cloudzero-agent-operator
+
+.PHONY: operator-docker-build
+operator-docker-build: ## Build the operator Docker image (local only)
+	$(call LOG,DOCKER,operator-docker-build $(OPERATOR_IMAGE_NAME):$(TAG))
+	$(Q)$(CONTAINER_TOOL) build \
+		--build-arg TARGETOS=linux \
+		--build-arg TARGETARCH=amd64 \
+		-t $(OPERATOR_IMAGE_NAME):$(TAG) \
+		-f operator/Dockerfile .
+
+.PHONY: operator-docker-push
+operator-docker-push: ## Build and push the operator Docker image
+	$(call LOG,DOCKER,operator-docker-push $(OPERATOR_IMAGE_NAME):$(TAG))
+ifeq ($(BUILDX_CONTAINER_EXISTS), 0)
+	$(Q)$(CONTAINER_TOOL) buildx create --name container --driver=docker-container --use
+endif
+	$(Q)$(CONTAINER_TOOL) buildx build \
+		--progress=plain \
+		--platform linux/amd64,linux/arm64 \
+		--push -t $(OPERATOR_IMAGE_NAME):$(TAG) \
+		-f operator/Dockerfile .
 
 # ----------- HELM CHART ------------
 

@@ -6979,6 +6979,51 @@
       "deprecated": true,
       "type": ["string", "null"]
     },
+    "operator": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "image": {
+          "additionalProperties": false,
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "enum": ["Always", "IfNotPresent", "Never"],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "resources": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+        },
+        "leaderElection": {
+          "type": "boolean"
+        },
+        "replicas": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "nodeSelector": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "tolerations": {
+          "$ref": "#/$defs/com.cloudzero.agent.tolerations"
+        },
+        "affinity": {
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "prometheusConfig": {
       "additionalProperties": false,
       "properties": {

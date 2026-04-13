@@ -1,0 +1,33 @@
+{{/*
+CloudZeroAgent Custom Resource
+
+Creates the CloudZeroAgent CR that the operator watches and reconciles.
+Field values are derived from the existing Helm values so that the operator
+manages the same TLS secret, webhook configuration, and service names that
+the rest of the chart creates.
+*/}}
+{{- if .Values.operator.enabled }}
+apiVersion: agent.cloudzero.com/v1alpha1
+kind: CloudZeroAgent
+metadata:
+  name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator" "subcomponent" "cr") }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "operator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+spec:
+  tls:
+    mode: managed
+    secretName: {{ include "cloudzero-agent.tlsSecretName" . }}
+    webhookName: {{ include "cloudzero-agent.validatingWebhookConfigName" . }}
+    serviceName: {{ include "cloudzero-agent.serviceName" . }}
+    algorithm: ECDSA
+    keySize: 256
+    validityDuration: "8760h"
+    renewalThreshold: "720h"
+{{- end }}

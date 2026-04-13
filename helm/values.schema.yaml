@@ -400,6 +400,52 @@ properties:
       - "null"
     description: |
       Override the name of the chart. Used in resource naming.
+  operator:
+    description: |
+      Configuration for the CloudZero Agent operator controller. The operator
+      watches CloudZeroAgent custom resources and reconciles TLS certificates,
+      job orchestration, and agent health.
+    type: object
+    additionalProperties: false
+    properties:
+      enabled:
+        description: Whether to deploy the operator.
+        type: boolean
+      image:
+        description: Container image for the operator.
+        type: object
+        additionalProperties: false
+        properties:
+          repository:
+            description: Image repository.
+            type: string
+          tag:
+            description: Image tag. Defaults to Chart.AppVersion when empty.
+            type: string
+          pullPolicy:
+            description: Image pull policy.
+            enum: [Always, IfNotPresent, Never]
+            type: string
+      resources:
+        description: Resource requirements and limits for the operator.
+        $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
+      leaderElection:
+        description: Enable leader election for safe multi-replica operation.
+        type: boolean
+      replicas:
+        description: Number of operator replicas.
+        type: integer
+        minimum: 1
+      nodeSelector:
+        description: Node selector for the operator pod.
+        type: object
+        additionalProperties: true
+      tolerations:
+        description: Tolerations for the operator pod.
+        $ref: "#/$defs/com.cloudzero.agent.tolerations"
+      affinity:
+        description: Affinity rules for the operator pod.
+        type: object
   forceNamespace:
     deprecated: true
     type:

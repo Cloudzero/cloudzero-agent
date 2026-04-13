@@ -1,0 +1,29 @@
+{{/*
+CloudZero Agent Operator ClusterRoleBinding
+
+Binds the operator ClusterRole to the operator ServiceAccount, granting
+the operator pods the permissions they need to reconcile CloudZeroAgent
+resources across the cluster.
+*/}}
+{{- if .Values.operator.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "operator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

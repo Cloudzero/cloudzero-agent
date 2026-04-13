@@ -1,0 +1,92 @@
+{{/*
+CloudZero Agent Operator Deployment
+
+Runs the operator controller manager, which watches CloudZeroAgent custom
+resources and reconciles the agent's desired state (TLS certs, job completion,
+lifecycle status) against the cluster.
+
+The operator image is separate from the main agent image and is built from
+operator/Dockerfile.
+*/}}
+{{- if .Values.operator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "operator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+spec:
+  replicas: {{ .Values.operator.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: operator
+      {{- include "cloudzero-agent.common.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- include "cloudzero-agent.generateLabels" (dict
+          "root" .
+          "name" "operator"
+          "labels" (list
+            .Values.defaults.labels
+            .Values.commonMetaLabels
+          )
+        ) | nindent 6 }}
+    spec:
+      serviceAccountName: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+      {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.operator.image) | nindent 6 }}
+      securityContext:
+        runAsNonRoot: true
+      {{- if .Values.operator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.operator.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.operator.tolerations }}
+      tolerations:
+        {{- toYaml .Values.operator.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.operator.affinity }}
+      affinity:
+        {{- toYaml .Values.operator.affinity | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: manager
+          image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=0
+            {{- if .Values.operator.leaderElection }}
+            - --leader-elect
+            {{- end }}
+          ports:
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- include "cloudzero-agent.generateResources" .Values.operator.resources | nindent 10 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+{{- end }}

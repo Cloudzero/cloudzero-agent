@@ -1,0 +1,203 @@
+{{/*
+CloudZero Agent Operator CRD
+
+Installs the CloudZeroAgent CustomResourceDefinition so the operator controller
+can watch and reconcile CloudZeroAgent resources. The CRD is generated from
+kubebuilder markers in operator/api/v1alpha1/cloudzeroagent_types.go.
+*/}}
+{{- if .Values.operator.enabled }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: cloudzeroagents.agent.cloudzero.com
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "operator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+spec:
+  group: agent.cloudzero.com
+  names:
+    kind: CloudZeroAgent
+    listKind: CloudZeroAgentList
+    plural: cloudzeroagents
+    shortNames:
+    - cza
+    singular: cloudzeroagent
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.tls.mode
+      name: TLS Mode
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="CertificateValid")].status
+      name: Certificate Valid
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          CloudZeroAgent is the schema for a CloudZero Agent installation.
+          The operator watches this resource and reconciles the agent's state on the cluster.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: CloudZeroAgentSpec defines the desired state of a CloudZeroAgent
+              installation.
+            properties:
+              tls:
+                description: TLS configures webhook TLS certificate management.
+                properties:
+                  algorithm:
+                    default: ECDSA
+                    description: 'Algorithm is the key generation algorithm: RSA,
+                      ECDSA, or Ed25519.'
+                    enum:
+                    - RSA
+                    - ECDSA
+                    - Ed25519
+                    type: string
+                  keySize:
+                    default: 256
+                    description: |-
+                      KeySize is the key size in bits for RSA (min 2048) or ECDSA (256, 384, 521).
+                      Ignored for Ed25519.
+                    type: integer
+                  mode:
+                    default: managed
+                    description: |-
+                      Mode determines how TLS certificates are managed.
+                      "managed" means the operator generates and rotates certs automatically.
+                      "cert-manager" or "user-supplied" means the operator skips cert management.
+                    enum:
+                    - managed
+                    - cert-manager
+                    - user-supplied
+                    type: string
+                  renewalThreshold:
+                    default: 720h
+                    description: |-
+                      RenewalThreshold is how far before expiry the operator should renew the certificate
+                      (Go duration string, e.g. "720h"). Must be less than ValidityDuration.
+                    type: string
+                  secretName:
+                    default: cloudzero-agent-tls
+                    description: SecretName is the name of the Kubernetes Secret holding
+                      TLS cert data.
+                    type: string
+                  serviceName:
+                    default: cloudzero-agent-webhook
+                    description: ServiceName is the DNS service name used for certificate
+                      Subject Alternative Names.
+                    type: string
+                  validityDuration:
+                    default: 8760h
+                    description: ValidityDuration is how long generated certificates
+                      are valid (Go duration string, e.g. "8760h").
+                    type: string
+                  webhookName:
+                    default: cloudzero-agent-webhook
+                    description: WebhookName is the name of the ValidatingWebhookConfiguration
+                      to patch with the CA bundle.
+                    type: string
+                required:
+                - mode
+                type: object
+            type: object
+          status:
+            description: CloudZeroAgentStatus defines the observed state of a CloudZeroAgent
+              installation.
+            properties:
+              conditions:
+                description: Conditions represent the latest observations of the CloudZeroAgent's
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

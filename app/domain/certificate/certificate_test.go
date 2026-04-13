@@ -2,10 +2,15 @@ package certificate_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -539,6 +544,166 @@ func TestCertificateService_ValidateExistingCertificate(t *testing.T) {
 				}
 				if tt.errorContains != "" && !containsString(err.Error(), tt.errorContains) {
 					t.Errorf("expected error to contain '%s', got '%s'", tt.errorContains, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if isValid != tt.expectValid {
+				t.Errorf("expected isValid=%v, got %v", tt.expectValid, isValid)
+			}
+		})
+	}
+}
+
+func TestCertificateService_ValidateCertificateExpiry(t *testing.T) {
+	// makeCertSecret generates a self-signed cert with the given notAfter time and returns
+	// a mock secret map in the format returned by GetTLSSecret.
+	makeCertSecret := func(t *testing.T, notAfter time.Time) map[string]interface{} {
+		t.Helper()
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatalf("failed to generate key: %v", err)
+		}
+		template := &x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject:      pkix.Name{CommonName: "test"},
+			NotBefore:    time.Now().Add(-time.Hour),
+			NotAfter:     notAfter,
+		}
+		certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+		if err != nil {
+			t.Fatalf("failed to create cert: %v", err)
+		}
+		certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+		return map[string]interface{}{
+			"data": map[string]interface{}{
+				"tls.crt": base64.StdEncoding.EncodeToString(certPEM),
+			},
+		}
+	}
+
+	tests := []struct {
+		name          string
+		threshold     time.Duration
+		mockSecret    map[string]interface{}
+		mockError     error
+		expectValid   bool
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name:        "cert valid and not near expiry",
+			threshold:   30 * 24 * time.Hour,
+			mockSecret:  makeCertSecret(t, time.Now().Add(365*24*time.Hour)),
+			expectValid: true,
+		},
+		{
+			name:        "cert within renewal threshold",
+			threshold:   30 * 24 * time.Hour,
+			mockSecret:  makeCertSecret(t, time.Now().Add(15*24*time.Hour)),
+			expectValid: false,
+		},
+		{
+			name:        "cert already expired",
+			threshold:   30 * 24 * time.Hour,
+			mockSecret:  makeCertSecret(t, time.Now().Add(-time.Hour)),
+			expectValid: false,
+		},
+		{
+			name:      "get secret returns error",
+			threshold: 30 * 24 * time.Hour,
+			mockError: fmt.Errorf("secret not found"),
+			expectError:   true,
+			errorContains: "failed to get TLS secret",
+		},
+		{
+			name:      "secret data is not a map",
+			threshold: 30 * 24 * time.Hour,
+			mockSecret: map[string]interface{}{
+				"data": "not-a-map",
+			},
+			expectError:   true,
+			errorContains: "secret data is not a map",
+		},
+		{
+			name:      "tls.crt field missing",
+			threshold: 30 * 24 * time.Hour,
+			mockSecret: map[string]interface{}{
+				"data": map[string]interface{}{
+					"ca.crt": "someval",
+				},
+			},
+			expectError:   true,
+			errorContains: "tls.crt field missing or not a string",
+		},
+		{
+			name:      "tls.crt is not valid base64",
+			threshold: 30 * 24 * time.Hour,
+			mockSecret: map[string]interface{}{
+				"data": map[string]interface{}{
+					"tls.crt": "not-valid-base64!!!",
+				},
+			},
+			expectError:   true,
+			errorContains: "failed to decode tls.crt",
+		},
+		{
+			name:      "tls.crt is valid base64 but not PEM",
+			threshold: 30 * 24 * time.Hour,
+			mockSecret: map[string]interface{}{
+				"data": map[string]interface{}{
+					"tls.crt": base64.StdEncoding.EncodeToString([]byte("this is not pem")),
+				},
+			},
+			expectError:   true,
+			errorContains: "failed to decode PEM block from tls.crt",
+		},
+		{
+			name:      "tls.crt PEM has invalid DER certificate",
+			threshold: 30 * 24 * time.Hour,
+			mockSecret: map[string]interface{}{
+				"data": map[string]interface{}{
+					"tls.crt": base64.StdEncoding.EncodeToString(
+						pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("not valid der")}),
+					),
+				},
+			},
+			expectError:   true,
+			errorContains: "failed to parse certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockKubernetesClient(ctrl)
+			service := certificate.NewCertificateService(mockClient)
+
+			mockClient.EXPECT().
+				GetTLSSecret(gomock.Any(), "test-namespace", "test-secret").
+				Return(tt.mockSecret, tt.mockError)
+
+			isValid, err := service.ValidateCertificateExpiry(
+				context.Background(),
+				"test-namespace",
+				"test-secret",
+				tt.threshold,
+			)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("expected error but got none")
+					return
+				}
+				if tt.errorContains != "" && !containsString(err.Error(), tt.errorContains) {
+					t.Errorf("expected error to contain %q, got %q", tt.errorContains, err.Error())
 				}
 				return
 			}

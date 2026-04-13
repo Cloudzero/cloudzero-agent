@@ -1,0 +1,15 @@
+apiVersion: agent.cloudzero.com/v1alpha1
+kind: CloudZeroAgent
+metadata:
+  name: cloudzero-agent
+  namespace: test-ns
+spec:
+  tls:
+    mode: managed
+    secretName: test-release-cz-webhook-tls
+    webhookName: test-release-cz-webhook
+    serviceName: test-release-cz-webhook
+    algorithm: ECDSA
+    keySize: 256
+    validityDuration: "8760h"
+    renewalThreshold: "720h"

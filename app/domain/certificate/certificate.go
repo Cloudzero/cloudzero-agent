@@ -255,6 +255,50 @@ func (s *CertificateService) UpdateResources(ctx context.Context, namespace, sec
 	return nil
 }
 
+// ValidateCertificateExpiry checks if the certificate in the given secret will expire within the
+// threshold duration. Returns true if the certificate is present, parseable, and not near expiry.
+func (s *CertificateService) ValidateCertificateExpiry(ctx context.Context, namespace, secretName string, threshold time.Duration) (bool, error) {
+	secret, err := s.k8sClient.GetTLSSecret(ctx, namespace, secretName)
+	if err != nil {
+		return false, fmt.Errorf("failed to get TLS secret: %w", err)
+	}
+
+	data, ok := secret["data"].(map[string]interface{})
+	if !ok {
+		return false, errors.New("secret data is not a map")
+	}
+
+	tlsCrtB64, ok := data["tls.crt"].(string)
+	if !ok {
+		return false, errors.New("tls.crt field missing or not a string")
+	}
+
+	certPEM, err := base64.StdEncoding.DecodeString(tlsCrtB64)
+	if err != nil {
+		return false, fmt.Errorf("failed to decode tls.crt: %w", err)
+	}
+
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return false, errors.New("failed to decode PEM block from tls.crt")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	now := time.Now()
+	if now.After(cert.NotAfter) {
+		return false, nil // already expired
+	}
+	if now.Add(threshold).After(cert.NotAfter) {
+		return false, nil // within renewal threshold
+	}
+
+	return true, nil
+}
+
 // ValidateExistingCertificate checks if the existing certificate is valid
 func (s *CertificateService) ValidateExistingCertificate(ctx context.Context, namespace, secretName string) (bool, error) {
 	secret, err := s.k8sClient.GetTLSSecret(ctx, namespace, secretName)

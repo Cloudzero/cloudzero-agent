@@ -1,0 +1,4 @@
+cloudAccountId: "618300337335"
+clusterName: eks-dev-cirrus-trino-operator
+existingSecretName: api-token
+region: us-east-1

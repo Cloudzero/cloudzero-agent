@@ -1635,6 +1635,44 @@ aggregator:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+# Operator configuration.
+#
+# The operator runs a Kubernetes controller that reconciles CloudZeroAgent
+# custom resources, managing TLS certificate lifecycle, job orchestration,
+# and agent health monitoring.
+operator:
+  # Whether to deploy the operator. When disabled, no operator Deployment,
+  # RBAC, CRD, or CR resources are created.
+  enabled: true
+  # Container image for the operator.
+  image:
+    repository: ghcr.io/cloudzero/cloudzero-agent-operator
+    # Tag defaults to .Chart.AppVersion when left empty.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # Resource requirements and limits for the operator container.
+  #
+  # The operator is lightweight — it runs a single reconciliation loop
+  # and does not process large data volumes.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  # Enable leader election so multiple operator replicas are safe.
+  # When true the operator passes --leader-elect to the manager binary.
+  leaderElection: true
+  # Number of operator replicas. One is sufficient; leader election
+  # ensures only one is active when running multiple.
+  replicas: 1
+  # Node selector for the operator pod.
+  nodeSelector: {}
+  # Tolerations for the operator pod.
+  tolerations: []
+  # Affinity rules for the operator pod.
+  affinity: {}
+
 # -- Deprecated. Override the name of the chart. Used in resource naming.
 nameOverride:
 # -- Deprecated. Force all resources to be deployed to a specific namespace, overriding .Release.Namespace.

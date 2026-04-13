@@ -1,0 +1,109 @@
+{{/*
+CloudZero Agent Operator ClusterRole
+
+Defines the RBAC permissions the operator needs. The rules come from
+kubebuilder RBAC markers in the operator controller source and the
+leader election role from operator/config/rbac/.
+
+The operator needs cluster-scoped access to CloudZeroAgent CRs, Secrets
+(for TLS cert management), ValidatingWebhookConfigurations (for CA bundle
+patching), and coordination resources (for leader election).
+*/}}
+{{- if .Values.operator.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cloudzero-agent.internal.resourceName" (dict "context" . "component" "operator") }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "operator"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+rules:
+  # CloudZeroAgent CRD access (from operator/config/rbac/role.yaml)
+  - apiGroups:
+      - agent.cloudzero.com
+    resources:
+      - cloudzeroagents
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - agent.cloudzero.com
+    resources:
+      - cloudzeroagents/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - agent.cloudzero.com
+    resources:
+      - cloudzeroagents/status
+    verbs:
+      - get
+      - patch
+      - update
+  # Secrets — needed for TLS certificate management
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # ValidatingWebhookConfigurations — needed for CA bundle patching
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # Leader election resources (from operator/config/rbac/leader_election_role.yaml)
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+{{- end }}
