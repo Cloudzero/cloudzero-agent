@@ -134,6 +134,40 @@ tests:
             readOnly: true
         template: templates/agent-deploy.yaml
 
+  # Test that /tmp is mounted as an emptyDir in the Alloy container
+  # The agent image is distroless/scratch and has no /tmp directory; the Alloy
+  # process requires a writable /tmp to create its storage path (/tmp/alloy).
+  # Without this mount, the container crashes immediately with:
+  #   Error: failed to create the remotecfg service: mkdir /tmp: permission denied
+  - it: should mount an emptyDir at /tmp in the Alloy container
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: alloy-tmp
+            mountPath: /tmp
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: alloy-tmp
+            emptyDir: {}
+        template: templates/agent-deploy.yaml
+
+  # Verify alloy-tmp volume is NOT created in non-clustered modes
+  - it: should not create alloy-tmp volume when not in clustered mode
+    set:
+      components.agent.mode: agent
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: alloy-tmp
+            emptyDir: {}
+        template: templates/agent-deploy.yaml
+
   # Test Alloy environment variables
   - it: should set HOSTNAME environment variable for Alloy
     set:
