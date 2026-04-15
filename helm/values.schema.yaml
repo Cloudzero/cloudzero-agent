@@ -393,6 +393,22 @@ properties:
       - "null"
     description: |
       The name of an existing Kubernetes secret containing the API key.
+  extraVolumeMounts:
+    oneOf:
+      - type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+      - type: "null"
+    description: |
+      Additional Kubernetes VolumeMount definitions to add to CloudZero workloads.
+  extraVolumes:
+    oneOf:
+      - type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+      - type: "null"
+    description: |
+      Additional Kubernetes Volume definitions to add to CloudZero workloads.
   nameOverride:
     deprecated: true
     type:

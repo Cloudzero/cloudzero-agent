@@ -39,6 +39,10 @@ region: null
 apiKey: null
 # -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
 existingSecretName: null
+# -- Additional Kubernetes VolumeMount entries to add to the CloudZero workloads.
+extraVolumeMounts: []
+# -- Additional Kubernetes Volume entries to add to the CloudZero workloads.
+extraVolumes: []
 
 # Agent largely contains top-level settings which are often shared by multiple
 # components within this chart, or used as defaults in case values are not

@@ -784,6 +784,24 @@ Volume mount for the API key
 {{- end }}
 
 {{/*
+Additional volume mounts for user-provided extensions.
+*/}}
+{{- define "cloudzero-agent.extraVolumeMounts" -}}
+{{- with .Values.extraVolumeMounts -}}
+{{ toYaml . }}
+{{- end -}}
+{{- end }}
+
+{{/*
+Additional volumes for user-provided extensions.
+*/}}
+{{- define "cloudzero-agent.extraVolumes" -}}
+{{- with .Values.extraVolumes -}}
+{{ toYaml . }}
+{{- end -}}
+{{- end }}
+
+{{/*
 Return the URL for the agent and insights controller to send metrics to.
 
 If the CloudZero Aggregator is enabled, this will be the URL for the collector.

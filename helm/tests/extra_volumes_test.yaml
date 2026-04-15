@@ -1,0 +1,200 @@
+suite: test extraVolumes and extraVolumeMounts support
+templates:
+  - templates/aggregator-deploy.yaml
+  - templates/agent-deploy.yaml
+  - templates/agent-daemonset.yaml
+  - templates/config-loader-job.yaml
+  - templates/webhook-deploy.yaml
+  - templates/backfill-job.yaml
+tests:
+  - it: should add extra volumes and mounts to the aggregator deployment
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/aggregator-deploy.yaml
+
+  - it: should add extra volumes and mounts to the clustered agent deployment
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/agent-deploy.yaml
+
+  - it: should add extra volumes and mounts to webhook and config-loader jobs
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/webhook-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/webhook-deploy.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/config-loader-job.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/config-loader-job.yaml
+
+  - it: should add extra volumes and mounts in federated mode and backfill
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      defaults:
+        federation:
+          enabled: true
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/agent-daemonset.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key-csi
+            mountPath: /mnt/secrets-store
+            readOnly: true
+        template: templates/agent-daemonset.yaml
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/backfill-job.yaml

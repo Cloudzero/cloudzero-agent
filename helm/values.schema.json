@@ -5708,6 +5708,32 @@
     "apiKey": {
       "type": ["string", "null"]
     },
+    "extraVolumeMounts": {
+      "oneOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.VolumeMount"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "extraVolumes": {
+      "oneOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.Volume"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "cloudAccountId": {
       "pattern": "^$|^[0-9]+$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^'[0-9]+'$|^'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'$",
       "type": "string"
