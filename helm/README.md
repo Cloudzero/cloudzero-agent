@@ -152,6 +152,8 @@ Below is a summary of these settings and how they are used:
 | host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                          |
 | apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` is set.                                                           |
 | existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                        |
+| extraVolumeMounts  | array  | `[]`                  | Additional Kubernetes `VolumeMount` entries to add to the CloudZero workloads.                                                                       |
+| extraVolumes       | array  | `[]`                  | Additional Kubernetes `Volume` entries to add to the CloudZero workloads.                                                                             |
 | region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
 
 > It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
@@ -254,6 +256,8 @@ kubectl create secret -n example-namespace generic example-secret-name --from-li
 ```
 
 The secret can then be used with `existingSecretName`.
+
+For advanced integrations, you can also use `extraVolumes` and `extraVolumeMounts` to attach additional volumes such as CSI-backed secrets to the CloudZero workloads.
 
 ### Update Helm Chart
 

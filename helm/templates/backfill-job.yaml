@@ -171,18 +171,14 @@ spec:
               volumeMounts:
                 - name: insights-server-config
                   mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" $ }}
+                {{- include "cloudzero-agent.apiKeyVolumeMount" $ | nindent 16 }}
+                {{- include "cloudzero-agent.extraVolumeMounts" $ | nindent 16 }}
               {{- if or $.Values.insightsController.volumeMounts $.Values.insightsController.tls.enabled }}
-              {{- if or $.Values.existingSecretName $.Values.apiKey }}
-                - name: cloudzero-api-key
-                  mountPath: {{ $.Values.serverConfig.containerSecretFilePath }}
-                  subPath: ""
-                  readOnly: true
-              {{- end }}
                 {{- with $.Values.insightsController.volumeMounts }}
                   {{- toYaml . | nindent 16 }}
                 {{- end }}
               {{- end }}
-          {{- if or $.Values.insightsController.volumes $.Values.insightsController.tls.enabled }}
+          {{- if or $.Values.insightsController.volumes $.Values.insightsController.tls.enabled (or $.Values.existingSecretName $.Values.apiKey) $.Values.extraVolumes }}
           volumes:
             - name: insights-server-config
               configMap:
@@ -197,6 +193,7 @@ spec:
               secret:
                 secretName: {{ include "cloudzero-agent.secretName" $ }}
             {{- end }}
+            {{- include "cloudzero-agent.extraVolumes" $ | nindent 12 }}
             {{- with $.Values.insightsController.volumes }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
