@@ -5529,37 +5529,6 @@
       }
     }
   ],
-  "anyOf": [
-    {
-      "required": ["apiKey"]
-    },
-    {
-      "required": ["existingSecretName"]
-    }
-  ],
-  "oneOf": [
-    {
-      "properties": {
-        "apiKey": {
-          "pattern": "^[a-zA-Z0-9-_.~!*'();]+$",
-          "type": "string"
-        },
-        "existingSecretName": {
-          "type": "null"
-        }
-      }
-    },
-    {
-      "properties": {
-        "apiKey": {
-          "type": "null"
-        },
-        "existingSecretName": {
-          "type": "string"
-        }
-      }
-    }
-  ],
   "properties": {
     "aggregator": {
       "additionalProperties": false,
