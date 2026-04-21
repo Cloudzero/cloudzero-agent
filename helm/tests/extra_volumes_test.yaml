@@ -156,6 +156,9 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
+      configmapReload:
+        prometheus:
+          enabled: false
       defaults:
         federation:
           enabled: true
@@ -188,8 +191,60 @@ tests:
             mountPath: /mnt/secrets-store
             readOnly: true
         template: templates/agent-daemonset.yaml
+
+  - it: should add extra volumes and mounts to the backfill CronJob
+    documentIndex: 0
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
       - contains:
           path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key-csi
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: "cloudzero-api-key-spc"
+        template: templates/backfill-job.yaml
+
+  - it: should add extra volumes and mounts to the backfill one-time Job
+    documentIndex: 1
+    set:
+      clusterName: "test-cluster"
+      cloudAccountId: "123456789"
+      region: "us-east-1"
+      existingSecretName: "cloudzero-api-key"
+      apiKey: null
+      extraVolumes:
+        - name: cloudzero-api-key-csi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cloudzero-api-key-spc"
+      extraVolumeMounts:
+        - name: cloudzero-api-key-csi
+          mountPath: /mnt/secrets-store
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
           content:
             name: cloudzero-api-key-csi
             csi:
