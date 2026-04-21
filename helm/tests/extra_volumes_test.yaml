@@ -15,39 +15,33 @@ tests:
       existingSecretName: "cloudzero-api-key"
       apiKey: null
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/aggregator-deploy.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/aggregator-deploy.yaml
       - contains:
           path: spec.template.spec.containers[1].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/aggregator-deploy.yaml
 
@@ -59,39 +53,33 @@ tests:
       existingSecretName: "cloudzero-api-key"
       apiKey: null
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/agent-deploy.yaml
       - contains:
           path: spec.template.spec.initContainers[0].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/agent-deploy.yaml
       - contains:
           path: spec.template.spec.containers[1].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/agent-deploy.yaml
 
@@ -103,49 +91,40 @@ tests:
       existingSecretName: "cloudzero-api-key"
       apiKey: null
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/webhook-deploy.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/webhook-deploy.yaml
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/config-loader-job.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/config-loader-job.yaml
 
@@ -163,32 +142,26 @@ tests:
         federation:
           enabled: true
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/agent-daemonset.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
-            name: cloudzero-api-key-csi
-            mountPath: /mnt/secrets-store
+            name: custom-extra-volume
+            mountPath: /opt/custom-extra
             readOnly: true
         template: templates/agent-daemonset.yaml
 
@@ -201,26 +174,20 @@ tests:
       existingSecretName: "cloudzero-api-key"
       apiKey: null
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.jobTemplate.spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/backfill-job.yaml
 
   - it: should add extra volumes and mounts to the backfill one-time Job
@@ -232,24 +199,18 @@ tests:
       existingSecretName: "cloudzero-api-key"
       apiKey: null
       extraVolumes:
-        - name: cloudzero-api-key-csi
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: "cloudzero-api-key-spc"
+        - name: custom-extra-volume
+          configMap:
+            name: custom-extra-config
       extraVolumeMounts:
-        - name: cloudzero-api-key-csi
-          mountPath: /mnt/secrets-store
+        - name: custom-extra-volume
+          mountPath: /opt/custom-extra
           readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: cloudzero-api-key-csi
-            csi:
-              driver: secrets-store.csi.k8s.io
-              readOnly: true
-              volumeAttributes:
-                secretProviderClass: "cloudzero-api-key-spc"
+            name: custom-extra-volume
+            configMap:
+              name: custom-extra-config
         template: templates/backfill-job.yaml
