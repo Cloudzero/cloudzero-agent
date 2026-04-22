@@ -1,0 +1,60 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: verify-alloy-ready
+spec:
+  commands:
+    # Belt-and-suspenders: step 01's `helm --wait` already blocks on Ready,
+    # but re-assert explicitly here so the failure message points at readiness
+    # rather than at helm timing out.
+    - command: kubectl
+      args:
+        - wait
+        - --for=condition=Ready
+        - pod
+        - -l
+        - app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-alloy-ct
+        - -n
+        - cz-alloy-clustered-test
+        - --timeout=180s
+    # Fail if the Alloy container has restarted at all. The pre-fix failure
+    # is CrashLoopBackOff on first start, so any restart > 0 before Ready
+    # flags the regression even if a later retry somehow succeeded.
+    - command: sh
+      args:
+        - "-c"
+        - |
+          set -e
+          RESTARTS=$(kubectl get pod \
+            -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-alloy-ct \
+            -n cz-alloy-clustered-test \
+            -o jsonpath='{.items[*].status.containerStatuses[?(@.name=="cloudzero-agent-alloy")].restartCount}')
+          echo "Alloy container restart count: $RESTARTS"
+          for r in $RESTARTS; do
+            if [ "$r" -ne 0 ]; then
+              echo "FAIL: Alloy container restarted $r times (expected 0)" >&2
+              kubectl describe pod \
+                -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-alloy-ct \
+                -n cz-alloy-clustered-test >&2 || true
+              exit 1
+            fi
+          done
+    # Fail if the specific /tmp regression signature appears in Alloy logs.
+    # Pins this assertion to CP-40307 so unrelated clustered-mode failures
+    # can't silently green-bar.
+    - command: sh
+      args:
+        - "-c"
+        - |
+          set -e
+          LOGS=$(kubectl logs \
+            -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-alloy-ct \
+            -n cz-alloy-clustered-test \
+            -c cloudzero-agent-alloy \
+            --all-containers=false \
+            --tail=-1 2>&1 || true)
+          if echo "$LOGS" | grep -q 'mkdir /tmp: permission denied'; then
+            echo "FAIL: Alloy logs contain the CP-40307 regression signature" >&2
+            echo "$LOGS" >&2
+            exit 1
+          fi

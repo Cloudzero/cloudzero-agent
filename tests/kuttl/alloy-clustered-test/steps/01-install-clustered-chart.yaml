@@ -1,0 +1,22 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-clustered-chart
+spec:
+  commands:
+    # Install the chart in clustered mode as a separate release so we do not
+    # disturb the default cz-agent release other KUTTL suites run against.
+    # The dev image tag mirrors the `make helm-install-current` target.
+    - command: sh
+      args:
+        - "-c"
+        - |
+          set -e
+          DEV_TAG="dev-$(git rev-parse HEAD)"
+          .tools/bin/helm upgrade --install cz-alloy-ct ./helm \
+            --namespace cz-alloy-clustered-test \
+            --create-namespace \
+            --values clusters/kind-overrides.yaml \
+            --set components.agent.mode=clustered \
+            --set components.agent.image.tag="$DEV_TAG" \
+            --wait --timeout=3m

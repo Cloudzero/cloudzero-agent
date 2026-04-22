@@ -1,0 +1,19 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+metadata:
+  name: alloy-clustered-test
+  annotations:
+    kuttl.dev/type: "test"
+spec:
+  testDirs:
+    - ./steps
+  timeout: 300
+  parallel: 1
+  reportFormat: JSON
+  reportName: alloy-clustered-test-report
+  # The suite installs its own helm release in a dedicated namespace and
+  # uninstalls it in step 99, so we do not let kuttl delete the namespace
+  # (that would leave helm release state orphaned).
+  deleteNamespace: false
+  namespaceLabels:
+    test: alloy-clustered
