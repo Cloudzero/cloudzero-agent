@@ -2148,6 +2148,8 @@ spec:
               mountPath: /checks/
             - name: validator-config-volume
               mountPath: /checks/app/config/
+            - name: alloy-tmp
+              mountPath: /tmp
             - name: cloudzero-api-key
               mountPath: /etc/config/secrets/
               subPath: ""
@@ -2171,6 +2173,8 @@ spec:
           configMap:
             name: cz-agent-validator-configuration
         - name: lifecycle-volume
+          emptyDir: {}
+        - name: alloy-tmp
           emptyDir: {}
         - name: cloudzero-api-key
           secret:
