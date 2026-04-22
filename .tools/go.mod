@@ -1,6 +1,6 @@
 module github.com/cloudzero/cloudzero-agent/.tools
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/homeport/dyff v1.11.3
