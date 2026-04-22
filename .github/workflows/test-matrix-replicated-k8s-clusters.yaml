@@ -77,18 +77,6 @@ jobs:
               arch: amd64,
             },
             {
-              distribution: aks,
-              version: v1.32,
-              instance-type: Standard_D4S_v5,
-              arch: amd64,
-            },
-            {
-              distribution: aks,
-              version: v1.32,
-              instance-type: Standard_D4ps_v5,
-              arch: arm64,
-            },
-            {
               distribution: gke,
               version: v1.32,
               instance-type: e2-standard-2,
