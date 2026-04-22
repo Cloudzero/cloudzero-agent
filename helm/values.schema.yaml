@@ -302,23 +302,7 @@ additionalProperties: false
 required:
   - host
 
-# # Enforce that exactly one of apiKey or existingSecretName must be set
-# # anyOf ensures at least one is required, oneOf ensures only one has a non-null value
-# anyOf:
-#   - required: [apiKey]
-#   - required: [existingSecretName]
-# oneOf:
-#   - properties:
-#       apiKey:
-#         type: string
-#         pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
-#       existingSecretName:
-#         type: "null"
-#   - properties:
-#       apiKey:
-#         type: "null"
-#       existingSecretName:
-#         type: string
+# Root-level cross-field validations live in allOf below.
 
 properties:
   cloudAccountId:
@@ -2902,6 +2886,39 @@ properties:
 
 # Root-level conditional validations that span multiple properties
 allOf:
+  # Conditional: API key source validation
+  #
+  # Default mode: exactly one of apiKey or existingSecretName must be set.
+  # External volume mode: if both are null, require explicit extraVolumes and
+  # extraVolumeMounts so this remains intentional and not accidental.
+  - if:
+      properties:
+        apiKey:
+          type: "null"
+        existingSecretName:
+          type: "null"
+    then:
+      properties:
+        extraVolumes:
+          type: array
+          minItems: 1
+        extraVolumeMounts:
+          type: array
+          minItems: 1
+    else:
+      oneOf:
+        - properties:
+            apiKey:
+              type: string
+              pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
+            existingSecretName:
+              type: "null"
+        - properties:
+            apiKey:
+              type: "null"
+            existingSecretName:
+              type: string
+
   # Conditional: Federation mode constraint
   #
   # If defaults.federation.enabled is true, then components.agent.mode must be

@@ -5445,6 +5445,55 @@
   "allOf": [
     {
       "if": {
+        "properties": {
+          "apiKey": {
+            "type": "null"
+          },
+          "existingSecretName": {
+            "type": "null"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "extraVolumes": {
+            "minItems": 1,
+            "type": "array"
+          },
+          "extraVolumeMounts": {
+            "minItems": 1,
+            "type": "array"
+          }
+        }
+      },
+      "else": {
+        "oneOf": [
+          {
+            "properties": {
+              "apiKey": {
+                "pattern": "^[a-zA-Z0-9-_.~!*'();]+$",
+                "type": "string"
+              },
+              "existingSecretName": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "properties": {
+              "apiKey": {
+                "type": "null"
+              },
+              "existingSecretName": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
         "allOf": [
           {
             "properties": {
