@@ -1527,6 +1527,7 @@ data:
       volumeMounts: []
       volumes: []
     prometheusConfig:
+      additionalAlloyConfig: ""
       configMapAnnotations: {}
       configMapNameOverride: ""
       configOverride: ""

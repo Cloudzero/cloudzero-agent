@@ -1019,7 +1019,16 @@ prometheusConfig:
       # Scrape interval for GPU metrics job
       scrapeInterval: 30s
     # -- Any items added to this list will be added to the Prometheus scrape configuration.
+    # Only used when components.agent.mode is "agent" (Prometheus mode). For
+    # clustered (Alloy) mode, use prometheusConfig.additionalAlloyConfig.
     additionalScrapeJobs: []
+  # -- Raw Alloy River configuration appended to the generated config when
+  # components.agent.mode is "clustered" (Alloy mode). Use this to add custom
+  # scrape jobs or other pipeline components. Your components should forward to
+  # prometheus.remote_write.cloudzero.receiver to ship metrics to the
+  # CloudZero aggregator. Ignored in non-clustered (Prometheus) mode; use
+  # prometheusConfig.scrapeJobs.additionalScrapeJobs there instead.
+  additionalAlloyConfig: ""
 
 # General server settings that apply to both the prometheus agent server and the webhook server
 serverConfig:

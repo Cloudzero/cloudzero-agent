@@ -1357,6 +1357,7 @@ data:
         port: 8080
       tolerations: []
     prometheusConfig:
+      additionalAlloyConfig: ""
       configMapAnnotations: {}
       configMapNameOverride: ""
       configOverride: ""

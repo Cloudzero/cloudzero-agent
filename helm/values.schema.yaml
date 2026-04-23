@@ -1664,9 +1664,27 @@ properties:
           additionalScrapeJobs:
             description: |
               Additional scrape jobs to add to the configuration.
+
+              Only used when components.agent.mode is "agent" (Prometheus mode).
+              For clustered (Alloy) mode, use
+              prometheusConfig.additionalAlloyConfig.
             type: array
             items:
               type: object
+      additionalAlloyConfig:
+        description: |
+          Raw Alloy River configuration appended to the generated config when
+          components.agent.mode is "clustered" (Alloy mode).
+
+          Use this to add custom scrape jobs or other pipeline components.
+          Components should forward to
+          prometheus.remote_write.cloudzero.receiver to ship metrics to the
+          CloudZero aggregator.
+
+          Ignored in non-clustered (Prometheus) mode; use
+          prometheusConfig.scrapeJobs.additionalScrapeJobs there instead.
+        type: string
+        default: ""
 
   commonMetaLabels:
     $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
