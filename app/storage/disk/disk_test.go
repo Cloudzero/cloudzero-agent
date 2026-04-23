@@ -245,6 +245,106 @@ func TestDiskStore_GetFiles(t *testing.T) {
 	})
 }
 
+func TestDiskStore_RecoveryAfterFlushFailure(t *testing.T) {
+	dirPath := t.TempDir()
+	rowLimit := 5
+
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
+	require.NoError(t, err)
+
+	mockClock := mocks.NewMockClock(time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC))
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     "test_metric",
+		NodeName:       "node1",
+		CreatedAt:      mockClock.GetCurrentTime(),
+		TimeStamp:      mockClock.GetCurrentTime(),
+		Labels:         map[string]string{"label": "test"},
+		Value:          "123.45",
+	}
+	ctx := context.Background()
+
+	// Put some metrics (below row limit)
+	err = ps.Put(ctx, metric, metric)
+	require.NoError(t, err)
+	assert.Equal(t, 2, ps.Pending())
+
+	// Make directory read-only so os.Rename fails during flush
+	require.NoError(t, os.Chmod(dirPath, 0o444))
+
+	// Put enough metrics to trigger row-limit flush — this should fail
+	err = ps.Put(ctx, metric, metric, metric, metric)
+	assert.Error(t, err, "flush should fail when directory is read-only")
+
+	// Restore directory permissions
+	require.NoError(t, os.Chmod(dirPath, 0o755))
+
+	// The store should recover: new Put() should succeed
+	err = ps.Put(ctx, metric)
+	require.NoError(t, err, "Put should recover after failed flush")
+	assert.Equal(t, 1, ps.Pending())
+
+	// Flush should also work
+	err = ps.Flush()
+	require.NoError(t, err, "Flush should succeed after recovery")
+	assert.Equal(t, 0, ps.Pending())
+
+	// Verify the flushed file exists and is readable
+	files, err := ps.GetFiles()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(files), "should have exactly one completed file")
+}
+
+func TestDiskStore_CorruptFileCleanedUpAfterFlushFailure(t *testing.T) {
+	dirPath := t.TempDir()
+	rowLimit := 5
+
+	ps, err := disk.NewDiskStore(config.Database{StoragePath: dirPath, MaxRecords: rowLimit}, disk.WithContentIdentifier(disk.CostContentIdentifier))
+	require.NoError(t, err)
+
+	mockClock := mocks.NewMockClock(time.Date(2023, 10, 1, 12, 0, 0, 0, time.UTC))
+	metric := types.Metric{
+		ID:             uuid.New(),
+		ClusterName:    "cluster",
+		CloudAccountID: "cloudaccount",
+		MetricName:     "test_metric",
+		NodeName:       "node1",
+		CreatedAt:      mockClock.GetCurrentTime(),
+		TimeStamp:      mockClock.GetCurrentTime(),
+		Labels:         map[string]string{"label": "test"},
+		Value:          "123.45",
+	}
+	ctx := context.Background()
+
+	// Put some metrics
+	err = ps.Put(ctx, metric, metric)
+	require.NoError(t, err)
+
+	// Make directory read-only to cause flush failure
+	require.NoError(t, os.Chmod(dirPath, 0o444))
+
+	// Trigger flush failure
+	err = ps.Put(ctx, metric, metric, metric, metric)
+	assert.Error(t, err)
+
+	// Restore permissions
+	require.NoError(t, os.Chmod(dirPath, 0o755))
+
+	// Verify no incomplete active files remain (only the new active file from recovery)
+	entries, err := os.ReadDir(dirPath)
+	require.NoError(t, err)
+
+	completedFiles := 0
+	for _, entry := range entries {
+		if filepath.Ext(entry.Name()) == ".br" {
+			completedFiles++
+		}
+	}
+	assert.Equal(t, 0, completedFiles, "no completed .br files should exist from the failed flush")
+}
+
 func TestDiskStore_GetUsage(t *testing.T) {
 	tmpDir := t.TempDir()
 	d, err := disk.NewDiskStore(config.Database{StoragePath: tmpDir, MaxRecords: 100}, disk.WithContentIdentifier(disk.CostContentIdentifier))
