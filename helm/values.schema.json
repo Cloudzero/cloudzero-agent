@@ -6166,6 +6166,48 @@
           },
           "type": "object"
         },
+        "monitoring": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "default": null,
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": ["auto"],
+                  "type": "string"
+                }
+              ]
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "namespace": {
+              "default": null,
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "sharedSecret": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
         "prometheus": {
           "additionalProperties": false,
           "properties": {

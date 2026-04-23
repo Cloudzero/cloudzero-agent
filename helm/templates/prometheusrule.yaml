@@ -1,0 +1,388 @@
+{{/*
+PrometheusRule CRD for Prometheus Operator.
+
+Creates pre-configured alert rules that Prometheus Operator automatically picks
+up. These alerts cover the critical failure modes documented in the "Monitoring
+the CloudZero Agent" wiki page.
+
+Requires the Prometheus Operator CRDs (monitoring.coreos.com/v1) to be installed
+in the cluster. Controlled by components.monitoring.enabled (null=auto-detect,
+true=force, false=disable).
+
+Alert expressions use the Helm-generated service names to construct job label
+selectors, so they work regardless of the Helm release name.
+*/}}
+{{- if include "cloudzero-agent.monitoring.enabled" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "cloudzero-agent.server.fullname" . }}-alerts
+  namespace: {{ .Values.components.monitoring.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.baseLabels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+    {{- with .Values.components.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: cloudzero-agent.rules
+      rules:
+        {{/*
+        ===== Critical Alerts =====
+
+        These indicate the agent is broken and not collecting or delivering data.
+        */}}
+
+        {{/*
+        CloudZeroAgentDown: The Prometheus agent (server pod) scrape target is
+        unreachable. No metrics are being collected from the cluster.
+
+        The Prometheus Operator derives the job label from the Service name
+        (not the ServiceMonitor name). We use the exact Helm-generated service
+        name here so alerts work regardless of the Helm release name.
+
+        See: Monitoring the CloudZero Agent > Monitoring Prometheus Agent Scrape Health
+        */}}
+        - alert: CloudZeroAgentDown
+          expr: |
+            up{job="{{ include "cloudzero-agent.server.fullname" . }}"} == 0
+            or
+            absent(up{job="{{ include "cloudzero-agent.server.fullname" . }}"})
+          for: 5m
+          labels:
+            severity: critical
+            component: server
+          annotations:
+            summary: "CloudZero Agent server is down"
+            description: "The CloudZero Agent server (Prometheus) has been down for more than 5 minutes. No cluster metrics are being collected."
+
+        {{/*
+        CloudZeroCollectorNoMetrics: The collector is running but not receiving
+        any remote-write data from the internal Prometheus agent.
+
+        Uses the real metric name from app/domain/metric_collector.go.
+        The collector shares the aggregator service name but is distinguished
+        by the endpoint label (port name "metrics").
+        See: Monitoring the CloudZero Agent > Monitoring Data Pipeline Health
+        */}}
+        - alert: CloudZeroCollectorNoMetrics
+          expr: rate(metrics_received_total{job="{{ include "cloudzero-agent.aggregator.name" . }}", endpoint="metrics"}[10m]) == 0
+          for: 15m
+          labels:
+            severity: critical
+            component: collector
+          annotations:
+            summary: "CloudZero Collector not receiving metrics"
+            description: "The collector has not received any metrics for 15 minutes. The internal Prometheus agent may not be sending data, or the collector may be down."
+
+        {{/*
+        CloudZeroWebhookDown: The webhook server scrape target is unreachable.
+        Admission controller functionality is unavailable, meaning Kubernetes
+        resource metadata is not being captured.
+
+        See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
+        */}}
+        - alert: CloudZeroWebhookDown
+          expr: |
+            up{job="{{ include "cloudzero-agent.serviceName" . }}"} == 0
+            or
+            absent(up{job="{{ include "cloudzero-agent.serviceName" . }}"})
+          for: 5m
+          labels:
+            severity: critical
+            component: webhook
+          annotations:
+            summary: "CloudZero Webhook server is down"
+            description: "The webhook server has been down for 5 minutes. Kubernetes resource metadata is not being captured for cost attribution."
+
+        {{/*
+        CloudZeroAggregatorDown: The aggregator pod (containing the collector
+        and shipper containers) scrape target is unreachable. Both metric
+        collection and data upload are affected.
+
+        Uses the collector's metrics endpoint to detect the aggregator pod.
+        See: Monitoring the CloudZero Agent > Monitoring Data Pipeline Health
+        */}}
+        - alert: CloudZeroAggregatorDown
+          expr: |
+            up{job="{{ include "cloudzero-agent.aggregator.name" . }}", endpoint="metrics"} == 0
+            or
+            absent(up{job="{{ include "cloudzero-agent.aggregator.name" . }}", endpoint="metrics"})
+          for: 5m
+          labels:
+            severity: critical
+            component: aggregator
+          annotations:
+            summary: "CloudZero Aggregator is down"
+            description: "The aggregator pod (collector + shipper) has been down for 5 minutes. No metrics are being collected or uploaded to CloudZero."
+
+        {{/*
+        CloudZeroShipperUploadFailures: The shipper is failing to upload files
+        to CloudZero. Data is accumulating on disk and will eventually be lost
+        if the shipper cannot recover.
+
+        The threshold is dynamically calculated as 3.1x the configured
+        costMaxInterval (default 30m = 93m threshold). This gives the shipper
+        three full flush cycles plus buffer to attempt automatic recovery
+        before firing.
+
+        Uses shipper_run_fail_total from app/domain/shipper/metrics.go.
+        The shipper shares the aggregator service name but is distinguished
+        by the endpoint label (port name "shipper-metrics").
+        See: Monitoring the CloudZero Agent > Monitoring Shipper Health
+        */}}
+        {{- $shipperCritInterval := include "cloudzero-agent.scaledDuration" (list .Values.aggregator.database.costMaxInterval 3.1) }}
+        - alert: CloudZeroShipperUploadFailures
+          expr: rate(shipper_run_fail_total{job="{{ include "cloudzero-agent.aggregator.name" . }}", endpoint="shipper-metrics"}[{{ $shipperCritInterval }}]) > 0
+          for: {{ $shipperCritInterval }}
+          labels:
+            severity: critical
+            component: shipper
+          annotations:
+            summary: "CloudZero Shipper failing to upload data"
+            description: "The shipper has been failing to upload metric data for {{ $shipperCritInterval }}. Check the error_status_code label for the failure category (err-unauthorized, err-network, etc.)."
+
+        {{/*
+        CloudZeroWebhookNoEvents: The webhook is running but receiving zero
+        admission requests. This is the most dangerous silent failure mode --
+        it typically indicates a TLS certificate mismatch after rotation.
+
+        Uses czo_webhook_types_total from app/domain/webhook/webhook.go.
+        See: Monitoring the CloudZero Agent > Monitoring Webhook TLS Certificate Health
+        */}}
+        - alert: CloudZeroWebhookNoEvents
+          expr: rate(czo_webhook_types_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m]) == 0
+          for: 30m
+          labels:
+            severity: critical
+            component: webhook
+          annotations:
+            summary: "CloudZero Webhook receiving zero admission events"
+            description: "The webhook has not received any Kubernetes admission requests for 30 minutes despite being running. The most common cause is a TLS certificate mismatch. Compare the caBundle in the ValidatingWebhookConfiguration with the ca.crt in the webhook TLS secret."
+
+        {{/*
+        ===== Warning Alerts =====
+
+        These indicate degraded operation that may escalate to critical.
+        */}}
+
+        {{/*
+        CloudZeroShipperNoSuccessfulUploads: The shipper has not successfully
+        uploaded any files recently. Broader than the failure alert -- catches
+        any delivery problem regardless of the specific error category.
+
+        The threshold is dynamically calculated as 1.5x the configured
+        costMaxInterval (default 30m = 45m threshold). This allows one
+        full flush cycle plus 50% buffer before warning.
+
+        Uses shipper_handle_request_success_total from app/domain/shipper/metrics.go.
+        See: Monitoring the CloudZero Agent > Monitoring Shipper Health
+        */}}
+        {{- $shipperWarnInterval := include "cloudzero-agent.scaledDuration" (list .Values.aggregator.database.costMaxInterval 1.5) }}
+        - alert: CloudZeroShipperNoSuccessfulUploads
+          expr: rate(shipper_handle_request_success_total{job="{{ include "cloudzero-agent.aggregator.name" . }}", endpoint="shipper-metrics"}[{{ $shipperWarnInterval }}]) == 0
+          for: {{ $shipperWarnInterval }}
+          labels:
+            severity: warning
+            component: shipper
+          annotations:
+            summary: "CloudZero Shipper not completing uploads"
+            description: "No files have been successfully uploaded in {{ $shipperWarnInterval }}. The shipper flush interval is configured to {{ .Values.aggregator.database.costMaxInterval }}."
+
+        {{/*
+        CloudZeroWebhookServerHighLatency: Internal webhook processing time
+        is high. Note this only measures server-side processing and does NOT
+        include network/TLS overhead. For end-to-end latency, monitor the
+        apiserver_admission_webhook_admission_duration_seconds metric from the
+        Kubernetes API server.
+
+        See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
+        */}}
+        - alert: CloudZeroWebhookServerHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              rate(function_execution_seconds_bucket{
+                job="{{ include "cloudzero-agent.serviceName" . }}",
+                function_name=~"executeAdmissionsReviewRequest_.*",
+                error=""
+              }[5m])
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            component: webhook
+          annotations:
+            summary: "High server-side processing latency on CloudZero Webhook"
+            description: "The webhook server-side processing p99 exceeds 500ms. This measures internal processing time only; actual API server impact includes additional network and TLS overhead. Cross-reference with apiserver_admission_webhook_admission_duration_seconds."
+
+        {{/*
+        CloudZeroWebhookRemoteWriteFailures: The webhook cannot deliver
+        metadata to the CloudZero API.
+
+        Uses remote_write_failures_total from the webhook metrics.
+        See: Monitoring the CloudZero Agent > Monitoring Webhook Metadata Delivery
+        */}}
+        - alert: CloudZeroWebhookRemoteWriteFailures
+          expr: rate(remote_write_failures_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m]) > 0
+          for: 15m
+          labels:
+            severity: warning
+            component: webhook
+          annotations:
+            summary: "CloudZero Webhook failing to push metadata"
+            description: "The webhook cannot push resource metadata to the CloudZero API. Cost attribution metadata is not being delivered. Check network connectivity and API key validity."
+
+        {{/*
+        CloudZeroRemoteWriteLag: The internal Prometheus agent's remote-write
+        queue is falling behind. Data is being scraped but not delivered to the
+        collector in a timely manner.
+
+        Uses Prometheus native metrics available on the server pod.
+        See: Monitoring the CloudZero Agent > Monitoring Prometheus Agent Scrape Health
+        */}}
+        - alert: CloudZeroRemoteWriteLag
+          expr: |
+            (
+              prometheus_remote_storage_queue_highest_timestamp_seconds{job="{{ include "cloudzero-agent.server.fullname" . }}"}
+              -
+              prometheus_remote_storage_queue_highest_sent_timestamp_seconds{job="{{ include "cloudzero-agent.server.fullname" . }}"}
+            ) > 300
+          for: 10m
+          labels:
+            severity: warning
+            component: server
+          annotations:
+            summary: "CloudZero Agent remote-write queue is lagging"
+            description: "The remote-write queue is more than 5 minutes behind. Data is being scraped but not delivered to the collector in a timely manner. Persistent lag indicates the collector cannot keep up or there is a network issue."
+
+        {{/*
+        CloudZeroAgentHighMemoryUsage: A CloudZero Agent container is using
+        more than 85% of its memory limit. This uses the metric and threshold
+        recommended by the monitoring wiki.
+
+        Uses standard Kubernetes container metrics.
+        See: Monitoring the CloudZero Agent > Monitoring Pod and Container Health
+        */}}
+        - alert: CloudZeroAgentHighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{
+                namespace="{{ .Release.Namespace }}",
+                container!="", container!="POD"
+              }
+              / on(namespace, pod, container)
+              kube_pod_container_resource_limits{
+                namespace="{{ .Release.Namespace }}",
+                resource="memory"
+              }
+            ) > 0.85
+          for: 10m
+          labels:
+            severity: warning
+            component: agent
+          annotations:
+            summary: "CloudZero Agent container using excessive memory"
+            description: "A CloudZero Agent container is using more than 85% of its memory limit. It may be at risk of OOM kills. Increase the memory limit for the affected container."
+
+        {{/*
+        CloudZeroAgentOOMKilled: A CloudZero Agent container was terminated
+        by the kernel OOM killer. This is a post-incident alert -- the
+        container has already been killed and (if restartPolicy allows)
+        restarted. Repeated OOM kills indicate the memory limit is too low
+        for the workload.
+
+        Uses kube_pod_container_status_last_terminated_reason from
+        kube-state-metrics, which reports the reason for the most recent
+        container termination. The alert fires if any CloudZero container's
+        last termination was OOMKilled and this state persists for 1 minute
+        (avoiding flapping on a single restart).
+
+        See: Monitoring the CloudZero Agent > Monitoring Pod and Container Health
+        */}}
+        - alert: CloudZeroAgentOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{
+              namespace="{{ .Release.Namespace }}",
+              reason="OOMKilled"
+            } == 1
+          for: 1m
+          labels:
+            severity: critical
+            component: agent
+          annotations:
+            summary: "CloudZero Agent container OOM killed"
+            description: "The {{ "{{ $labels.container }}" }} container in pod {{ "{{ $labels.pod }}" }} was OOM killed. The memory limit is too low for the current workload. Increase the memory limit for this container."
+
+        {{/*
+        CloudZeroAgentContainerRestarting: A CloudZero Agent container is in
+        a restart loop. This catches CrashLoopBackOff and other repeated
+        restart scenarios that may not trigger OOM-specific alerts (e.g.,
+        configuration errors, missing secrets, TLS cert issues).
+
+        Uses the rate of container restarts over 15 minutes. A rate > 0
+        sustained for 15 minutes means multiple restarts have occurred.
+
+        See: Monitoring the CloudZero Agent > Monitoring Pod and Container Health
+        */}}
+        - alert: CloudZeroAgentContainerRestarting
+          expr: |
+            rate(kube_pod_container_status_restarts_total{
+              namespace="{{ .Release.Namespace }}"
+            }[15m]) * 60 * 15 > 2
+          for: 15m
+          labels:
+            severity: warning
+            component: agent
+          annotations:
+            summary: "CloudZero Agent container is restarting frequently"
+            description: "The {{ "{{ $labels.container }}" }} container in pod {{ "{{ $labels.pod }}" }} has restarted more than 2 times in the last 15 minutes. Check pod logs for the root cause."
+
+        {{/*
+        ===== Data Quality Alerts =====
+
+        These detect scenarios where the agent is running but the data it
+        collects is insufficient for accurate cost attribution.
+        */}}
+
+        {{/*
+        CloudZeroMissingContainerMetrics: cAdvisor metrics are being scraped
+        but lack container-level labels (container, image). This is the
+        scenario where data flows through the pipeline and looks
+        healthy, but cost attribution produces zeros because the pipeline
+        expects container-level granularity.
+
+        This happens when the CRI (e.g., Docker on older distributions)
+        does not emit container-level rollups. The metrics arrive at node
+        or pod level only.
+
+        The alert checks whether container_cpu_usage_seconds_total has ANY
+        time series with a non-empty container label. If the metric exists
+        (pod/node level) but no container-level variants are found, this
+        alert fires.
+
+        Severity is warning because pod-level data still provides usable
+        (though less accurate) cost attribution for memory, but CPU
+        requires container-level metrics.
+
+        See: docs/metric-level-classification.md
+        */}}
+        - alert: CloudZeroMissingContainerMetrics
+          expr: |
+            (
+              count(container_cpu_usage_seconds_total{container!="", container!="POD", image!=""}) or vector(0)
+            )
+            == 0
+            and
+            (
+              count(container_cpu_usage_seconds_total) or vector(0)
+            )
+            > 0
+          for: 30m
+          labels:
+            severity: warning
+            component: agent
+          annotations:
+            summary: "cAdvisor metrics missing container-level labels"
+            description: "cAdvisor is emitting container_cpu_usage_seconds_total but no time series have container-level labels (container, image). Only node/pod-level aggregates are available. This typically indicates the container runtime (CRI) is not providing container-level metrics to cAdvisor. CPU cost attribution will be inaccurate."
+{{- end }}
