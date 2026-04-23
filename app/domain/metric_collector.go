@@ -25,7 +25,6 @@ import (
 	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/prompb"
 	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
-	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -159,10 +158,10 @@ func NewMetricCollector(s *config.Settings, clock types.TimeProvider, costStore 
 // PutMetrics processes a Prometheus remote_write request and stores classified metrics.
 // This method handles decompression, protocol version detection, metric classification,
 // and routing to appropriate storage backends while maintaining compatibility statistics.
-func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*remote.WriteResponseStats, error) {
+func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingType string, body []byte) (*WriteResponseStats, error) {
 	var (
 		metrics      []types.Metric
-		stats        *remote.WriteResponseStats
+		stats        *WriteResponseStats
 		decompressed = body
 		err          error
 	)
@@ -191,7 +190,7 @@ func (d *MetricCollector) PutMetrics(ctx context.Context, contentType, encodingT
 	case v2ContentType:
 		metrics, stats, err = d.DecodeV2(decompressed)
 		if err != nil {
-			return &remote.WriteResponseStats{}, ErrJSONUnmarshal
+			return &WriteResponseStats{}, ErrJSONUnmarshal
 		}
 	default:
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
@@ -374,15 +373,15 @@ func (d *MetricCollector) DecodeV1(data []byte) ([]types.Metric, error) {
 }
 
 // DecodeV2 decompresses and decodes a Protobuf v2 WriteRequest, then converts it to a slice of Metric structs and collects stats.
-func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteResponseStats, error) {
+func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *WriteResponseStats, error) {
 	// Parse Protobuf v2 WriteRequest
 	var writeReq writev2.Request
 	if err := proto.Unmarshal(data, &writeReq); err != nil {
-		return nil, &remote.WriteResponseStats{}, err
+		return nil, &WriteResponseStats{}, err
 	}
 
 	// Initialize statistics
-	stats := remote.WriteResponseStats{}
+	stats := WriteResponseStats{}
 
 	// Convert to []types.Metric and update stats
 	var metrics []types.Metric
@@ -394,7 +393,7 @@ func (d *MetricCollector) DecodeV2(data []byte) ([]types.Metric, *remote.WriteRe
 			nameIdx := ts.LabelsRefs[i]
 			valueIdx := ts.LabelsRefs[i+1]
 			if int(nameIdx) >= len(writeReq.Symbols) || int(valueIdx) >= len(writeReq.Symbols) {
-				return nil, &remote.WriteResponseStats{}, errors.New("invalid label reference indices")
+				return nil, &WriteResponseStats{}, errors.New("invalid label reference indices")
 			}
 			labelName := writeReq.Symbols[nameIdx]
 			labelValue := writeReq.Symbols[valueIdx]
