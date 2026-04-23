@@ -157,3 +157,69 @@ tests:
       - notMatchRegex:
           path: data["alloy-config.river"]
           pattern: 'prometheus.scrape "dcgm"'
+
+  # Test that additionalAlloyConfig is injected when provided
+  - it: should inject additionalAlloyConfig when set
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.additionalAlloyConfig: |
+        prometheus.scrape "external_cadvisor" {
+          targets = [{__address__ = "external-cadvisor.svc:4196"}]
+          forward_to = [prometheus.remote_write.cloudzero.receiver]
+        }
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "external_cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: "external-cadvisor.svc:4196"
+
+  # Test that additionalAlloyConfig section header is absent when empty
+  - it: should not include additionalAlloyConfig section when empty
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: "USER-PROVIDED ALLOY CONFIGURATION"
+
+  # Test that the built-in cAdvisor scrape job can be disabled via
+  # integrations.cAdvisor.enabled=false in Alloy mode
+  - it: should not include built-in cAdvisor scrape when integrations.cAdvisor.enabled is false
+    set:
+      components.agent.mode: clustered
+      integrations.cAdvisor.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.kubernetes "cadvisor"'
+
+  # Test that the built-in cAdvisor scrape job can be disabled via the
+  # deprecated prometheusConfig.scrapeJobs.cadvisor.enabled=false in Alloy mode
+  - it: should not include built-in cAdvisor scrape when deprecated cadvisor.enabled is false
+    set:
+      components.agent.mode: clustered
+      prometheusConfig.scrapeJobs.cadvisor.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.kubernetes "cadvisor"'
+
+  # Test that the built-in cAdvisor scrape is present by default in Alloy mode
+  - it: should include built-in cAdvisor scrape by default in Alloy mode
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'prometheus.scrape "cadvisor"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'discovery.kubernetes "cadvisor"'

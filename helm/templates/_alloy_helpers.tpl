@@ -175,6 +175,19 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 {{ include "cloudzero-agent.alloy.scrapeGPU" . }}
 {{- end }}
 
+{{- if .Values.prometheusConfig.additionalAlloyConfig }}
+// ============================================================================
+// USER-PROVIDED ALLOY CONFIGURATION
+// ============================================================================
+//
+// Custom Alloy components defined via prometheusConfig.additionalAlloyConfig.
+// These components typically forward to prometheus.remote_write.cloudzero.receiver
+// to ship metrics through the same pipeline as the built-in scrape jobs.
+// ============================================================================
+
+{{ .Values.prometheusConfig.additionalAlloyConfig }}
+{{- end }}
+
 {{ include "cloudzero-agent.alloy.remoteWrite" . }}
 {{- end -}}
 
