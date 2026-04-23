@@ -33,6 +33,8 @@ The script will create a directory containing:
   - Service mesh detection (Istio, Linkerd, Consul)
   - Scrape configuration
   - cAdvisor metrics
+  - ValidatingWebhookConfiguration and caBundle status
+  - TLS certificate metadata (dates, fingerprints -- not contents)
 
 EOF
     exit 1
@@ -528,6 +530,133 @@ else
     echo "[FAILED]  Get node name for cAdvisor metrics" >> "${COMMAND_RESULTS_FILE}"
     FAILED_COMMANDS=$((FAILED_COMMANDS + 1))
 fi
+
+info "Gathering webhook configuration..."
+{
+    echo "==================================="
+    echo "ValidatingWebhookConfiguration"
+    echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+    echo "==================================="
+    echo ""
+
+    # Find VWCs that reference a service in the agent namespace.
+    # This catches the CloudZero webhook regardless of release name or
+    # label changes across chart versions.
+    VWC_NAMES=$(kubectl --context "${KUBECTX}" get validatingwebhookconfigurations \
+        -o jsonpath="{range .items[?(@.webhooks[0].clientConfig.service.namespace==\"${KUBENS}\")]}{.metadata.name}{\"\\n\"}{end}" 2>/dev/null || echo "")
+
+    if [ -z "${VWC_NAMES}" ]; then
+        echo "No ValidatingWebhookConfigurations found referencing namespace ${KUBENS}"
+        echo ""
+        echo "This means the Kubernetes API server is not configured to send"
+        echo "admission requests to the CloudZero webhook. The webhook pods"
+        echo "will run but receive no traffic."
+    else
+        for VWC_NAME in ${VWC_NAMES}; do
+            echo "--- ${VWC_NAME} ---"
+            echo ""
+
+            # Full YAML for the VWC
+            kubectl --context "${KUBECTX}" get validatingwebhookconfiguration "${VWC_NAME}" -o yaml 2>&1
+
+            echo ""
+            echo "--- caBundle status ---"
+
+            CA_BUNDLE=$(kubectl --context "${KUBECTX}" get validatingwebhookconfiguration "${VWC_NAME}" \
+                -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null || echo "")
+
+            if [ -z "${CA_BUNDLE}" ]; then
+                echo "WARNING: caBundle is EMPTY. The API server cannot verify the"
+                echo "webhook TLS certificate and will silently skip admission"
+                echo "requests (failurePolicy: Ignore)."
+            else
+                CA_LENGTH=${#CA_BUNDLE}
+                echo "caBundle present (${CA_LENGTH} characters)"
+
+                # Decode and show certificate metadata (not the cert itself)
+                echo "${CA_BUNDLE}" | base64 -d 2>/dev/null | \
+                    openssl x509 -noout -subject -issuer -dates -fingerprint 2>/dev/null || \
+                    echo "WARNING: caBundle could not be decoded as a valid certificate"
+            fi
+
+            echo ""
+        done
+    fi
+} > "${OUTPUT_DIR}/webhook-config.txt" 2>&1
+echo "[SUCCESS] Gather webhook configuration" >> "${COMMAND_RESULTS_FILE}"
+
+info "Gathering TLS certificate metadata..."
+{
+    echo "==================================="
+    echo "TLS Certificate Metadata"
+    echo "Collection Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+    echo "==================================="
+    echo ""
+    echo "NOTE: This file contains certificate metadata only (subject,"
+    echo "issuer, dates, fingerprint, key size). No private keys or"
+    echo "certificate contents are included."
+    echo ""
+
+    # Find TLS secrets in the namespace
+    TLS_SECRETS=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secrets \
+        -o jsonpath='{range .items[?(@.type=="kubernetes.io/tls")]}{.metadata.name}{"\n"}{end}' 2>/dev/null || echo "")
+
+    if [ -z "${TLS_SECRETS}" ]; then
+        echo "No TLS secrets found in namespace ${KUBENS}"
+    else
+        for SECRET_NAME in ${TLS_SECRETS}; do
+            echo "--- ${SECRET_NAME} ---"
+            echo ""
+
+            # Get the certificate (tls.crt) and show metadata only
+            CERT_DATA=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secret "${SECRET_NAME}" \
+                -o jsonpath='{.data.tls\.crt}' 2>/dev/null || echo "")
+
+            if [ -z "${CERT_DATA}" ]; then
+                echo "  tls.crt: not present"
+            else
+                CERT_LENGTH=${#CERT_DATA}
+                echo "  tls.crt length: ${CERT_LENGTH} characters (base64)"
+                echo ""
+                echo "  Certificate details:"
+                echo "${CERT_DATA}" | base64 -d 2>/dev/null | \
+                    openssl x509 -noout -subject -issuer -dates -fingerprint -ext subjectAltName 2>/dev/null || \
+                    echo "  WARNING: Could not decode tls.crt as a valid certificate"
+            fi
+
+            echo ""
+
+            # Check for CA cert (ca.crt) if present
+            CA_DATA=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secret "${SECRET_NAME}" \
+                -o jsonpath='{.data.ca\.crt}' 2>/dev/null || echo "")
+
+            if [ -n "${CA_DATA}" ]; then
+                CA_LENGTH=${#CA_DATA}
+                echo "  ca.crt length: ${CA_LENGTH} characters (base64)"
+                echo ""
+                echo "  CA certificate details:"
+                echo "${CA_DATA}" | base64 -d 2>/dev/null | \
+                    openssl x509 -noout -subject -issuer -dates -fingerprint 2>/dev/null || \
+                    echo "  WARNING: Could not decode ca.crt as a valid certificate"
+                echo ""
+            fi
+
+            # Check for private key existence and size (never dump contents)
+            KEY_DATA=$(kubectl --context "${KUBECTX}" -n "${KUBENS}" get secret "${SECRET_NAME}" \
+                -o jsonpath='{.data.tls\.key}' 2>/dev/null || echo "")
+
+            if [ -z "${KEY_DATA}" ]; then
+                echo "  tls.key: not present"
+            else
+                KEY_LENGTH=${#KEY_DATA}
+                echo "  tls.key: present (${KEY_LENGTH} characters base64)"
+            fi
+
+            echo ""
+        done
+    fi
+} > "${OUTPUT_DIR}/tls-cert-metadata.txt" 2>&1
+echo "[SUCCESS] Gather TLS certificate metadata" >> "${COMMAND_RESULTS_FILE}"
 
 # Finalize command results summary
 {
