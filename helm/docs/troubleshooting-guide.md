@@ -205,6 +205,127 @@ kubectl -n cloudzero-agent get secret cloudzero-agent-webhook-server-tls -o yaml
 kubectl -n cloudzero-agent get secret cloudzero-agent-webhook-server-tls -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
 ```
 
+**❌ Problem: TLS handshake error / bad certificate (CA bundle mismatch)**
+
+This occurs when the CA bundle in the `ValidatingWebhookConfiguration` does not match the certificate the webhook server is presenting. The Kubernetes API server cannot verify the webhook's TLS certificate, so it skips the webhook call entirely. Because the webhook uses `failurePolicy: Ignore`, **pods and other resources will still be created**, but the webhook silently receives no admission events -- meaning no label data is captured.
+
+**Symptoms:**
+
+- Webhook server logs contain: `go-obvious.server TLS Error: ... http: TLS handshake error from ...: remote error: tls: bad certificate`
+- New pods, deployments, etc. are created successfully, but no admission events appear in webhook logs
+- The webhook server pod is Running and passes health checks, but the `recordCount` in push logs drops to zero or stays very low
+- The `ValidatingWebhookConfiguration` exists and has a non-empty `caBundle`, but it doesn't match what the server is using
+
+**Common causes:**
+
+- Someone deleted and recreated the `ValidatingWebhookConfiguration` (e.g., via GitOps sync) without re-running the init-cert job to populate the `caBundle`
+- A `helm upgrade` created new pods with new certs, but the `ValidatingWebhookConfiguration` retained the old CA bundle
+- The TLS secret was deleted or modified externally without also updating the webhook configuration
+- A cluster restore or migration copied resources inconsistently
+
+**Diagnosis:**
+
+```bash
+# 1. Check webhook logs for TLS errors
+kubectl -n <namespace> logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=webhook-server | grep -i "tls\|certificate\|x509"
+
+# 2. Verify the TLS secret exists and has all three keys (ca.crt, tls.crt, tls.key)
+kubectl -n <namespace> get secret <release>-cz-webhook-tls -o jsonpath='{.data}' | python3 -c "import json,sys; d=json.load(sys.stdin); print('Keys:', sorted(d.keys()))"
+
+# 3. Compare the CA in the secret with the caBundle in the webhook configuration
+# Extract CA from secret:
+kubectl -n <namespace> get secret <release>-cz-webhook-tls -o jsonpath='{.data.ca\.crt}'
+# Extract caBundle from VWC:
+kubectl get validatingwebhookconfiguration <release>-cz-webhook -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
+# These two base64 values MUST match. If they differ, the TLS handshake will fail.
+```
+
+**Fix -- Method A: Quick fix (re-sync CA bundle from secret to webhook config)**
+
+Use this if the TLS secret still has valid certificate data but the `ValidatingWebhookConfiguration` has the wrong `caBundle`. This is the fastest fix and does not require restarting any pods.
+
+```bash
+# 1. Extract the CA from the TLS secret
+CA_BUNDLE=$(kubectl -n <namespace> get secret <release>-cz-webhook-tls -o jsonpath='{.data.ca\.crt}')
+
+# 2. Patch the ValidatingWebhookConfiguration with the correct CA
+kubectl patch validatingwebhookconfiguration <release>-cz-webhook \
+  --type='json' \
+  -p="[{\"op\": \"replace\", \"path\": \"/webhooks/0/clientConfig/caBundle\", \"value\": \"${CA_BUNDLE}\"}]"
+
+# 3. Verify -- create a test pod and check webhook logs for the admission event
+kubectl run webhook-test --image=busybox --restart=Never --command -- sleep 10
+kubectl -n <namespace> logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=webhook-server --tail=5
+kubectl delete pod webhook-test
+```
+
+**Fix -- Method B: Full certificate regeneration (re-run init-cert job)**
+
+Use this if the TLS secret is missing, corrupted, or you want to regenerate everything from scratch. This generates a new CA + server certificate, updates both the secret and the webhook configuration, then restarts the webhook pods.
+
+```bash
+# 1. Delete the existing TLS secret
+kubectl -n <namespace> delete secret <release>-cz-webhook-tls
+
+# 2. Recreate an empty secret (the init-cert job patches it via strategic merge)
+kubectl -n <namespace> create secret generic <release>-cz-webhook-tls
+
+# 3. Find a previous init-cert job to use as a template
+kubectl -n <namespace> get jobs -l app.kubernetes.io/name=init-cert
+
+# 4. Get the image and arguments from the most recent init-cert job
+kubectl -n <namespace> get job <init-cert-job-name> -o jsonpath='{.spec.template.spec.containers[0].image}'
+kubectl -n <namespace> get job <init-cert-job-name> -o jsonpath='{.spec.template.spec.containers[0].args[*]}'
+# Expected args: generate --secret-name=<release>-cz-webhook-tls --namespace=<namespace>
+#   --service-name=<release>-cz-webhook --webhook-name=<release>-cz-webhook [--enable-labels]
+
+# 5. Create and run a new init-cert job (substitute the image and args from step 4)
+cat <<'EOF' | kubectl apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: <release>-init-cert-manual-fix
+  namespace: <namespace>
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: <release>-cz-webhook-init-cert
+      restartPolicy: OnFailure
+      containers:
+      - name: init-cert
+        image: <image-from-step-4>
+        command: ["/app/cloudzero-certifik8s"]
+        args: ["generate",
+               "--secret-name=<release>-cz-webhook-tls",
+               "--namespace=<namespace>",
+               "--service-name=<release>-cz-webhook",
+               "--webhook-name=<release>-cz-webhook",
+               "--enable-labels"]
+EOF
+
+# 6. Wait for completion and check logs
+kubectl -n <namespace> wait --for=condition=complete job/<release>-init-cert-manual-fix --timeout=60s
+kubectl -n <namespace> logs job/<release>-init-cert-manual-fix
+# Expected output: "Certificate generated and resources updated successfully"
+
+# 7. Restart webhook pods to pick up the new certificate
+kubectl -n <namespace> rollout restart deployment <release>-cz-webhook
+kubectl -n <namespace> rollout status deployment <release>-cz-webhook --timeout=60s
+
+# 8. Verify
+kubectl run webhook-test --image=busybox --restart=Never --command -- sleep 10
+kubectl -n <namespace> logs -l app.kubernetes.io/part-of=cloudzero-agent,app.kubernetes.io/name=webhook-server --tail=5
+kubectl delete pod webhook-test
+
+# 9. Clean up the manual job
+kubectl -n <namespace> delete job <release>-init-cert-manual-fix
+```
+
+> **Note**: Replace `<namespace>` with the agent namespace (e.g., `cloudzero-agent`) and `<release>` with your Helm release name (e.g., `cloudzero-agent`). To find these values: `helm list -A | grep cloudzero`
+>
+> **Alternative**: If you have Helm access, `helm upgrade` with the same values will also re-run the init-cert job and regenerate all certificates automatically. However, this requires access to the original Helm values and chart version, which may not be available during an emergency.
+
 **❌ Problem: Admission timeouts**
 
 ```bash
@@ -348,6 +469,8 @@ kubectl -n cloudzero-agent logs -l job-name=<init-cert-job-name>
 # Verify certificates were created
 kubectl -n cloudzero-agent get secrets | grep tls
 ```
+
+If the init-cert job succeeded but the webhook still shows TLS errors, see the **TLS handshake error / bad certificate (CA bundle mismatch)** subsection in the Webhook Server section above for CA bundle mismatch diagnosis and recovery.
 
 ### Helmless Configuration Issues
 

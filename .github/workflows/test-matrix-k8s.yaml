@@ -91,7 +91,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
         with:
           version: ${{ matrix.kver.k8s }}
 
@@ -208,7 +208,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
 
       - name: Install Krew and Plugins
         uses: nick-fields/retry@v4
