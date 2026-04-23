@@ -1329,6 +1329,69 @@ properties:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
 
+      monitoring:
+        description: |
+          Prometheus Operator monitoring integration.
+
+          When enabled, the chart creates ServiceMonitor and PrometheusRule CRDs
+          that allow the Prometheus Operator to automatically discover and scrape
+          CloudZero Agent metrics and evaluate pre-configured alert rules.
+
+          Regardless of this setting, prometheus.io/* annotations are always added
+          to Services for customers using standard Prometheus service discovery.
+        additionalProperties: false
+        type: object
+        properties:
+          enabled:
+            description: |
+              Controls creation of Prometheus Operator CRDs (ServiceMonitor, PrometheusRule).
+
+              - null (default): Follow the release default. Currently maps to false
+                while this feature is being validated. In a future release, null will
+                map to "auto".
+              - "auto": Auto-detect. Creates monitoring CRDs only if the Prometheus
+                Operator CRDs (monitoring.coreos.com/v1) are available in the cluster.
+              - true: Always create monitoring CRDs. Helm will fail if the Prometheus
+                Operator CRDs are not installed.
+              - false: Never create monitoring CRDs.
+            default: null
+            oneOf:
+              - type: "null"
+              - type: boolean
+              - type: string
+                enum:
+                  - auto
+          namespace:
+            description: |
+              Namespace override for PrometheusRule and ServiceMonitor CRDs.
+              null (default) = same namespace as the agent installation.
+              Some Prometheus Operator deployments require CRDs to be in a
+              specific namespace to be discovered.
+            default: null
+            oneOf:
+              - type: "null"
+              - type: string
+          labels:
+            description: |
+              Additional labels to add to PrometheusRule and ServiceMonitor CRDs.
+              Some Prometheus Operator deployments require specific labels for CRD
+              discovery (e.g., release: kube-prometheus-stack).
+            additionalProperties:
+              type: string
+            type: object
+          sharedSecret:
+            description: |
+              Controls how Prometheus verifies the webhook server's TLS certificate
+              when scraping its metrics endpoint.
+
+              - false (default): Skip TLS verification (insecureSkipVerify). Most
+                compatible, works in all environments.
+              - true: Share the webhook's CA certificate with Prometheus for proper
+                TLS verification. Requires the Prometheus Operator to have RBAC to
+                read Secrets in the agent's namespace.
+            default: false
+            type: boolean
+
   #######################################################################################
   #######################################################################################
   ####                                                                               ####

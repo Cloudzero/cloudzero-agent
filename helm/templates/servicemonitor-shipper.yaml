@@ -1,0 +1,35 @@
+{{/*
+ServiceMonitor for the CloudZero Agent shipper (aggregator deployment sidecar).
+
+Tells the Prometheus Operator to scrape shipper metrics on port 8081 (exposed
+as service port "shipper-metrics"). These include shipper_run_fail_total,
+shipper_handle_request_success_total, shipper_file_upload_error_total, and
+shipper_disk_* gauges.
+
+See: Monitoring the CloudZero Agent > Monitoring Shipper Health
+*/}}
+{{- if include "cloudzero-agent.monitoring.enabled" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cloudzero-agent.aggregator.name" . }}-shipper
+  namespace: {{ .Values.components.monitoring.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.baseLabels" . | nindent 4 }}
+    app.kubernetes.io/component: shipper
+    {{- with .Values.components.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "cloudzero-agent.aggregator.matchLabels" . | nindent 6 }}
+  endpoints:
+    - port: shipper-metrics
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 10s
+{{- end }}

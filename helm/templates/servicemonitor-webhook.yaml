@@ -1,0 +1,56 @@
+{{/*
+ServiceMonitor for the CloudZero Agent webhook server.
+
+Tells the Prometheus Operator to scrape webhook metrics on port 8443 over HTTPS.
+The webhook uses TLS (either self-signed via init-cert job or cert-manager issued).
+
+TLS verification is controlled by components.monitoring.sharedSecret:
+
+  - false (default): Uses insecureSkipVerify. Most compatible; works everywhere.
+  - true: References the webhook's TLS CA secret for proper verification.
+    Requires the Prometheus Operator to have RBAC to read Secrets in the
+    agent's namespace (standard kube-prometheus-stack grants this by default).
+
+Note on Istio: When Istio is present without cert-manager, the chart adds
+traffic.sidecar.istio.io/excludeInboundPorts: "8443" to the webhook pods,
+which means Prometheus connects directly to the webhook (bypassing the sidecar).
+
+See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
+     Monitoring the CloudZero Agent > Monitoring Webhook Metadata Delivery
+*/}}
+{{- if include "cloudzero-agent.monitoring.enabled" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cloudzero-agent.serviceName" . }}
+  namespace: {{ .Values.components.monitoring.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "cloudzero-agent.baseLabels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook
+    {{- with .Values.components.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      scheme: https
+      tlsConfig:
+        {{- if .Values.components.monitoring.sharedSecret }}
+        ca:
+          secret:
+            name: {{ include "cloudzero-agent.tlsSecretName" . }}
+            key: ca.crt
+        serverName: {{ include "cloudzero-agent.serviceName" . }}.{{ .Release.Namespace }}.svc
+        {{- else }}
+        insecureSkipVerify: true
+        {{- end }}
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 10s
+{{- end }}
