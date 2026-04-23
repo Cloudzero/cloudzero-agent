@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 )
 
@@ -65,12 +64,7 @@ func ContainerExternalHost(ctx context.Context, container testcontainers.Contain
 		return nil, fmt.Errorf("failed to get the container host name: %w", err)
 	}
 
-	// compose the nat port
-	natPort, err := nat.NewPort("tcp", port)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the nat port: %w", err)
-	}
-	mappedPort, err := container.MappedPort(ctx, natPort)
+	mappedPort, err := container.MappedPort(ctx, port+"/tcp")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the mappedPort: %w", err)
 	}
