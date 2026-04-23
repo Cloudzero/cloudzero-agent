@@ -312,6 +312,8 @@ spec:
               mountPath: /checks/
             - name: validator-config-volume
               mountPath: /checks/app/config/
+            - name: alloy-tmp
+              mountPath: /tmp
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
         {{- end }}{{/* End Alloy container */}}
       {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
@@ -337,6 +339,10 @@ spec:
             name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
         - name: lifecycle-volume
           emptyDir: {}
+        {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
+        - name: alloy-tmp
+          emptyDir: {}
+        {{- end }}
         {{- if or .Values.existingSecretName .Values.apiKey }}
         - name: cloudzero-api-key
           secret:
