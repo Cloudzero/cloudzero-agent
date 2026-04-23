@@ -288,7 +288,7 @@ components:
     # executables, to provide CloudZero functionality.
     image:
       repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-      tag: 1.2.10  # <- Software release corresponding to this chart version.
+      tag: 1.2.11  # <- Software release corresponding to this chart version.
 
     # Agent deployment mode. Controls how the agent collects and processes metrics.
     #
