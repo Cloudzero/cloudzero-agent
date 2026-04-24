@@ -5593,8 +5593,44 @@
         "collector": {
           "additionalProperties": false,
           "properties": {
+            "livenessProbe": {
+              "additionalProperties": false,
+              "properties": {
+                "failureThreshold": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "initialDelaySeconds": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
             "port": {
               "type": "integer"
+            },
+            "readinessProbe": {
+              "additionalProperties": false,
+              "properties": {
+                "failureThreshold": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "initialDelaySeconds": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
             },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
@@ -5656,6 +5692,24 @@
           "$ref": "#/$defs/com.cloudzero.agent.image",
           "deprecated": true
         },
+        "livenessProbe": {
+          "additionalProperties": false,
+          "properties": {
+            "failureThreshold": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "initialDelaySeconds": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
         "logging": {
           "additionalProperties": false,
           "properties": {
@@ -5683,6 +5737,24 @@
         "profiling": {
           "type": "boolean"
         },
+        "readinessProbe": {
+          "additionalProperties": false,
+          "properties": {
+            "failureThreshold": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "initialDelaySeconds": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
         "reconnectFrequency": {
           "minimum": 0,
           "type": "integer"
@@ -5690,8 +5762,44 @@
         "shipper": {
           "additionalProperties": false,
           "properties": {
+            "livenessProbe": {
+              "additionalProperties": false,
+              "properties": {
+                "failureThreshold": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "initialDelaySeconds": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
             "port": {
               "type": "integer"
+            },
+            "readinessProbe": {
+              "additionalProperties": false,
+              "properties": {
+                "failureThreshold": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "initialDelaySeconds": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
             },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"

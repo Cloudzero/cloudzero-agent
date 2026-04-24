@@ -1,0 +1,95 @@
+suite: test aggregator probe configuration
+templates:
+  - templates/aggregator-deploy.yaml
+tests:
+  # The collector liveness probe uses /livez (sticky-latch semantics). This
+  # gives a pod returning persistent 5xx time to self-heal via connection
+  # rotation; if it doesn't, /livez stays 503 and the probe restarts the pod.
+  # failureThreshold=10 at periodSeconds=30s = ~5 minutes tolerance.
+  - it: should default collector livenessProbe to /livez with failureThreshold=10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /livez
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 10
+
+  # The shipper has no in-process error-rate tracker; its /healthz only
+  # reflects basic HTTP server liveness. The longer grace period that the
+  # collector uses doesn't apply — restart it promptly.
+  - it: should default shipper livenessProbe to /healthz with failureThreshold=3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.failureThreshold
+          value: 3
+
+  # Readiness stays aggressive for both containers — we want a broken pod out
+  # of the Service endpoint list quickly.
+  - it: should default collector readinessProbe to /healthz with failureThreshold=3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.failureThreshold
+          value: 3
+
+  - it: should default shipper readinessProbe to /healthz with failureThreshold=3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.failureThreshold
+          value: 3
+
+  # Per-container overrides: collector-specific setting affects collector only.
+  - it: should honor aggregator.collector.livenessProbe.failureThreshold override
+    set:
+      aggregator.collector.livenessProbe.failureThreshold: 5
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.failureThreshold
+          value: 3
+
+  - it: should honor aggregator.shipper.livenessProbe.failureThreshold override
+    set:
+      aggregator.shipper.livenessProbe.failureThreshold: 7
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 10
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.failureThreshold
+          value: 7
+
+  # Shared default override: both containers see it unless they individually
+  # override.
+  - it: should honor aggregator.livenessProbe.failureThreshold shared default override
+    set:
+      aggregator.livenessProbe.failureThreshold: 4
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 4
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.failureThreshold
+          value: 3
+
+  - it: should honor aggregator.readinessProbe.failureThreshold shared default override
+    set:
+      aggregator.readinessProbe.failureThreshold: 6
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.failureThreshold
+          value: 6
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.failureThreshold
+          value: 6
