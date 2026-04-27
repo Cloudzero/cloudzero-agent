@@ -7068,6 +7068,10 @@
     "prometheusConfig": {
       "additionalProperties": false,
       "properties": {
+        "additionalAlloyConfig": {
+          "default": "",
+          "type": "string"
+        },
         "configMapAnnotations": {
           "additionalProperties": true,
           "type": "object"

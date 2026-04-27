@@ -176,6 +176,12 @@ func (d *DiskStore) Put(ctx context.Context, metrics ...types.Metric) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	if d.writer == nil {
+		if err := d.newFileWriter(); err != nil {
+			return fmt.Errorf("failed to recover writer: %w", err)
+		}
+	}
+
 	for _, metric := range metrics {
 		encodedMetric, err := json.Marshal(metric)
 		if err != nil {
@@ -217,11 +223,34 @@ func (d *DiskStore) Flush() error {
 	return nil
 }
 
-// flushUnlocked finalizes the current writer, writes all buffered data to disk, and renames the file
-func (d *DiskStore) flushUnlocked() error {
+// flushUnlocked finalizes the current writer, writes all buffered data to disk, and renames the file.
+// On error, all state is cleaned up so the store can recover on the next Put() call.
+func (d *DiskStore) flushUnlocked() (retErr error) {
 	if d.writer == nil {
 		return nil
 	}
+
+	defer func() {
+		if retErr != nil {
+			// Abandon the corrupt file and reset state so the store can recover.
+			// Data in the current buffer is lost, but Prometheus will retry.
+			if d.compressor != nil {
+				d.compressor.Close()
+			}
+			if d.file != nil {
+				d.file.Close()
+			}
+			os.Remove(d.activeFilePath)
+
+			d.writer = nil
+			d.arrayState = nil
+			d.file = nil
+			d.compressor = nil
+			d.rowCount = 0
+
+			log.Warn().Err(retErr).Msg("flush failed, abandoned file to allow recovery")
+		}
+	}()
 
 	// End the JSON array
 	d.arrayState.End()
@@ -275,7 +304,8 @@ func (d *DiskStore) flushUnlocked() error {
 	d.writer = nil
 	d.arrayState = nil
 	d.file = nil
-	d.rowCount = 0 // Reset row count after flush
+	d.compressor = nil
+	d.rowCount = 0
 	return nil
 }
 
