@@ -61,7 +61,7 @@ func main() {
 		Str("chartsRepo", build.ChartsRepo).
 		Str("platformEndpoint", settings.Destination).
 		Interface("configFiles", configFiles).
-		Msg("Starting CloudZero Insights Controller")
+		Msg("Starting CloudZero Webhook Server")
 	if len(configFiles) == 0 {
 		log.Fatal().Msg("No configuration files provided")
 	}
@@ -90,24 +90,13 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create in-memory resource repository")
 	}
 
-	// Start a monitor that can pickup secrets changes and update the settings
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	secretMon := monitor.NewSecretMonitor(ctx, settings)
-	if err = secretMon.Run(); err != nil {
-		log.Fatal().Err(err).Msg("failed to run secret monitor") //nolint:gocritic // It's okay if the `defer cancel()` doesn't run since we're exiting.
-	}
-	defer func() {
-		if innerErr := secretMon.Shutdown(); innerErr != nil {
-			log.Err(innerErr).Msg("failed to shut down secret monitor")
-		}
-	}()
 
 	// create remote metrics writer
 	dataPusher := pusher.New(ctx, store, clock, settings)
 	if err = dataPusher.Run(); err != nil {
-		log.Fatal().Err(err).Msg("failed to start remote metrics writer")
+		log.Fatal().Err(err).Msg("failed to start remote metrics writer") //nolint:gocritic // It's okay if the `defer cancel()` doesn't run since we're exiting.
 	}
 	defer func() {
 		log.Ctx(ctx).Debug().Msg("Starting main shutdown process")

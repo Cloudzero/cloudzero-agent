@@ -1,0 +1,70 @@
+suite: webhook (insights-controller) no longer mounts the API key
+templates:
+  - templates/webhook-deploy.yaml
+  - templates/webhook-cm.yaml
+tests:
+  - it: webhook Deployment has no cloudzero-api-key volume
+    template: templates/webhook-deploy.yaml
+    set:
+      apiKey: "test-key-abc123"
+      existingSecretName: null
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+          any: true
+
+  - it: webhook container has no cloudzero-api-key volumeMount
+    template: templates/webhook-deploy.yaml
+    set:
+      apiKey: "test-key-abc123"
+      existingSecretName: null
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key
+          any: true
+
+  - it: webhook Deployment also has no api-key mount when existingSecretName is used
+    template: templates/webhook-deploy.yaml
+    set:
+      apiKey: null
+      existingSecretName: "my-existing-secret"
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key
+          any: true
+
+  - it: webhook server-config.yaml does not reference api_key_path
+    template: templates/webhook-cm.yaml
+    set:
+      apiKey: "test-key-abc123"
+      existingSecretName: null
+    asserts:
+      - notMatchRegex:
+          path: data["server-config.yaml"]
+          pattern: "api_key_path"
+
+  - it: webhook server-config.yaml does not encode cluster info as query string
+    # The aggregator does not parse those query params and the webhook now
+    # POSTs straight to the in-cluster destination URL.
+    template: templates/webhook-cm.yaml
+    set:
+      apiKey: "test-key-abc123"
+      existingSecretName: null
+    asserts:
+      - notMatchRegex:
+          path: data["server-config.yaml"]
+          pattern: "cluster_name="
+      - notMatchRegex:
+          path: data["server-config.yaml"]
+          pattern: "cloud_account_id="

@@ -1638,7 +1638,6 @@ data:
       retention_time: 24h
       cleanup_interval: 3h
       batch_update_size: 500
-    api_key_path: /etc/config/secrets/value
     certificate:
       key: /etc/certs/tls.key
       cert: /etc/certs/tls.crt
@@ -2493,10 +2492,6 @@ spec:
             - name: tls-certs
               mountPath: /etc/certs
               readOnly: true
-            - name: cloudzero-api-key
-              mountPath: /etc/config/secrets/
-              subPath: ""
-              readOnly: true
           livenessProbe:
             httpGet:
               scheme: HTTPS
@@ -2524,9 +2519,6 @@ spec:
         - name: tls-certs
           secret:
             secretName: cz-agent-cz-webhook-tls
-        - name: cloudzero-api-key
-          secret:
-            secretName: cz-agent-api-key
 ---
 # Source: cloudzero-agent/templates/backfill-job.yaml
 apiVersion: batch/v1

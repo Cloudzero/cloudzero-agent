@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cloudzero/cloudzero-agent/app/utils/scout"
@@ -26,27 +24,30 @@ import (
 
 // Settings represents the configuration settings for the application.
 type Settings struct {
-	CloudAccountID    string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
-	Region            string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
-	ClusterName       string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
-	Destination       string      `yaml:"destination" env:"DESTINATION" env-default:"https://api.cloudzero.com/v1/container-metrics" env-description:"location to send metrics to"`
-	APIKeyPath        string      `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"path to the API key file"`
-	Server            Server      `yaml:"server"`
-	Certificate       Certificate `yaml:"certificate"`
-	Logging           Logging     `yaml:"logging"`
-	Database          Database    `yaml:"database"`
-	Filters           Filters     `yaml:"filters"`
-	RemoteWrite       RemoteWrite `yaml:"remote_write"`
-	K8sClient         K8sClient   `yaml:"k8s_client"`
+	CloudAccountID string      `yaml:"cloud_account_id" env:"CLOUD_ACCOUNT_ID" env-description:"CSP account ID"`
+	Region         string      `yaml:"region" env:"CSP_REGION" env-description:"cloud service provider region"`
+	ClusterName    string      `yaml:"cluster_name" env:"CLUSTER_NAME" env-description:"name of the cluster to monitor"`
+	Destination    string      `yaml:"destination" env:"DESTINATION" env-default:"https://api.cloudzero.com/v1/container-metrics" env-description:"location to send metrics to"`
+	Server         Server      `yaml:"server"`
+	Certificate    Certificate `yaml:"certificate"`
+	Logging        Logging     `yaml:"logging"`
+	Database       Database    `yaml:"database"`
+	Filters        Filters     `yaml:"filters"`
+	RemoteWrite    RemoteWrite `yaml:"remote_write"`
+	K8sClient      K8sClient   `yaml:"k8s_client"`
+
+	// Deprecated: removed in CP-28161 when the insights-controller stopped
+	// authenticating to the in-cluster aggregator. Kept as an ignored
+	// tombstone so legacy configs (older Helm-rendered server-config.yaml,
+	// or an API_KEY_PATH env var still set in a pod spec) load cleanly under
+	// strict YAML/env decoders. Has no effect.
+	APIKeyPath string `yaml:"api_key_path" env:"API_KEY_PATH" env-description:"deprecated; ignored"`
+
 	LabelMatches      []regexp.Regexp
 	AnnotationMatches []regexp.Regexp
-
-	// control for dynamic reloading
-	mu sync.Mutex
 }
 
 type RemoteWrite struct {
-	apiKey          string
 	Host            string
 	MaxBytesPerSend int           `yaml:"max_bytes_per_send" default:"10000000" env:"MAX_BYTES_PER_SEND" env-description:"maximum bytes to send in a single request"`
 	SendInterval    time.Duration `yaml:"send_interval" default:"60s" env:"SEND_INTERVAL" env-description:"interval in seconds to send data"`
@@ -94,10 +95,6 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 
 	cfg.setCompiledFilters()
 
-	if err := cfg.SetAPIKey(); err != nil {
-		return nil, fmt.Errorf("failed to get API key: %w", err)
-	}
-
 	cfg.setRemoteWriteURL()
 	cfg.setPolicy()
 
@@ -106,63 +103,11 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	return &cfg, nil
 }
 
-func (s *Settings) GetAPIKey() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.RemoteWrite.apiKey
-}
-
-func (s *Settings) SetAPIKey() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	apiKeyPathLocation, err := absFilePath(s.APIKeyPath)
-	if err != nil {
-		return fmt.Errorf("failed to get absolute path: %w", err)
-	}
-
-	if _, err = os.Stat(apiKeyPathLocation); os.IsNotExist(err) {
-		return fmt.Errorf("API key file %s not found: %w", apiKeyPathLocation, err)
-	}
-	apiKey, err := os.ReadFile(s.APIKeyPath)
-	if err != nil {
-		return fmt.Errorf("failed to read API key: %w", err)
-	}
-	s.RemoteWrite.apiKey = strings.TrimSpace(string(apiKey))
-
-	if len(s.RemoteWrite.apiKey) == 0 {
-		return errors.New("API key is empty")
-	}
-	return nil
-}
-
 func (s *Settings) setRemoteWriteURL() {
-	if s.Destination == "" {
-		s.Destination = "https://api.cloudzero.com/v1/container-metrics"
+	if _, err := url.ParseRequestURI(s.Destination); err != nil {
+		log.Fatal().Str("url", s.Destination).Err(err).Msg("URL format invalid")
 	}
-	baseURL, err := url.Parse(s.Destination)
-	if err != nil {
-		fmt.Println("Malformed URL: ", err.Error())
-		return
-	}
-	params := url.Values{}
-	params.Add("cluster_name", s.ClusterName)
-	params.Add("cloud_account_id", s.CloudAccountID)
-	params.Add("region", s.Region)
-	baseURL.RawQuery = params.Encode()
-	url := baseURL.String()
-
-	if !isValidURL(url) {
-		log.Fatal().Str("url", url).Msg("URL format invalid")
-	}
-	s.RemoteWrite.Host = url
-}
-
-func isValidURL(uri string) bool {
-	if _, err := url.ParseRequestURI(uri); err != nil {
-		return false
-	}
-	return true
+	s.RemoteWrite.Host = s.Destination
 }
 
 func (s *Settings) setPolicy() {
@@ -193,19 +138,6 @@ func (s *Settings) compilePatterns(patterns []string) []regexp.Regexp {
 		log.Fatal().Msg("Config file contains invalid regex patterns")
 	}
 	return compiledPatterns
-}
-
-func absFilePath(location string) (string, error) {
-	dir := filepath.Dir(filepath.Clean(location))
-	// validate path if not local directory
-	if dir == "" || strings.HasPrefix(dir, ".") {
-		wd, err := os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("failed to get working directory: %w", err)
-		}
-		location = filepath.Clean(filepath.Join(wd, location))
-	}
-	return location, nil
 }
 
 // Files is a custom flag type to handle multiple configuration files

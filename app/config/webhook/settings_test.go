@@ -5,7 +5,6 @@ package config
 
 import (
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ func TestNewSettings(t *testing.T) {
 	t.Run("valid config file", func(t *testing.T) {
 		// Create a temporary config file
 		configContent := `
-api_key_path: "/path/to/api_key"
 server:
   port: 8080
 certificate:
@@ -57,21 +55,8 @@ destination: "https://api.cloudzero.com/v1/container-metrics"
 		_, err = tmpFileExtra.Write([]byte(configContentExtra))
 		require.NoError(t, err)
 		require.NoError(t, tmpFile.Close())
+		require.NoError(t, tmpFileExtra.Close())
 
-		// Mock the API key file
-		apiKeyContent := "test-api-key"
-		apiKeyFile, err := os.CreateTemp("", "api_key-*.txt")
-		require.NoError(t, err)
-		defer os.Remove(apiKeyFile.Name())
-
-		_, err = apiKeyFile.Write([]byte(apiKeyContent))
-		require.NoError(t, err)
-		require.NoError(t, apiKeyFile.Close())
-
-		// Update the API key path in the config
-		configContent = strings.Replace(configContent, "/path/to/api_key", apiKeyFile.Name(), 1)
-		err = os.WriteFile(tmpFile.Name(), []byte(configContent), 0o644)
-		require.NoError(t, err)
 		configFiles := Files{tmpFile.Name(), tmpFileExtra.Name()}
 		settings, err := NewSettings(configFiles...)
 		require.NoError(t, err)
@@ -85,14 +70,11 @@ destination: "https://api.cloudzero.com/v1/container-metrics"
 		assert.NotEmpty(t, settings.Region, "Region should be set from config or Scout detection")
 		assert.Equal(t, "test-cluster", settings.ClusterName)
 		assert.Equal(t, "https://api.cloudzero.com/v1/container-metrics", settings.Destination)
-		assert.Equal(t, apiKeyContent, settings.GetAPIKey())
 
-		// Verify RemoteWrite.Host contains the expected base URL and cluster_name
-		// (cloudAccountId and region may differ due to Scout detection)
-		assert.Contains(t, settings.RemoteWrite.Host, "https://api.cloudzero.com/v1/container-metrics")
-		assert.Contains(t, settings.RemoteWrite.Host, "cluster_name=test-cluster")
-		assert.Contains(t, settings.RemoteWrite.Host, "cloud_account_id="+settings.CloudAccountID)
-		assert.Contains(t, settings.RemoteWrite.Host, "region="+settings.Region)
+		// RemoteWrite.Host should equal Destination verbatim — no query-string
+		// encoding (the aggregator doesn't read those params and we no longer
+		// authenticate the in-cluster hop).
+		assert.Equal(t, settings.Destination, settings.RemoteWrite.Host)
 
 		assert.Equal(t, 10000000, settings.RemoteWrite.MaxBytesPerSend)
 		assert.Equal(t, 60*time.Second, settings.RemoteWrite.SendInterval)

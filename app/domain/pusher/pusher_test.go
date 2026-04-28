@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -24,30 +23,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 )
 
-// createAPIKeyFile creates a temporary API key file with the given content.
-// It returns the file path and a cleanup function to remove the file.
-func createAPIKeyFile(t *testing.T, apiKeyContent string) string {
-	apiKeyFile, err := os.CreateTemp("", "api_key-*.txt")
-	require.NoError(t, err, "Failed to create temp API key file")
-
-	_, err = apiKeyFile.Write([]byte(apiKeyContent))
-	require.NoError(t, err, "Failed to write to temp API key file")
-
-	err = apiKeyFile.Close()
-	require.NoError(t, err, "Failed to close temp API key file")
-
-	t.Cleanup(func() {
-		_ = os.Remove(apiKeyFile.Name())
-	})
-
-	return apiKeyFile.Name()
-}
-
 // setupTest initializes the test environment and returns a TestSetup instance.
-func setupTest(t *testing.T, clock types.TimeProvider, store types.ResourceStore, handlerFunc http.HandlerFunc, apiKeyContent string) (*pusher.MetricsPusher, string) {
-	// Create temporary API key file
-	apiKeyPath := createAPIKeyFile(t, apiKeyContent)
-
+func setupTest(t *testing.T, clock types.TimeProvider, store types.ResourceStore, handlerFunc http.HandlerFunc) (*pusher.MetricsPusher, string) {
 	// Start test HTTP server
 	server := httptest.NewServer(http.HandlerFunc(handlerFunc))
 	t.Cleanup(func() {
@@ -56,7 +33,6 @@ func setupTest(t *testing.T, clock types.TimeProvider, store types.ResourceStore
 
 	// Initialize settings
 	settings := &config.Settings{
-		APIKeyPath: apiKeyPath,
 		RemoteWrite: config.RemoteWrite{
 			Host:            server.URL,
 			MaxBytesPerSend: 40, // small - should be no more than 2 objects at a time (see mkRecords)
@@ -65,7 +41,6 @@ func setupTest(t *testing.T, clock types.TimeProvider, store types.ResourceStore
 			MaxRetries:      3,
 		},
 	}
-	settings.SetAPIKey()
 
 	p := pusher.New(context.Background(), store, clock, settings)
 	rw := p.(*pusher.MetricsPusher)
@@ -100,7 +75,7 @@ func Test_SupportsRunnableInterface(t *testing.T) {
 	defer ctrl.Finish()
 	mockStore := mocks.NewMockResourceStore(ctrl)
 
-	p, _ := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {}, "")
+	p, _ := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {})
 	assert.False(t, p.IsRunning())
 
 	mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return([]*types.ResourceTags{}, nil).AnyTimes()
@@ -137,7 +112,6 @@ func Test_FlushMany(t *testing.T) {
 	})).Return(nil).AnyTimes()
 
 	// Capture the records that were sent
-	apiKeyContent := "apiKeyContent"
 	expectedSentCount := 3
 	actualSentCount := 0
 	p, host := setupTest(
@@ -148,8 +122,10 @@ func Test_FlushMany(t *testing.T) {
 			if r.Method != http.MethodPost {
 				t.Errorf("Expected POST method, got: %s", r.Method)
 			}
-			if r.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", apiKeyContent) {
-				t.Errorf("Expected Authorization header to be 'Bearer %s', got: %s", apiKeyContent, r.Header.Get("Authorization"))
+			// The aggregator does not authenticate the in-cluster hop;
+			// the webhook must not send an Authorization header.
+			if got := r.Header.Get("Authorization"); got != "" {
+				t.Errorf("Expected no Authorization header, got: %q", got)
 			}
 			if r.Header.Get("Content-Encoding") != "snappy" {
 				t.Errorf("Expected Content-Encoding 'snappy', got: %s", r.Header.Get("Content-Encoding"))
@@ -159,7 +135,6 @@ func Test_FlushMany(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusOK)
 		},
-		apiKeyContent,
 	)
 
 	err := p.Flush()
@@ -191,7 +166,7 @@ func Test_Flush_FindAll_ReturnsNothing(t *testing.T) {
 	emptyList := mkRecords(currentTime, 0)
 	mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(emptyList, nil).Times(1)
 
-	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {}, "apiKeyContent")
+	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {})
 
 	err := p.Flush()
 	assert.NoError(t, err)
@@ -220,7 +195,7 @@ func Test_Flush_Handles_FindAll_Error_Gracefully(t *testing.T) {
 	expectedError := errors.New("find error")
 	mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(nil, expectedError).Times(1)
 
-	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {}, "apiKeyContent")
+	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {})
 
 	err := p.Flush()
 	assert.Error(t, err)
@@ -253,7 +228,7 @@ func Test_Flush_Handles_Tx_Error_Gracefully(t *testing.T) {
 	expectedError := errors.New("find error")
 	mockStore.EXPECT().Tx(gomock.Any(), gomock.Any()).Return(expectedError).Times(1)
 
-	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {}, "apiKeyContent")
+	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {})
 
 	err := p.Flush()
 	assert.Error(t, err)
@@ -287,7 +262,7 @@ func Test_Flush_Handles_Update_Error_Gracefully(t *testing.T) {
 	expectedError := errors.New("find error")
 	mockStore.EXPECT().Update(gomock.Any(), gomock.Any()).Return(expectedError).Times(1)
 
-	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {}, "apiKeyContent")
+	p, host := setupTest(t, mockClock, mockStore, func(w http.ResponseWriter, r *http.Request) {})
 
 	err := p.Flush()
 	assert.Error(t, err)
@@ -316,14 +291,11 @@ func Test_Flush_Handles_SendFailure(t *testing.T) {
 	records := mkRecords(currentTime, 1)
 	mockStore.EXPECT().FindAllBy(gomock.Any(), gomock.Any()).Return(records, nil).AnyTimes()
 
-	// Capture the records that were sent
-	apiKeyContent := "apiKeyContent"
 	p, host := setupTest(
 		t, mockClock, mockStore,
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		},
-		apiKeyContent,
 	)
 
 	err := p.Flush()

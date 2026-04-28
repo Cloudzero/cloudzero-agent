@@ -6,13 +6,14 @@ package monitor_test
 import (
 	"context"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/monitor"
 )
 
@@ -26,6 +27,31 @@ func (m *MockFileMonitor) Run() {
 
 func (m *MockFileMonitor) Close() {
 	m.Called()
+}
+
+// fileBackedAPIKey is a minimal monitor.MonitoredAPIKey that reads from a
+// file on disk, used here to exercise the secrets monitor's refresh loop.
+type fileBackedAPIKey struct {
+	path string
+	mu   sync.Mutex
+	key  string
+}
+
+func (f *fileBackedAPIKey) GetAPIKey() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.key
+}
+
+func (f *fileBackedAPIKey) SetAPIKey() error {
+	data, err := os.ReadFile(f.path)
+	if err != nil {
+		return err
+	}
+	f.mu.Lock()
+	f.key = strings.TrimSpace(string(data))
+	f.mu.Unlock()
+	return nil
 }
 
 func TestSecretsMonitor_Start(t *testing.T) {
@@ -44,9 +70,7 @@ func TestSecretsMonitor_Start(t *testing.T) {
 	_, err = file.WriteString("foo")
 	assert.NoError(t, err)
 
-	settings := &config.Settings{
-		APIKeyPath: file.Name(),
-	}
+	settings := &fileBackedAPIKey{path: file.Name()}
 
 	err = settings.SetAPIKey()
 	assert.NoError(t, err)
