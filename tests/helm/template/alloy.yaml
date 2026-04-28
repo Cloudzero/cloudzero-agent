@@ -915,7 +915,9 @@ data:
         sendInterval: 10m
         sendTimeout: 120s
       collector:
+        livenessProbe: {}
         port: 8080
+        readinessProbe: {}
         resources:
           limits:
             cpu: ""
@@ -940,6 +942,10 @@ data:
         pullPolicy: null
         repository: null
         tag: null
+      livenessProbe:
+        failureThreshold: 10
+        initialDelaySeconds: 30
+        periodSeconds: 30
       logging:
         capture: true
         level: info
@@ -947,9 +953,16 @@ data:
       name: null
       nodeSelector: {}
       profiling: false
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 10
+        periodSeconds: 10
       reconnectFrequency: 16
       shipper:
+        livenessProbe:
+          failureThreshold: 3
         port: 8081
+        readinessProbe: {}
         resources:
           limits:
             cpu: ""
@@ -2847,11 +2860,16 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /healthz
+              # /livez has sticky-latch semantics — once the collector's
+              # error-rate tracker has observed an unhealthy evaluation, it
+              # stays 503 through the cooldown so liveness actually fires a
+              # restart rather than oscillating Ready / NotReady with
+              # /healthz. Readiness stays on /healthz so recovery is fast.
+              path: /livez
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 30
-            failureThreshold: 3
+            failureThreshold: 10
           resources:
             limits:
               cpu: 2000m
@@ -2893,6 +2911,8 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
+              # The shipper has no in-process error-rate tracker, so /livez
+              # would not exist here — stay on /healthz.
               path: /healthz
               port: 8081
             initialDelaySeconds: 30

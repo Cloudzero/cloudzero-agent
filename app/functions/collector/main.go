@@ -6,14 +6,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/go-obvious/server"
+	"github.com/go-obvious/server/healthz"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -26,6 +29,29 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/storage/disk"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
+)
+
+// Error-rate health-check parameters for the /collector endpoint. These are
+// starting points chosen to match the analysis in CP-40749 and should be
+// revisited if real traffic patterns call for different thresholds.
+//
+//   - errorRateWindow: how much recent /collector traffic to consider.
+//   - errorRateThreshold: the 5xx fraction above which the health check trips
+//     (0.20 = 20%).
+//   - errorRateMinFailures: absolute floor on failures required before the
+//     threshold is evaluated, so a single transient blip doesn't trip the
+//     probe.
+//   - errorRateLivenessCooldown: how long /livez stays latched unhealthy
+//     after the last unhealthy evaluation. Must be at least as long as the
+//     liveness probe's total budget (failureThreshold × periodSeconds) so
+//     the probe actually fires a restart instead of the latch releasing
+//     first; the chart default of failureThreshold=10 × periodSeconds=30s
+//     = 5m matches this constant.
+const (
+	errorRateWindow           = 60 * time.Second
+	errorRateThreshold        = 0.20
+	errorRateMinFailures      = 3
+	errorRateLivenessCooldown = 5 * time.Minute
 )
 
 func main() {
@@ -115,9 +141,33 @@ func main() {
 		middleware.PromHTTPMiddleware,
 	}
 
+	// Track recent /collector response statuses so two different probes can
+	// react on different timescales:
+	//
+	//   - /healthz (readiness): instantaneous — fails fast, recovers fast.
+	//     When the rate crosses the threshold, Kubernetes removes the pod
+	//     from the Service endpoint list. If the pod subsequently stops
+	//     seeing traffic and the window ages out, /healthz goes back to 200
+	//     and the pod rejoins the Service.
+	//
+	//   - /livez (liveness): sticky latch — once the tracker has observed an
+	//     unhealthy evaluation, /livez stays 503 for errorRateLivenessCooldown
+	//     even if /healthz has since returned to 200. This prevents a
+	//     readiness-eviction → no-traffic → window-ages-out → readmit flap
+	//     loop and guarantees that a persistently bad pod is eventually
+	//     restarted rather than bouncing between Ready and NotReady forever.
+	collectorErrorRate := middleware.NewErrorRateTracker(errorRateWindow)
+	healthz.Register("collector-error-rate", func() error {
+		if !collectorErrorRate.Healthy(errorRateThreshold, errorRateMinFailures) {
+			return errors.New("/collector 5xx rate exceeds threshold")
+		}
+		return nil
+	})
+
 	apis := []server.API{
-		handlers.NewRemoteWriteAPI("/collector", domain),
+		handlers.NewRemoteWriteAPI("/collector", domain, handlers.WithErrorRateTracker(collectorErrorRate)),
 		handlers.NewPromMetricsAPI("/metrics"),
+		handlers.NewLivezAPI("/livez", collectorErrorRate, errorRateThreshold, errorRateMinFailures, errorRateLivenessCooldown),
 	}
 
 	if settings.Server.Profiling {

@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/cloudzero/cloudzero-agent/app/domain"
+	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 )
 
 // MaxPayloadSize defines the maximum allowed size for Prometheus remote_write requests.
@@ -87,6 +88,23 @@ type RemoteWriteAPI struct {
 	// By maintaining this abstraction, the RemoteWriteAPI can handle HTTP concerns
 	// while keeping the metric processing logic testable and reusable.
 	metrics *domain.MetricCollector
+
+	// errorRateTracker, if non-nil, receives the status code of every response
+	// served by this API so that a readiness health check can observe a
+	// sustained 5xx rate without any code inside this handler needing to know
+	// about the health check itself.
+	errorRateTracker *middleware.ErrorRateTracker
+}
+
+// RemoteWriteAPIOption configures optional behavior on a RemoteWriteAPI.
+type RemoteWriteAPIOption func(*RemoteWriteAPI)
+
+// WithErrorRateTracker attaches an ErrorRateTracker so that response statuses
+// flowing through the API are recorded for use by a health check.
+func WithErrorRateTracker(t *middleware.ErrorRateTracker) RemoteWriteAPIOption {
+	return func(a *RemoteWriteAPI) {
+		a.errorRateTracker = t
+	}
 }
 
 // NewRemoteWriteAPI creates a new HTTP API server for Prometheus remote_write metric ingestion.
@@ -115,13 +133,16 @@ type RemoteWriteAPI struct {
 //
 // The returned RemoteWriteAPI can be registered with the CloudZero Agent HTTP server
 // to begin receiving Prometheus metrics for cost allocation processing.
-func NewRemoteWriteAPI(base string, d *domain.MetricCollector) *RemoteWriteAPI {
+func NewRemoteWriteAPI(base string, d *domain.MetricCollector, opts ...RemoteWriteAPIOption) *RemoteWriteAPI {
 	a := &RemoteWriteAPI{
 		metrics: d,
 		Service: api.Service{
 			APIName: "remotewrite",
 			Mounts:  map[string]*chi.Mux{},
 		},
+	}
+	for _, opt := range opts {
+		opt(a)
 	}
 	a.Mounts[base] = a.Routes()
 	return a
@@ -186,6 +207,9 @@ func (a *RemoteWriteAPI) Register(app server.Server) error {
 // while maintaining high throughput and reliability for CloudZero metric processing.
 func (a *RemoteWriteAPI) Routes() *chi.Mux {
 	r := chi.NewRouter()
+	if a.errorRateTracker != nil {
+		r.Use(middleware.ErrorRateMiddleware(a.errorRateTracker))
+	}
 	r.Post("/", a.PostMetrics)
 	return r
 }
@@ -267,6 +291,17 @@ func (a *RemoteWriteAPI) PostMetrics(w http.ResponseWriter, r *http.Request) {
 	stats, err := a.metrics.PutMetrics(r.Context(), contentType, encodingType, data)
 	if err != nil {
 		log.Ctx(ctx).Err(err).Msg("failed to put metrics")
+		// On 5xx, force HTTP/1.x clients to tear down the TCP connection so
+		// the next request is re-balanced by kube-proxy instead of staying
+		// pinned to a pod that is persistently failing.
+		//
+		// Unfortunately this won't work for HTTP/2 (the `Connection` header
+		// is not allowed on HTTP/2 per RFC 9113 §8.2.2, and HTTP/2 does not
+		// automatically close the underlying TCP connection on 5xx), but
+		// currently all traffic we're seeing from Prometheus is HTTP/1.1.
+		if r.ProtoMajor == 1 {
+			w.Header().Set("Connection", "close")
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
