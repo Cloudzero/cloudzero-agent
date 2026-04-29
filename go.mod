@@ -65,6 +65,7 @@ require (
 )
 
 require (
+	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/andybalholm/brotli v1.2.1
 	github.com/ccoveille/go-safecast v1.8.2
 	github.com/fsnotify/fsnotify v1.9.0
@@ -126,6 +127,7 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect
 	github.com/parquet-go/jsonlite v1.0.0 // indirect
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect

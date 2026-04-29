@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/domain/metricio"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/gogo/protobuf/proto"
