@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	"github.com/cloudzero/cloudzero-agent/app/functions/cluster-config/loader"
 	"github.com/cloudzero/cloudzero-agent/app/logging"

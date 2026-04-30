@@ -12,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/inspector"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
