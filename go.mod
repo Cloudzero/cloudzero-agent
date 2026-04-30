@@ -80,7 +80,7 @@ require (
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_golang/exp v0.0.0-20260325093428-d8591d0db856
-	github.com/prometheus/prometheus v0.311.2
+	github.com/prometheus/prometheus v0.311.3
 	github.com/shirou/gopsutil/v4 v4.26.3
 	github.com/stretchr/testify v1.11.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
