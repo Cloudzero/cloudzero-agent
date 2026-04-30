@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/domain/certificate"
 	"github.com/cloudzero/cloudzero-agent/app/domain/k8s"
 )

@@ -18,6 +18,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/housekeeper"
@@ -36,8 +37,10 @@ import (
 func main() {
 	var configFiles config.Files
 	var backfill bool
+	var backfillNoWait bool
 	flag.Var(&configFiles, "config", "Path to the configuration file(s)")
 	flag.BoolVar(&backfill, "backfill", false, "Enable backfill mode")
+	flag.BoolVar(&backfillNoWait, "backfill-no-wait", false, "Skip waiting for dependent services in backfill mode")
 	flag.Parse()
 
 	clock := &utils.Clock{}
@@ -139,7 +142,11 @@ func main() {
 		if err2 != nil {
 			log.Fatal().Err(err2).Msg("Failed to build k8s client")
 		}
-		if err3 := backfiller.NewKubernetesObjectEnumerator(k8sClient, wd, settings).Start(context.Background()); err3 != nil {
+		enum := backfiller.NewKubernetesObjectEnumerator(k8sClient, wd, settings)
+		if backfillNoWait {
+			enum.DisableServiceWait()
+		}
+		if err3 := enum.Start(context.Background()); err3 != nil {
 			log.Fatal().Err(err3).Msg("Failed to start Kubernetes object enumerator")
 		}
 		return

@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
+	_ "github.com/KimMachineGun/automemlimit"
 	"github.com/cloudzero/cloudzero-agent/app/build"
 	configcmd "github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/config"
 	diagcmd "github.com/cloudzero/cloudzero-agent/app/functions/agent-validator/diagnose"
