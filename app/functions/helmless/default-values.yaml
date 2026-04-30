@@ -1578,6 +1578,24 @@ aggregator:
   # load across the various collector replicas. 0=never, otherwise 1/N
   # probability.
   reconnectFrequency: 16
+  # Kubernetes readiness probe configuration for both the collector and shipper
+  # containers. Readiness is kept aggressive so that a pod returning 5xx is
+  # removed from the Service endpoint list quickly (within ~30s at defaults).
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  # Kubernetes liveness probe configuration for both the collector and shipper
+  # containers. Liveness is deliberately more tolerant than readiness: a pod
+  # that the health check reports as unhealthy gets removed from the Service
+  # quickly, but only restarted after sustained failure. This gives the pod a
+  # chance to self-heal (for example via connection rotation) before
+  # Kubernetes kills it. At periodSeconds=30, failureThreshold=10 yields ~5
+  # minutes of sustained unhealth before restart.
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    failureThreshold: 10
   # Container image configuration for the aggregator components.
   #
   # Deprecated. Please use components.aggregator.image instead.
@@ -1683,6 +1701,11 @@ aggregator:
       limits:
         memory: ""
         cpu: ""
+    # Per-container probe overrides merged on top of aggregator.readinessProbe
+    # and aggregator.livenessProbe. Empty by default — the collector uses the
+    # shared aggregator probe settings.
+    readinessProbe: {}
+    livenessProbe: {}
   # Configuration for the shipper component of the aggregator.
   shipper:
     # Port that the shipper listens on for internal communication.
@@ -1700,6 +1723,13 @@ aggregator:
       limits:
         memory: ""
         cpu: ""
+    # Per-container probe overrides merged on top of aggregator.readinessProbe
+    # and aggregator.livenessProbe. The shipper does not run the error-rate
+    # tracker that extends the collector's restart budget, so its liveness
+    # uses a tighter failureThreshold.
+    readinessProbe: {}
+    livenessProbe:
+      failureThreshold: 3
   # Node selector configuration for the aggregator pods.
   #
   # See the Kubernetes documentation for details:

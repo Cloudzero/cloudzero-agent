@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/moby/moby/api v1.54.1
-	github.com/prometheus/prometheus v0.311.2
+	github.com/prometheus/prometheus v0.311.3
 	github.com/rs/zerolog v1.35.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
