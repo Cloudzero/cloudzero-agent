@@ -454,10 +454,13 @@ users:
 
 func writeWebhookConfig(t *testing.T, cfgPath, kubeconfigPath, serverURL string) {
 	t.Helper()
+	apiKeyPath := filepath.Join(filepath.Dir(cfgPath), "api-key")
+	require.NoError(t, os.WriteFile(apiKeyPath, []byte("test-key"), 0o600))
 	sinkURL := fmt.Sprintf("%s/v1/container-metrics?cloud_account_id=test&cluster_name=stress&region=us-west-2", serverURL)
 	content := fmt.Sprintf(`cloud_account_id: test
 region: us-west-2
 cluster_name: stress
+api_key_path: %s
 host: %s
 destination: %s
 logging:
@@ -476,11 +479,11 @@ database:
   cleanup_interval: 3h
   batch_update_size: 500
 server:
-  port: 18099
+  port: 0
   read_timeout: 10s
   write_timeout: 10s
   idle_timeout: 120s
-  profiling: true
+  profiling: false
 filters:
   labels:
     enabled: true
@@ -504,7 +507,7 @@ filters:
     resources:
       namespaces: false
       pods: false
-`, serverURL, sinkURL, sinkURL, kubeconfigPath)
+`, apiKeyPath, serverURL, sinkURL, sinkURL, kubeconfigPath)
 	require.NoError(t, os.WriteFile(cfgPath, []byte(content), 0o644))
 }
 
