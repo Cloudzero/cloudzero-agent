@@ -30,4 +30,22 @@ spec:
     keySize: 256
     validityDuration: "8760h"
     renewalThreshold: "720h"
+  {{- with .Values.operator.resourceManagement }}
+  resourceManagement:
+    mode: {{ .mode | default "Observe" }}
+    pressureThresholdPercent: {{ .pressureThresholdPercent | default 85 }}
+    scaleUpStepPercent: {{ .scaleUpStepPercent | default 25 }}
+    cooldownPeriod: {{ .cooldownPeriod | default "10m" | quote }}
+    maxMemoryMultiplier: {{ .maxMemoryMultiplier | default 4 }}
+    {{- if .components }}
+    components:
+      {{- range $name, $cfg := .components }}
+      {{- if $cfg.memory.max }}
+      {{ $name }}:
+        memory:
+          max: {{ $cfg.memory.max | quote }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}

@@ -446,6 +446,46 @@ properties:
       affinity:
         description: Affinity rules for the operator pod.
         type: object
+      resourceManagement:
+        description: Memory pressure management configuration for agent components.
+        type: object
+        additionalProperties: false
+        properties:
+          mode:
+            description: "Operator behavior when memory pressure is detected: Observe, Recommend, or AutoRemediate."
+            type: string
+            enum: [Observe, Recommend, AutoRemediate]
+          pressureThresholdPercent:
+            description: Memory usage percentage (of limit) that triggers action.
+            type: integer
+            minimum: 50
+            maximum: 99
+          scaleUpStepPercent:
+            description: Percentage increase per AutoRemediate patch.
+            type: integer
+            minimum: 10
+            maximum: 100
+          cooldownPeriod:
+            description: Minimum time between AutoRemediate patches for the same component (Go duration string).
+            type: string
+          maxMemoryMultiplier:
+            description: Ceiling multiplier applied to the current limit when no explicit per-component max is set.
+            type: integer
+            minimum: 2
+            maximum: 32
+          components:
+            description: Per-component memory ceiling overrides.
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                memory:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    max:
+                      type: string
   forceNamespace:
     deprecated: true
     type:

@@ -125,3 +125,36 @@ This is a prerequisite for production use. Until it is complete, the operator mu
 9. Automatically patch `Deployment` resource limits within configured bounds and trigger rolling restarts (`AutoRemediate` mode)
 
 The `mode` field gives human operators control over automation aggressiveness. Phase 2 ships in `Observe` mode by default, with `AutoRemediate` opt-in. This approach is similar to a Vertical Pod Autoscaler but domain-aware — the operator understands CloudZero-specific context (e.g. a backfill Job running is expected to spike KSM memory) rather than applying a generic algorithm.
+
+### Phase 3 — Remote Configuration
+
+Allow the operator to periodically poll a CloudZero API endpoint for configuration updates — for example, which labels to scrape, resource exclusion rules, or feature flags — and apply them to the running agent without requiring a Helm upgrade.
+
+**Design principles (informed by Datadog, OpAMP, and Prometheus Operator patterns):**
+
+- **CRD spec remains the primary interface.** Remote config enriches it; it does not replace it. Precedence order (lowest to highest): operator defaults → `spec` values → remote API config. Users who want local config to win can set `spec.remoteConfig.localOverride: true`.
+- **Opt-in.** Disabled by default. Enabled via `spec.remoteConfig.enabled: true` with the endpoint and credentials configured explicitly.
+- **Automatic rollback.** If applying new remote config causes agent health checks to fail, revert to the last known good config automatically (OpAMP pattern).
+- **Fully observable.** Remote-config-derived values are surfaced in `.status.remoteConfig` — never silently applied. Every fetch and apply emits a Kubernetes Event with the config version/hash.
+- **GitOps-safe.** Remote config is applied by the operator to its own in-memory state and status, not by patching Deployment specs directly. ArgoCD/Flux will not revert it.
+- **Graceful degradation.** If the CloudZero API is unreachable, the operator holds the last known good config and sets a `RemoteConfigStale` condition — it does not revert to defaults.
+
+**New CRD fields:**
+
+```yaml
+spec:
+  remoteConfig:
+    enabled: false
+    endpoint: "https://api.cloudzero.com/v1/agent-config"
+    pollInterval: "5m"
+    localOverride: false   # if true, spec values win over remote config
+
+status:
+  remoteConfig:
+    status: Applied        # Applied | Applying | Failed | Stale | Disabled
+    fetchedAt: "2026-04-17T10:00:00Z"
+    configVersion: "abc123"
+    message: "Remote config applied successfully"
+```
+
+**Research reference:** `docs/remote-config-research.md` contains a full comparison of how Datadog, OpenTelemetry (OpAMP), Prometheus Operator, and Fluent Bit handle this problem.

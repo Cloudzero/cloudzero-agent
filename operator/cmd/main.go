@@ -19,7 +19,10 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"net"
+	"net/http"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -29,6 +32,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/transport"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -41,6 +46,8 @@ import (
 	agentv1alpha1 "github.com/cloudzero/cloudzero-agent/operator/api/v1alpha1"
 	"github.com/cloudzero/cloudzero-agent/operator/internal/certmanager"
 	"github.com/cloudzero/cloudzero-agent/operator/internal/controller"
+	"github.com/cloudzero/cloudzero-agent/operator/internal/metricsapi"
+	metricsversioned "k8s.io/metrics/pkg/client/clientset/versioned"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -182,17 +189,59 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Build the certificate service from the existing domain layer and inject it into the reconciler.
-	certK8sClient := k8sclient.NewCertificateClientWithConfig(
-		mgr.GetConfig(),
-		kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-	)
+	// Build the certificate service from the existing domain layer.
+	coreK8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	certK8sClient := k8sclient.NewCertificateClientWithConfig(mgr.GetConfig(), coreK8sClient)
 	certService := certificate.NewCertificateService(certK8sClient)
 
+	// Build a custom HTTP client for the metrics API that forces HTTP/1.1 to avoid a deadlock
+	// in Go's HTTP/2 transport during the SETTINGS frame exchange on the aggregated
+	// metrics.k8s.io API path (reproducible in KIND clusters).
+	//
+	// Root cause: k8s.io/client-go/transport.New calls http2.ConfigureTransport, which
+	// unconditionally prepends "h2" to TLSClientConfig.NextProtos even when the caller
+	// pre-sets NextProtos to ["http/1.1"]. The resulting ALPN advertises h2; after the TLS
+	// handshake negotiates h2, Go's HTTP/2 transport blocks waiting for the server SETTINGS ACK
+	// in a goroutine that is unreachable by context cancellation or http.Client.Timeout.
+	//
+	// Fix: obtain the *tls.Config via rest.TLSConfigFor (which handles CA/cert loading),
+	// override NextProtos to ["http/1.1"] on the returned struct (after library initialisation),
+	// construct http.Transport without invoking http2.ConfigureTransport, and wrap the
+	// resulting transport with auth via transport.HTTPWrappersForConfig.
+	var metricsClient metricsapi.MetricsClient
+	if metricsTLSCfg, tlsErr := rest.TLSConfigFor(mgr.GetConfig()); tlsErr != nil {
+		setupLog.Info("Could not build metrics TLS config, memory pressure monitoring disabled", "error", tlsErr)
+	} else {
+		metricsTLSCfg.NextProtos = []string{"http/1.1"}
+		rawMetricsTransport := &http.Transport{
+			DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+			TLSClientConfig:       metricsTLSCfg,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			// Empty TLSNextProto prevents net/http from registering an http2 upgrade handler.
+			// Combined with NextProtos above, this ensures HTTP/1.1 end-to-end.
+			TLSNextProto: make(map[string]func(string, *tls.Conn) http.RoundTripper),
+		}
+		if transportCfg, cfgErr := mgr.GetConfig().TransportConfig(); cfgErr != nil {
+			setupLog.Info("Could not build metrics transport config, memory pressure monitoring disabled", "error", cfgErr)
+		} else if wrappedTransport, wrapErr := transport.HTTPWrappersForConfig(transportCfg, rawMetricsTransport); wrapErr != nil {
+			setupLog.Info("Could not wrap metrics transport with auth, memory pressure monitoring disabled", "error", wrapErr)
+		} else if metricsVersionedClient, clientErr := metricsversioned.NewForConfigAndClient(
+			rest.CopyConfig(mgr.GetConfig()),
+			&http.Client{Transport: wrappedTransport, Timeout: 60 * time.Second},
+		); clientErr != nil {
+			setupLog.Info("Metrics server client unavailable, memory pressure monitoring disabled", "error", clientErr)
+		} else {
+			metricsClient = metricsapi.NewAdapter(metricsVersionedClient, coreK8sClient)
+		}
+	}
+
 	if err := (&controller.CloudZeroAgentReconciler{
-		Client:      mgr.GetClient(),
-		Scheme:      mgr.GetScheme(),
-		CertManager: certmanager.NewAdapter(certService),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		CertManager:   certmanager.NewAdapter(certService),
+		MetricsClient: metricsClient,
+		EventRecorder: mgr.GetEventRecorderFor("cloudzero-agent-operator"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "CloudZeroAgent")
 		os.Exit(1)

@@ -106,4 +106,31 @@ rules:
     verbs:
       - create
       - patch
+  # Deployments — needed for AutoRemediate memory limit patching
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - patch
+      - watch
+  # Pods — needed to read memory limits alongside metrics API data
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  # Pod metrics — needed to observe memory usage via the metrics server
+  - apiGroups:
+      - metrics.k8s.io
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
 {{- end }}

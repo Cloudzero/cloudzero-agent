@@ -294,6 +294,20 @@ cd operator && make deploy IMG=cloudzero-agent-operator:latest
 - Phase 4: Enriched data (cert details, pod status, events, PVC health)
 - Detailed plan in `docs/operator-ui-proposal.md`
 
+### Phase 3: Remote Configuration (planned, not yet started)
+
+Allow the operator to poll a CloudZero API endpoint for config updates (label scrape rules, resource exclusions, feature flags) and apply them without a Helm upgrade.
+
+Key design decisions:
+- **Opt-in** via `spec.remoteConfig.enabled: true`
+- **CRD spec wins by default**; remote config is lowest-priority unless `spec.remoteConfig.localOverride: false` (the default)
+- **Automatic rollback** if new config fails agent health checks (OpAMP pattern)
+- **GitOps-safe** — applied to operator state/status, not Deployment specs directly
+- **Graceful degradation** — holds last known good config if API unreachable; sets `RemoteConfigStale` condition
+- Status reported in `.status.remoteConfig` with `Applied | Applying | Failed | Stale | Disabled`
+
+See `docs/operator-proposal.md` (Phase 3) and `docs/remote-config-research.md` for full design and prior art.
+
 ### Burn-Book-Derived Items (not yet planned)
 
 | Item | Source Pattern |

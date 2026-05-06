@@ -23,6 +23,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="CertificateValid")].status
       name: Certificate Valid
       type: string
+    - jsonPath: .status.conditions[?(@.type=="MemoryPressure")].status
+      name: Memory Pressure
+      type: string
+    - jsonPath: .spec.resourceManagement.mode
+      name: Resource Mgmt
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -54,6 +60,73 @@ spec:
             description: CloudZeroAgentSpec defines the desired state of a CloudZeroAgent
               installation.
             properties:
+              resourceManagement:
+                description: ResourceManagement configures memory pressure observation
+                  and optional remediation.
+                properties:
+                  components:
+                    additionalProperties:
+                      description: ComponentResourceSpec allows overriding the AutoRemediate
+                        ceiling for a single component.
+                      properties:
+                        memory:
+                          description: Memory defines the explicit upper bound for
+                            AutoRemediate limit patches.
+                          properties:
+                            max:
+                              description: Max is the upper bound for the memory limit
+                                (e.g. "2Gi").
+                              pattern: ^[0-9]+(\.[0-9]+)?(Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$
+                              type: string
+                          type: object
+                      type: object
+                    description: |-
+                      Components optionally overrides the AutoRemediate ceiling for specific components.
+                      If a component is not listed here, the ceiling is derived from its current limit
+                      multiplied by MaxMemoryMultiplier.
+                    type: object
+                  cooldownPeriod:
+                    default: 10m
+                    description: |-
+                      CooldownPeriod is the minimum time between successive AutoRemediate patches for the same
+                      component (Go duration string, e.g. "10m").
+                    type: string
+                  maxMemoryMultiplier:
+                    default: 4
+                    description: |-
+                      MaxMemoryMultiplier is the ceiling multiplier applied to the component's current memory limit
+                      when no explicit per-component Max is configured. For example, a value of 4 means the operator
+                      will not scale a component beyond 4× its Helm-deployed limit.
+                    maximum: 32
+                    minimum: 2
+                    type: integer
+                  mode:
+                    default: Observe
+                    description: Mode controls operator behavior when memory pressure
+                      is detected.
+                    enum:
+                    - Observe
+                    - Recommend
+                    - AutoRemediate
+                    type: string
+                  pressureThresholdPercent:
+                    default: 85
+                    description: PressureThresholdPercent is the memory usage percentage
+                      (of limit) that triggers action.
+                    maximum: 99
+                    minimum: 50
+                    type: integer
+                  scaleUpStepPercent:
+                    default: 25
+                    description: |-
+                      ScaleUpStepPercent is how much to increase the limit by on each AutoRemediate patch,
+                      expressed as a percentage of the current limit.
+                    maximum: 100
+                    minimum: 10
+                    type: integer
+                required:
+                - mode
+                type: object
               tls:
                 description: TLS configures webhook TLS certificate management.
                 properties:
@@ -117,6 +190,52 @@ spec:
             description: CloudZeroAgentStatus defines the observed state of a CloudZeroAgent
               installation.
             properties:
+              componentMemory:
+                description: ComponentMemory tracks observed memory usage for each
+                  managed agent component.
+                items:
+                  description: ComponentMemoryStatus tracks observed memory usage
+                    for a single agent component.
+                  properties:
+                    componentName:
+                      description: ComponentName identifies the component.
+                      enum:
+                      - kubeStateMetrics
+                      - collector
+                      - aggregator
+                      - webhook
+                      type: string
+                    currentUsageBytes:
+                      description: CurrentUsageBytes is the most recently observed
+                        memory usage in bytes.
+                      format: int64
+                      type: integer
+                    lastObservedAt:
+                      description: LastObservedAt is the timestamp of the last metrics
+                        observation.
+                      format: date-time
+                      type: string
+                    lastPatchedAt:
+                      description: LastPatchedAt is the timestamp of the last AutoRemediate
+                        patch, if any.
+                      format: date-time
+                      type: string
+                    limitBytes:
+                      description: LimitBytes is the current memory limit in bytes.
+                      format: int64
+                      type: integer
+                    usagePercent:
+                      description: UsagePercent is CurrentUsageBytes / LimitBytes
+                        * 100.
+                      type: integer
+                  required:
+                  - componentName
+                  - currentUsageBytes
+                  - lastObservedAt
+                  - limitBytes
+                  - usagePercent
+                  type: object
+                type: array
               conditions:
                 description: Conditions represent the latest observations of the CloudZeroAgent's
                   state.

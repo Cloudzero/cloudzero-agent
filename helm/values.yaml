@@ -1672,6 +1672,44 @@ operator:
   tolerations: []
   # Affinity rules for the operator pod.
   affinity: {}
+  # Memory pressure management configuration.
+  #
+  # The operator can observe, recommend, or automatically remediate memory pressure
+  # on agent components by watching pod metrics and optionally patching Deployment
+  # resource limits.
+  #
+  # Modes:
+  #   Observe        - Surface memory pressure as status conditions only (default, no-op).
+  #   Recommend      - Emit Kubernetes Events recommending limit increases.
+  #   AutoRemediate  - Automatically patch Deployment memory limits within bounds.
+  #
+  # When AutoRemediate is enabled, the operator will not scale a component beyond
+  # maxMemoryMultiplier × its current Helm-deployed memory limit. Per-component
+  # overrides can be set under components.<name>.memory.max.
+  resourceManagement:
+    # mode controls operator behavior when memory pressure is detected.
+    # Valid values: Observe, Recommend, AutoRemediate
+    mode: Observe
+    # pressureThresholdPercent is the memory usage percentage that triggers action (50-99).
+    pressureThresholdPercent: 85
+    # scaleUpStepPercent is how much to increase the limit per AutoRemediate patch (10-100).
+    scaleUpStepPercent: 25
+    # cooldownPeriod is the minimum time between AutoRemediate patches for the same component.
+    cooldownPeriod: "10m"
+    # maxMemoryMultiplier is the ceiling multiplier applied to the current memory limit when
+    # no explicit per-component max is set. A value of 4 means the operator will not scale
+    # a component beyond 4× its current limit.
+    maxMemoryMultiplier: 4
+    # components optionally overrides the AutoRemediate ceiling per component.
+    # If not set, the ceiling is derived from the component's current limit × maxMemoryMultiplier.
+    # components:
+    #   kubeStateMetrics:
+    #     memory:
+    #       max: "2Gi"
+    #   collector:
+    #     memory:
+    #       max: "4Gi"
+    components: {}
 
 # -- Deprecated. Override the name of the chart. Used in resource naming.
 nameOverride:
