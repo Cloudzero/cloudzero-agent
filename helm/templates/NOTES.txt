@@ -13,6 +13,21 @@ Please refer to the documentation for guidance on `kubeStateMetrics` settings.
 
 ***************
 {{- end }}
+{{- if and (not .Values.apiKey) (not .Values.existingSecretName) }}
+***************
+
+
+****WARNING****
+
+This release is configured with both `apiKey` and `existingSecretName` unset.
+No CloudZero API key Secret volume will be mounted by the chart.
+
+If you are using an external secret mount pattern, ensure each enabled workload
+that needs the key has matching `components.*.extraVolumes` and
+`components.*.extraVolumeMounts` configured.
+
+***************
+{{- end }}
 
 
                     73                 32                  

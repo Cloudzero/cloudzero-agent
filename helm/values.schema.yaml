@@ -364,6 +364,7 @@ properties:
     type:
       - string
       - "null"
+    pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
     description: |
       The CloudZero API key.
   host:
@@ -377,22 +378,6 @@ properties:
       - "null"
     description: |
       The name of an existing Kubernetes secret containing the API key.
-  extraVolumeMounts:
-    oneOf:
-      - type: array
-        items:
-          $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
-      - type: "null"
-    description: |
-      Additional Kubernetes VolumeMount definitions to add to CloudZero workloads.
-  extraVolumes:
-    oneOf:
-      - type: array
-        items:
-          $ref: "#/$defs/io.k8s.api.core.v1.Volume"
-      - type: "null"
-    description: |
-      Additional Kubernetes Volume definitions to add to CloudZero workloads.
   nameOverride:
     deprecated: true
     type:
@@ -609,6 +594,22 @@ properties:
               For details, see the Kubernetes documentation on security contexts:
               https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
             $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          extraVolumeMounts:
+            description: |
+              Additional Kubernetes VolumeMount definitions to add to agent workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+              - type: "null"
+          extraVolumes:
+            description: |
+              Additional Kubernetes Volume definitions to add to agent workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+              - type: "null"
           labels:
             description: |
               Labels to be added to agent resources.
@@ -929,6 +930,22 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+              extraVolumeMounts:
+                description: |
+                  Additional Kubernetes VolumeMount definitions to add to config loader workloads.
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+                  - type: "null"
+              extraVolumes:
+                description: |
+                  Additional Kubernetes Volume definitions to add to config loader workloads.
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+                  - type: "null"
               annotations:
                 description: |
                   Annotations to add to the config loader job.
@@ -1159,6 +1176,22 @@ properties:
               For details, see the Kubernetes documentation on security contexts:
               https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
             $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          extraVolumeMounts:
+            description: |
+              Additional Kubernetes VolumeMount definitions to add to aggregator workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+              - type: "null"
+          extraVolumes:
+            description: |
+              Additional Kubernetes Volume definitions to add to aggregator workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+              - type: "null"
 
       kubectl:
         description: |
@@ -1251,6 +1284,22 @@ properties:
               For details, see the Kubernetes documentation on security contexts:
               https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
             $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+          extraVolumeMounts:
+            description: |
+              Additional Kubernetes VolumeMount definitions to add to webhook server workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+              - type: "null"
+          extraVolumes:
+            description: |
+              Additional Kubernetes Volume definitions to add to webhook server workloads.
+            oneOf:
+              - type: array
+                items:
+                  $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+              - type: "null"
           labels:
             description: |
               Labels to be added to webhook server resources.
@@ -1328,6 +1377,22 @@ properties:
                   For details, see the Kubernetes documentation on security contexts:
                   https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
+              extraVolumeMounts:
+                description: |
+                  Additional Kubernetes VolumeMount definitions to add to backfill workloads.
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
+                  - type: "null"
+              extraVolumes:
+                description: |
+                  Additional Kubernetes Volume definitions to add to backfill workloads.
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/$defs/io.k8s.api.core.v1.Volume"
+                  - type: "null"
 
       monitoring:
         description: |
@@ -3067,34 +3132,18 @@ properties:
 allOf:
   # Conditional: API key source validation
   #
-  # Default mode: exactly one of apiKey or existingSecretName must be set.
-  # External volume mode: if both are null, require explicit extraVolumes and
-  # extraVolumeMounts so this remains intentional and not accidental.
-  - if:
-      properties:
-        apiKey:
-          type: "null"
-        existingSecretName:
-          type: "null"
-    then:
-      properties:
-        extraVolumes:
-          type: array
-          minItems: 1
-        extraVolumeMounts:
-          type: array
-          minItems: 1
-    else:
-      oneOf:
-        - properties:
+  # Prevent setting both apiKey and existingSecretName at the same time.
+  # Both can be null to support external secret mount patterns.
+  - not:
+      allOf:
+        - required:
+            - apiKey
+          properties:
             apiKey:
               type: string
-              pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
-            existingSecretName:
-              type: "null"
-        - properties:
-            apiKey:
-              type: "null"
+        - required:
+            - existingSecretName
+          properties:
             existingSecretName:
               type: string
 

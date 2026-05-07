@@ -39,10 +39,6 @@ region: null
 apiKey: null
 # -- If set, the agent will use the API key in this Secret to authenticate with CloudZero.
 existingSecretName: null
-# -- Additional Kubernetes VolumeMount entries to add to the CloudZero workloads.
-extraVolumeMounts: []
-# -- Additional Kubernetes Volume entries to add to the CloudZero workloads.
-extraVolumes: []
 
 # Agent largely contains top-level settings which are often shared by multiple
 # components within this chart, or used as defaults in case values are not
@@ -356,6 +352,10 @@ components:
     # For details, see the Kubernetes documentation on security contexts:
     # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
     securityContext: {}
+    # Additional Kubernetes VolumeMount entries to add to agent workloads.
+    extraVolumeMounts: []
+    # Additional Kubernetes Volume entries to add to agent workloads.
+    extraVolumes: []
     # Resource requirements and limits for the agent component.
     #
     # For details, see the Kubernetes documentation on resource management:
@@ -570,6 +570,10 @@ components:
       # For details, see the Kubernetes documentation on security contexts:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
+      # Additional Kubernetes VolumeMount entries to add to the config loader job.
+      extraVolumeMounts: []
+      # Additional Kubernetes Volume entries to add to the config loader job.
+      extraVolumes: []
       # Annotations to add to the config loader job.
       #
       # These annotations are merged with defaults.annotations and apply to
@@ -720,6 +724,10 @@ components:
     # For details, see the Kubernetes documentation on security contexts:
     # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
     securityContext: {}
+    # Additional Kubernetes VolumeMount entries to add to aggregator workloads.
+    extraVolumeMounts: []
+    # Additional Kubernetes Volume entries to add to aggregator workloads.
+    extraVolumes: []
     collector:
       # Security context for the aggregator collector container.
       #
@@ -792,6 +800,10 @@ components:
     # For details, see the Kubernetes documentation on security contexts:
     # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
     securityContext: {}
+    # Additional Kubernetes VolumeMount entries to add to webhook server workloads.
+    extraVolumeMounts: []
+    # Additional Kubernetes Volume entries to add to webhook server workloads.
+    extraVolumes: []
     # Resource requirements and limits for the webhook server component.
     #
     # For details, see the Kubernetes documentation on resource management:
@@ -843,6 +855,10 @@ components:
       # For details, see the Kubernetes documentation on security contexts:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
+      # Additional Kubernetes VolumeMount entries to add to backfill job workloads.
+      extraVolumeMounts: []
+      # Additional Kubernetes Volume entries to add to backfill job workloads.
+      extraVolumes: []
 
   # Prometheus Operator monitoring integration.
   #

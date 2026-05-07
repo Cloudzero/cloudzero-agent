@@ -14,14 +14,16 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        aggregator:
+          extraVolumes:
+            - name: custom-extra-volume
+              configMap:
+                name: custom-extra-config
+          extraVolumeMounts:
+            - name: custom-extra-volume
+              mountPath: /opt/custom-extra
+              readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
@@ -52,14 +54,16 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        agent:
+          extraVolumes:
+            - name: custom-extra-volume
+              configMap:
+                name: custom-extra-config
+          extraVolumeMounts:
+            - name: custom-extra-volume
+              mountPath: /opt/custom-extra
+              readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
@@ -90,14 +94,26 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        webhookServer:
+          extraVolumes:
+            - name: custom-extra-volume
+              configMap:
+                name: custom-extra-config
+          extraVolumeMounts:
+            - name: custom-extra-volume
+              mountPath: /opt/custom-extra
+              readOnly: true
+        miscellaneous:
+          configLoader:
+            extraVolumes:
+              - name: custom-extra-volume
+                configMap:
+                  name: custom-extra-config
+            extraVolumeMounts:
+              - name: custom-extra-volume
+                mountPath: /opt/custom-extra
+                readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
@@ -141,14 +157,16 @@ tests:
       defaults:
         federation:
           enabled: true
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        agent:
+          extraVolumes:
+            - name: custom-extra-volume
+              configMap:
+                name: custom-extra-config
+          extraVolumeMounts:
+            - name: custom-extra-volume
+              mountPath: /opt/custom-extra
+              readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes
@@ -173,14 +191,17 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        webhookServer:
+          backfill:
+            extraVolumes:
+              - name: custom-extra-volume
+                configMap:
+                  name: custom-extra-config
+            extraVolumeMounts:
+              - name: custom-extra-volume
+                mountPath: /opt/custom-extra
+                readOnly: true
     asserts:
       - contains:
           path: spec.jobTemplate.spec.template.spec.volumes
@@ -198,14 +219,17 @@ tests:
       region: "us-east-1"
       existingSecretName: "cloudzero-api-key"
       apiKey: null
-      extraVolumes:
-        - name: custom-extra-volume
-          configMap:
-            name: custom-extra-config
-      extraVolumeMounts:
-        - name: custom-extra-volume
-          mountPath: /opt/custom-extra
-          readOnly: true
+      components:
+        webhookServer:
+          backfill:
+            extraVolumes:
+              - name: custom-extra-volume
+                configMap:
+                  name: custom-extra-config
+            extraVolumeMounts:
+              - name: custom-extra-volume
+                mountPath: /opt/custom-extra
+                readOnly: true
     asserts:
       - contains:
           path: spec.template.spec.volumes

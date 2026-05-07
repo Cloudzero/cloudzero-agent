@@ -772,35 +772,9 @@ Name for the secret holding TLS certificates
 {{- end }}
 
 {{/*
-Validate external API key file mode mount path configuration.
-
-When both apiKey and existingSecretName are unset, the chart expects the API key
-to be available from an externally mounted file. In this mode, at least one
-extraVolumeMount must target serverConfig.containerSecretFilePath so the runtime
-can read credentials from the configured location.
-*/}}
-{{- define "cloudzero-agent.validateExternalApiKeyMountPath" -}}
-{{- if and (not .Values.apiKey) (not .Values.existingSecretName) -}}
-  {{- $expectedPath := .Values.serverConfig.containerSecretFilePath | default "/etc/config/secrets/" -}}
-  {{- $expectedPathTrimmed := trimSuffix "/" $expectedPath -}}
-  {{- $match := dict "found" false -}}
-  {{- range $mount := .Values.extraVolumeMounts -}}
-    {{- $mountPath := $mount.mountPath | default "" -}}
-    {{- if or (eq $mountPath $expectedPath) (eq (trimSuffix "/" $mountPath) $expectedPathTrimmed) -}}
-      {{- $_ := set $match "found" true -}}
-    {{- end -}}
-  {{- end -}}
-  {{- if not (get $match "found") -}}
-    {{- fail (printf "External API key mode requires at least one extraVolumeMount.mountPath matching serverConfig.containerSecretFilePath (%s)." $expectedPath) -}}
-  {{- end -}}
-{{- end -}}
-{{- end }}
-
-{{/*
 Volume mount for the API key
 */}}
 {{- define "cloudzero-agent.apiKeyVolumeMount" -}}
-{{- include "cloudzero-agent.validateExternalApiKeyMountPath" . -}}
 {{- if or .Values.existingSecretName .Values.apiKey -}}
 - name: cloudzero-api-key
   mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
@@ -813,7 +787,7 @@ Volume mount for the API key
 Additional volume mounts for user-provided extensions.
 */}}
 {{- define "cloudzero-agent.extraVolumeMounts" -}}
-{{- with .Values.extraVolumeMounts -}}
+{{- with (.volumeMounts | default (list)) -}}
 {{ toYaml . }}
 {{- end -}}
 {{- end }}
@@ -822,8 +796,17 @@ Additional volume mounts for user-provided extensions.
 Additional volumes for user-provided extensions.
 */}}
 {{- define "cloudzero-agent.extraVolumes" -}}
-{{- with .Values.extraVolumes -}}
+{{- with (.volumes | default (list)) -}}
 {{ toYaml . }}
+{{- end -}}
+{{- end }}
+
+{{/*
+Returns true if resource-scoped extra volumes are configured.
+*/}}
+{{- define "cloudzero-agent.hasExtraVolumes" -}}
+{{- if gt (len (.volumes | default (list))) 0 -}}
+true
 {{- end -}}
 {{- end }}
 

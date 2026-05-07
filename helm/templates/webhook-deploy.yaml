@@ -132,7 +132,7 @@ spec:
             - name: insights-server-config
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
+            {{- include "cloudzero-agent.extraVolumeMounts" (dict "volumeMounts" .Values.components.webhookServer.extraVolumeMounts) | nindent 12 }}
           {{- if or .Values.insightsController.volumeMounts .Values.insightsController.tls.enabled }}
             {{- if .Values.insightsController.tls.enabled }}
             - name: tls-certs
@@ -165,7 +165,7 @@ spec:
             successThreshold: {{ .Values.insightsController.server.healthCheck.successThreshold }}
             failureThreshold: {{ .Values.insightsController.server.healthCheck.failureThreshold }}
           {{- end }}
-      {{- if or .Values.insightsController.volumes .Values.insightsController.tls.enabled (or .Values.existingSecretName .Values.apiKey) .Values.extraVolumes }}
+      {{- if or .Values.insightsController.volumes .Values.insightsController.tls.enabled (or .Values.existingSecretName .Values.apiKey) (include "cloudzero-agent.hasExtraVolumes" (dict "volumes" .Values.components.webhookServer.extraVolumes)) }}
       volumes:
         - name: insights-server-config
           configMap:
@@ -180,7 +180,7 @@ spec:
           secret:
             secretName: {{ include "cloudzero-agent.secretName" . }}
         {{- end }}
-        {{- include "cloudzero-agent.extraVolumes" . | nindent 8 }}
+        {{- include "cloudzero-agent.extraVolumes" (dict "volumes" .Values.components.webhookServer.extraVolumes) | nindent 8 }}
         {{- with .Values.insightsController.volumes }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
