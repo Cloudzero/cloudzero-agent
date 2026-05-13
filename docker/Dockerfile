@@ -9,7 +9,7 @@ ARG DEPLOY_IMAGE=scratch
 # 6. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
-FROM --platform=$BUILDPLATFORM golang:1.26.2-alpine AS base-tools
+FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine AS base-tools
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 
