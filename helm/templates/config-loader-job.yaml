@@ -95,7 +95,6 @@ spec:
               ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
             - name: config-values
               mountPath: /cloudzero/config/values # values.yaml
             - name: config-volume
@@ -127,12 +126,7 @@ spec:
         - name: config-aggregator
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
-        - name: cloudzero-api-key
-          secret:
-            secretName: {{ include "cloudzero-agent.secretName" . }}
-        {{- end }}
-        {{- include "cloudzero-agent.extraVolumes" . | nindent 8 }}
+        {{- include "cloudzero-agent.apiKeyVolume" . | nindent 8 }}
         {{- with .Values.insightsController.volumes }}
           {{- toYaml . | nindent 8 }}
         {{- end }}

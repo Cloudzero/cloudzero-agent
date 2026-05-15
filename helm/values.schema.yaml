@@ -377,22 +377,6 @@ properties:
       - "null"
     description: |
       The name of an existing Kubernetes secret containing the API key.
-  extraVolumeMounts:
-    oneOf:
-      - type: array
-        items:
-          $ref: "#/$defs/io.k8s.api.core.v1.VolumeMount"
-      - type: "null"
-    description: |
-      Additional Kubernetes VolumeMount definitions to add to CloudZero workloads.
-  extraVolumes:
-    oneOf:
-      - type: array
-        items:
-          $ref: "#/$defs/io.k8s.api.core.v1.Volume"
-      - type: "null"
-    description: |
-      Additional Kubernetes Volume definitions to add to CloudZero workloads.
   nameOverride:
     deprecated: true
     type:
@@ -526,6 +510,23 @@ properties:
     additionalProperties: false
     type: object
     properties:
+      apiKey:
+        description: |
+          API key CSI configuration. Takes effect only when both top-level
+          apiKey and existingSecretName are null.
+        type: object
+        additionalProperties: false
+        properties:
+          secretProviderClass:
+            description: |
+              Name of a Kubernetes SecretProviderClass resource. When set, the
+              chart mounts the API key via the Secrets Store CSI Driver instead
+              of a Kubernetes Secret volume. The SecretProviderClass must be
+              created separately and configured to produce a file named after
+              serverConfig.containerSecretFileName at the mount path.
+            type:
+              - string
+              - "null"
       agent:
         description: |
           The CloudZero Agent.
@@ -3077,9 +3078,9 @@ properties:
 allOf:
   # Conditional: API key source validation
   #
-  # Default mode: exactly one of apiKey or existingSecretName must be set.
-  # External volume mode: if both are null, require explicit extraVolumes and
-  # extraVolumeMounts so this remains intentional and not accidental.
+  # Top-level apiKey/existingSecretName take priority when set. If both are
+  # null, the chart falls back to components.apiKey where exactly one of
+  # value, name, or secretProviderClass must be non-null.
   - if:
       properties:
         apiKey:
@@ -3088,12 +3089,14 @@ allOf:
           type: "null"
     then:
       properties:
-        extraVolumes:
-          type: array
-          minItems: 1
-        extraVolumeMounts:
-          type: array
-          minItems: 1
+        components:
+          properties:
+            apiKey:
+              properties:
+                secretProviderClass:
+                  type: string
+                  minLength: 1
+              required: [secretProviderClass]
     else:
       oneOf:
         - properties:

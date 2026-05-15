@@ -150,10 +150,8 @@ Below is a summary of these settings and how they are used:
 | cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, or project number in GCP. Auto-detected via IMDS when available; required if IMDS is blocked.           |
 | clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS and AKS; auto-detected on GKE; required on any provider if IMDS is blocked.                         |
 | host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                          |
-| apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` is set.                                                           |
+| apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` or `components.apiKey` is configured.                             |
 | existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                        |
-| extraVolumeMounts  | array  | `[]`                  | Additional Kubernetes `VolumeMount` entries to add to the CloudZero workloads.                                                                       |
-| extraVolumes       | array  | `[]`                  | Additional Kubernetes `Volume` entries to add to the CloudZero workloads.                                                                             |
 | region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
 
 > It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
@@ -257,7 +255,21 @@ kubectl create secret -n example-namespace generic example-secret-name --from-li
 
 The secret can then be used with `existingSecretName`.
 
-For advanced integrations, you can also use `extraVolumes` and `extraVolumeMounts` to attach additional volumes such as CSI-backed secrets to the CloudZero workloads.
+#### CSI-based Secret Delivery
+
+For environments using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/), you can mount the API key directly from an external vault (AWS Secrets Manager, Azure Key Vault, GCP Secret Manager, etc.) without creating a Kubernetes Secret object.
+
+1. Install the Secrets Store CSI Driver and the appropriate cloud provider plugin on your cluster.
+2. Create a `SecretProviderClass` in the same namespace as the CloudZero Agent that fetches your API key and produces a file matching `serverConfig.containerSecretFileName` (default: `value`).
+3. Reference it in your values:
+
+```yaml
+components:
+  apiKey:
+    secretProviderClass: "your-secret-provider-class-name"
+```
+
+When `components.apiKey.secretProviderClass` is set and both `apiKey` and `existingSecretName` are null, the chart mounts the API key via the CSI driver. The top-level `apiKey` and `existingSecretName` properties take priority when set.
 
 ### Update Helm Chart
 

@@ -82,7 +82,6 @@ spec:
             ) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-          {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
             - name: lifecycle-volume
               mountPath: /checks/bin/
             - name: validator-config-volume
@@ -111,7 +110,6 @@ spec:
             ) | nindent 10 }}
           volumeMounts:
           {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-          {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
             - name: lifecycle-volume
               mountPath: /checks/bin/
             - name: validator-config-volume
@@ -251,8 +249,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/app/config/
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
-        {{- end }}{{/* End Prometheus container */}}
+          {{- end }}{{/* End Prometheus container */}}
         {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
         # CloudZero Alloy container (binary embedded in agent image)
         - name: {{ template "cloudzero-agent.name" . }}-alloy
@@ -334,8 +331,7 @@ spec:
             - name: alloy-tmp
               mountPath: /tmp
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
-        {{- end }}{{/* End Alloy container */}}
+          {{- end }}{{/* End Alloy container */}}
       {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
           (.Values.defaults.securityContext | default (dict))
           (.Values.components.agent.securityContext | default (dict))
@@ -363,12 +359,7 @@ spec:
         - name: alloy-tmp
           emptyDir: {}
         {{- end }}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
-        - name: cloudzero-api-key
-          secret:
-            secretName: {{ include "cloudzero-agent.secretName" . }}
-        {{- end }}
-        {{- include "cloudzero-agent.extraVolumes" . | nindent 8 }}
+        {{- include "cloudzero-agent.apiKeyVolume" . | nindent 8 }}
         - name: cloudzero-agent-storage-volume
         {{- if .Values.server.persistentVolume.enabled }}
           persistentVolumeClaim:

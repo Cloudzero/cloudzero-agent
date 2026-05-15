@@ -88,7 +88,6 @@ spec:
             ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
             - name: aggregator-config-volume
               mountPath: {{ .Values.aggregator.mountRoot }}/config
               readOnly: true
@@ -138,7 +137,6 @@ spec:
             ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
             - name: aggregator-config-volume
               mountPath: {{ .Values.aggregator.mountRoot }}/config
               readOnly: true
@@ -194,12 +192,7 @@ spec:
             name: {{ template "cloudzero-agent.validatorConfigMapName" . }}
         - name: lifecycle-volume
           emptyDir: {}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
-        - name: cloudzero-api-key
-          secret:
-            secretName: {{ include "cloudzero-agent.secretName" . }}
-        {{- end }}
-        {{- include "cloudzero-agent.extraVolumes" . | nindent 8 }}
+        {{- include "cloudzero-agent.apiKeyVolume" . | nindent 8 }}
         - name: aggregator-config-volume
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}

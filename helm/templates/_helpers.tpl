@@ -54,6 +54,23 @@ Returns: string (e.g., "my-release-api-key" or custom existing secret name)
 {{- end}}
 
 {{/*
+Determine the API key provisioning mode.
+
+Returns one of: "inline", "secret", "csi", "none"
+*/}}
+{{- define "cloudzero-agent.apiKey.mode" -}}
+{{- if .Values.apiKey -}}
+  {{- print "inline" -}}
+{{- else if .Values.existingSecretName -}}
+  {{- print "secret" -}}
+{{- else if and .Values.components .Values.components.apiKey .Values.components.apiKey.secretProviderClass -}}
+  {{- print "csi" -}}
+{{- else -}}
+  {{- print "none" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Define the path and filename on the container filesystem which holds the CloudZero API key.
 
 This template constructs the complete file path where the API key is mounted inside containers.
@@ -772,36 +789,12 @@ Name for the secret holding TLS certificates
 {{- end }}
 
 {{/*
-Validate external API key file mode mount path configuration.
-
-When both apiKey and existingSecretName are unset, the chart expects the API key
-to be available from an externally mounted file. In this mode, at least one
-extraVolumeMount must target serverConfig.containerSecretFilePath so the runtime
-can read credentials from the configured location.
-*/}}
-{{- define "cloudzero-agent.validateExternalApiKeyMountPath" -}}
-{{- if and (not .Values.apiKey) (not .Values.existingSecretName) -}}
-  {{- $expectedPath := .Values.serverConfig.containerSecretFilePath | default "/etc/config/secrets/" -}}
-  {{- $expectedPathTrimmed := trimSuffix "/" $expectedPath -}}
-  {{- $match := dict "found" false -}}
-  {{- range $mount := .Values.extraVolumeMounts -}}
-    {{- $mountPath := $mount.mountPath | default "" -}}
-    {{- if or (eq $mountPath $expectedPath) (eq (trimSuffix "/" $mountPath) $expectedPathTrimmed) -}}
-      {{- $_ := set $match "found" true -}}
-    {{- end -}}
-  {{- end -}}
-  {{- if not (get $match "found") -}}
-    {{- fail (printf "External API key mode requires at least one extraVolumeMount.mountPath matching serverConfig.containerSecretFilePath (%s)." $expectedPath) -}}
-  {{- end -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Volume mount for the API key
+Volume mount for the API key.
+Renders for inline, secret, and csi modes. No output for "none".
 */}}
 {{- define "cloudzero-agent.apiKeyVolumeMount" -}}
-{{- include "cloudzero-agent.validateExternalApiKeyMountPath" . -}}
-{{- if or .Values.existingSecretName .Values.apiKey -}}
+{{- $mode := include "cloudzero-agent.apiKey.mode" . -}}
+{{- if ne $mode "none" -}}
 - name: cloudzero-api-key
   mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
   subPath: ""
@@ -810,21 +803,25 @@ Volume mount for the API key
 {{- end }}
 
 {{/*
-Additional volume mounts for user-provided extensions.
+Volume definition for the API key.
+- inline/secret: Kubernetes Secret volume
+- csi: Secrets Store CSI Driver volume
+- none: no output
 */}}
-{{- define "cloudzero-agent.extraVolumeMounts" -}}
-{{- with .Values.extraVolumeMounts -}}
-{{ toYaml . }}
-{{- end -}}
+{{- define "cloudzero-agent.apiKeyVolume" -}}
+{{- $mode := include "cloudzero-agent.apiKey.mode" . -}}
+{{- if or (eq $mode "inline") (eq $mode "secret") -}}
+- name: cloudzero-api-key
+  secret:
+    secretName: {{ include "cloudzero-agent.secretName" . }}
+{{- else if eq $mode "csi" -}}
+- name: cloudzero-api-key
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ .Values.components.apiKey.secretProviderClass }}
 {{- end }}
-
-{{/*
-Additional volumes for user-provided extensions.
-*/}}
-{{- define "cloudzero-agent.extraVolumes" -}}
-{{- with .Values.extraVolumes -}}
-{{ toYaml . }}
-{{- end -}}
 {{- end }}
 
 {{/*

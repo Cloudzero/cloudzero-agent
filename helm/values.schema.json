@@ -5444,28 +5444,6 @@
   "additionalProperties": false,
   "allOf": [
     {
-      "if": {
-        "properties": {
-          "apiKey": {
-            "type": "null"
-          },
-          "existingSecretName": {
-            "type": "null"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "extraVolumes": {
-            "minItems": 1,
-            "type": "array"
-          },
-          "extraVolumeMounts": {
-            "minItems": 1,
-            "type": "array"
-          }
-        }
-      },
       "else": {
         "oneOf": [
           {
@@ -5490,6 +5468,33 @@
             }
           }
         ]
+      },
+      "if": {
+        "properties": {
+          "apiKey": {
+            "type": "null"
+          },
+          "existingSecretName": {
+            "type": "null"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "properties": {
+              "apiKey": {
+                "properties": {
+                  "secretProviderClass": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["secretProviderClass"]
+              }
+            }
+          }
+        }
       }
     },
     {
@@ -5833,32 +5838,6 @@
     },
     "apiKey": {
       "type": ["string", "null"]
-    },
-    "extraVolumeMounts": {
-      "oneOf": [
-        {
-          "items": {
-            "$ref": "#/$defs/io.k8s.api.core.v1.VolumeMount"
-          },
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "extraVolumes": {
-      "oneOf": [
-        {
-          "items": {
-            "$ref": "#/$defs/io.k8s.api.core.v1.Volume"
-          },
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ]
     },
     "cloudAccountId": {
       "pattern": "^$|^[0-9]+$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^'[0-9]+'$|^'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'$",
@@ -6226,6 +6205,15 @@
             },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations"
+            }
+          },
+          "type": "object"
+        },
+        "apiKey": {
+          "additionalProperties": false,
+          "properties": {
+            "secretProviderClass": {
+              "type": ["string", "null"]
             }
           },
           "type": "object"

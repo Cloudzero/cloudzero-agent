@@ -1027,6 +1027,8 @@ data:
               memory: 64Mi
           securityContext: {}
         tolerations: []
+      apiKey:
+        secretProviderClass: null
       miscellaneous:
         configLoader:
           annotations: {}

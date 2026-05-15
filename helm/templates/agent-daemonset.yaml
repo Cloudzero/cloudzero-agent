@@ -189,7 +189,6 @@ spec:
               mountPath: /data
               subPath: ""
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
-            {{- include "cloudzero-agent.extraVolumeMounts" . | nindent 12 }}
       {{- include "cloudzero-agent.generatePodSecurityContext" (mergeOverwrite
           (.Values.defaults.securityContext | default (dict))
           (.Values.components.agent.federatedNode.securityContext | default (dict))
@@ -207,12 +206,7 @@ spec:
             name: {{ .Release.Name }}-daemonset-cm
         - name: processed-config-volume
           emptyDir: {}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
-        - name: cloudzero-api-key
-          secret:
-            secretName: {{ include "cloudzero-agent.secretName" . }}
-        {{- end }}
-        {{- include "cloudzero-agent.extraVolumes" . | nindent 8 }}
+        {{- include "cloudzero-agent.apiKeyVolume" . | nindent 8 }}
         - name: cloudzero-agent-storage-volume
           emptyDir:
           {{- if .Values.server.emptyDir.sizeLimit }}
