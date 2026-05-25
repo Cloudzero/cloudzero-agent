@@ -8,13 +8,19 @@ how they were validated.
 
 The chart provides two categories of monitoring integration:
 
-1. **Prometheus `prometheus.io/*` annotations** on all Services (always enabled).
-   These allow standard Prometheus installations using `kubernetes_sd_configs`
-   to auto-discover and scrape CloudZero Agent metrics without any CRDs.
+1. **Prometheus `prometheus.io/*` annotations** on all Services (enabled by
+   default, controlled by `components.monitoring.scrapeAnnotations`). These
+   allow standard Prometheus installations using `kubernetes_sd_configs` to
+   auto-discover and scrape CloudZero Agent metrics without any CRDs.
 
 2. **Prometheus Operator CRDs** (opt-in via `components.monitoring.enabled`).
    When enabled, the chart creates `ServiceMonitor` and `PrometheusRule`
    resources that the Prometheus Operator automatically picks up.
+
+When both are active simultaneously, Prometheus deployments that honor both
+annotation-based discovery and ServiceMonitors may scrape each target twice.
+Set `components.monitoring.scrapeAnnotations: false` to disable the annotations
+when using ServiceMonitors.
 
 These resources are designed to be useful regardless of the customer's
 monitoring stack. The `ServiceMonitor` and `PrometheusRule` CRDs are the
@@ -31,6 +37,10 @@ components:
     # true = always install CRDs (fails if Prometheus Operator absent)
     # false = never install CRDs (default while feature is being validated)
     enabled: false
+
+    # true (default) = keep prometheus.io/* annotations on Services
+    # false = remove redundant annotations from Services
+    scrapeAnnotations: true
 
     # Override namespace for CRDs (default: same as agent namespace)
     namespace: ""
@@ -288,11 +298,15 @@ Validated using multiple test scenarios on the `bach` cluster:
 
 Tested via `helm template` with all three modes:
 
-| `components.monitoring.enabled` | ServiceMonitors | PrometheusRules | `prometheus.io/*` annotations |
-| ------------------------------- | --------------- | --------------- | ----------------------------- |
-| `null` (no CRDs in cluster)     | 0               | 0               | 3 (always)                    |
-| `true`                          | 4               | 1               | 3 (always)                    |
-| `false`                         | 0               | 0               | 3 (always)                    |
+| `components.monitoring.enabled` | ServiceMonitors | PrometheusRules | `prometheus.io/*` annotations<sup>†</sup> |
+| ------------------------------- | --------------- | --------------- | ----------------------------------------- |
+| `null` (no CRDs in cluster)     | 0               | 0               | 3                                         |
+| `true`                          | 4               | 1               | 3                                         |
+| `false`                         | 0               | 0               | 3                                         |
+
+<sup>†</sup> Annotation count assumes `components.monitoring.scrapeAnnotations: true`
+(default). Set to `false` to omit annotations, e.g. when `enabled` is `true` or
+`"auto"` to avoid duplicate scraping.
 
 ### Test Suite
 

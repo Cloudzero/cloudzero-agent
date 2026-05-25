@@ -6309,6 +6309,10 @@
                 }
               ]
             },
+            "scrapeAnnotations": {
+              "default": true,
+              "type": "boolean"
+            },
             "sharedSecret": {
               "default": false,
               "type": "boolean"

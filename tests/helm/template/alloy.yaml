@@ -1104,6 +1104,7 @@ data:
         enabled: null
         labels: {}
         namespace: null
+        scrapeAnnotations: true
         sharedSecret: false
       prometheus:
         image:

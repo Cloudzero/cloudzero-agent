@@ -859,10 +859,26 @@ components:
   #
   # To opt in now, set to "auto" or true.
   #
-  # Regardless of this setting, prometheus.io/* annotations are always added to
-  # Services for customers using standard Prometheus service discovery.
+  # By default, prometheus.io/* annotations are added to Services for customers
+  # using standard Prometheus service discovery. Set monitoring.scrapeAnnotations:
+  # false to disable them when using Prometheus Operator ServiceMonitors to avoid
+  # Prometheus scraping each target twice.
   monitoring:
     enabled: null
+
+    # Controls whether prometheus.io/* annotations are added to Services.
+    #
+    # Background: When monitoring.enabled is true, the chart creates
+    # ServiceMonitor CRDs that instruct the Prometheus Operator to scrape
+    # CloudZero Agent metrics. In that setup, the prometheus.io/* annotations on
+    # Services become redundant and in clusters where both annotation-based
+    # and CRD-based discovery are active, same metrics could be scraped twice.
+    #
+    # - true (default): Keep the prometheus.io/* annotations set on Services.
+    #   This value ensures backward compatibility
+    #
+    # - false: Remove the redundant prometheus.io/* annotations from Services.
+    scrapeAnnotations: true
 
     # Namespace override for PrometheusRule and ServiceMonitor CRDs.
     # null (default) = same namespace as the agent installation.

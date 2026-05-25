@@ -2,15 +2,18 @@
 #
 # This test validates that Service resources properly inherit
 # defaults.labels and defaults.annotations from the chart's defaults section.
+# Also tests monitoring.scrapeAnnotations controls prometheus.io/* annotations.
 #
 # Services only support metadata-level defaults (labels and annotations).
 # PodSpec defaults (affinity, tolerations, etc.) do not apply to Services.
 #
 # Templates tested:
+# - agent-service.yaml
 # - aggregator-service.yaml
 # - webhook-service.yaml
 suite: defaults.* properties apply to Service resources
 templates:
+  - agent-service.yaml
   - aggregator-service.yaml
   - webhook-service.yaml
 tests:
@@ -91,3 +94,54 @@ tests:
       - equal:
           path: metadata.annotations.test-defaults-annotation
           value: sentinel-value-annotation
+
+  # ============================================================================
+  # monitoring.scrapeAnnotations tests
+  # ============================================================================
+  - it: should include prometheus.io annotations on agent-service by default
+    template: agent-service.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should omit prometheus.io annotations on agent-service when scrapeAnnotations is false
+    template: agent-service.yaml
+    set:
+      components.monitoring.scrapeAnnotations: false
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]
+
+  - it: should include prometheus.io annotations on aggregator-service by default
+    template: aggregator-service.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should omit prometheus.io annotations on aggregator-service when scrapeAnnotations is false
+    template: aggregator-service.yaml
+    set:
+      components.monitoring.scrapeAnnotations: false
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]
+
+  - it: should include prometheus.io annotations on webhook-service by default
+    template: webhook-service.yaml
+    set:
+      insightsController.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should omit prometheus.io annotations on webhook-service when scrapeAnnotations is false
+    template: webhook-service.yaml
+    set:
+      insightsController.enabled: true
+      components.monitoring.scrapeAnnotations: false
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]

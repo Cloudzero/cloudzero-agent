@@ -11,13 +11,17 @@ metadata:
         .Values.components.webhookServer.labels
       )
     ) | nindent 2 }}
+  {{- $promAnnotations := dict -}}
+  {{- if not (eq .Values.components.monitoring.scrapeAnnotations false) -}}
+  {{- $promAnnotations = dict "prometheus.io/scrape" "true" "prometheus.io/port" "8443" "prometheus.io/path" "/metrics" "prometheus.io/scheme" "https" -}}
+  {{- end -}}
   {{- include "cloudzero-agent.generateAnnotations" (dict
       "root" .
       "annotations" (list
         .Values.defaults.annotations
         .Values.components.webhookServer.annotations
         (dict "nginx.ingress.kubernetes.io/ssl-redirect" "false")
-        (dict "prometheus.io/scrape" "true" "prometheus.io/port" "8443" "prometheus.io/path" "/metrics" "prometheus.io/scheme" "https")
+        $promAnnotations
       )
     ) | nindent 2 }}
   namespace: {{ .Release.Namespace }}
