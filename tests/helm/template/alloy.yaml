@@ -1199,6 +1199,7 @@ data:
       dns:
         config: {}
         policy: null
+      env: []
       image:
         pullPolicy: IfNotPresent
         pullSecrets: null
@@ -2630,6 +2631,7 @@ spec:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
             - --listen-address=:8080
+          
           ports:
             - containerPort: 8080
           livenessProbe:
@@ -2679,10 +2681,6 @@ spec:
             - --server.http.listen-addr=0.0.0.0:9090
             - --storage.path=/tmp/alloy
           env:
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
             - name: K8S_NAMESPACE
               value: cz-agent
             - name: K8S_POD_NAME
@@ -2697,6 +2695,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.labels['topology.istio.io/cluster']
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           lifecycle:
             postStart:
               exec:
@@ -3024,6 +3026,7 @@ spec:
           args:
             - -config
             - "/etc/cloudzero-agent-insights/server-config.yaml"
+          
           ports:
             - containerPort: 8443
           resources:
@@ -3130,6 +3133,7 @@ spec:
                 - -config
                 - "/etc/cloudzero-agent-insights/server-config.yaml"
                 - -backfill
+              
               resources:
                 limits:
                   cpu: 500m
@@ -3338,6 +3342,7 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
+          
           resources:
             limits:
               cpu: 200m
@@ -3404,6 +3409,7 @@ spec:
           imagePullPolicy: "IfNotPresent"
           command: ["/app/cloudzero-certifik8s"]
           workingDir: /var/tmp
+          
           resources:
             limits:
               cpu: 200m
@@ -3481,6 +3487,7 @@ spec:
                 - -config
                 - "/etc/cloudzero-agent-insights/server-config.yaml"
                 - -backfill
+              
               resources:
                 limits:
                   cpu: 500m

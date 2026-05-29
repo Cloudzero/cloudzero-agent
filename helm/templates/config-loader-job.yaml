@@ -56,8 +56,12 @@ spec:
       containers:
         - name: run-validator
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
-          env:
-            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+              )
+            ) | nindent 10 }}
           command:
             - /app/cloudzero-cluster-config
             - load

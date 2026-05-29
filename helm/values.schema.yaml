@@ -461,6 +461,16 @@ properties:
         description: |
           Annotations to be added to all resources.
         $ref: "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+      env:
+        description: |
+          Additional environment variables to inject into every container the
+          chart manages. Merged with the chart's per-container env on a
+          last-wins-by-name basis. Canonical knob for routing chart traffic
+          through an HTTP(S) proxy (set HTTP_PROXY / HTTPS_PROXY / NO_PROXY
+          here) — also usable for any other env var needed across the chart.
+        type: array
+        items:
+          $ref: "#/$defs/io.k8s.api.core.v1.EnvVar"
       affinity:
         description: |
           Affinity settings to be added to all resources.

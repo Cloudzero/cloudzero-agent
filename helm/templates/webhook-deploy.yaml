@@ -118,6 +118,11 @@ spec:
           args:
             - -config
             - "{{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml"
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+              )
+            ) | nindent 10 }}
           ports:
             - containerPort: 8443
           {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list

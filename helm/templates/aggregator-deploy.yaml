@@ -80,9 +80,12 @@ spec:
             - name: port-collector
               containerPort: {{ .Values.aggregator.collector.port }}
           command: ["/app/cloudzero-collector", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
-          env:
-            - name: SERVER_PORT
-              value: "{{ .Values.aggregator.collector.port }}"
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (list (dict "name" "SERVER_PORT" "value" (printf "%d" (int .Values.aggregator.collector.port))))
+              )
+            ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume
@@ -126,9 +129,12 @@ spec:
             - name: port-shipper
               containerPort: {{ .Values.aggregator.shipper.port }}
           command: ["/app/cloudzero-shipper", "-config", "{{ .Values.aggregator.mountRoot }}/config/config.yml"]
-          env:
-            - name: SERVER_PORT
-              value: "{{ .Values.aggregator.shipper.port }}"
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (list (dict "name" "SERVER_PORT" "value" (printf "%d" (int .Values.aggregator.shipper.port))))
+              )
+            ) | nindent 10 }}
           volumeMounts:
             {{- include "cloudzero-agent.apiKeyVolumeMount" . | nindent 12 }}
             - name: aggregator-config-volume

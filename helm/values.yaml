@@ -52,6 +52,26 @@ defaults:
   image:
     pullPolicy: IfNotPresent
     pullSecrets:
+
+  # Additional environment variables to inject into every container the chart
+  # manages. Each entry follows the Kubernetes EnvVar schema — `name` plus
+  # either a literal `value` or a `valueFrom` (fieldRef, configMapKeyRef,
+  # secretKeyRef, etc.). See:
+  # https://kubernetes.io/docs/reference/kubernetes-api/core/pod-v1/#EnvVar
+  #
+  # `defaults.env` is the lowest-priority env source — chart-emitted entries
+  # (validatorEnv, hardcoded `HOSTNAME` / `NODE_NAME` / `SERVER_PORT`
+  # fieldRefs) and component-specific user env (e.g., `.Values.server.env` on
+  # the Prometheus container) override it on `name` collision.
+  #
+  # To route chart traffic through an HTTP(S) proxy, set HTTP_PROXY /
+  # HTTPS_PROXY / NO_PROXY here, see `helm/docs/egress-proxy.md` for the full
+  # walkthrough — what NO_PROXY must cover, per-cloud examples, and discovery
+  # commands.
+  #
+  # Default: [] (no extra env vars).
+  env: []
+
   # If set, these DNS settings will be attached to resources which support it.
   dns:
     # DNS policy to use on all pods.

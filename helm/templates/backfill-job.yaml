@@ -155,6 +155,11 @@ spec:
                 - -config
                 - "{{ include "cloudzero-agent.insightsController.configurationMountPath" $ }}/server-config.yaml"
                 - -backfill
+              {{- include "cloudzero-agent.generateEnv" (dict
+                  "env" (list
+                    $.Values.defaults.env
+                  )
+                ) | nindent 14 }}
               {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
                     ($.Values.components.webhookServer.backfill.resources | default (dict))
                     ($.Values.insightsController.resources | default (dict))
