@@ -71,7 +71,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
 FROM gcr.io/distroless/static-debian12:debug@sha256:7985579713fb1171e707d74659c67af3605642d1c9db305304c2998a99032615 AS certs
 
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
-FROM ghcr.io/cloudzero/alloy:v1.15.1 AS alloy
+FROM ghcr.io/cloudzero/alloy:v1.16.1 AS alloy
 
 # Stage 6: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
