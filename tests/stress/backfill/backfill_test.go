@@ -89,7 +89,8 @@ func TestBackfillMemoryScaling(t *testing.T) {
 		name := fmt.Sprintf("%dk", total/1000)
 		t.Run(name, func(t *testing.T) {
 			r := runOutOfProcess(t, tc.namespaces, tc.podsPerNS, "")
-			t.Logf("%-12d %10s %12s %8s %10d",
+			t.Logf(
+				"%-12d %10s %12s %8s %10d",
 				total,
 				r.duration.Round(time.Millisecond),
 				humanBytes(r.peakRSS),
@@ -114,7 +115,8 @@ func TestBackfillMemoryScalingWithLimit(t *testing.T) {
 		name := fmt.Sprintf("%dk", total/1000)
 		t.Run(name, func(t *testing.T) {
 			r := runOutOfProcess(t, tc.namespaces, tc.podsPerNS, "256MiB")
-			t.Logf("%-12d %10s %12s %10d",
+			t.Logf(
+				"%-12d %10s %12s %10d",
 				total,
 				r.duration.Round(time.Millisecond),
 				humanBytes(r.peakRSS),

@@ -51,7 +51,8 @@ func main() {
 
 	// create logging opts
 	loggingOpts := make([]logging.LoggerOpt, 0, 2)
-	loggingOpts = append(loggingOpts,
+	loggingOpts = append(
+		loggingOpts,
 		logging.WithLevel(settings.Logging.Level),
 		logging.WithSink(logging.NewFieldFilterWriter(os.Stdout, []string{"spanId", "parentSpanId"})),
 	)

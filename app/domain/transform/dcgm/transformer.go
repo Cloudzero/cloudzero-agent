@@ -289,7 +289,8 @@ func (t *Transformer) bufferMemoryMetric(metric types.Metric, isUsed bool) {
 // makeMemoryKey creates a unique key for buffering memory metrics. Format:
 // "namespace/pod/container/gpu"
 func makeMemoryKey(metric types.Metric) string {
-	return fmt.Sprintf("%s/%s/%s/%s",
+	return fmt.Sprintf(
+		"%s/%s/%s/%s",
 		metric.Labels["namespace"],
 		metric.Labels["pod"],
 		metric.Labels["container"],

@@ -80,7 +80,8 @@ func (h *HouseKeeper) Run() error {
 				log.Debug().
 					Dur("retention_time", h.retentionTime).
 					Msg("Starting data purge process for stale records")
-				expired, err := h.store.FindAllBy(h.ctx,
+				expired, err := h.store.FindAllBy(
+					h.ctx,
 					fmt.Sprintf("sent_at < '%[1]s' AND record_created < '%[1]s' AND record_updated < '%[1]s' AND sent_at IS NOT NULL", utils.FormatForStorage(retentionTime)),
 				)
 				if err != nil {

@@ -41,7 +41,8 @@ func main() {
 		},
 	}
 
-	app.Commands = append(app.Commands,
+	app.Commands = append(
+		app.Commands,
 		configcmd.NewCommand(ctx),
 		diagcmd.NewCommand(),
 		install.NewCommand(),

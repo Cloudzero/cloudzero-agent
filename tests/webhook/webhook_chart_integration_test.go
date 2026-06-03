@@ -190,7 +190,8 @@ func deployWebhookChart(t *testing.T, kubeconfig, apiKey string) {
 	}
 
 	// Install Helm chart with webhook enabled and minimal replicas for faster testing
-	cmd = helmCommand(kubeconfig, "upgrade", "--install", releaseName, helmDir,
+	cmd = helmCommand(
+		kubeconfig, "upgrade", "--install", releaseName, helmDir,
 		"--namespace", webhookNamespace,
 		"--values", valuesPath,
 		"--timeout", helmTimeout,

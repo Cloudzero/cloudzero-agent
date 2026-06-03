@@ -37,7 +37,8 @@ func TestStorageWarning_Thresholds(t *testing.T) {
 			du := &types.StoreUsage{PercentUsed: tt.percent}
 			got := du.GetStorageWarning()
 			if got != tt.expected {
-				t.Errorf("For %.2f%%, expected %v (%d), got %v (%d)",
+				t.Errorf(
+					"For %.2f%%, expected %v (%d), got %v (%d)",
 					tt.percent,
 					tt.expected, uint(tt.expected),
 					got, uint(got),
