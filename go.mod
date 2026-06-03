@@ -68,7 +68,7 @@ require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/andybalholm/brotli v1.2.1
 	github.com/ccoveille/go-safecast v1.8.2
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-obvious/server v0.1.15
 	github.com/go-obvious/timestamp v0.0.1
