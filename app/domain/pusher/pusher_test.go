@@ -140,7 +140,8 @@ func Test_FlushMany(t *testing.T) {
 	apiKeyContent := "apiKeyContent"
 	expectedSentCount := 3
 	actualSentCount := 0
-	p, host := setupTest(t, mockClock, mockStore,
+	p, host := setupTest(
+		t, mockClock, mockStore,
 		func(w http.ResponseWriter, r *http.Request) {
 			actualSentCount++
 			// Basic request validation
@@ -317,7 +318,8 @@ func Test_Flush_Handles_SendFailure(t *testing.T) {
 
 	// Capture the records that were sent
 	apiKeyContent := "apiKeyContent"
-	p, host := setupTest(t, mockClock, mockStore,
+	p, host := setupTest(
+		t, mockClock, mockStore,
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		},

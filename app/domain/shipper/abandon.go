@@ -26,7 +26,8 @@ type AbandonAPIPayloadFile struct {
 // reason.
 func (m *MetricShipper) AbandonFiles(ctx context.Context, payload []*AbandonAPIPayloadFile) error {
 	return m.metrics.SpanCtx(ctx, "shipper_AbandonFiles", func(ctx context.Context, id string) error {
-		logger := instr.SpanLogger(ctx, id,
+		logger := instr.SpanLogger(
+			ctx, id,
 			func(ctx zerolog.Context) zerolog.Context {
 				return ctx.Int("numFiles", len(payload))
 			},

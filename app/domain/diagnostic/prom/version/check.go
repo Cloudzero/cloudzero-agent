@@ -54,7 +54,8 @@ func (c *checker) Check(ctx context.Context, _ *net.Client, accessor status.Acce
 			&status.StatusCheck{
 				Name:  DiagnosticPrometheusVersion,
 				Error: err.Error(),
-			})
+			},
+		)
 		return nil
 	}
 

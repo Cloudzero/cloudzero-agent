@@ -82,7 +82,8 @@ func Post(ctx context.Context, client *net.Client, cfg *config.Settings, accesso
 	logrus.Infof("compressed size is: %d bytes", buf.Len())
 
 	endpoint := fmt.Sprintf("%s%s", cfg.Cloudzero.Host, URLPath)
-	_, err = http.Do(ctx, client, net.MethodPost,
+	_, err = http.Do(
+		ctx, client, net.MethodPost,
 		map[string]string{
 			http.HeaderAuthorization: "Bearer " + cfg.Cloudzero.Credential,
 			http.HeaderContentType:   http.ContentTypeProtobuf,
