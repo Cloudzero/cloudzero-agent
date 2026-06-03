@@ -67,7 +67,7 @@ jobs:
 
       - name: Push to cloudzero-charts
         if: ${{ env.PUSH_HELM_CHART == 'true' }}
-        uses: ad-m/github-push-action@v1.1.0
+        uses: ad-m/github-push-action@v1.3.0
         with:
           ssh: true
           repository: cloudzero/cloudzero-charts
