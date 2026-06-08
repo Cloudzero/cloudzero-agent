@@ -65,11 +65,12 @@ spec:
             - /bin/sh
             - -c
             - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (list (dict "name" "NODE_NAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "spec.nodeName"))))
+              )
+            ) | nindent 10 }}
           {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
               (.Values.components.agent.reloader.resources | default (dict))
               (.Values.configmapReload.prometheus.resources | default (dict))
@@ -91,6 +92,11 @@ spec:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
             - --listen-address=:8080
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+              )
+            ) | nindent 10 }}
           ports:
             - containerPort: 8080
           livenessProbe:
@@ -128,14 +134,13 @@ spec:
         {{- end }}
         - name: {{ template "cloudzero-agent.name" . }}-server
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheus.image "compat" (dict "repository" .Values.server.image.repository "tag" (include "cloudzero-agent.Values.components.prometheus.image.tag" .) "digest" .Values.server.image.digest "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            {{- if .Values.server.env }}
-            {{- toYaml .Values.server.env | indent 12}}
-            {{- end }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                .Values.server.env
+                (list (dict "name" "NODE_NAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "spec.nodeName"))))
+              )
+            ) | nindent 10 }}
           args:
             - --config.file=/etc/config/prometheus.yml
             - --web.enable-lifecycle

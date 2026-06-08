@@ -1129,6 +1129,7 @@ data:
       dns:
         config: {}
         policy: null
+      env: []
       image:
         pullPolicy: IfNotPresent
         pullSecrets: null
@@ -2560,6 +2561,7 @@ spec:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
             - --listen-address=:8080
+          
           ports:
             - containerPort: 8080
           livenessProbe:
@@ -2601,6 +2603,21 @@ spec:
         - name: cloudzero-agent-server
           image: "quay.io/prometheus/prometheus:v3.10.0-distroless"
           imagePullPolicy: "IfNotPresent"
+          env:
+            - name: K8S_NAMESPACE
+              value: cz-agent
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ISTIO_AMBIENT_REDIRECTION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['ambient.istio.io/redirection']
+            - name: ISTIO_TOPOLOGY_CLUSTER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['topology.istio.io/cluster']
           lifecycle:
             postStart:
               exec:
@@ -2934,6 +2951,7 @@ spec:
           args:
             - -config
             - "/etc/cloudzero-agent-insights/server-config.yaml"
+          
           ports:
             - containerPort: 8443
           resources:
@@ -3041,6 +3059,7 @@ spec:
                 - -config
                 - "/etc/cloudzero-agent-insights/server-config.yaml"
                 - -backfill
+              
               resources:
                 limits:
                   cpu: 500m
@@ -3249,6 +3268,7 @@ spec:
             - /etc/config/values/values.yaml
             - --output
             - "-"
+          
           resources:
             limits:
               cpu: 200m
@@ -3315,6 +3335,7 @@ spec:
           imagePullPolicy: "IfNotPresent"
           command: ["/app/cloudzero-certifik8s"]
           workingDir: /var/tmp
+          
           resources:
             limits:
               cpu: 200m
@@ -3393,6 +3414,7 @@ spec:
                 - -config
                 - "/etc/cloudzero-agent-insights/server-config.yaml"
                 - -backfill
+              
               resources:
                 limits:
                   cpu: 500m

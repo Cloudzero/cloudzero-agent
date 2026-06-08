@@ -323,6 +323,7 @@ To receive a notification when a new version of the chart is [released](https://
 - [Memory Sizing Guide](./docs/sizing-guide.md)
 - [Deployment Validation Guide](./docs/deploy-validation.md)
 - Using istio? [Read on here](./docs/istio.md)
+- Behind an egress proxy? [Read on here](./docs/egress-proxy.md)
 - [Chart release notes](./docs/releases/)
 
 ---

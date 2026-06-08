@@ -61,8 +61,12 @@ spec:
       initContainers:
         - name: {{ .Values.validator.name }}-copy
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
-          env:
-            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+              )
+            ) | nindent 10 }}
           command:
             - /app/cloudzero-agent-validator
             - install
@@ -84,8 +88,12 @@ spec:
               mountPath: /checks/config/
         - name: {{ .Values.validator.name }}-run
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.validator.image) | nindent 10 }}
-          env:
-            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+              )
+            ) | nindent 10 }}
           command:
             - /checks/bin/cloudzero-agent-validator
             - diagnose
@@ -115,6 +123,11 @@ spec:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
             - --listen-address=:8080
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+              )
+            ) | nindent 10 }}
           ports:
             - containerPort: 8080
           livenessProbe:
@@ -161,11 +174,13 @@ spec:
               "tag" (include "cloudzero-agent.Values.components.prometheus.image.tag" .)
               "digest" .Values.server.image.digest
               "pullPolicy" .Values.server.image.pullPolicy)) | nindent 10 }}
-          {{- if .Values.server.env }}
-          env:
-{{ toYaml .Values.server.env | indent 12}}
-            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
-          {{- end }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                .Values.server.env
+                (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+              )
+            ) | nindent 10 }}
           lifecycle:
             postStart:
               exec:
@@ -252,12 +267,13 @@ spec:
             - --cluster.enabled=true
             - --cluster.name={{ .Values.clusterName }}
             {{- end }}
-          env:
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            {{- include "cloudzero-agent.validatorEnv" . | nindent 12 }}
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+                (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+                (list (dict "name" "HOSTNAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))))
+              )
+            ) | nindent 10 }}
           lifecycle:
             postStart:
               exec:

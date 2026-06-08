@@ -62,6 +62,11 @@ spec:
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.initCertJob.image) | nindent 10 }}
           command: ["/app/cloudzero-certifik8s"]
           workingDir: /var/tmp
+          {{- include "cloudzero-agent.generateEnv" (dict
+              "env" (list
+                .Values.defaults.env
+              )
+            ) | nindent 10 }}
           {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.initCert.resources | nindent 10 }}
           {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
               (.Values.defaults.securityContext | default (dict))

@@ -1,0 +1,382 @@
+# Tests for `defaults.env` propagation and the `generateEnv` merge helper.
+#
+# `defaults.env` is the chart-wide env-injection mechanism. Behavior under
+# test:
+#
+#   1. Every chart-managed container picks up every entry from
+#      `defaults.env`. There's no per-container opt-in/opt-out.
+#
+#   2. Entries are merged by `name` with a last-wins rule. `defaults.env`
+#      is the LOWEST-priority source — chart-emitted entries (validatorEnv,
+#      hardcoded SERVER_PORT/NODE_NAME/HOSTNAME fieldRefs) win over it,
+#      and component-specific user env (e.g. `.Values.server.env` on the
+#      Prometheus container) sits in between.
+#
+#   3. When `defaults.env` is unset (or empty), no env block is emitted on
+#      containers that have no other env sources — preserving the chart's
+#      "no env block when nothing to emit" default.
+#
+#   4. valueFrom entries are preserved as deep dicts (not flattened).
+#
+# The set of containers exercised here is intentionally broad — the helper
+# refactor touches every container in the chart, so the propagation tests
+# act as a guard against regressions where someone forgets to wire
+# generateEnv into a new container.
+suite: defaults.env propagation and generateEnv merge semantics
+templates:
+  - templates/aggregator-deploy.yaml
+  - templates/agent-deploy.yaml
+  - templates/agent-daemonset.yaml
+  - templates/config-loader-job.yaml
+  - templates/webhook-deploy.yaml
+  - templates/backfill-job.yaml
+  - templates/helmless-job.yaml
+  - templates/init-cert-job.yaml
+tests:
+  # ============================================================================
+  # Baseline: no defaults.env, no other env source -> no env block emitted.
+  # ============================================================================
+  - it: should emit no env block on containers with no other sources when defaults.env unset
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+        template: templates/helmless-job.yaml
+      - isNull:
+          path: spec.template.spec.containers[0].env
+        template: templates/init-cert-job.yaml
+      - isNull:
+          path: spec.template.spec.containers[0].env
+        template: templates/webhook-deploy.yaml
+      - isNull:
+          path: spec.template.spec.containers[0].env
+        template: templates/backfill-job.yaml
+        documentIndex: 1
+      - isNull:
+          # configmap-reload sidecar in agent-deploy
+          path: spec.template.spec.containers[0].env
+        template: templates/agent-deploy.yaml
+
+  # ============================================================================
+  # Propagation: a single defaults.env entry reaches every chart container.
+  # ============================================================================
+  - it: should propagate defaults.env into the aggregator collector + shipper
+    set:
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FOO
+            value: bar
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: FOO
+            value: bar
+        template: templates/aggregator-deploy.yaml
+
+  - it: should propagate defaults.env into agent-deploy server-mode containers
+    set:
+      components.agent.mode: agent
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      # containers[0] = configmap-reload, containers[1] = prometheus-server
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+      # initContainers[0] = validator-copy, [1] = validator-run
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+
+  - it: should propagate defaults.env into alloy in clustered mode
+    set:
+      components.agent.mode: clustered
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      # containers[1] = alloy in clustered mode
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+
+  - it: should propagate defaults.env into agent-daemonset containers (federated mode)
+    set:
+      components.agent.mode: federated
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-daemonset.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-daemonset.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-daemonset.yaml
+
+  - it: should propagate defaults.env into config-loader, webhook, helmless, init-cert
+    set:
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/config-loader-job.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/webhook-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/helmless-job.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/init-cert-job.yaml
+      # backfill-job ranges over [CronJob, Job]; documentIndex 0 is the
+      # CronJob (jobTemplate-nested spec) and 1 is the one-time Job (flat
+      # spec). Both should pick up defaults.env.
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/backfill-job.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FOO, value: bar }
+        template: templates/backfill-job.yaml
+        documentIndex: 1
+
+  # ============================================================================
+  # Merge semantics: chart-emitted entries live alongside defaults.env.
+  # ============================================================================
+  - it: should preserve chart-emitted SERVER_PORT alongside defaults.env on aggregator
+    set:
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SERVER_PORT, value: "8081" }
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/aggregator-deploy.yaml
+
+  - it: should preserve chart-emitted validatorEnv alongside defaults.env on validator init
+    set:
+      components.agent.mode: agent
+      defaults.env:
+        - name: FOO
+          value: bar
+    asserts:
+      # K8S_POD_NAME uses a valueFrom fieldRef — pin the structure so we know
+      # the deep dict survives the merge unchanged.
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content: { name: FOO, value: bar }
+        template: templates/agent-deploy.yaml
+
+  # ============================================================================
+  # Merge precedence — `defaults.env` is the LOWEST-priority source.
+  # Chart-emitted literals must win on collision (they're load-bearing).
+  # ============================================================================
+  - it: should NOT let defaults.env override the chart-emitted SERVER_PORT literal
+    set:
+      defaults.env:
+        - name: SERVER_PORT
+          value: "9999"
+    asserts:
+      # collector's port is 8080, shipper's is 8081 — the chart values must
+      # win, not the user's defaults.env "9999".
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: SERVER_PORT, value: "8080" }
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SERVER_PORT, value: "8081" }
+        template: templates/aggregator-deploy.yaml
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: { name: SERVER_PORT, value: "9999" }
+        template: templates/aggregator-deploy.yaml
+
+  # `.Values.server.env` is the middle tier — wins over defaults.env but
+  # still loses to chart-emitted entries.
+  - it: should let .Values.server.env override defaults.env on the prometheus-server container
+    set:
+      components.agent.mode: agent
+      defaults.env:
+        - name: SHARED
+          value: from-defaults
+      server.env:
+        - name: SHARED
+          value: from-server-env
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SHARED, value: from-server-env }
+        template: templates/agent-deploy.yaml
+      # And the override is scoped to prometheus-server: other containers
+      # still see the defaults.env value.
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: SHARED, value: from-defaults }
+        template: templates/aggregator-deploy.yaml
+
+  # ============================================================================
+  # valueFrom entries pass through intact.
+  # ============================================================================
+  - it: should preserve valueFrom entries from defaults.env
+    set:
+      defaults.env:
+        - name: MY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        template: templates/webhook-deploy.yaml
+
+  # ============================================================================
+  # Realistic proxy-config use case.
+  # ============================================================================
+  - it: should inject HTTPS_PROXY+NO_PROXY into every container when set via defaults.env
+    set:
+      defaults.env:
+        - name: HTTPS_PROXY
+          value: "http://proxy.example.com:8080"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,.svc.cluster.local"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HTTPS_PROXY, value: "http://proxy.example.com:8080" }
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: HTTPS_PROXY, value: "http://proxy.example.com:8080" }
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HTTPS_PROXY, value: "http://proxy.example.com:8080" }
+        template: templates/config-loader-job.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HTTPS_PROXY, value: "http://proxy.example.com:8080" }
+        template: templates/webhook-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            { name: NO_PROXY, value: "localhost,127.0.0.1,.svc.cluster.local" }
+        template: templates/webhook-deploy.yaml
+
+  # ============================================================================
+  # Generic merge-helper edge cases. These pin behavior the helper docstring
+  # promises (`cloudzero-agent.generateEnv` in _helpers.tpl).
+  # ============================================================================
+  - it: should always emit validatorEnv on prometheus-server even with empty server.env and defaults.env
+    set:
+      components.agent.mode: agent
+    asserts:
+      # containers[1] = prometheus-server in agent mode. validatorEnv must
+      # render unconditionally — the lifecycle hooks invoked by the
+      # prometheus-server container rely on K8S_NAMESPACE / K8S_POD_NAME.
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+
+  # NOTE: the "entries without a name are dropped" behavior the helper
+  # documents is unreachable through normal use — the values schema for
+  # `defaults.env` references `io.k8s.api.core.v1.EnvVar`, which requires
+  # `name` and rejects entries without it at chart-render time. The
+  # defensive check inside the helper is internal armor only.
+
+  - it: should preserve first-source position when a later source overrides by name
+    set:
+      defaults.env:
+        - name: SERVER_PORT # collides with chart literal; defaults.env comes
+          value: "9999" # first in the source list, so position 0 is its
+        - name: SECOND # slot — but the chart literal's value wins.
+          value: two
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[0].name
+          value: SERVER_PORT
+        template: templates/aggregator-deploy.yaml
+      - equal:
+          path: spec.template.spec.containers[0].env[0].value
+          value: "8080" # chart literal wins on value; collector port
+        template: templates/aggregator-deploy.yaml
+
+  - it: should NOT let defaults.env override a validatorEnv-emitted variable
+    set:
+      components.agent.mode: agent
+      defaults.env:
+        - name: K8S_POD_NAME
+          value: from-defaults-env
+    asserts:
+      # K8S_POD_NAME is set via validatorEnv (fieldRef metadata.name) — that
+      # chart-emitted value must win over the user's defaults.env attempt.
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+      - notContains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: K8S_POD_NAME
+            value: from-defaults-env
+        template: templates/agent-deploy.yaml

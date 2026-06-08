@@ -1016,6 +1016,76 @@ annotations:
 {{- end -}}
 
 {{/*
+Generate a container env block by merging a list of env-entry sources.
+
+Parameters (dict):
+- env:  List of env-entry lists to merge (required).
+
+Each list element is itself a list of env-entry dicts ({name, value} or
+{name, valueFrom}). Sources can come from:
+  - an inline list of dicts built with `(list (dict "name" "..." "value" ...))`
+  - the output of an env-emitting helper, parsed via `fromYamlArray`:
+      (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+  - a list value from values.yaml: `.Values.defaults.env`
+
+Merge behavior:
+- Later sources override earlier sources by `name` (last wins).
+- First-seen wins for ordering; overrides retain the entry's original position.
+- Nil/empty sources are skipped.
+- Entries without a `name` field are skipped (defensive only — the
+  `.Values.defaults.env` schema rejects them at render time via the
+  io.k8s.api.core.v1.EnvVar ref).
+
+Output:
+- If at least one entry survives the merge, emits an `env:` key followed by
+  the merged list as YAML.
+- If the merged list is empty, emits nothing — caller's container ends up
+  with no env block, preserving the chart's default rendering.
+
+Source-list precedence convention (lowest → highest):
+  1. `.Values.defaults.env` — chart-wide user override; lowest priority.
+  2. Component-specific user env (e.g. `.Values.server.env`) — overrides
+     chart-wide user env on collision but loses to chart-emitted entries.
+  3. Chart-emitted helper output (`validatorEnv` etc.).
+  4. Chart-emitted hardcoded literals (`SERVER_PORT`, `NODE_NAME`,
+     `HOSTNAME`) — highest priority; these are load-bearing for the
+     chart's correctness and must not be overridable.
+
+Example:
+  {{- include "cloudzero-agent.generateEnv" (dict
+      "env" (list
+        .Values.defaults.env
+        .Values.server.env
+        (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
+        (list (dict "name" "SERVER_PORT" "value" (printf "%d" (int .Values.aggregator.shipper.port))))
+      )
+    ) | nindent 10 }}
+*/}}
+{{- define "cloudzero-agent.generateEnv" -}}
+{{- $sources := .env | default (list) -}}
+{{- $byName := dict -}}
+{{- $order := list -}}
+{{- range $list := $sources -}}
+  {{- range $entry := $list -}}
+    {{- if and $entry $entry.name -}}
+      {{- if not (hasKey $byName $entry.name) -}}
+        {{- $order = append $order $entry.name -}}
+      {{- end -}}
+      {{- $_ := set $byName $entry.name $entry -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $order -}}
+{{- $result := list -}}
+{{- range $name := $order -}}
+  {{- $result = append $result (index $byName $name) -}}
+{{- end -}}
+env:
+{{- $result | toYaml | nindent 2 -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate affinity sections
 */}}
 {{- define "cloudzero-agent.generateAffinity" -}}
@@ -1529,6 +1599,7 @@ Returns: The Istio cluster ID string (explicit or fallback to clusterName)
 {{- define "cloudzero-agent.istio.clusterID" -}}
 {{- .Values.integrations.istio.clusterID | default .Values.clusterName -}}
 {{- end -}}
+
 
 {{/*
 Validator Stage Helper

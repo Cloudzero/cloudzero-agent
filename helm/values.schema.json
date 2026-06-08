@@ -6488,6 +6488,12 @@
         "dns": {
           "$ref": "#/$defs/com.cloudzero.agent.dns"
         },
+        "env": {
+          "items": {
+            "$ref": "#/$defs/io.k8s.api.core.v1.EnvVar"
+          },
+          "type": "array"
+        },
         "federation": {
           "additionalProperties": false,
           "properties": {
