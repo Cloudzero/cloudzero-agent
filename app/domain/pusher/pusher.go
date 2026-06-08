@@ -10,7 +10,6 @@ package pusher
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -242,18 +241,13 @@ func (h *MetricsPusher) sendBatch(batch []*types.ResourceTags) error {
 	}
 
 	endpoint := h.settings.RemoteWrite.Host
-	apiToken := h.settings.GetAPIKey()
-	if apiToken == "" {
-		RemoteWriteFailures.WithLabelValues(endpoint).Inc()
-		return errors.New("API key is empty")
-	}
 
 	ts := h.formatMetrics(batch)
 	log.Ctx(h.ctx).Info().
 		Int("recordCount", len(ts)).
 		Msg("Pushing records to remote write endpoint")
 
-	if err := h.pushMetrics(h.settings.RemoteWrite.Host, apiToken, ts); err != nil {
+	if err := h.pushMetrics(h.settings.RemoteWrite.Host, ts); err != nil {
 		RemoteWriteFailures.WithLabelValues(endpoint).Inc()
 		return fmt.Errorf("failed to push metrics to remote write: %v", err)
 	}
@@ -388,7 +382,7 @@ func (h *MetricsPusher) createTimeseries(
 	return ts
 }
 
-func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSeries []prompb.TimeSeries) error {
+func (h *MetricsPusher) pushMetrics(remoteWriteURL string, timeSeries []prompb.TimeSeries) error {
 	writeRequest := &prompb.WriteRequest{
 		Timeseries: timeSeries,
 	}
@@ -420,7 +414,6 @@ func (h *MetricsPusher) pushMetrics(remoteWriteURL string, apiKey string, timeSe
 
 		req.Header.Set("Content-Type", "application/x-protobuf")
 		req.Header.Set("Content-Encoding", "snappy")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
 
 		client := &http.Client{}
 		resp, err = client.Do(req)

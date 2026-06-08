@@ -136,7 +136,6 @@ database:
   retention_time: 24h
   cleanup_interval: 3h
   batch_update_size: 500
-api_key_path: {{ include "cloudzero-agent.secretFileFullPath" . }}
 {{- $namespace := .Release.Namespace }}
 {{- with .Values.insightsController }}
 certificate:
