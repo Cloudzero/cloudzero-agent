@@ -302,23 +302,7 @@ additionalProperties: false
 required:
   - host
 
-# Enforce that exactly one of apiKey or existingSecretName must be set
-# anyOf ensures at least one is required, oneOf ensures only one has a non-null value
-anyOf:
-  - required: [apiKey]
-  - required: [existingSecretName]
-oneOf:
-  - properties:
-      apiKey:
-        type: string
-        pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
-      existingSecretName:
-        type: "null"
-  - properties:
-      apiKey:
-        type: "null"
-      existingSecretName:
-        type: string
+# Root-level cross-field validations live in allOf below.
 
 properties:
   cloudAccountId:
@@ -526,6 +510,23 @@ properties:
     additionalProperties: false
     type: object
     properties:
+      apiKey:
+        description: |
+          API key CSI configuration. Takes effect only when both top-level
+          apiKey and existingSecretName are null.
+        type: object
+        additionalProperties: false
+        properties:
+          secretProviderClass:
+            description: |
+              Name of a Kubernetes SecretProviderClass resource. When set, the
+              chart mounts the API key via the Secrets Store CSI Driver instead
+              of a Kubernetes Secret volume. The SecretProviderClass must be
+              created separately and configured to produce a file named after
+              serverConfig.containerSecretFileName at the mount path.
+            type:
+              - string
+              - "null"
       agent:
         description: |
           The CloudZero Agent.
@@ -3075,6 +3076,41 @@ properties:
 
 # Root-level conditional validations that span multiple properties
 allOf:
+  # Conditional: API key source validation
+  #
+  # Top-level apiKey/existingSecretName take priority when set. If both are
+  # null, the chart falls back to components.apiKey where exactly one of
+  # value, name, or secretProviderClass must be non-null.
+  - if:
+      properties:
+        apiKey:
+          type: "null"
+        existingSecretName:
+          type: "null"
+    then:
+      properties:
+        components:
+          properties:
+            apiKey:
+              properties:
+                secretProviderClass:
+                  type: string
+                  minLength: 1
+              required: [secretProviderClass]
+    else:
+      oneOf:
+        - properties:
+            apiKey:
+              type: string
+              pattern: "^[a-zA-Z0-9-_.~!*'();]+$"
+            existingSecretName:
+              type: "null"
+        - properties:
+            apiKey:
+              type: "null"
+            existingSecretName:
+              type: string
+
   # Conditional: Federation mode constraint
   #
   # If defaults.federation.enabled is true, then components.agent.mode must be

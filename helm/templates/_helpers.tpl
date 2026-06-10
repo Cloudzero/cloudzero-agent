@@ -54,6 +54,23 @@ Returns: string (e.g., "my-release-api-key" or custom existing secret name)
 {{- end}}
 
 {{/*
+Determine the API key provisioning mode.
+
+Returns one of: "inline", "secret", "csi", "none"
+*/}}
+{{- define "cloudzero-agent.apiKey.mode" -}}
+{{- if .Values.apiKey -}}
+  {{- print "inline" -}}
+{{- else if .Values.existingSecretName -}}
+  {{- print "secret" -}}
+{{- else if and .Values.components .Values.components.apiKey .Values.components.apiKey.secretProviderClass -}}
+  {{- print "csi" -}}
+{{- else -}}
+  {{- print "none" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Define the path and filename on the container filesystem which holds the CloudZero API key.
 
 This template constructs the complete file path where the API key is mounted inside containers.
@@ -772,14 +789,38 @@ Name for the secret holding TLS certificates
 {{- end }}
 
 {{/*
-Volume mount for the API key
+Volume mount for the API key.
+Renders for inline, secret, and csi modes. No output for "none".
 */}}
 {{- define "cloudzero-agent.apiKeyVolumeMount" -}}
-{{- if or .Values.existingSecretName .Values.apiKey -}}
+{{- $mode := include "cloudzero-agent.apiKey.mode" . -}}
+{{- if ne $mode "none" -}}
 - name: cloudzero-api-key
   mountPath: {{ .Values.serverConfig.containerSecretFilePath }}
   subPath: ""
   readOnly: true
+{{- end }}
+{{- end }}
+
+{{/*
+Volume definition for the API key.
+- inline/secret: Kubernetes Secret volume
+- csi: Secrets Store CSI Driver volume
+- none: no output
+*/}}
+{{- define "cloudzero-agent.apiKeyVolume" -}}
+{{- $mode := include "cloudzero-agent.apiKey.mode" . -}}
+{{- if or (eq $mode "inline") (eq $mode "secret") -}}
+- name: cloudzero-api-key
+  secret:
+    secretName: {{ include "cloudzero-agent.secretName" . }}
+{{- else if eq $mode "csi" -}}
+- name: cloudzero-api-key
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ .Values.components.apiKey.secretProviderClass }}
 {{- end }}
 {{- end }}
 

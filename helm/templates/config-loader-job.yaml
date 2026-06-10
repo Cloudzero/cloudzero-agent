@@ -126,11 +126,7 @@ spec:
         - name: config-aggregator
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}
-        {{- if or .Values.existingSecretName .Values.apiKey }}
-        - name: cloudzero-api-key
-          secret:
-            secretName: {{ include "cloudzero-agent.secretName" . }}
-        {{- end }}
+        {{- include "cloudzero-agent.apiKeyVolume" . | nindent 8 }}
         {{- with .Values.insightsController.volumes }}
           {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -300,6 +300,13 @@ integrations:
 
 # Component-specific configuration settings.
 components:
+  # API key configuration for CSI-driven secret mounts.
+  apiKey:
+    # -- Name of a SecretProviderClass resource. When set (and both top-level
+    # -- apiKey and existingSecretName are null), the chart mounts the API key
+    # -- via the Secrets Store CSI Driver instead of a Kubernetes Secret volume.
+    secretProviderClass: null
+
   # The agent here refers to the CloudZero Agent, which is the component that
   # collects metrics from the cluster and sends them to the aggregator.
   agent:

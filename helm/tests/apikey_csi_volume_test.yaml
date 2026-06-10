@@ -1,0 +1,156 @@
+suite: test CSI volume rendering for secretProviderClass
+templates:
+  - templates/aggregator-deploy.yaml
+  - templates/agent-deploy.yaml
+  - templates/agent-daemonset.yaml
+  - templates/config-loader-job.yaml
+  - templates/webhook-deploy.yaml
+  - templates/backfill-job.yaml
+tests:
+  - it: should render CSI volume in aggregator when secretProviderClass is set
+    set:
+      apiKey: null
+      existingSecretName: null
+      components:
+        apiKey:
+          secretProviderClass: "my-secret-provider"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: my-secret-provider
+        template: templates/aggregator-deploy.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cloudzero-api-key
+            mountPath: /etc/config/secrets/
+            subPath: ""
+            readOnly: true
+        template: templates/aggregator-deploy.yaml
+
+  - it: should render CSI volume in agent deployment when secretProviderClass is set
+    set:
+      apiKey: null
+      existingSecretName: null
+      components:
+        apiKey:
+          secretProviderClass: "my-secret-provider"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: my-secret-provider
+        template: templates/agent-deploy.yaml
+
+  # NOTE: The webhook server is intentionally excluded from API-key mounting
+  # (CP-28161 removed the API key from the webhook entirely), so there is no
+  # CSI-volume case for templates/webhook-deploy.yaml here. The
+  # webhook_no_apikey_mount_test.yaml suite asserts the webhook has no
+  # api-key volume or volumeMount under any apiKey source, including CSI.
+
+  - it: should render CSI volume in config-loader job when secretProviderClass is set
+    set:
+      apiKey: null
+      existingSecretName: null
+      components:
+        apiKey:
+          secretProviderClass: "my-secret-provider"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: my-secret-provider
+        template: templates/config-loader-job.yaml
+
+  - it: should render secret volume (not CSI) when top-level apiKey is set
+    set:
+      apiKey: "test-key-123"
+      existingSecretName: null
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            secret:
+              secretName: RELEASE-NAME-api-key
+        template: templates/aggregator-deploy.yaml
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: my-secret-provider
+        template: templates/aggregator-deploy.yaml
+
+  - it: should render secret volume when top-level existingSecretName is set
+    set:
+      apiKey: null
+      existingSecretName: "my-custom-secret"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            secret:
+              secretName: my-custom-secret
+        template: templates/aggregator-deploy.yaml
+
+  - it: should use top-level apiKey over components.apiKey.secretProviderClass
+    set:
+      apiKey: "top-level-key"
+      existingSecretName: null
+      components:
+        apiKey:
+          secretProviderClass: "should-be-ignored"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            secret:
+              secretName: RELEASE-NAME-api-key
+        template: templates/aggregator-deploy.yaml
+
+  - it: should render CSI volume in daemonset when secretProviderClass is set in federated mode
+    set:
+      apiKey: null
+      existingSecretName: null
+      configmapReload:
+        prometheus:
+          enabled: false
+      defaults:
+        federation:
+          enabled: true
+      components:
+        apiKey:
+          secretProviderClass: "my-secret-provider"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cloudzero-api-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: my-secret-provider
+        template: templates/agent-daemonset.yaml

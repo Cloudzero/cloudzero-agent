@@ -5444,6 +5444,60 @@
   "additionalProperties": false,
   "allOf": [
     {
+      "else": {
+        "oneOf": [
+          {
+            "properties": {
+              "apiKey": {
+                "pattern": "^[a-zA-Z0-9-_.~!*'();]+$",
+                "type": "string"
+              },
+              "existingSecretName": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "properties": {
+              "apiKey": {
+                "type": "null"
+              },
+              "existingSecretName": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "if": {
+        "properties": {
+          "apiKey": {
+            "type": "null"
+          },
+          "existingSecretName": {
+            "type": "null"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "properties": {
+              "apiKey": {
+                "properties": {
+                  "secretProviderClass": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["secretProviderClass"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "if": {
         "allOf": [
           {
@@ -5525,37 +5579,6 @@
             },
             "type": "object"
           }
-        }
-      }
-    }
-  ],
-  "anyOf": [
-    {
-      "required": ["apiKey"]
-    },
-    {
-      "required": ["existingSecretName"]
-    }
-  ],
-  "oneOf": [
-    {
-      "properties": {
-        "apiKey": {
-          "pattern": "^[a-zA-Z0-9-_.~!*'();]+$",
-          "type": "string"
-        },
-        "existingSecretName": {
-          "type": "null"
-        }
-      }
-    },
-    {
-      "properties": {
-        "apiKey": {
-          "type": "null"
-        },
-        "existingSecretName": {
-          "type": "string"
         }
       }
     }
@@ -6182,6 +6205,15 @@
             },
             "tolerations": {
               "$ref": "#/$defs/com.cloudzero.agent.tolerations"
+            }
+          },
+          "type": "object"
+        },
+        "apiKey": {
+          "additionalProperties": false,
+          "properties": {
+            "secretProviderClass": {
+              "type": ["string", "null"]
             }
           },
           "type": "object"
