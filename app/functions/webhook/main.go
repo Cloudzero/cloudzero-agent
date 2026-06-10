@@ -30,6 +30,7 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/http/middleware"
 	"github.com/cloudzero/cloudzero-agent/app/logging"
 	"github.com/cloudzero/cloudzero-agent/app/storage/repo"
+	"github.com/cloudzero/cloudzero-agent/app/storage/streaming"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
 	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
@@ -84,7 +85,32 @@ func main() {
 		fmt.Println(string(enc))
 	}
 
-	// setup database
+	if backfill {
+		log.Info().Msg("Starting backfill mode")
+		streamStore := streaming.New(settings)
+		wd, err2 := webhook.NewWebhookFactory(streamStore, settings, clock)
+		if err2 != nil {
+			log.Fatal().Err(err2).Msg("failed to create webhook domain controller")
+		}
+		k8sClient, err2 := k8s.NewClient(settings.K8sClient.KubeConfig)
+		if err2 != nil {
+			log.Fatal().Err(err2).Msg("Failed to build k8s client")
+		}
+		enum := backfiller.NewKubernetesObjectEnumerator(k8sClient, wd, settings)
+		if backfillNoWait {
+			enum.DisableServiceWait()
+		}
+		if err2 = enum.Start(context.Background()); err2 != nil {
+			log.Fatal().Err(err2).Msg("Failed to start Kubernetes object enumerator")
+		}
+		if err2 = streamStore.Flush(); err2 != nil {
+			log.Fatal().Err(err2).Msg("failed to flush remaining backfill data")
+		}
+		return
+	}
+
+	// --- webhook server mode ---
+
 	store, err := repo.NewInMemoryResourceRepository(clock)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create in-memory resource repository")
@@ -102,13 +128,10 @@ func main() {
 		log.Ctx(ctx).Debug().Msg("Starting main shutdown process")
 		if innerErr := dataPusher.Shutdown(); innerErr != nil {
 			log.Err(innerErr).Msg("failed to flush data")
-			// Exit with a non-zero status code to indicate failure because we
-			// are potentially losing data.
 			os.Exit(1)
 		}
 	}()
 
-	// start the housekeeper to delete old data
 	hk := housekeeper.New(ctx, store, clock, settings)
 	if err = hk.Run(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start database housekeeper")
@@ -122,23 +145,6 @@ func main() {
 	wd, err := webhook.NewWebhookFactory(store, settings, clock)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create webhook domain controller")
-	}
-
-	if backfill {
-		log.Ctx(ctx).Info().Msg("Starting backfill mode")
-		// setup k8s client
-		k8sClient, err2 := k8s.NewClient(settings.K8sClient.KubeConfig)
-		if err2 != nil {
-			log.Fatal().Err(err2).Msg("Failed to build k8s client")
-		}
-		enum := backfiller.NewKubernetesObjectEnumerator(k8sClient, wd, settings)
-		if backfillNoWait {
-			enum.DisableServiceWait()
-		}
-		if err3 := enum.Start(context.Background()); err3 != nil {
-			log.Fatal().Err(err3).Msg("Failed to start Kubernetes object enumerator")
-		}
-		return
 	}
 
 	defer func() {

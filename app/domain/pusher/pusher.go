@@ -8,22 +8,14 @@
 package pusher
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"math"
-	"math/rand/v2"
-	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/golang/snappy"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/protoadapt"
 
 	config "github.com/cloudzero/cloudzero-agent/app/config/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/types"
@@ -329,132 +321,14 @@ func (h *MetricsPusher) Flush() error {
 	return nil
 }
 
+// formatMetrics and pushMetrics delegate to the public package-level
+// functions in sender.go so the same logic can be reused by the streaming
+// store (which doesn't have a MetricsPusher instance).
+
 func (h *MetricsPusher) formatMetrics(records []*types.ResourceTags) []prompb.TimeSeries {
-	timeSeries := []prompb.TimeSeries{}
-	for _, record := range records {
-		metricName := h.constructMetricTagName(record, "labels")
-		recordCreatedOrUpdated := h.maxTime(record.RecordUpdated, record.RecordCreated)
-		timeSeries = append(timeSeries, h.createTimeseries(metricName, *record.Labels, *record.MetricLabels, recordCreatedOrUpdated))
-		if record.Annotations != nil {
-			metricName := h.constructMetricTagName(record, "annotations")
-			timeSeries = append(timeSeries, h.createTimeseries(metricName, *record.Annotations, *record.MetricLabels, recordCreatedOrUpdated))
-		}
-	}
-	return timeSeries
-}
-
-func (h *MetricsPusher) constructMetricTagName(record *types.ResourceTags, metricType string) string {
-	return fmt.Sprintf("cloudzero_%s_%s", config.ResourceTypeToMetricName[record.Type], metricType)
-}
-
-func (h *MetricsPusher) createTimeseries(
-	metricName string, metricTags config.MetricLabelTags,
-	additionalMetricLabels config.MetricLabels,
-	recordCreatedOrUpdated time.Time,
-) prompb.TimeSeries {
-	ts := prompb.TimeSeries{
-		Labels: []prompb.Label{
-			{
-				Name:  "__name__",
-				Value: metricName,
-			},
-		},
-		Samples: []prompb.Sample{
-			{
-				Value:     1,
-				Timestamp: recordCreatedOrUpdated.UnixNano() / int64(time.Millisecond),
-			},
-		},
-	}
-	for labelKey, labelValue := range additionalMetricLabels {
-		ts.Labels = append(ts.Labels, prompb.Label{
-			Name:  labelKey,
-			Value: labelValue,
-		})
-	}
-	for labelKey, labelValue := range metricTags {
-		ts.Labels = append(ts.Labels, prompb.Label{
-			Name:  "label_" + labelKey,
-			Value: labelValue,
-		})
-	}
-
-	return ts
+	return FormatMetrics(records)
 }
 
 func (h *MetricsPusher) pushMetrics(remoteWriteURL string, timeSeries []prompb.TimeSeries) error {
-	writeRequest := &prompb.WriteRequest{
-		Timeseries: timeSeries,
-	}
-
-	data, err := proto.Marshal(protoadapt.MessageV2Of(writeRequest))
-	if err != nil {
-		return fmt.Errorf("error marshaling WriteRequest: %v", err)
-	}
-
-	compressed := snappy.Encode(nil, data)
-
-	endpoint := remoteWriteURL
-	start := time.Now()
-
-	// Instrument: Observe payload size
-	RemoteWritePayloadSizeBytes.WithLabelValues(endpoint).Observe(float64(len(compressed)))
-
-	var resp *http.Response
-	var req *http.Request
-
-	for attempt := range h.maxRetries {
-		ctx, cancel := context.WithTimeout(context.Background(), h.sendTimeout)
-		defer cancel()
-
-		req, err = http.NewRequestWithContext(ctx, "POST", remoteWriteURL, bytes.NewBuffer(compressed))
-		if err != nil {
-			return fmt.Errorf("error creating HTTP request: %v", err)
-		}
-
-		req.Header.Set("Content-Type", "application/x-protobuf")
-		req.Header.Set("Content-Encoding", "snappy")
-
-		client := &http.Client{}
-		resp, err = client.Do(req)
-		if err != nil {
-			log.Ctx(ctx).Err(err).Msg("post metric failure")
-		}
-
-		// Instrument: measure duration after each attempt
-		duration := time.Since(start).Seconds()
-		RemoteWriteRequestDuration.WithLabelValues(endpoint).Observe(duration)
-
-		if err == nil && (resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-			defer resp.Body.Close()
-			// Instrument: response code 200
-			RemoteWriteResponseCodes.WithLabelValues(endpoint, "2xx").Inc()
-			return nil
-		}
-
-		if resp != nil {
-			statusCode := strconv.Itoa(resp.StatusCode)
-			RemoteWriteResponseCodes.WithLabelValues(endpoint, statusCode).Inc()
-			resp.Body.Close()
-			log.Ctx(h.ctx).Error().
-				Int("statusCode", resp.StatusCode).
-				Str("statusText", resp.Status).
-				Msg("Received non-2xx response, retrying...")
-		} else {
-			// If resp is nil, we can track it as a failure as well
-			RemoteWriteResponseCodes.WithLabelValues(endpoint, "no_response").Inc()
-		}
-		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-		jitter := time.Duration(rand.Int64N(int64(time.Second))) //nolint:gosec // cryptographically secure PRNG here is not necessary
-		time.Sleep(backoff + jitter)
-	}
-
-	return fmt.Errorf("received non-2xx response: %v after %d retries", err, h.maxRetries)
-}
-
-func (h *MetricsPusher) maxTime(t1, t2 time.Time) time.Time {
-	if t1.After(t2) {
-		return t1
-	}
-	return t2
+	return PushMetrics(h.ctx, remoteWriteURL, timeSeries, h.maxRetries, h.sendTimeout)
 }
