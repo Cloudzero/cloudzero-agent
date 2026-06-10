@@ -6,13 +6,13 @@ up. These alerts cover the critical failure modes documented in the "Monitoring
 the CloudZero Agent" wiki page.
 
 Requires the Prometheus Operator CRDs (monitoring.coreos.com/v1) to be installed
-in the cluster. Controlled by components.monitoring.enabled (null=auto-detect,
-true=force, false=disable).
+in the cluster. Controlled by components.monitoring.enabled (true/false); enabling
+it on a cluster without the Operator CRDs will fail at apply time.
 
 Alert expressions use the Helm-generated service names to construct job label
 selectors, so they work regardless of the Helm release name.
 */}}
-{{- if include "cloudzero-agent.monitoring.enabled" . }}
+{{- if include "cloudzero-agent.monitoring.rulesActive" . }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:

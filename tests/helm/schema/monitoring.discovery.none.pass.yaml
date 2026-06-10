@@ -1,0 +1,5 @@
+# Gate off -> no Operator CRDs, no annotations. The chart still renders cleanly.
+clusterName: "test-cluster"
+components:
+  monitoring:
+    enabled: false

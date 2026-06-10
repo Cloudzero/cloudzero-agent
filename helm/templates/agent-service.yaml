@@ -11,11 +11,15 @@ metadata:
         .Values.commonMetaLabels
       )
     ) | nindent 2 }}
+  {{- $promAnnotations := dict -}}
+  {{- if include "cloudzero-agent.monitoring.annotationsActive" . -}}
+  {{- $promAnnotations = dict "prometheus.io/scrape" "true" "prometheus.io/port" "9090" "prometheus.io/path" "/metrics" -}}
+  {{- end -}}
   {{- include "cloudzero-agent.generateAnnotations" (dict
       "root" .
       "annotations" (list
         .Values.defaults.annotations
-        (dict "prometheus.io/scrape" "true" "prometheus.io/port" "9090" "prometheus.io/path" "/metrics")
+        $promAnnotations
       )
     ) | nindent 2 }}
 spec:

@@ -6309,20 +6309,20 @@
         "monitoring": {
           "additionalProperties": false,
           "properties": {
-            "enabled": {
-              "default": null,
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "enum": ["auto"],
+            "discovery": {
+              "additionalProperties": false,
+              "properties": {
+                "method": {
+                  "default": "auto",
+                  "enum": ["auto", "serviceMonitors", "annotations"],
                   "type": "string"
                 }
-              ]
+              },
+              "type": "object"
+            },
+            "enabled": {
+              "default": false,
+              "type": "boolean"
             },
             "labels": {
               "additionalProperties": {

@@ -1,0 +1,5 @@
+# Invalid: enabled is a plain boolean -- "auto" (and null) are no longer accepted.
+clusterName: "test-cluster"
+components:
+  monitoring:
+    enabled: auto

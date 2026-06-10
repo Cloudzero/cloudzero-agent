@@ -12,12 +12,16 @@ metadata:
         .Values.components.aggregator.labels
       )
     ) | nindent 2 }}
+  {{- $promAnnotations := dict -}}
+  {{- if include "cloudzero-agent.monitoring.annotationsActive" . -}}
+  {{- $promAnnotations = dict "prometheus.io/scrape" "true" "prometheus.io/port" (.Values.aggregator.collector.port | quote) "prometheus.io/path" "/metrics" -}}
+  {{- end -}}
   {{- include "cloudzero-agent.generateAnnotations" (dict
       "root" .
       "annotations" (list
         .Values.defaults.annotations
         .Values.components.aggregator.annotations
-        (dict "prometheus.io/scrape" "true" "prometheus.io/port" (.Values.aggregator.collector.port | quote) "prometheus.io/path" "/metrics")
+        $promAnnotations
       )
     ) | nindent 2 }}
 spec:

@@ -1,0 +1,10 @@
+# Force the gate on (enabled: true) with the serviceMonitors path so the
+# ServiceMonitors + PrometheusRule render even though `helm template` detects no
+# Operator. kubeconform validates these monitoring.coreos.com/v1 CRDs against the
+# datreeio CRDs-catalog.
+clusterName: "test-cluster"
+components:
+  monitoring:
+    enabled: true
+    discovery:
+      method: serviceMonitors

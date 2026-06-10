@@ -6,11 +6,16 @@
 # Services only support metadata-level defaults (labels and annotations).
 # PodSpec defaults (affinity, tolerations, etc.) do not apply to Services.
 #
+# Also validates that monitoring.discovery.annotations controls the
+# prometheus.io/* annotations on Services.
+#
 # Templates tested:
+# - agent-service.yaml
 # - aggregator-service.yaml
 # - webhook-service.yaml
 suite: defaults.* properties apply to Service resources
 templates:
+  - agent-service.yaml
   - aggregator-service.yaml
   - webhook-service.yaml
 tests:
@@ -91,3 +96,68 @@ tests:
       - equal:
           path: metadata.annotations.test-defaults-annotation
           value: sentinel-value-annotation
+
+  # ============================================================================
+  # monitoring.discovery.method: prometheus.io/* annotation gating.
+  # Annotations render only when monitoring is enabled AND method=annotations.
+  # enabled defaults to false, so by default the annotations are omitted.
+  # ============================================================================
+  - it: should omit prometheus.io annotations on agent-service by default
+    template: agent-service.yaml
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]
+
+  - it: should omit prometheus.io annotations on aggregator-service by default
+    template: aggregator-service.yaml
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]
+
+  - it: should omit prometheus.io annotations on webhook-service by default
+    template: webhook-service.yaml
+    set:
+      insightsController.enabled: true
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]
+
+  - it: should add prometheus.io annotations on agent-service when enabled + method=annotations
+    template: agent-service.yaml
+    set:
+      components.monitoring.enabled: true
+      components.monitoring.discovery.method: annotations
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should add prometheus.io annotations on aggregator-service when enabled + method=annotations
+    template: aggregator-service.yaml
+    set:
+      components.monitoring.enabled: true
+      components.monitoring.discovery.method: annotations
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should add prometheus.io annotations on webhook-service when enabled + method=annotations
+    template: webhook-service.yaml
+    set:
+      insightsController.enabled: true
+      components.monitoring.enabled: true
+      components.monitoring.discovery.method: annotations
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: should NOT add prometheus.io annotations when method=serviceMonitors (operator path)
+    template: agent-service.yaml
+    set:
+      components.monitoring.enabled: true
+      components.monitoring.discovery.method: serviceMonitors
+    asserts:
+      - isNull:
+          path: metadata.annotations["prometheus.io/scrape"]

@@ -1,36 +1,47 @@
 # CloudZero Agent Monitoring Infrastructure
 
 This document describes the monitoring resources shipped with the CloudZero
-Agent Helm chart: what they are, what they cover, what they don't cover, and
-how they were validated.
+Agent Helm chart: what they are, what they cover, and what they don't cover.
 
 ## Overview
 
-The chart provides two categories of monitoring integration:
+The chart can expose the CloudZero Agent's own metrics to your Prometheus and
+ship a set of alert rules. It is off by default; two values turn it on and choose
+how.
 
-1. **Prometheus `prometheus.io/*` annotations** on all Services (always enabled).
-   These allow standard Prometheus installations using `kubernetes_sd_configs`
-   to auto-discover and scrape CloudZero Agent metrics without any CRDs.
+**`components.monitoring.enabled`** — whether the monitoring resources are created:
 
-2. **Prometheus Operator CRDs** (opt-in via `components.monitoring.enabled`).
-   When enabled, the chart creates `ServiceMonitor` and `PrometheusRule`
-   resources that the Prometheus Operator automatically picks up.
+- `false` (default): off.
+- `true`: on.
 
-These resources are designed to be useful regardless of the customer's
-monitoring stack. The `ServiceMonitor` and `PrometheusRule` CRDs are the
-standard interoperability format understood by the Prometheus Operator, but
-also by compatible tools like Victoria Metrics Operator, Datadog (via its
-Prometheus integration), Grafana Agent, and others.
+**`components.monitoring.discovery.method`** — how your Prometheus discovers the
+agent's metrics, when monitoring is on:
+
+- `auto` (default): use ServiceMonitors.
+- `serviceMonitors`: create `ServiceMonitor` resources for the Prometheus Operator,
+  along with the alert rules. These are Prometheus Operator resources, so the
+  install fails if the Operator isn't present.
+- `annotations`: add `prometheus.io/*` annotations to the agent's Services instead,
+  for a Prometheus configured to scrape by annotation. No alert rules.
+
+To turn monitoring on, set `enabled: true`. Keep the default `method` if you run the
+Prometheus Operator; use `annotations` if your Prometheus discovers targets by
+annotation instead.
 
 ## Configuration
 
 ```yaml
 components:
   monitoring:
-    # null = auto-detect (install CRDs if Prometheus Operator is present)
-    # true = always install CRDs (fails if Prometheus Operator absent)
-    # false = never install CRDs (default while feature is being validated)
+    # Whether to create the monitoring resources. false (default) = off; true = on.
     enabled: false
+
+    discovery:
+      # How Prometheus discovers the agent's metrics:
+      #   auto (default)  -> ServiceMonitors
+      #   serviceMonitors -> ServiceMonitor resources + alert rules
+      #   annotations     -> prometheus.io/* annotations only (no alert rules)
+      method: auto
 
     # Override namespace for CRDs (default: same as agent namespace)
     namespace: ""
@@ -177,126 +188,3 @@ installation, the following may be absent until their trigger condition occurs:
 Alerts that reference absent metrics evaluate to "no data" rather than firing,
 which is the correct behavior (absence of the failure counter means no failures
 have occurred).
-
-## Validation Results
-
-Tested on the `bach` cluster (GKE, `kube-prometheus-stack` installed) with
-an intentionally invalid API key to trigger failure-path alerts.
-
-### Scrape Targets
-
-All four targets verified as `UP` in Prometheus:
-
-| Target                   | Endpoint                 | Status                   |
-| ------------------------ | ------------------------ | ------------------------ |
-| `cz-agent-cz-server`     | `http-metrics` (9090)    | UP                       |
-| `cz-agent-cz-aggregator` | `metrics` (8080)         | UP                       |
-| `cz-agent-cz-aggregator` | `shipper-metrics` (8081) | UP                       |
-| `cz-agent-cz-webhook`    | `http` (8443)            | UP (when pod is healthy) |
-
-### Metric Availability
-
-All metrics referenced by alert rules were verified present in Prometheus:
-
-| Metric                                                           | Source             | Time Series Count | Notes                                                    |
-| ---------------------------------------------------------------- | ------------------ | ----------------- | -------------------------------------------------------- |
-| `metrics_received_total`                                         | Collector          | 4                 | Present immediately                                      |
-| `metrics_received_cost_total`                                    | Collector          | 1                 | Present immediately                                      |
-| `czo_webhook_types_total`                                        | Webhook            | 41                | Present immediately (multiple label combinations)        |
-| `function_execution_seconds_bucket`                              | Webhook            | 33                | Present immediately (histogram buckets)                  |
-| `prometheus_remote_storage_queue_highest_timestamp_seconds`      | Server             | 1                 | Present immediately                                      |
-| `prometheus_remote_storage_queue_highest_sent_timestamp_seconds` | Server             | 1                 | Present immediately                                      |
-| `shipper_run_fail_total`                                         | Shipper            | 3                 | Appeared after first failed upload (invalid API key)     |
-| `shipper_handle_request_success_total`                           | Shipper            | 0                 | Expected absent (no successful uploads with invalid key) |
-| `remote_write_failures_total`                                    | Webhook            | 0                 | Counter, appears after first failure event               |
-| `container_memory_working_set_bytes`                             | kubelet/cAdvisor   | 244               | Standard Kubernetes metric (cluster-wide)                |
-| `kube_pod_container_resource_limits`                             | kube-state-metrics | 315               | Standard Kubernetes metric (cluster-wide)                |
-
-### Alert Firing Behavior
-
-Validated using multiple test scenarios on the `bach` cluster:
-
-**Scenario 1: Invalid API key (natural failure path)**
-
-| Alert                                 | State              | Notes                                                     |
-| ------------------------------------- | ------------------ | --------------------------------------------------------- |
-| `CloudZeroShipperUploadFailures`      | **Pending/Firing** | Correctly detected `error_status_code="err-unauthorized"` |
-| `CloudZeroWebhookNoEvents`            | **Firing**         | Webhook pod on unhealthy node; no admission events        |
-| `CloudZeroWebhookRemoteWriteFailures` | **Firing**         | Webhook unable to push metadata                           |
-| `CloudZeroRemoteWriteLag`             | **Pending**        | Remote-write queue falling behind                         |
-
-**Scenario 2: Unschedulable pod (memory request set to 64Gi)**
-
-| Alert                | State       | Notes                                                                                                                                                                                                                           |
-| -------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CloudZeroAgentDown` | **Pending** | `absent(up{...})` correctly detected missing target. Original `up == 0` expression would NOT have fired because the metric becomes absent (not zero) when a pod disappears entirely. Fixed to use `up == 0 or absent(up{...})`. |
-
-**Scenario 3: Memory pressure (memory limit set to 65Mi vs 73.7Mi working set)**
-
-| Alert                               | State       | Notes                                                                                                                                                                                          |
-| ----------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CloudZeroAgentHighMemoryUsage`     | **Pending** | Memory ratio at 93.9%. Required `on(namespace, pod, container)` join -- without it, the division silently produced zero results due to label mismatch between cAdvisor and kube-state-metrics. |
-| `CloudZeroAgentContainerRestarting` | **Pending** | Container restarting from memory pressure. Caught restart loop alongside the memory alert.                                                                                                     |
-
-**Scenario 4: OOM kill (memory limit set to 30Mi vs 73.7Mi working set)**
-
-| Alert                               | State       | Notes                                                                                                                                                                       |
-| ----------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CloudZeroAgentOOMKilled`           | **Firing**  | `kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}` correctly detected OOM kill within 1 minute. Standard KSM metric, no configuration changes required. |
-| `CloudZeroAgentContainerRestarting` | **Pending** | Caught the CrashLoopBackOff from repeated OOM kills.                                                                                                                        |
-| `CloudZeroAgentDown`                | **Pending** | Server target gone due to crash loop.                                                                                                                                       |
-
-**Scenario 5: Collector starved (server + webhook scaled to 0)**
-
-| Alert                         | State       | Notes                                                                                                                                                                                                                                   |
-| ----------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CloudZeroCollectorNoMetrics` | **Pending** | Correctly detected that `rate(metrics_received_total[10m]) == 0`. Note: scaling only the server to 0 is insufficient because the webhook also remote-writes to the collector. Both data sources must be stopped for this alert to fire. |
-
-**Alerts validated as correctly inactive during normal operation:**
-
-| Alert                               | Notes                                                                                                           |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `CloudZeroWebhookServerHighLatency` | p99 latency well below 500ms threshold. Would require sustained load to trigger.                                |
-| `CloudZeroMissingContainerMetrics`  | Container-level cAdvisor metrics present (bach uses containerd CRI). Would require Docker-based CRI to trigger. |
-
-**Alerts with intentional design limitations:**
-
-| Alert                                 | Notes                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CloudZeroShipperNoSuccessfulUploads` | Detects "was working, then stopped" -- NOT "never worked at all." When the success counter has never been incremented, it is absent in Prometheus and `rate()` returns no data rather than 0. This is intentional: the "never worked" case is covered by `CloudZeroShipperUploadFailures` (which fires on upload errors) and the OOM/restart/down alerts (which catch container-level failures). |
-
-### Bugs Found and Fixed During Testing
-
-1. **`absent()` bug in AgentDown/WebhookDown**: When a pod is completely
-   absent (unschedulable, scaled to 0), the `up` metric becomes absent rather
-   than zero. The original `up == 0` expression never fires. Fixed to use
-   `up == 0 or absent(up{...})`.
-
-2. **Label join bug in HighMemoryUsage**: `container_memory_working_set_bytes`
-   (from cAdvisor/kubelet) and `kube_pod_container_resource_limits` (from
-   kube-state-metrics) have different label sets. Without an explicit
-   `on(namespace, pod, container)` join, Prometheus's implicit matching
-   silently produces zero results. Fixed by adding the explicit join.
-
-3. **Job label mismatch in collector/shipper alerts**: The Prometheus Operator
-   assigns the `job` label from the Service name, not the ServiceMonitor name.
-   Both collector and shipper share the aggregator Service, so they get the
-   same `job` label. Fixed by adding `endpoint` label selectors to
-   distinguish them.
-
-### Auto-Detection Logic
-
-Tested via `helm template` with all three modes:
-
-| `components.monitoring.enabled` | ServiceMonitors | PrometheusRules | `prometheus.io/*` annotations |
-| ------------------------------- | --------------- | --------------- | ----------------------------- |
-| `null` (no CRDs in cluster)     | 0               | 0               | 3 (always)                    |
-| `true`                          | 4               | 1               | 3 (always)                    |
-| `false`                         | 0               | 0               | 3 (always)                    |
-
-### Test Suite
-
-- Helm lint: passing
-- Helm unit tests: 498/498 passing
-- Helm schema tests: all passing (includes `components.monitoring.enabled`
-  null/true/false validation)

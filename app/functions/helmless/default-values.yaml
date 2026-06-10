@@ -867,29 +867,26 @@ components:
       # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
       securityContext: {}
 
-  # Prometheus Operator monitoring integration.
+  # Monitoring integration with the customer's Prometheus stack.
   #
-  # When enabled, the chart creates ServiceMonitor and PrometheusRule CRDs that
-  # allow the Prometheus Operator to automatically discover and scrape CloudZero
-  # Agent metrics, and to evaluate pre-configured alert rules.
-  #
-  # This follows the same null/true/false pattern as integrations.istio:
-  #
-  # - null (default): Follow the release default. Currently maps to "false"
-  #   (disabled) while this feature is being validated. In a future release,
-  #   null will map to "auto". Use null unless you have a reason to override.
-  # - "auto": Auto-detect. Creates monitoring CRDs only if the Prometheus
-  #   Operator CRDs (monitoring.coreos.com/v1) are available in the cluster.
-  # - true: Always create monitoring CRDs. Helm will fail if the Prometheus
-  #   Operator CRDs are not installed in the cluster.
-  # - false: Never create monitoring CRDs.
-  #
-  # To opt in now, set to "auto" or true.
-  #
-  # Regardless of this setting, prometheus.io/* annotations are always added to
-  # Services for customers using standard Prometheus service discovery.
+  # The chart integrates two ways: via the Prometheus Operator (ServiceMonitor +
+  # PrometheusRule CRDs) and/or via prometheus.io/* annotations on Services.
   monitoring:
-    enabled: null
+    # Whether to create the monitoring resources. Off by default; set to true to
+    # enable. With the default discovery method (serviceMonitors), this creates
+    # monitoring.coreos.com/v1 CRDs, so the install fails if the Prometheus
+    # Operator is not present -- use discovery.method: annotations otherwise.
+    enabled: false
+
+    discovery:
+      # How your Prometheus discovers the agent's metrics (when monitoring is on).
+      #
+      # - auto (default): use ServiceMonitors.
+      # - serviceMonitors: create ServiceMonitor resources for the Prometheus
+      #   Operator, along with the alert rules.
+      # - annotations: add prometheus.io/* annotations to the Services instead, for
+      #   a Prometheus that scrapes by annotation. No alert rules.
+      method: auto
 
     # Namespace override for PrometheusRule and ServiceMonitor CRDs.
     # null (default) = same namespace as the agent installation.

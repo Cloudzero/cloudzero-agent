@@ -1342,36 +1342,46 @@ properties:
 
       monitoring:
         description: |
-          Prometheus Operator monitoring integration.
+          Monitoring integration with the customer's Prometheus stack.
 
-          When enabled, the chart creates ServiceMonitor and PrometheusRule CRDs
-          that allow the Prometheus Operator to automatically discover and scrape
-          CloudZero Agent metrics and evaluate pre-configured alert rules.
-
-          Regardless of this setting, prometheus.io/* annotations are always added
-          to Services for customers using standard Prometheus service discovery.
+          The chart integrates two ways: via the Prometheus Operator (ServiceMonitor
+          + PrometheusRule CRDs) and/or via prometheus.io/* annotations on Services.
+          monitoring.enabled turns it on; monitoring.discovery.method selects which.
         additionalProperties: false
         type: object
         properties:
           enabled:
             description: |
-              Controls creation of Prometheus Operator CRDs (ServiceMonitor, PrometheusRule).
+              Whether to create the monitoring resources. Off by default; set to
+              true to enable. With the default discovery method (serviceMonitors),
+              this creates monitoring.coreos.com/v1 CRDs, so the install fails if the
+              Prometheus Operator is not present -- use discovery.method: annotations
+              otherwise.
+            default: false
+            type: boolean
+          discovery:
+            description: |
+              How the agent's metrics are advertised when monitoring.enabled is on.
+            additionalProperties: false
+            type: object
+            properties:
+              method:
+                description: |
+                  Discovery mechanism used when monitoring.enabled resolves on.
 
-              - null (default): Follow the release default. Currently maps to false
-                while this feature is being validated. In a future release, null will
-                map to "auto".
-              - "auto": Auto-detect. Creates monitoring CRDs only if the Prometheus
-                Operator CRDs (monitoring.coreos.com/v1) are available in the cluster.
-              - true: Always create monitoring CRDs. Helm will fail if the Prometheus
-                Operator CRDs are not installed.
-              - false: Never create monitoring CRDs.
-            default: null
-            oneOf:
-              - type: "null"
-              - type: boolean
-              - type: string
+                  - "auto" (default): Pick automatically. Resolves to "serviceMonitors"
+                    today; kept as an enum so a future auto-detectable backend can extend
+                    it without changing the default.
+                  - "serviceMonitors": Emit ServiceMonitor CRDs plus the PrometheusRule
+                    alert bundle for the Prometheus Operator.
+                  - "annotations": Emit prometheus.io/* annotations only -- no Operator
+                    CRDs and no alert bundle. Explicit opt-in; never auto-selected.
+                default: auto
+                type: string
                 enum:
                   - auto
+                  - serviceMonitors
+                  - annotations
           namespace:
             description: |
               Namespace override for PrometheusRule and ServiceMonitor CRDs.
