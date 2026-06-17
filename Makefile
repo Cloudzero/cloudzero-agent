@@ -430,6 +430,16 @@ CLUSTER_NAME              ?= kind
 kind-up: # Create kind cluster for testing
 kind-up: tests/kuttl/kubeconfig
 
+# kind-load - Load a locally-available docker image into the kind cluster's node
+# so pods can use it without pulling from a registry (chart imagePullPolicy is
+# IfNotPresent). Used by CI to make the freshly-built (untested) agent image
+# available under the tag the chart installs. Set LOAD_IMAGE to the image ref.
+.PHONY: kind-load
+kind-load: ## Load LOAD_IMAGE into the kind cluster (uses CLUSTER_NAME)
+	$(if $(LOAD_IMAGE),,$(error LOAD_IMAGE must be set, e.g. make kind-load LOAD_IMAGE=repo/image:tag))
+	$(call LOG,KIND,load $(LOAD_IMAGE) into $(CLUSTER_NAME))
+	$(Q)$(KIND) load docker-image "$(LOAD_IMAGE)" --name $(CLUSTER_NAME)
+
 .PHONY: kind-down
 kind-down: ## Delete kind cluster and cleanup
 	$(call LOG,KIND,delete cluster $(CLUSTER_NAME))

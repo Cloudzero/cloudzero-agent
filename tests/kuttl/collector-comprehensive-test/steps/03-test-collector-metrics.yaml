@@ -2,25 +2,19 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: test-collector-metrics
-spec:
-  commands:
-    - command: sh
-      args:
-        - -c
-        - "echo '=== Testing Collector Metrics Endpoints ==='"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_pod_info' && echo '✅ Pod metrics found' || echo '❌ No pod metrics found'"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_deployment' && echo '✅ Deployment metrics found' || echo '❌ No deployment metrics found'"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_service' && echo '✅ Service metrics found' || echo '❌ No service metrics found'"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -20 || echo 'Warning: Collector metrics endpoint test failed'"
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped.
+#
+# These checks curl in-cluster service DNS (*.svc.cluster.local), which does NOT
+# resolve from the host where kuttl runs scripts, so they remain best-effort
+# diagnostics (every line exits 0 via `|| echo`), faithfully matching the original
+# intent. Hardening these into genuine assertions (port-forward / in-cluster exec)
+# is a deliberate follow-up, not this ticket.
+commands:
+  - script: |
+      echo '=== Testing Collector Metrics Endpoints ==='
+      curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_pod_info' && echo '✅ Pod metrics found' || echo '❌ No pod metrics found'
+      curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_deployment' && echo '✅ Deployment metrics found' || echo '❌ No deployment metrics found'
+      curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | grep -q 'kube_service' && echo '✅ Service metrics found' || echo '❌ No service metrics found'
+      curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -20 || echo 'Warning: Collector metrics endpoint test failed'

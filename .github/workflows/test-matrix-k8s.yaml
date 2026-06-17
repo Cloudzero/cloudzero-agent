@@ -122,6 +122,13 @@ jobs:
           command: |
             make install-tools V=1
 
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Complete Chart Tests
         env:
           CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
@@ -134,8 +141,29 @@ jobs:
           # Create cluster configuration files for this test run
           cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
           cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
-          # Run the complete test workflow using Kind
-          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" V=1
+
+          # The chart (and the alloy-clustered-test suite) install the agent image
+          # at <prod-repo>:dev-<sha>, which is NOT published for a PR. Pull the
+          # freshly-built (untested) image for this matrix arch, retag it as the
+          # tag the chart installs, and kind-load it into the node so pods can start
+          # (chart imagePullPolicy is IfNotPresent). Pull single-arch: kind cannot
+          # load a multi-arch manifest list.
+          SRC="${{ inputs.image-repo }}/${{ inputs.image-path }}:${{ inputs.image-tag }}"
+          DST="ghcr.io/cloudzero/cloudzero-agent:dev-$(git rev-parse HEAD)"
+          docker pull --platform "${{ matrix.kver.platform }}" "$SRC"
+          docker tag "$SRC" "$DST"
+
+          # Run the test workflow phases explicitly so the image is loaded between
+          # cluster creation and chart install (the monolithic `kind-test` target
+          # does not expose that seam).
+          test_status=0
+          make kind-up "CLUSTER_NAME=$CLUSTER_NAME" V=1
+          make kind-load "CLUSTER_NAME=$CLUSTER_NAME" LOAD_IMAGE="$DST" V=1
+          make helm-install-current helm-wait "CLUSTER_NAME=$CLUSTER_NAME" V=1
+          make helm-test-kuttl "CLUSTER_NAME=$CLUSTER_NAME" V=1 || test_status=$?
+          make helm-uninstall "CLUSTER_NAME=$CLUSTER_NAME" V=1 || true
+          make kind-down "CLUSTER_NAME=$CLUSTER_NAME" V=1 || true
+          exit $test_status
 
       - name: Set version output
         id: set-output
@@ -250,6 +278,13 @@ jobs:
           echo "Contents:"
           cat "$EXTRA_OVERRIDES_FILE"
 
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Chart Tests with Specialized Configuration
         env:
           CLOUDZERO_DEV_API_KEY: ${{ secrets.CLOUDZERO_DEV_API_KEY }}
@@ -263,8 +298,25 @@ jobs:
           # Create cluster configuration files for this test run
           cp clusters/kind.yaml "clusters/$CLUSTER_NAME.yaml"
           cp clusters/kind-overrides.yaml "clusters/$CLUSTER_NAME-overrides.yaml"
-          # Run the complete test workflow using Kind with extra overrides
-          make kind-test "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES" V=1
+
+          # Make the freshly-built (untested) agent image available to the kind
+          # node under the tag the chart installs (see the version-matrix job for
+          # the full rationale). Pull single-arch so kind can load it.
+          SRC="${{ inputs.image-repo }}/${{ inputs.image-path }}:${{ inputs.image-tag }}"
+          DST="ghcr.io/cloudzero/cloudzero-agent:dev-$(git rev-parse HEAD)"
+          docker pull --platform linux/amd64 "$SRC"
+          docker tag "$SRC" "$DST"
+
+          # Run the test workflow phases explicitly so the image is loaded between
+          # cluster creation and chart install.
+          test_status=0
+          make kind-up "CLUSTER_NAME=$CLUSTER_NAME" V=1
+          make kind-load "CLUSTER_NAME=$CLUSTER_NAME" LOAD_IMAGE="$DST" V=1
+          make helm-install-current helm-wait "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES" V=1
+          make helm-test-kuttl "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES" V=1 || test_status=$?
+          make helm-uninstall "CLUSTER_NAME=$CLUSTER_NAME" "HELM_EXTRA_OVERRIDES=$HELM_EXTRA_OVERRIDES" V=1 || true
+          make kind-down "CLUSTER_NAME=$CLUSTER_NAME" V=1 || true
+          exit $test_status
 
       - name: Set config output
         id: set-output

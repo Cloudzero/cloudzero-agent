@@ -2,21 +2,32 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: install-clustered-chart
-spec:
-  commands:
-    # Install the chart in clustered mode as a separate release so we do not
-    # disturb the default cz-agent release other KUTTL suites run against.
-    # The dev image tag mirrors the `make helm-install-current` target.
-    - command: sh
-      args:
-        - "-c"
-        - |
-          set -e
-          DEV_TAG="dev-$(git rev-parse HEAD)"
-          .tools/bin/helm upgrade --install cz-alloy-ct ./helm \
-            --namespace cz-alloy-clustered-test \
-            --create-namespace \
-            --values clusters/kind-overrides.yaml \
-            --set components.agent.mode=clustered \
-            --set components.agent.image.tag="$DEV_TAG" \
-            --wait --timeout=3m
+# kuttl command steps use top-level `commands:` with `script:` (a shell-script
+# string). kuttl's TestStep has no `spec` field and its Command has no `args`
+# field (`command` is a single string), so the previous `spec:`+`command:`+`args:`
+# shape silently no-opped. kuttl also runs scripts with CWD = this step directory,
+# so we walk up to the repo root before using repo-relative paths
+# (.tools/bin/helm, ./helm, clusters/).
+commands:
+  # Install the chart in clustered mode as a separate release so we do not
+  # disturb the default release other kuttl suites run against.
+  # The dev image tag mirrors the `make helm-install-current` target.
+  #
+  # `timeout:` must exceed `helm --wait --timeout=3m` (180s). kuttl applies a 30s
+  # per-command timeout here (this suite's kuttl-test.yaml sets `spec.timeout`, which
+  # kuttl ignores — the timeout field is top-level — so the 30s default applies), and
+  # that would kill the install mid-wait. The explicit per-command `timeout:` overrides it.
+  - timeout: 240
+    script: |
+      set -e
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      DEV_TAG="dev-$(git rev-parse HEAD)"
+      .tools/bin/helm upgrade --install cz-alloy-ct ./helm \
+        --namespace cz-alloy-clustered-test \
+        --create-namespace \
+        --values clusters/kind-overrides.yaml \
+        --set components.agent.mode=clustered \
+        --set components.agent.image.tag="$DEV_TAG" \
+        --wait --timeout=3m

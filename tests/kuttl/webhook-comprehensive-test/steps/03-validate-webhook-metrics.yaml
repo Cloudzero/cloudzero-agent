@@ -2,24 +2,24 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: validate-webhook-metrics
-spec:
-  commands:
-    - command: sleep
-      args:
-        - "30"
-    - command: sh
-      args:
-        - -c
-        - "echo '=== Validating Webhook Metrics ==='"
-    - command: sh
-      args:
-        - -c
-        - "WEBHOOK_METRICS=$(curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/metrics) || echo 'Warning: Failed to fetch webhook metrics'"
-    - command: sh
-      args:
-        - -c
-        - 'if echo "$WEBHOOK_METRICS" | grep -q ''czo_webhook_types_total''; then echo ''✅ Webhook metrics found''; echo "$WEBHOOK_METRICS" | grep ''czo_webhook_types_total''; else echo ''❌ No webhook metrics found''; fi'
-    - command: sh
-      args:
-        - -c
-        - 'WEBHOOK_COUNT=$(echo "$WEBHOOK_METRICS" | grep ''czo_webhook_types_total'' | wc -l); if [ "$WEBHOOK_COUNT" -gt 0 ]; then echo "✅ Webhook metrics found ($WEBHOOK_COUNT entries)"; else echo ''❌ No webhook metrics found''; fi'
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped.
+#
+# These five original commands MUST live in one `script:` block: $WEBHOOK_METRICS is
+# set by the curl and read by the later grep/count steps, and kuttl runs each command
+# entry in a SEPARATE shell — split across entries the variable would be empty and the
+# checks would silently always report "no metrics". The curl hits in-cluster service DNS
+# (*.svc.cluster.local), which does not resolve from the host, so this stays a
+# best-effort diagnostic (every path exits 0), faithfully matching the original intent.
+commands:
+  # kuttl applies a 30s per-command timeout here (the suite's kuttl-test.yaml sets
+  # `spec.timeout`, which kuttl ignores — the field is top-level — so the 30s default
+  # applies); this block sleeps 30s then curls, so it needs a larger explicit `timeout:`.
+  - timeout: 90
+    script: |
+      sleep 30
+      echo '=== Validating Webhook Metrics ==='
+      WEBHOOK_METRICS=$(curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/metrics) || echo 'Warning: Failed to fetch webhook metrics'
+      if echo "$WEBHOOK_METRICS" | grep -q 'czo_webhook_types_total'; then echo '✅ Webhook metrics found'; echo "$WEBHOOK_METRICS" | grep 'czo_webhook_types_total'; else echo '❌ No webhook metrics found'; fi
+      WEBHOOK_COUNT=$(echo "$WEBHOOK_METRICS" | grep 'czo_webhook_types_total' | wc -l); if [ "$WEBHOOK_COUNT" -gt 0 ]; then echo "✅ Webhook metrics found ($WEBHOOK_COUNT entries)"; else echo '❌ No webhook metrics found'; fi

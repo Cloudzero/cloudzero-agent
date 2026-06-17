@@ -2,19 +2,34 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: test-metrics-endpoint
-spec:
-  commands:
-    - command: kubectl
-      args:
-        - port-forward
-        - service/cz-agent-cloudzero-agent-webhook-server-svc
-        - 8443:443
-        - -n
-        - cz-agent
-    - command: sleep
-      args:
-        - "5"
-    - command: sh
-      args:
-        - -c
-        - "curl -k https://localhost:8443/metrics | head -20"
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped.
+#
+# Consolidated into ONE script because kuttl runs each command entry in a separate
+# shell — a foreground `kubectl port-forward` would block the step forever, so it is
+# backgrounded and torn down via `trap`. The webhook-server service is selected by
+# LABEL (app.kubernetes.io/name=webhook-server) in its actual namespace, not the stale
+# hardcoded `service/cz-agent-cloudzero-agent-webhook-server-svc -n cz-agent`.
+# The alloy co-install (instance=cz-alloy-ct) is excluded.
+commands:
+  - script: |
+      set -e
+      NS=$(kubectl get svc \
+        -l 'app.kubernetes.io/name=webhook-server,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -A -o jsonpath='{.items[0].metadata.namespace}')
+      SVC=$(kubectl get svc \
+        -l 'app.kubernetes.io/name=webhook-server,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" -o jsonpath='{.items[0].metadata.name}')
+      [ -n "$NS" ] && [ -n "$SVC" ] || { echo "FAIL: webhook-server service not found" >&2; exit 1; }
+      echo "port-forwarding svc/$SVC -n $NS"
+      kubectl port-forward "service/$SVC" 8443:443 -n "$NS" >/tmp/cz-webhook-pf.log 2>&1 &
+      PF=$!
+      trap 'kill $PF 2>/dev/null || true' EXIT
+      sleep 5
+      # Land the body first so a failed fetch fails the step: piping `curl | head`
+      # would mask curl's exit status (the pipeline returns head's, always 0), and
+      # `set -o pipefail` is unsafe here (head closing the pipe SIGPIPEs a successful
+      # curl). Fetch to a file under `set -e`, then head it.
+      curl -skf https://localhost:8443/metrics -o /tmp/cz-webhook-metrics.txt
+      head -20 /tmp/cz-webhook-metrics.txt

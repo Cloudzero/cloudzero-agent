@@ -2,32 +2,33 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: verify-webhook-events
-spec:
-  commands:
-    - command: kubectl
-      args:
-        - wait
-        - --for=condition=available
-        - deployment/webhook-test-deployment
-        - -n
-        - webhook-test-namespace
-        - --timeout=60s
-    - command: sleep
-      args:
-        - "10"
-    - command: kubectl
-      args:
-        - get
-        - pods
-        - -n
-        - webhook-test-namespace
-        - -o
-        - wide
-    - command: kubectl
-      args:
-        - logs
-        - deployment/cz-agent-cloudzero-agent-webhook-server
-        - -n
-        - cz-agent
-        - --since=2m
-        - --tail=10
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped. kubectl reads KUBECONFIG
+# from the environment, so no repo-root cd is needed.
+#
+# The shared webhook server is referenced by LABEL (app.kubernetes.io/name=webhook-server)
+# in its actual namespace, NOT by the stale hardcoded name
+# `deployment/cz-agent-cloudzero-agent-webhook-server -n cz-agent` (the chart names it
+# `<release>-cz-webhook`; the namespace/release are config-driven). The alloy co-install
+# (instance=cz-alloy-ct) is excluded.
+commands:
+  # The suite's own test deployment (created in step 01) must be available.
+  # `timeout:` covers the wait's --timeout=60s (kuttl's 30s default would otherwise clamp it).
+  - command: kubectl wait --for=condition=available deployment/webhook-test-deployment -n webhook-test-namespace --timeout=60s
+    timeout: 90
+  - command: sleep 10
+  # Diagnostic: list the suite's test pods.
+  - command: kubectl get pods -n webhook-test-namespace -o wide
+  # Fetch the shared webhook-server logs, discovered by label (excluding alloy).
+  - script: |
+      set -e
+      NS=$(kubectl get deploy \
+        -l 'app.kubernetes.io/name=webhook-server,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -A -o jsonpath='{.items[0].metadata.namespace}')
+      [ -n "$NS" ] || { echo "FAIL: shared webhook-server deployment not found" >&2; exit 1; }
+      echo "webhook-server namespace=$NS"
+      kubectl logs \
+        -l 'app.kubernetes.io/name=webhook-server,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" \
+        --since=2m --tail=10

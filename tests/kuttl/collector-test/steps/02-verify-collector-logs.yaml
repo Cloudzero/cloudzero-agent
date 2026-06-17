@@ -2,26 +2,46 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: verify-collector-logs
-spec:
-  commands:
-    - command: kubectl
-      args:
-        - wait
-        - --for=condition=available
-        - deployment/metric-test-deployment
-        - -n
-        - metric-test-namespace
-        - --timeout=60s
-    - command: sleep
-      args:
-        - "30"
-    - command: kubectl
-      args:
-        - logs
-        - deployment/cz-agent-aggregator
-        - -n
-        - cz-agent
-        - -c
-        - cz-agent-aggregator-collector
-        - --since=2m
-        - --tail=20
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field (`command` is a single
+# string), so the previous `spec:`+`command:`+`args:` shape silently no-opped.
+# kubectl reads KUBECONFIG from the environment, so no repo-root cd is needed.
+#
+# The shared agent install is referenced by LABEL (app.kubernetes.io/name=aggregator)
+# in the namespace it was actually installed into, NOT by the stale hardcoded name
+# `deployment/cz-agent-aggregator -n cz-agent` (the chart names it `<release>-cz-aggregator`
+# and the namespace/release are config-driven, e.g. im-a-namespace/im-a-release on kind).
+# The alloy-clustered-test release (instance=cz-alloy-ct) installs the same chart, so it
+# is excluded from discovery.
+commands:
+  # The suite's own test deployment (created in step 01) must be available.
+  # `timeout:` must cover the wait's own --timeout=60s; without it kuttl's 30s
+  # per-command default (suite spec.timeout is ignored) would clamp the wait to 30s.
+  - command: kubectl wait --for=condition=available deployment/metric-test-deployment -n metric-test-namespace --timeout=60s
+    timeout: 90
+  # Let the collector scrape a couple of cycles. kuttl applies a 30s per-command
+  # timeout here (the suite's kuttl-test.yaml sets `spec.timeout`, which kuttl ignores
+  # — the timeout field is top-level — so the 30s default applies), so this 30s sleep
+  # needs an explicit larger `timeout:` or it races the deadline.
+  - command: sleep 30
+    timeout: 60
+  # Fetch the aggregator's collector-container logs from the shared install,
+  # discovered by label (excluding the alloy co-install).
+  - script: |
+      set -e
+      NS=$(kubectl get deploy \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -A -o jsonpath='{.items[0].metadata.namespace}')
+      [ -n "$NS" ] || { echo "FAIL: shared aggregator deployment not found" >&2; exit 1; }
+      # The collector container is named "<release>-cz-aggregator-collector"; select it
+      # generically rather than hardcoding the release prefix.
+      CONTAINER=$(kubectl get deploy \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name)].name}' \
+        | tr ' ' '\n' | grep -- '-aggregator-collector$' | head -1)
+      echo "aggregator namespace=$NS collector container=$CONTAINER"
+      kubectl logs \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" \
+        -c "$CONTAINER" \
+        --since=2m --tail=20

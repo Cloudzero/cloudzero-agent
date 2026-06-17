@@ -2,17 +2,23 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: uninstall-clustered-chart
-spec:
-  commands:
-    # Uninstall the dedicated release so subsequent kuttl suites and the
-    # `kind-test` teardown are unaffected. `--ignore-not-found` and `|| true`
-    # keep cleanup best-effort even if an earlier step failed.
-    - command: sh
-      args:
-        - "-c"
-        - |
-          .tools/bin/helm uninstall cz-alloy-ct \
-            --namespace cz-alloy-clustered-test \
-            --ignore-not-found || true
-          kubectl delete namespace cz-alloy-clustered-test \
-            --ignore-not-found --wait=false || true
+# Uses top-level `commands:` with `script:` (kuttl's TestStep has no `spec` field
+# and its Command has no `args` field). Walks up to the repo root before calling
+# .tools/bin/helm, since kuttl runs scripts with CWD = this step dir.
+commands:
+  # Uninstall the dedicated release so subsequent kuttl suites and the
+  # `kind-test` teardown are unaffected. `--ignore-not-found` and `|| true`
+  # keep cleanup best-effort even if an earlier step failed.
+  #
+  # Headroom over the 30s per-command timeout (this suite's kuttl-test.yaml sets
+  # `spec.timeout`, which kuttl ignores, so the 30s default applies) for helm uninstall.
+  - timeout: 120
+    script: |
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      .tools/bin/helm uninstall cz-alloy-ct \
+        --namespace cz-alloy-clustered-test \
+        --ignore-not-found || true
+      kubectl delete namespace cz-alloy-clustered-test \
+        --ignore-not-found --wait=false || true

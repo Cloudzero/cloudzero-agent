@@ -2,32 +2,25 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: verify-webhook-health
-spec:
-  commands:
-    - command: kubectl
-      args:
-        - wait
-        - --for=condition=available
-        - deployment/webhook-comprehensive-test-deployment
-        - -n
-        - webhook-comprehensive-test-namespace
-        - --timeout=60s
-    - command: sleep
-      args:
-        - "30"
-    - command: sh
-      args:
-        - -c
-        - "echo '=== Testing Webhook Health Endpoints ==='"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/healthz || echo 'Warning: Webhook health endpoint test failed'"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | head -10 || echo 'Warning: State metrics endpoint test failed'"
-    - command: sh
-      args:
-        - -c
-        - "curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -10 || echo 'Warning: Collector metrics endpoint test failed'"
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped.
+#
+# The endpoint checks curl in-cluster service DNS (*.svc.cluster.local), which does
+# NOT resolve from the host where kuttl runs scripts, so they remain best-effort
+# diagnostics (`|| echo Warning`), faithfully matching the original intent. Only the
+# test-namespace deployment wait (created by step 01) is a hard assertion.
+commands:
+  # Hard assertion: the suite's own test deployment (created in step 01) must be available.
+  # `timeout:` covers the wait's --timeout=60s (kuttl's 30s default would otherwise clamp it).
+  - command: kubectl wait --for=condition=available deployment/webhook-comprehensive-test-deployment -n webhook-comprehensive-test-namespace --timeout=60s
+    timeout: 90
+  # kuttl's default per-command timeout is 30s; this 30s settle sleep needs a larger one.
+  - command: sleep 30
+    timeout: 60
+  # Best-effort endpoint diagnostics (in-cluster DNS not reachable from host).
+  - script: |
+      echo '=== Testing Webhook Health Endpoints ==='
+      curl -m 10 -k https://cz-agent-cloudzero-agent-webhook-server-svc.cz-agent.svc.cluster.local:443/healthz || echo 'Warning: Webhook health endpoint test failed'
+      curl -m 10 http://cz-agent-cloudzero-state-metrics.cz-agent.svc.cluster.local:8080/metrics | head -10 || echo 'Warning: State metrics endpoint test failed'
+      curl -m 10 http://cz-agent-aggregator.cz-agent.svc.cluster.local/metrics | head -10 || echo 'Warning: Collector metrics endpoint test failed'
