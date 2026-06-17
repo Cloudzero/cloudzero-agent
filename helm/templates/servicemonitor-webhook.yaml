@@ -18,7 +18,7 @@ which means Prometheus connects directly to the webhook (bypassing the sidecar).
 See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
      Monitoring the CloudZero Agent > Monitoring Webhook Metadata Delivery
 */}}
-{{- if include "cloudzero-agent.monitoring.serviceMonitorsActive" . }}
+{{- if and (eq (include "cloudzero-agent.webhookServer.enabled" .) "true") (include "cloudzero-agent.monitoring.serviceMonitorsActive" .) }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

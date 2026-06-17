@@ -66,21 +66,34 @@ data:
         - /etc/prometheus/prometheus.yml
         - /etc/config/prometheus/configmaps/prometheus.yml
 
+    {{- /* When the webhook server is disabled, force the post-start
+           webhook_server_reachable check to "disabled" so the validator does not
+           probe a non-existent service. "disabled" is the stageCheck sentinel that
+           omits a check (see cloudzero-agent.validator.stageCheck in _helpers.tpl).
+           deepCopy the checks map first: .Values is shared across the render and
+           must not be mutated in place. */ -}}
+    {{- $checks := deepCopy .Values.components.validator.checks -}}
+    {{- if ne (include "cloudzero-agent.webhookServer.enabled" .) "true" -}}
+      {{- $ps := dict -}}
+      {{- if hasKey $checks "post-start" -}}{{- $ps = index $checks "post-start" -}}{{- end -}}
+      {{- $_ := set $ps "webhook_server_reachable" "disabled" -}}
+      {{- $_ := set $checks "post-start" $ps -}}
+    {{- end }}
     diagnostics:
       stages:
         - {{- include "cloudzero-agent.validator.stageCheck" (dict
                 "stage"        "pre-start"
-                "checksConfig" .Values.components.validator.checks
+                "checksConfig" $checks
               ) | nindent 10 }}
         - {{- include "cloudzero-agent.validator.stageCheck" (dict
                 "stage"        "post-start"
-                "checksConfig" .Values.components.validator.checks
+                "checksConfig" $checks
               ) | nindent 10 }}
         - {{- include "cloudzero-agent.validator.stageCheck" (dict
                 "stage"        "pre-stop"
-                "checksConfig" .Values.components.validator.checks
+                "checksConfig" $checks
               ) | nindent 10 }}
         - {{- include "cloudzero-agent.validator.stageCheck" (dict
                 "stage"        "config-load"
-                "checksConfig" .Values.components.validator.checks
+                "checksConfig" $checks
               ) | nindent 10 }}

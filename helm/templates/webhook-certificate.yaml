@@ -1,4 +1,4 @@
-{{ if .Values.insightsController.tls.useCertManager }}
+{{- if and (eq (include "cloudzero-agent.webhookServer.enabled" .) "true") .Values.insightsController.tls.useCertManager }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -46,4 +46,4 @@ spec:
   issuerRef:
     name: {{ include "cloudzero-agent.issuerName" . }}
     kind: Issuer
-{{ end }}
+{{- end }}

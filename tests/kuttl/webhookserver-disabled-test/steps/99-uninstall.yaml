@@ -1,0 +1,19 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: uninstall-webhook-disabled
+# Uses `script:` (kuttl has no `args` field). Walks up to the repo root before
+# calling .tools/bin/helm, since kuttl runs scripts with CWD = this step dir.
+commands:
+  # Uninstall the dedicated release so subsequent kuttl suites and the
+  # `kind-test` teardown are unaffected. `--ignore-not-found` and `|| true`
+  # keep cleanup best-effort even if an earlier step failed.
+  - script: |
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      .tools/bin/helm uninstall cz-whdis \
+        --namespace cz-webhookserver-disabled-test \
+        --ignore-not-found || true
+      kubectl delete namespace cz-webhookserver-disabled-test \
+        --ignore-not-found --wait=false || true

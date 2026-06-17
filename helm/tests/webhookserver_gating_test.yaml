@@ -1,0 +1,350 @@
+suite: webhook server gating across resources
+tests:
+  - it: webhook ConfigMap absent when disabled
+    templates: [templates/webhook-cm.yaml]
+    set: { components.webhookServer.enabled: false }
+    asserts: [{ hasDocuments: { count: 0 } }]
+  - it: webhook ConfigMap present by default
+    templates: [templates/webhook-cm.yaml]
+    set: { insightsController.labels.patterns: ["app.kubernetes.io/.*"] }
+    asserts: [{ hasDocuments: { count: 1 } }]
+  - it: ValidatingWebhookConfiguration absent when disabled
+    templates: [templates/webhook-validating-config.yaml]
+    set: { components.webhookServer.enabled: false }
+    asserts: [{ hasDocuments: { count: 0 } }]
+  - it: init-cert Job absent when disabled
+    templates: [templates/init-cert-job.yaml]
+    set: { components.webhookServer.enabled: false }
+    asserts: [{ hasDocuments: { count: 0 } }]
+  - it: backfill resources absent when disabled
+    templates: [templates/backfill-job.yaml]
+    set: { components.webhookServer.enabled: false }
+    asserts: [{ hasDocuments: { count: 0 } }]
+  - it: webhook HPA absent when disabled even if autoscaling on
+    templates: [templates/webhook-hpa.yaml]
+    set:
+      components.webhookServer.enabled: false
+      components.webhookServer.autoscaling.enabled: true
+    asserts: [{ hasDocuments: { count: 0 } }]
+  - it: agent ConfigMap omits the webhook scrape job when disabled
+    templates: [templates/agent-cm.yaml]
+    set: { components.webhookServer.enabled: false }
+    asserts:
+      - notMatchRegex:
+          path: data["prometheus.yml"]
+          pattern: "cloudzero-webhook-job"
+  - it: agent ConfigMap includes the webhook scrape job by default
+    templates: [templates/agent-cm.yaml]
+    set: { insightsController.labels.patterns: ["app.kubernetes.io/.*"] }
+    asserts:
+      - matchRegex:
+          path: data["prometheus.yml"]
+          pattern: "cloudzero-webhook-job"
+
+  # --- webhook-service.yaml ---
+  - it: webhook Service absent when disabled
+    templates: [templates/webhook-service.yaml]
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook Service present when enabled
+    templates: [templates/webhook-service.yaml]
+    # labels.patterns is required render-time input (webhook label collection); set so the resource renders.
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- webhook-pdb.yaml ---
+  - it: webhook PDB absent when disabled
+    templates: [templates/webhook-pdb.yaml]
+    set:
+      components.webhookServer.enabled: false
+      components.webhookServer.podDisruptionBudget.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook PDB present when enabled
+    templates: [templates/webhook-pdb.yaml]
+    set:
+      components.webhookServer.podDisruptionBudget.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- webhook-serviceaccount.yaml ---
+  - it: init-cert ServiceAccount absent when disabled
+    templates: [templates/webhook-serviceaccount.yaml]
+    set:
+      components.webhookServer.enabled: false
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: init-cert ServiceAccount present when enabled
+    templates: [templates/webhook-serviceaccount.yaml]
+    set:
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- init-cert-clusterrole.yaml ---
+  - it: init-cert ClusterRole absent when disabled
+    templates: [templates/init-cert-clusterrole.yaml]
+    set:
+      components.webhookServer.enabled: false
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: init-cert ClusterRole present when enabled
+    templates: [templates/init-cert-clusterrole.yaml]
+    set:
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- init-cert-clusterrolebinding.yaml ---
+  - it: init-cert ClusterRoleBinding absent when disabled
+    templates: [templates/init-cert-clusterrolebinding.yaml]
+    set:
+      components.webhookServer.enabled: false
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: init-cert ClusterRoleBinding present when enabled
+    templates: [templates/init-cert-clusterrolebinding.yaml]
+    set:
+      initCertJob.rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- servicemonitor-webhook.yaml ---
+  - it: webhook ServiceMonitor absent when disabled even if monitoring on
+    templates: [templates/servicemonitor-webhook.yaml]
+    set:
+      components.webhookServer.enabled: false
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook ServiceMonitor present when enabled and monitoring on
+    templates: [templates/servicemonitor-webhook.yaml]
+    set:
+      components.monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- agent-issuer.yaml ---
+  - it: webhook Issuer absent when disabled
+    templates: [templates/agent-issuer.yaml]
+    set:
+      components.webhookServer.enabled: false
+      insightsController.tls.useCertManager: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook Issuer present when enabled
+    templates: [templates/agent-issuer.yaml]
+    set:
+      insightsController.tls.useCertManager: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- webhook-certificate.yaml ---
+  - it: webhook Certificate absent when disabled
+    templates: [templates/webhook-certificate.yaml]
+    set:
+      components.webhookServer.enabled: false
+      insightsController.tls.useCertManager: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook Certificate present when enabled
+    templates: [templates/webhook-certificate.yaml]
+    set:
+      insightsController.tls.useCertManager: true
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- webhook-tls-secret.yaml ---
+  - it: webhook TLS secret absent when disabled
+    templates: [templates/webhook-tls-secret.yaml]
+    set:
+      components.webhookServer.enabled: false
+      insightsController.tls.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: webhook TLS secret present when enabled
+    templates: [templates/webhook-tls-secret.yaml]
+    set:
+      insightsController.tls.enabled: true
+      insightsController.tls.secret.create: true
+      insightsController.tls.useCertManager: false
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # --- config-loader-job.yaml ---
+  - it: config-loader keeps the --config-webhook flag but empties its value when disabled
+    templates: [templates/config-loader-job.yaml]
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].command
+          content: "--config-webhook"
+      # Assert by index: --config-webhook lands at index 18, its value at 19.
+      # This is non-vacuous: it fails if the value were a mount path (enabled render).
+      - equal:
+          path: spec.template.spec.containers[0].command[18]
+          value: "--config-webhook"
+      - equal:
+          path: spec.template.spec.containers[0].command[19]
+          value: ""
+  - it: config-loader passes the mount path as --config-webhook value when enabled
+    templates: [templates/config-loader-job.yaml]
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command[18]
+          value: "--config-webhook"
+      - contains:
+          path: spec.template.spec.containers[0].command
+          content: "/etc/cloudzero-agent-insights/server-config.yaml"
+  - it: config-loader drops the webhook volume when disabled
+    templates: [templates/config-loader-job.yaml]
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: config-webhook
+          any: true
+  - it: config-loader drops the webhook volumeMount when disabled
+    templates: [templates/config-loader-job.yaml]
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-webhook
+          any: true
+  - it: config-loader mounts the webhook config by default (enabled)
+    templates: [templates/config-loader-job.yaml]
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config-webhook
+          any: true
+
+  # --- validator-cm.yaml ---
+  - it: validator config drops webhook_server_reachable when disabled
+    templates: [templates/validator-cm.yaml]
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["validator.yml"]
+          pattern: "webhook_server_reachable"
+  - it: validator config keeps webhook_server_reachable when enabled
+    templates: [templates/validator-cm.yaml]
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - matchRegex:
+          path: data["validator.yml"]
+          pattern: "post-start[\\s\\S]*webhook_server_reachable"
+
+  # --- prometheusrule.yaml ---
+  # The four webhook alerts (CloudZeroWebhookDown / NoEvents / ServerHighLatency /
+  # RemoteWriteFailures) must not be emitted when the webhook server is disabled,
+  # even though the PrometheusRule itself still renders (monitoring on). We assert
+  # against spec.groups[0].rules with content: {alert: <name>}, any: true because
+  # helm-unittest cannot regex-match the `spec` map directly (it is not a string).
+  # CloudZeroWebhookDown is the critical one: its expr uses absent(up{...}), which
+  # would page forever for a deliberately-disabled component.
+  # NOTE: prometheusrule.yaml renders a single rule group, so spec.groups[0] is stable. Revisit if a second group is added.
+  - it: PrometheusRule has no webhook alerts when disabled (monitoring on)
+    templates: [templates/prometheusrule.yaml]
+    set:
+      components.webhookServer.enabled: false
+      components.monitoring.enabled: true
+    asserts:
+      - notContains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookDown
+          any: true
+      - notContains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookNoEvents
+          any: true
+      - notContains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookServerHighLatency
+          any: true
+      - notContains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookRemoteWriteFailures
+          any: true
+  - it: PrometheusRule keeps non-webhook alerts when webhook disabled
+    templates: [templates/prometheusrule.yaml]
+    set:
+      components.webhookServer.enabled: false
+      components.monitoring.enabled: true
+    asserts:
+      - contains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroAgentDown
+          any: true
+  # labels.patterns is set so the webhook resolver path renders cleanly (labels-without-patterns fails the chart).
+  - it: PrometheusRule has webhook alerts when enabled (monitoring on)
+    templates: [templates/prometheusrule.yaml]
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+      components.monitoring.enabled: true
+    asserts:
+      - contains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookDown
+          any: true
+      - contains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookNoEvents
+          any: true
+      - contains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookServerHighLatency
+          any: true
+      - contains:
+          path: spec.groups[0].rules
+          content:
+            alert: CloudZeroWebhookRemoteWriteFailures
+          any: true

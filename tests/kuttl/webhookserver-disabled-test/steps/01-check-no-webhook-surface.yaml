@@ -1,0 +1,41 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: assert-no-webhook-surface
+commands:
+  # Negative assertions: with components.webhookServer.enabled=false the
+  # webhook surface must be entirely absent. Each `kubectl get` is expected
+  # to FAIL with NotFound; we invert that with `! ... ` so the step succeeds
+  # only when the resource does NOT exist. Names verified by rendering the
+  # chart (release "cz-whdis"):
+  #   Service / Deployment            -> cz-whdis-cz-webhook
+  #   ValidatingWebhookConfiguration  -> cz-whdis-cz-webhook (cluster-scoped)
+
+  # Namespaced webhook Deployment must not exist.
+  - script: |
+      set -e
+        if kubectl get deployment cz-whdis-cz-webhook \
+            -n cz-webhookserver-disabled-test >/dev/null 2>&1; then
+          echo "FAIL: webhook Deployment cz-whdis-cz-webhook exists but should be absent" >&2
+          exit 1
+        fi
+        echo "OK: webhook Deployment absent"
+
+  # Namespaced webhook Service must not exist.
+  - script: |
+      set -e
+        if kubectl get service cz-whdis-cz-webhook \
+            -n cz-webhookserver-disabled-test >/dev/null 2>&1; then
+          echo "FAIL: webhook Service cz-whdis-cz-webhook exists but should be absent" >&2
+          exit 1
+        fi
+        echo "OK: webhook Service absent"
+
+  # Cluster-scoped ValidatingWebhookConfiguration must not exist.
+  - script: |
+      set -e
+        if kubectl get validatingwebhookconfiguration cz-whdis-cz-webhook >/dev/null 2>&1; then
+          echo "FAIL: ValidatingWebhookConfiguration cz-whdis-cz-webhook exists but should be absent" >&2
+          exit 1
+        fi
+        echo "OK: ValidatingWebhookConfiguration absent"

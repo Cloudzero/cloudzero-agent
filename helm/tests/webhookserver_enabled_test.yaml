@@ -1,0 +1,48 @@
+# Resolver truth table + webhook-server gating.
+# Asserts components.webhookServer.enabled (× legacy insightsController.enabled)
+# correctly drives presence/absence of the webhook Deployment.
+suite: webhook server enable/disable resolver
+templates:
+  - webhook-deploy.yaml
+tests:
+  - it: default (both unset) renders the webhook Deployment
+    set:
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: webhookServer.enabled=auto renders the Deployment
+    set:
+      components.webhookServer.enabled: auto
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: webhookServer.enabled=true renders the Deployment
+    set:
+      components.webhookServer.enabled: true
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: webhookServer.enabled=false removes the Deployment
+    set:
+      components.webhookServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: legacy insightsController.enabled=false wins over webhookServer.enabled=true
+    set:
+      components.webhookServer.enabled: true
+      insightsController.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: legacy insightsController.enabled=true wins over webhookServer.enabled=false
+    set:
+      components.webhookServer.enabled: false
+      insightsController.enabled: true
+      insightsController.labels.patterns: ["app.kubernetes.io/.*"]
+    asserts:
+      - hasDocuments:
+          count: 1

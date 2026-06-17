@@ -1093,6 +1093,7 @@ data:
               memory: 128Mi
           schedule: 0 */12 * * *
           securityContext: {}
+        enabled: auto
         labels: {}
         podAnnotations: {}
         podDisruptionBudget: null
@@ -1220,7 +1221,7 @@ data:
           pods: true
           statefulsets: false
       configurationMountPath: null
-      enabled: true
+      enabled: null
       labels:
         enabled: true
         patterns:
@@ -1747,7 +1748,6 @@ data:
       configurations:
         - /etc/prometheus/prometheus.yml
         - /etc/config/prometheus/configmaps/prometheus.yml
-
     diagnostics:
       stages:
         -

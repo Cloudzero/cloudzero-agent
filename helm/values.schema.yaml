@@ -1217,6 +1217,28 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          enabled:
+            description: |
+              Whether to run the webhook server (admission controller for
+              resource metadata).
+
+              - "auto" (default): Let the chart decide. Currently equivalent to
+                true; a future release will make "auto" follow the KubeState
+                configuration.
+              - true: Always run the webhook server.
+              - false: Never run it (e.g. when the in-agent KubeState plugin
+                supplies metadata, or cluster policy disallows admission webhooks).
+
+              Takes effect only when the deprecated insightsController.enabled is
+              unset (null). When insightsController.enabled is explicitly set, it
+              takes precedence over this field.
+            default: auto
+            oneOf:
+              - type: "null"
+              - type: boolean
+              - type: string
+                enum:
+                  - auto
           autoscaling:
             description: |
               Horizontal Pod Autoscaler configuration for the webhook server.
@@ -1988,10 +2010,15 @@ properties:
     properties:
       enabled:
         description: |
-          Whether to enable the insights controller. It is strongly recommended
-          that this feature be enabled as it provides important functionality.
-        type: boolean
-        default: true
+          DEPRECATED: use components.webhookServer.enabled instead. Retained for
+          backward compatibility: when explicitly set (true/false) this value
+          takes precedence over components.webhookServer.enabled. Leave unset
+          (null) to use the new field.
+        deprecated: true
+        default: null
+        oneOf:
+          - type: "null"
+          - type: boolean
       labels:
         description: |
           Configuration for collecting labels from Kubernetes resources.

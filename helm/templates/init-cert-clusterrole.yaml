@@ -1,4 +1,4 @@
-{{- if .Values.initCertJob.rbac.create }}
+{{- if and (eq (include "cloudzero-agent.webhookServer.enabled" .) "true") .Values.initCertJob.rbac.create }}
 # ClusterRole for the init-cert Job
 #
 # This ClusterRole grants the init-cert job (which runs during

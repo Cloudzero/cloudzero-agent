@@ -1,0 +1,5 @@
+# Valid: explicit boolean true.
+clusterName: "test-cluster"
+components:
+  webhookServer:
+    enabled: true

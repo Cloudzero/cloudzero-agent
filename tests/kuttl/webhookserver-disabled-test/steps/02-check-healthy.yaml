@@ -1,0 +1,84 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: assert-healthy
+# Uses `script:` (kuttl has no `args` field; `command:`+`args:` silently no-ops).
+# kubectl reads KUBECONFIG from the environment, so these need no repo-root cd.
+commands:
+  # Regression guard for the original CP-43292 bug: with the webhook server
+  # disabled, the config-loader Job must still reach Complete. The Job name
+  # is checksum-suffixed (cz-whdis-confload-<hash>), so select it by label
+  # rather than by name. Label verified by rendering the chart:
+  #   app.kubernetes.io/name=validator, app.kubernetes.io/part-of=cloudzero-agent
+  #
+  # Pre-check: `kubectl wait --for=condition=Complete job -l <selector>` exits 0
+  # immediately on kubectl <1.27 when no matching Job exists yet, which would
+  # vacuously pass without the Job ever appearing. Poll until at least one
+  # matching Job exists before handing off to kubectl wait.
+  - script: |
+      set -e
+      for i in $(seq 1 30); do
+        COUNT=$(kubectl get job \
+          -l app.kubernetes.io/name=validator,app.kubernetes.io/part-of=cloudzero-agent \
+          -n cz-webhookserver-disabled-test \
+          --no-headers 2>/dev/null | wc -l)
+        if [ "$COUNT" -gt 0 ]; then
+          echo "config-loader Job appeared (attempt $i)"
+          break
+        fi
+        [ "$i" -eq 30 ] && { echo "FAIL: config-loader Job never appeared" >&2; exit 1; }
+        sleep 2
+      done
+      kubectl wait --for=condition=Complete job \
+        -l app.kubernetes.io/name=validator,app.kubernetes.io/part-of=cloudzero-agent \
+        -n cz-webhookserver-disabled-test \
+        --timeout=180s
+
+  # Belt-and-suspenders: step 00's `helm --wait` already blocks on Ready, but
+  # re-assert explicitly so a failure message points at the agent (server)
+  # pod readiness rather than at helm timing out. Selector verified by render:
+  #   app.kubernetes.io/name=server, app.kubernetes.io/instance=cz-whdis
+  #
+  # Pre-check: same kubectl wait empty-selector footgun applies to pods.
+  # Poll until at least one matching pod exists before handing off to kubectl wait.
+  - script: |
+      set -e
+      for i in $(seq 1 30); do
+        COUNT=$(kubectl get pod \
+          -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-whdis \
+          -n cz-webhookserver-disabled-test \
+          --no-headers 2>/dev/null | wc -l)
+        if [ "$COUNT" -gt 0 ]; then
+          echo "Agent (server) pod appeared (attempt $i)"
+          break
+        fi
+        [ "$i" -eq 30 ] && { echo "FAIL: agent (server) pod never appeared" >&2; exit 1; }
+        sleep 2
+      done
+      kubectl wait --for=condition=Ready pod \
+        -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-whdis \
+        -n cz-webhookserver-disabled-test \
+        --timeout=180s
+
+  # Fail if the cloudzero-agent-alloy container has restarted. A disabled-webhook
+  # misconfiguration manifests as CrashLoopBackOff, so any restart > 0 before
+  # Ready flags the regression even if a later retry somehow succeeded.
+  # Scoped to the cloudzero-agent-alloy container by name (matching the
+  # alloy-clustered-test idiom) to avoid counting init-container or sidecar
+  # restarts. Container name verified by rendering with webhookServer.enabled=false.
+  - script: |
+      set -e
+      RESTARTS=$(kubectl get pod \
+        -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-whdis \
+        -n cz-webhookserver-disabled-test \
+        -o jsonpath='{.items[*].status.containerStatuses[?(@.name=="cloudzero-agent-alloy")].restartCount}')
+      echo "cloudzero-agent-alloy container restart count: $RESTARTS"
+      for r in $RESTARTS; do
+        if [ "$r" -ne 0 ]; then
+          echo "FAIL: cloudzero-agent-alloy container restarted $r times (expected 0)" >&2
+          kubectl describe pod \
+            -l app.kubernetes.io/name=server,app.kubernetes.io/instance=cz-whdis \
+            -n cz-webhookserver-disabled-test >&2 || true
+          exit 1
+        fi
+      done

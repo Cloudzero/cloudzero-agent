@@ -1,0 +1,58 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: assert-cluster-resources-removed
+# Uses `script:` (kuttl has no `args` field). kubectl reads KUBECONFIG from the
+# environment, so these need no repo-root cd.
+commands:
+  # After the enabled->disabled upgrade, the cluster-scoped webhook resources
+  # must be pruned by helm. Each `kubectl get` is expected to FAIL with
+  # NotFound; we treat existence as a failure so the step succeeds only when
+  # the resource is GONE. Names verified by rendering the chart with the
+  # webhook ENABLED (release "cz-whup"):
+  #   ValidatingWebhookConfiguration -> cz-whup-cz-webhook
+  #   ClusterRole                    -> cz-whup-cz-webhook-init-cert
+  #   ClusterRoleBinding             -> cz-whup-cz-webhook-init-cert
+
+  # Cluster-scoped ValidatingWebhookConfiguration must be gone.
+  - script: |
+      set -e
+      if kubectl get validatingwebhookconfiguration cz-whup-cz-webhook >/dev/null 2>&1; then
+        echo "FAIL: ValidatingWebhookConfiguration cz-whup-cz-webhook still exists after upgrade" >&2
+        exit 1
+      fi
+      echo "OK: ValidatingWebhookConfiguration removed"
+
+  # init-cert ClusterRole must be gone.
+  - script: |
+      set -e
+      if kubectl get clusterrole cz-whup-cz-webhook-init-cert >/dev/null 2>&1; then
+        echo "FAIL: ClusterRole cz-whup-cz-webhook-init-cert still exists after upgrade" >&2
+        exit 1
+      fi
+      echo "OK: init-cert ClusterRole removed"
+
+  # init-cert ClusterRoleBinding must be gone.
+  - script: |
+      set -e
+      if kubectl get clusterrolebinding cz-whup-cz-webhook-init-cert >/dev/null 2>&1; then
+        echo "FAIL: ClusterRoleBinding cz-whup-cz-webhook-init-cert still exists after upgrade" >&2
+        exit 1
+      fi
+      echo "OK: init-cert ClusterRoleBinding removed"
+
+  # Sanity: the namespaced webhook Deployment/Service should also be gone, so
+  # the upgrade is a genuine teardown rather than a partial prune.
+  - script: |
+      set -e
+      if kubectl get deployment cz-whup-cz-webhook \
+          -n cz-webhookserver-upgrade-test >/dev/null 2>&1; then
+        echo "FAIL: webhook Deployment cz-whup-cz-webhook still exists after upgrade" >&2
+        exit 1
+      fi
+      if kubectl get service cz-whup-cz-webhook \
+          -n cz-webhookserver-upgrade-test >/dev/null 2>&1; then
+        echo "FAIL: webhook Service cz-whup-cz-webhook still exists after upgrade" >&2
+        exit 1
+      fi
+      echo "OK: namespaced webhook Deployment and Service removed"

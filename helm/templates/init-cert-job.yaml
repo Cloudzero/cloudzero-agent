@@ -1,4 +1,4 @@
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 {{- if and .Values.insightsController.tls.secret.create (not .Values.insightsController.tls.useCertManager) .Values.initCertJob.enabled (not .Values.insightsController.tls.crt) (not .Values.insightsController.tls.key) }}
 apiVersion: batch/v1
 kind: Job

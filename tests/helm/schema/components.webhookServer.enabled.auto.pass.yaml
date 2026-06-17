@@ -1,0 +1,5 @@
+# Valid: the string "auto" (current default).
+clusterName: "test-cluster"
+components:
+  webhookServer:
+    enabled: auto
