@@ -2,44 +2,42 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 metadata:
   name: validate-collector-logs
-spec:
-  commands:
-    - command: kubectl
-      args:
-        - wait
-        - --for=condition=available
-        - deployment/collector-comprehensive-test-deployment
-        - -n
-        - collector-comprehensive-test-namespace
-        - --timeout=60s
-    - command: sleep
-      args:
-        - "60"
-    - command: sh
-      args:
-        - -c
-        - "echo '=== Validating Collector Logs ==='"
-    - command: sh
-      args:
-        - -c
-        - "kubectl logs deployment/cz-agent-aggregator -n cz-agent -c cz-agent-aggregator-collector --since=2m > /tmp/collector-logs.txt || echo 'Warning: Failed to get collector logs'"
-    - command: sh
-      args:
-        - -c
-        - "if grep -q 'remote_write.*metrics' /tmp/collector-logs.txt; then echo 'Remote write metrics found in logs'; else echo 'No remote_write metrics found'; fi"
-    - command: sh
-      args:
-        - -c
-        - "grep -q 'kube_pod_info' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_info' || echo 'Missing metric: kube_pod_info'"
-    - command: sh
-      args:
-        - -c
-        - "grep -q 'kube_pod_labels' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_labels' || echo 'Missing metric: kube_pod_labels'"
-    - command: sh
-      args:
-        - -c
-        - "grep -q 'czo_cost_metrics_shipping_progress' /tmp/collector-logs.txt && echo 'Found metric: czo_cost_metrics_shipping_progress' || echo 'Missing metric: czo_cost_metrics_shipping_progress'"
-    - command: sh
-      args:
-        - -c
-        - "if grep -q 'czo_webhook' /tmp/collector-logs.txt; then echo 'Webhook metrics being collected'; else echo 'No webhook metrics found in collector logs'; fi"
+# kuttl command steps use top-level `commands:` with `script:`. kuttl's TestStep
+# has no `spec` field and its Command has no `args` field, so the previous
+# `spec:`+`command:`+`args:` shape silently no-opped.
+#
+# The aggregator is referenced by LABEL (app.kubernetes.io/name=aggregator) in its
+# actual namespace, not the stale hardcoded `deployment/cz-agent-aggregator -n cz-agent`.
+# The alloy co-install (instance=cz-alloy-ct) is excluded. The log-content checks are
+# best-effort diagnostics (they print Found/Missing and never fail the step), matching
+# the original intent.
+commands:
+  # Hard assertion: the suite's own test deployment (created in step 01) must be available.
+  # `timeout:` covers the wait's --timeout=60s (kuttl's 30s default would otherwise clamp it).
+  - command: kubectl wait --for=condition=available deployment/collector-comprehensive-test-deployment -n collector-comprehensive-test-namespace --timeout=60s
+    timeout: 90
+  # kuttl applies a 30s per-command timeout here (the suite's kuttl-test.yaml sets
+  # `spec.timeout`, which kuttl ignores — the field is top-level — so the 30s default
+  # applies); this 60s settle sleep needs a larger explicit `timeout:`.
+  - command: sleep 60
+    timeout: 90
+  # Best-effort log-content diagnostics. Consolidated into one script so the log
+  # capture and the greps share a shell (the original chained via a /tmp file).
+  - script: |
+      echo '=== Validating Collector Logs ==='
+      NS=$(kubectl get deploy \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -A -o jsonpath='{.items[0].metadata.namespace}' 2>/dev/null)
+      CONTAINER=$(kubectl get deploy \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name)].name}' 2>/dev/null \
+        | tr ' ' '\n' | grep -- '-aggregator-collector$' | head -1)
+      kubectl logs \
+        -l 'app.kubernetes.io/name=aggregator,app.kubernetes.io/instance!=cz-alloy-ct' \
+        -n "$NS" -c "$CONTAINER" --since=2m > /tmp/collector-logs.txt 2>/dev/null \
+        || echo 'Warning: Failed to get collector logs'
+      if grep -q 'remote_write.*metrics' /tmp/collector-logs.txt; then echo 'Remote write metrics found in logs'; else echo 'No remote_write metrics found'; fi
+      grep -q 'kube_pod_info' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_info' || echo 'Missing metric: kube_pod_info'
+      grep -q 'kube_pod_labels' /tmp/collector-logs.txt && echo 'Found metric: kube_pod_labels' || echo 'Missing metric: kube_pod_labels'
+      grep -q 'czo_cost_metrics_shipping_progress' /tmp/collector-logs.txt && echo 'Found metric: czo_cost_metrics_shipping_progress' || echo 'Missing metric: czo_cost_metrics_shipping_progress'
+      if grep -q 'czo_webhook' /tmp/collector-logs.txt; then echo 'Webhook metrics being collected'; else echo 'No webhook metrics found in collector logs'; fi
