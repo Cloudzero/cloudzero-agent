@@ -1,0 +1,6 @@
+# Invalid: discovery.method must be one of auto | serviceMonitors | annotations.
+clusterName: "test-cluster"
+components:
+  monitoring:
+    discovery:
+      method: bogus

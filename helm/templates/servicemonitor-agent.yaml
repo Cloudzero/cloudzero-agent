@@ -7,7 +7,7 @@ prometheus_remote_storage_* counters, and other Prometheus native metrics.
 
 See: Monitoring the CloudZero Agent > Monitoring Prometheus Agent Scrape Health
 */}}
-{{- if include "cloudzero-agent.monitoring.enabled" . }}
+{{- if include "cloudzero-agent.monitoring.serviceMonitorsActive" . }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

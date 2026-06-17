@@ -1679,42 +1679,52 @@ checks: {{ $checks | toYaml | nindent 2 -}}
 {{- end -}}
 
 {{/*
-Prometheus Operator Monitoring Enabled Helper
+Prometheus monitoring resolution helpers.
 
-Determines whether Prometheus Operator CRDs (ServiceMonitor, PrometheusRule) should
-be created.
+The chart integrates with a customer's Prometheus stack through the Prometheus
+Operator (ServiceMonitor + PrometheusRule CRDs) and/or prometheus.io/* annotations.
 
-  - null (default): Follow the release default. Currently maps to "false"
-    (disabled) while the feature is being validated in customer environments.
-    In a future release, null will map to "auto".
-  - "auto": Auto-detect via CRD presence in the cluster. Creates monitoring
-    resources only if the Prometheus Operator CRDs (monitoring.coreos.com/v1)
-    are available.
-  - true: Force enable (will fail if CRDs are not installed)
-  - false: Force disable
+  components.monitoring.enabled (true|false, default false) -- whether any
+      monitoring resources are created. Explicit; there is no auto-detection.
+  components.monitoring.discovery.method (auto|serviceMonitors|annotations) -- when
+      enabled, the discovery mechanism:
+        auto (default)  = resolves to serviceMonitors today; left as an enum so a
+                          future mechanism can extend it without changing the default
+        serviceMonitors = ServiceMonitor CRDs (+ the PrometheusRule alert bundle).
+                          These are monitoring.coreos.com/v1 CRDs, so the install
+                          fails if the Prometheus Operator is not present.
+        annotations     = prometheus.io/* annotations only (no Operator CRDs, no alerts)
 
-Usage: {{ if include "cloudzero-agent.monitoring.enabled" . }}...{{ end }}
-Returns: "true" (truthy) when enabled, empty string (falsy) when disabled
+The ServiceMonitors and the PrometheusRule are one Operator bundle: both ride the
+serviceMonitors path. Choosing annotations is discovery-only (no alert bundle).
+Each helper returns "true"/"". The `dig` default mirrors values.yaml so values
+files predating `discovery` still resolve.
 */}}
-{{- define "cloudzero-agent.monitoring.enabled" -}}
-{{- $monitoringSetting := .Values.components.monitoring.enabled -}}
-{{- if kindIs "invalid" $monitoringSetting -}}
-  {{- /* null/not set = release default. Currently: disabled.
-         Change this block to auto-detect when promoting to GA:
-           if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1"
-             true
-           end
-  */ -}}
-{{- else if eq (toString $monitoringSetting) "auto" -}}
-  {{- /* "auto" = detect Prometheus Operator CRDs */ -}}
-  {{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
-    {{- true -}}
-  {{- end -}}
-{{- else if eq (toString $monitoringSetting) "true" -}}
-  {{- /* true = force enabled */ -}}
-  {{- true -}}
+{{/* Resolved discovery method: "annotations" only when explicitly chosen; "auto" and
+     "serviceMonitors" both resolve to serviceMonitors (auto is extensible in future). */}}
+{{- define "cloudzero-agent.monitoring.method" -}}
+{{- if eq (toString (dig "discovery" "method" "auto" .Values.components.monitoring)) "annotations" -}}
+{{- "annotations" -}}
+{{- else -}}
+{{- "serviceMonitors" -}}
 {{- end -}}
-{{- /* false = force disabled, returns empty string */ -}}
+{{- end -}}
+
+{{- define "cloudzero-agent.monitoring.serviceMonitorsActive" -}}
+{{- if dig "enabled" false .Values.components.monitoring -}}
+{{- if eq (include "cloudzero-agent.monitoring.method" .) "serviceMonitors" -}}{{- true -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* The PrometheusRule alert bundle ships with the ServiceMonitor (operator) path. */}}
+{{- define "cloudzero-agent.monitoring.rulesActive" -}}
+{{- include "cloudzero-agent.monitoring.serviceMonitorsActive" . -}}
+{{- end -}}
+
+{{- define "cloudzero-agent.monitoring.annotationsActive" -}}
+{{- if dig "enabled" false .Values.components.monitoring -}}
+{{- if eq (include "cloudzero-agent.monitoring.method" .) "annotations" -}}{{- true -}}{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

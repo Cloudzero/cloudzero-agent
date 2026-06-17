@@ -1018,7 +1018,9 @@ data:
               memory: 64Mi
           securityContext: {}
       monitoring:
-        enabled: null
+        discovery:
+          method: auto
+        enabled: false
         labels: {}
         namespace: null
         sharedSecret: false
@@ -2249,10 +2251,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.10.0
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    prometheus.io/path: /metrics
-    prometheus.io/port: "9090"
-    prometheus.io/scrape: "true"
+  
 spec:
   type: ClusterIP
   ports:
@@ -2277,10 +2276,7 @@ metadata:
     app.kubernetes.io/part-of: cloudzero-agent
     app.kubernetes.io/version: v3.10.0
     helm.sh/chart: cloudzero-agent-1.1.0-dev
-  annotations:
-    prometheus.io/path: /metrics
-    prometheus.io/port: '"8080"'
-    prometheus.io/scrape: "true"
+  
 spec:
   selector:
     app.kubernetes.io/name: aggregator
@@ -2310,10 +2306,6 @@ metadata:
     helm.sh/chart: cloudzero-agent-1.1.0-dev
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    prometheus.io/path: /metrics
-    prometheus.io/port: "8443"
-    prometheus.io/scheme: https
-    prometheus.io/scrape: "true"
   namespace: cz-agent
 spec:
   type: ClusterIP

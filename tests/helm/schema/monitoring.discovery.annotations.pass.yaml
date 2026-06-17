@@ -1,0 +1,9 @@
+# Annotation discovery opt-in: gate forced on + method=annotations renders the
+# prometheus.io/* annotations only (no Operator CRDs, no alert bundle), so it
+# applies cleanly on a cluster without the Prometheus Operator.
+clusterName: "test-cluster"
+components:
+  monitoring:
+    enabled: true
+    discovery:
+      method: annotations

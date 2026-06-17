@@ -1,0 +1,3 @@
+# Chart defaults (enabled: false). Monitoring is off, so nothing
+# monitoring-related renders. Validates the default install.
+clusterName: "test-cluster"
