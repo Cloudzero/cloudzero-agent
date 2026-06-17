@@ -1,0 +1,6 @@
+# Valid: insightsController.enabled may now be null (unset) — defers to components.webhookServer.enabled.
+clusterName: "test-cluster"
+cloudAccountId: "123456789012"
+region: us-east-1
+insightsController:
+  enabled: null

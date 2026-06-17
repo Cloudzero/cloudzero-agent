@@ -1,4 +1,4 @@
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 {{ $backFillValues := (include "cloudzero-agent.backFill" . | fromYaml) }}
 {{- if $backFillValues.enabled }}
 {{- /*

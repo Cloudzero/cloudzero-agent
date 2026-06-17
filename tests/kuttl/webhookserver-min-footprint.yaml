@@ -1,0 +1,70 @@
+# Minimal-footprint, fast-start overlay for the webhookServer KUTTL e2e suites.
+#
+# WHY THIS EXISTS (CP-43292):
+# `make kind-test` installs the full default `cz-agent` release first, then runs
+# every KUTTL suite against that single Kind node. Our webhookServer suites need
+# a DIFFERENTLY configured release (webhook disabled / toggled), so they install
+# their own release alongside `cz-agent` and `helm --wait` for it inside a kuttl
+# step. Two problems made that step time out in CI; this overlay addresses both
+# without changing the behavior under test:
+#
+# 1. Resource pressure. The default release already requests ~1.7 CPU; a second
+#    full-size stack pushed the Kind node past its allocatable CPU, so the new
+#    pods stayed Pending. We shrink the test release to a single replica with
+#    tiny CPU/memory requests so it bin-packs into the remaining headroom:
+#      - defaults.replicas: 1  -> one replica per component (clustered mode would
+#                                 otherwise fan the server out to 3).
+#      - tiny CPU/memory requests on every component the release runs.
+#
+# 2. Slow startup. The validator's `api_key_valid` pre-start check makes HTTP
+#    calls to the CloudZero API and retries with backoff before the server's
+#    init container exits. The test cluster uses a deliberately-invalid API key,
+#    so that check can never pass and only adds minutes of retry latency (it
+#    runs even when "optional"). We set it to "disabled" so the validator init
+#    completes promptly; api-key validation is orthogonal to the webhook gating
+#    this suite verifies. The values docs suggest exactly this for tests.
+#
+# These values affect ONLY the test release; they are never part of the shipped
+# chart defaults. Functional behavior (webhook gating, config-loader, KubeState
+# plugin) is unchanged - only resource requests, replica counts, and the
+# (always-failing, network-bound) api-key check are adjusted.
+defaults:
+  replicas: 1
+
+components:
+  validator:
+    checks:
+      pre-start:
+        api_key_valid: disabled
+      config-load:
+        api_key_valid: disabled
+
+  agent:
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+
+  aggregator:
+    collector:
+      resources:
+        requests:
+          cpu: "10m"
+          memory: "64Mi"
+    shipper:
+      resources:
+        requests:
+          cpu: "10m"
+          memory: "64Mi"
+
+  miscellaneous:
+    configLoader:
+      resources:
+        requests:
+          cpu: "10m"
+          memory: "64Mi"
+    helmless:
+      resources:
+        requests:
+          cpu: "10m"
+          memory: "64Mi"

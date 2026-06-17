@@ -82,7 +82,13 @@ spec:
             - --config-validator
             - /cloudzero/config/validator/validator.yml
             - --config-webhook
+            {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
             - {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml
+            {{- else }}
+            {{- /* Keep the flag with an empty value (do NOT omit it): the loader's
+                   NewSettings errors on a nil/missing arg, but tolerates "". See CP-43292. */}}
+            - ""
+            {{- end }}
             - --config-aggregator
             - {{ .Values.aggregator.mountRoot }}/config/config.yml
           {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
@@ -101,8 +107,10 @@ spec:
               mountPath: /etc/config/prometheus/configmaps/
             - name: config-validator
               mountPath: /cloudzero/config/validator # validator.yml
+            {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
             - name: config-webhook
               mountPath: {{ include "cloudzero-agent.insightsController.configurationMountPath" . }} # server-config.yaml
+            {{- end }}
             - name: config-aggregator
               mountPath: {{ .Values.aggregator.mountRoot }}/config # config.yaml
             - name: aggregator-persistent-storage
@@ -120,9 +128,11 @@ spec:
         - name: config-validator
           configMap:
             name: {{ include "cloudzero-agent.validatorConfigMapName" . }}
+        {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - name: config-webhook
           configMap:
             name: {{ include "cloudzero-agent.webhookConfigMapName" . }}
+        {{- end }}
         - name: config-aggregator
           configMap:
             name: {{ include "cloudzero-agent.aggregator.name" . }}

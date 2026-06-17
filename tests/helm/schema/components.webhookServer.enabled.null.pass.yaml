@@ -1,0 +1,7 @@
+# Valid: null (unset) — the new field defers to its default.
+clusterName: "test-cluster"
+cloudAccountId: "123456789012"
+region: us-east-1
+components:
+  webhookServer:
+    enabled: null

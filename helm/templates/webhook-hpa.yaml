@@ -1,10 +1,10 @@
 {{- $autoscaling := include "cloudzero-agent.getAutoscaling" (dict "component" .Values.components.webhookServer.autoscaling "defaults" .Values.defaults.autoscaling) | fromYaml -}}
-{{- if and .Values.insightsController.enabled $autoscaling.enabled }}
+{{- if and (eq (include "cloudzero-agent.webhookServer.enabled" .) "true") $autoscaling.enabled }}
 {{- /*
 Horizontal Pod Autoscaler for CloudZero Webhook Server
 
-This HPA applies when the webhook server (insights controller) is enabled
-(insightsController.enabled=true) and autoscaling is enabled.
+This HPA applies when the webhook server is enabled (per components.webhookServer.enabled,
+honoring the deprecated insightsController.enabled) and autoscaling is enabled.
 Autoscaling configuration falls back to defaults.autoscaling when
 components.webhookServer.autoscaling is null or when individual properties are not set.
 

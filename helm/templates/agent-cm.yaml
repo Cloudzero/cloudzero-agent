@@ -51,9 +51,9 @@ data:
       {{- include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "scrapeLocalNodeOnly" false) | nindent 6 }}
       {{- end }}{{/* End cadvisor scrape job */}}
 
-      {{- if .Values.insightsController.enabled }}
+      {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
       {{- include "cloudzero-agent.prometheus.scrapeWebhookJob" . | nindent 6 }}
-      {{- end }}{{/* End webhook (insightsController) scrape job */}}
+      {{- end }}{{/* End webhook (webhookServer) scrape job */}}
 
       {{- if .Values.prometheusConfig.scrapeJobs.aggregator.enabled }}
       {{- include "cloudzero-agent.prometheus.scrapeAggregator" . | nindent 6 }}

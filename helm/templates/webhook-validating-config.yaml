@@ -23,7 +23,7 @@ Supported Resources (see app/types/k8s_object.go):
 This configuration is essential for CloudZero cost allocation completeness,
 ensuring no Kubernetes resources are missed in cost attribution analysis.
 */}}
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 {{ $labelsEnabled := $.Values.insightsController.labels.enabled }}
 {{ $annotationEnabled := $.Values.insightsController.annotations.enabled }}
 {{- if or $labelsEnabled $annotationEnabled }}

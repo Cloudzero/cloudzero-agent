@@ -159,7 +159,7 @@ Usage: {{ include "cloudzero-agent.alloy.riverConfig" . }}
 {{- include "cloudzero-agent.alloy.scrapeCAdvisor" . }}
 {{- end }}
 
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 {{ include "cloudzero-agent.alloy.scrapeWebhook" . }}
 {{- end }}
 

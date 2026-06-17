@@ -1,0 +1,53 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-webhook-enabled
+# kuttl command steps use `script:` (no `args` field exists; `command:`+`args:`
+# silently no-ops). kuttl runs scripts with CWD = this step dir, so walk up to the
+# repo root before repo-relative paths. See docs/superpowers/kuttl-commands-noop-issue.md.
+commands:
+  # Install the chart with the admission webhook server ENABLED, as a
+  # separate release in a dedicated namespace so we do not disturb the
+  # default cz-agent release other kuttl suites run against. This is the
+  # starting state for the enabled->disabled upgrade removal test (CP-43292).
+  #
+  # The in-agent KubeState plugin is on (with kube-state-metrics off, which
+  # the chart requires) to match the disabled-fresh-install suite's config.
+  #
+  # webhookserver-min-footprint.yaml shrinks this release (1 replica, tiny CPU
+  # requests) so it schedules alongside the default cz-agent release that
+  # `make kind-test` installs first; otherwise two full-size stacks exhaust a
+  # CI Kind node's CPU and helm --wait times out. See that file's header
+  # (CP-43292).
+  #
+  # The dev image tag mirrors the `make helm-install-current` target.
+  - script: |
+      set -e
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      DEV_TAG="dev-$(git rev-parse HEAD)"
+      .tools/bin/helm upgrade --install cz-whup ./helm \
+        --namespace cz-webhookserver-upgrade-test \
+        --create-namespace \
+        --values clusters/kind-overrides.yaml \
+        --values tests/kuttl/webhookserver-min-footprint.yaml \
+        --set components.agent.mode=clustered \
+        --set components.agent.image.tag="$DEV_TAG" \
+        --set components.webhookServer.enabled=true \
+        --set components.agent.kubeState.enabled=true \
+        --set kubeStateMetrics.enabled=false \
+        --wait --timeout=8m
+
+      # Positively assert the cluster-scoped webhook resources exist after
+      # the enabled install, so step 02's "must be gone" assertions prove
+      # actual removal rather than removal-of-nothing. Names verified by
+      # rendering the chart with webhookServer.enabled=true, release cz-whup:
+      #   ValidatingWebhookConfiguration -> cz-whup-cz-webhook
+      #   ClusterRole                    -> cz-whup-cz-webhook-init-cert
+      #   ClusterRoleBinding             -> cz-whup-cz-webhook-init-cert
+      # With set -e, a missing resource causes kubectl get to return non-zero
+      # and fail this step immediately.
+      kubectl get validatingwebhookconfiguration cz-whup-cz-webhook
+      kubectl get clusterrole cz-whup-cz-webhook-init-cert
+      kubectl get clusterrolebinding cz-whup-cz-webhook-init-cert

@@ -1,0 +1,5 @@
+# Invalid: components.webhookServer.enabled must be null, a boolean, or the string "auto".
+clusterName: "test-cluster"
+components:
+  webhookServer:
+    enabled: 123

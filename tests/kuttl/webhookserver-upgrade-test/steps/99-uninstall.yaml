@@ -1,0 +1,18 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: uninstall-webhook-upgrade
+# Uses `script:` and walks up to the repo root (kuttl CWD = this step dir).
+commands:
+  # Uninstall the dedicated release so subsequent kuttl suites and the
+  # `kind-test` teardown are unaffected. `--ignore-not-found` and `|| true`
+  # keep cleanup best-effort even if an earlier step failed.
+  - script: |
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      .tools/bin/helm uninstall cz-whup \
+        --namespace cz-webhookserver-upgrade-test \
+        --ignore-not-found || true
+      kubectl delete namespace cz-webhookserver-upgrade-test \
+        --ignore-not-found --wait=false || true

@@ -1,4 +1,4 @@
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 {{- with .Values.insightsController }}
 {{- if and .labels.enabled (not .labels.patterns) }}
 {{- $msg := "\n\nThe required field(s) 'insightsController.labels.enabled' and/or 'insightsController.labels.patterns' is not set! See the README.md for more information." }}

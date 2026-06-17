@@ -1,0 +1,64 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-webhook-disabled
+# kuttl command steps use `script:` (a shell-script string), NOT `command:`+`args:`.
+# kuttl's Commands schema has no `args` field and `command` is a single string, so
+# the `command:`+`args:` shape silently no-ops. kuttl also runs scripts with CWD set
+# to this step directory, so we walk up to the repo root before using repo-relative
+# paths (.tools/bin/helm, ./helm, clusters/). See docs/superpowers/kuttl-commands-noop-issue.md.
+commands:
+  # Install the chart with the admission webhook server DISABLED, as a
+  # separate release in a dedicated namespace so we do not disturb the
+  # default cz-agent release other kuttl suites run against.
+  #
+  # components.webhookServer.enabled=false   -> no webhook surface (CP-43292)
+  # components.agent.kubeState.enabled=true  -> in-agent KubeState plugin on
+  # kubeStateMetrics.enabled=false           -> required: the KubeState plugin
+  #                                             replaces kube-state-metrics, and
+  #                                             the chart rejects both being true.
+  #
+  # webhookserver-min-footprint.yaml shrinks this release (1 replica, tiny CPU
+  # requests) so it schedules alongside the default cz-agent release that
+  # `make kind-test` installs first. Without it, two full-size stacks exceed a
+  # CI Kind node's allocatable CPU, the new pods stay Pending, and helm --wait
+  # times out. See that file's header for the full rationale (CP-43292).
+  #
+  # The dev image tag mirrors the `make helm-install-current` target.
+  - script: |
+      set -e
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      DEV_TAG="dev-$(git rev-parse HEAD)"
+      NS=cz-webhookserver-disabled-test
+      if ! .tools/bin/helm upgrade --install cz-whdis ./helm \
+        --namespace "$NS" \
+        --create-namespace \
+        --values clusters/kind-overrides.yaml \
+        --values tests/kuttl/webhookserver-min-footprint.yaml \
+        --set components.agent.mode=clustered \
+        --set components.agent.image.tag="$DEV_TAG" \
+        --set components.webhookServer.enabled=false \
+        --set components.agent.kubeState.enabled=true \
+        --set kubeStateMetrics.enabled=false \
+        --wait --timeout=8m; then
+        # The install did not reach Ready. CI tears the cluster down on failure,
+        # so capture why HERE (node capacity, pod states, scheduling/crash
+        # reasons) before this step returns. See CP-43292.
+        echo "===== INSTALL FAILED - cluster diagnostics ($NS) ====="
+        echo "--- nodes ---"; kubectl get nodes -o wide || true
+        echo "--- node allocatable + allocated requests ---"
+        kubectl describe nodes | grep -A15 'Allocated resources' || true
+        echo "--- pods (test ns + default release + kube-system) ---"
+        kubectl get pods -A -o wide | grep -E 'NAMESPACE|cz-webhookserver|im-a-namespace|cz-agent|Pending|Init|CrashLoop|Error|ContainerCreating' || true
+        echo "--- not-ready pods in $NS: describe (scheduling/crash reason) ---"
+        for p in $(kubectl get pods -n "$NS" -o name 2>/dev/null); do
+          echo "··· $p ···"
+          kubectl describe "$p" -n "$NS" 2>/dev/null \
+            | grep -E 'Status:|Reason:|Message:|FailedScheduling|Insufficient|Unschedulable|Warning|Back-off|Liveness|Readiness|State:|Last State:|Exit Code:|Ready:' \
+            | head -25 || true
+        done
+        echo "===== end diagnostics ====="
+        exit 1
+      fi

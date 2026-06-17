@@ -6443,6 +6443,21 @@
               },
               "type": "object"
             },
+            "enabled": {
+              "default": "auto",
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": ["auto"],
+                  "type": "string"
+                }
+              ]
+            },
             "labels": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
             },
@@ -6806,8 +6821,16 @@
           "type": ["string", "null"]
         },
         "enabled": {
-          "default": true,
-          "type": "boolean"
+          "default": null,
+          "deprecated": true,
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
         },
         "labels": {
           "additionalProperties": false,

@@ -1,0 +1,18 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+metadata:
+  name: webhookserver-upgrade-test
+  annotations:
+    kuttl.dev/type: "test"
+testDirs:
+  - ./steps
+timeout: 600 # two helm operations up to ~4 min each + assertion headroom
+parallel: 1
+reportFormat: JSON
+reportName: webhookserver-upgrade-test-report
+# The suite installs its own helm release in a dedicated namespace and
+# uninstalls it in step 99, so we do not let kuttl delete the namespace
+# (that would leave helm release state orphaned).
+deleteNamespace: false
+namespaceLabels:
+  test: webhookserver-upgrade

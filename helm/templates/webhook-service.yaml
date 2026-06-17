@@ -1,3 +1,4 @@
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -34,3 +35,4 @@ spec:
       appProtocol: https
   selector:
     {{- include "cloudzero-agent.insightsController.server.matchLabels" . | nindent 4 }}
+{{- end }}

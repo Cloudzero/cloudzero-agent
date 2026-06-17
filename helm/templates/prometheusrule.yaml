@@ -83,6 +83,7 @@ spec:
 
         See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
         */}}
+        {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - alert: CloudZeroWebhookDown
           expr: |
             up{job="{{ include "cloudzero-agent.serviceName" . }}"} == 0
@@ -95,6 +96,7 @@ spec:
           annotations:
             summary: "CloudZero Webhook server is down"
             description: "The webhook server has been down for 5 minutes. Kubernetes resource metadata is not being captured for cost attribution."
+        {{- end }}
 
         {{/*
         CloudZeroAggregatorDown: The aggregator pod (containing the collector
@@ -151,6 +153,7 @@ spec:
         Uses czo_webhook_types_total from app/domain/webhook/webhook.go.
         See: Monitoring the CloudZero Agent > Monitoring Webhook TLS Certificate Health
         */}}
+        {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - alert: CloudZeroWebhookNoEvents
           expr: rate(czo_webhook_types_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m]) == 0
           for: 30m
@@ -160,6 +163,7 @@ spec:
           annotations:
             summary: "CloudZero Webhook receiving zero admission events"
             description: "The webhook has not received any Kubernetes admission requests for 30 minutes despite being running. The most common cause is a TLS certificate mismatch. Compare the caBundle in the ValidatingWebhookConfiguration with the ca.crt in the webhook TLS secret."
+        {{- end }}
 
         {{/*
         ===== Warning Alerts =====
@@ -199,6 +203,7 @@ spec:
 
         See: Monitoring the CloudZero Agent > Monitoring Webhook Event Processing
         */}}
+        {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - alert: CloudZeroWebhookServerHighLatency
           expr: |
             histogram_quantile(0.99,
@@ -215,6 +220,7 @@ spec:
           annotations:
             summary: "High server-side processing latency on CloudZero Webhook"
             description: "The webhook server-side processing p99 exceeds 500ms. This measures internal processing time only; actual API server impact includes additional network and TLS overhead. Cross-reference with apiserver_admission_webhook_admission_duration_seconds."
+        {{- end }}
 
         {{/*
         CloudZeroWebhookRemoteWriteFailures: The webhook cannot deliver
@@ -223,6 +229,7 @@ spec:
         Uses remote_write_failures_total from the webhook metrics.
         See: Monitoring the CloudZero Agent > Monitoring Webhook Metadata Delivery
         */}}
+        {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - alert: CloudZeroWebhookRemoteWriteFailures
           expr: rate(remote_write_failures_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m]) > 0
           for: 15m
@@ -232,6 +239,7 @@ spec:
           annotations:
             summary: "CloudZero Webhook failing to push metadata"
             description: "The webhook cannot push resource metadata to the CloudZero API. Cost attribution metadata is not being delivered. Check network connectivity and API key validity."
+        {{- end }}
 
         {{/*
         CloudZeroRemoteWriteLag: The internal Prometheus agent's remote-write

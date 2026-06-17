@@ -776,6 +776,16 @@ components:
           cpu: "2000m"
   # Settings for the webhook server.
   webhookServer:
+    # Whether to run the webhook server (admission controller for resource
+    # metadata). Ternary:
+    #   true  - always run the webhook server
+    #   false - never run it (e.g. when the in-agent KubeState plugin supplies
+    #           metrics and you cannot deploy an admission webhook)
+    #   auto  - let the chart decide. Currently equivalent to `true`; a future
+    #           release will make `auto` follow the KubeState configuration.
+    # Note: if insightsController.enabled is explicitly set (true/false), it takes
+    # precedence over this field for backward compatibility.
+    enabled: auto
     replicas: null
     # Horizontal Pod Autoscaler configuration for the webhook server.
     #
@@ -1293,11 +1303,11 @@ server:
 # Configuration for the webhook server (née Insights Controller), which collects
 # and processes Kubernetes resource metadata for cost attribution and analysis.
 insightsController:
-  # Whether to enable the insights controller.
-  #
-  # It is strongly recommended that this feature be enabled as it provides
-  # important functionality.
-  enabled: true
+  # **DEPRECATED**: use `components.webhookServer.enabled` instead. Retained for
+  # backward compatibility: when explicitly set (true/false) this value takes
+  # precedence over components.webhookServer.enabled. Leave unset (null) to use
+  # the new field.
+  enabled: null
   # Configuration for collecting labels from Kubernetes resources.
   labels:
     # Whether to enable collection of specific labels for cost attribution

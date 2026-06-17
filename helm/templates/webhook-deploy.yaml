@@ -23,7 +23,7 @@ Operational characteristics:
 The webhook server is essential for CloudZero cost allocation accuracy,
 ensuring complete resource metadata collection across all Kubernetes workloads.
 */}}
-{{- if .Values.insightsController.enabled }}
+{{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,0 +1,27 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: upgrade-webhook-disabled
+# Uses `script:` and walks up to the repo root (kuttl CWD = this step dir).
+commands:
+  # Upgrade the SAME release (cz-whup) from webhook-enabled to
+  # webhook-disabled. Helm should prune the cluster-scoped webhook resources
+  # (ValidatingWebhookConfiguration + init-cert ClusterRole/ClusterRoleBinding)
+  # that no longer render. All other flags match the install step so the only
+  # change is components.webhookServer.enabled true -> false (CP-43292).
+  - script: |
+      set -e
+      ROOT="$PWD"
+      while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
+      cd "$ROOT"
+      DEV_TAG="dev-$(git rev-parse HEAD)"
+      .tools/bin/helm upgrade --install cz-whup ./helm \
+        --namespace cz-webhookserver-upgrade-test \
+        --values clusters/kind-overrides.yaml \
+        --values tests/kuttl/webhookserver-min-footprint.yaml \
+        --set components.agent.mode=clustered \
+        --set components.agent.image.tag="$DEV_TAG" \
+        --set components.webhookServer.enabled=false \
+        --set components.agent.kubeState.enabled=true \
+        --set kubeStateMetrics.enabled=false \
+        --wait --timeout=8m
