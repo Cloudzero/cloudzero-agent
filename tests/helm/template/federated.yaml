@@ -1119,7 +1119,7 @@ data:
       prometheusReloader:
         image:
           repository: quay.io/prometheus-operator/prometheus-config-reloader
-          tag: v0.87.0
+          tag: v0.91.0
       validator:
         annotations: {}
         checks:
@@ -2444,7 +2444,7 @@ spec:
         # in the prometheus.yml.in file with the actual node name, then use that
         # processed file in the container.
         - name: config-subst
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.87.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
           imagePullPolicy: "IfNotPresent"
           command:
             - /bin/sh
@@ -2473,7 +2473,7 @@ spec:
               mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.87.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -2817,7 +2817,7 @@ spec:
       containers:
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.87.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
