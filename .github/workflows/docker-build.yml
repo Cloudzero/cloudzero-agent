@@ -96,6 +96,16 @@ jobs:
         with:
           # ONLY use the untested registry address for the image until it is tested
           images: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}
+          # Generate the SAME tag set as the docker-merge step below, so this
+          # job's `image-tag` output (steps.meta.outputs.version) matches the tag
+          # the untested manifest is actually published under. Without this, a
+          # v* tag build emits the raw ref (e.g. `v1.2.12`) instead of the semver
+          # `1.2.12`, which breaks the downstream image pulls (matrix tests) and
+          # the production promotion that consume this output.
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -361,13 +371,17 @@ jobs:
   # PRODUCTION ONLY STEPS BEYOND THIS POINT
   #
   release-image:
-    needs:
-      [
-        "docker-build",
-        "docker-merge",
-        "k8s-version-matrix-tests",
-        "replicated-compatibility-matrix-tests",
-      ]
+    needs: ["docker-build", "docker-merge", "k8s-version-matrix-tests"]
+    # Promote to the production registry only for release artifacts: version
+    # tags (pushed by the Manual Prepare Release workflow) and GitHub Releases.
+    #
+    # NOTE: replicated-compatibility-matrix-tests is intentionally NOT listed in
+    # `needs` above. It only runs on merge_group events, so on tag/release events
+    # it is skipped -- and a skipped `needs` dependency makes GitHub Actions skip
+    # this job by default. Listing it here silently skipped the entire promotion
+    # on every release. The remaining needs all run on these events, so no
+    # `always()` gating is required.
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -384,13 +398,11 @@ jobs:
 
       # install regctl for registry management operations
       - name: PRODUCTION STEP - Install Regctl for registry management
-        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: install_regctl
         uses: iarekylew00t/regctl-installer@v4
 
       # Login to the production registry
       - name: PRODUCTION STEP - login to container registry
-        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: prod_registry_login
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
@@ -398,10 +410,8 @@ jobs:
               --user "${{ github.actor }}" \
               --pass-stdin
 
-      # Promote the untested image to production
-      # only allow on main, develop branches, or a version tag
+      # Promote the untested image to production (gated at the job level above).
       - name: PRODUCTION STEP - Publish Image to Production
-        if: github.event_name == 'release' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         id: prod_publish_image
         run: |
           regctl image copy \
@@ -442,3 +452,57 @@ jobs:
         with:
           name: "docker-build"
           status: "failure"
+
+  # Safety net: fail loudly if a release did not actually publish its production
+  # image. Runs even when release-image is skipped (always()), so a future
+  # regression that silently skips promotion becomes a hard, visible failure
+  # instead of a green no-op. Gated to the events that are supposed to publish.
+  verify-release-published:
+    name: Verify production image published
+    needs: ["docker-build", "release-image"]
+    if: always() && (github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Assert promotion job succeeded
+        run: |
+          result="${{ needs.release-image.result }}"
+          if [[ "$result" != "success" ]]; then
+            echo "::error::release-image did not succeed (result=$result). The production image was NOT published."
+            exit 1
+          fi
+
+      - name: Install regctl
+        uses: iarekylew00t/regctl-installer@v4
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            regctl registry login ${{ env.REGISTRY_PROD_ADDR }} \
+              --user "${{ github.actor }}" \
+              --pass-stdin
+
+      - name: Confirm production image is pullable
+        run: |
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          REF="${{ env.REGISTRY_PROD_ADDR }}/${IMAGE_NAME,,}:${{ needs.docker-build.outputs.image-tag }}"
+          echo "Verifying ${REF} exists in the registry..."
+          if ! regctl manifest head "${REF}"; then
+            echo "::error::${REF} is not present in the registry after promotion."
+            exit 1
+          fi
+          echo "Confirmed: ${REF} is published."
+
+          # For a bare-semver release, release-image also promotes :latest
+          # (same regex as the publish step). Assert it landed too.
+          if [[ "${{ needs.docker-build.outputs.image-tag }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            LATEST_REF="${{ env.REGISTRY_PROD_ADDR }}/${IMAGE_NAME,,}:latest"
+            echo "Verifying ${LATEST_REF} exists in the registry..."
+            if ! regctl manifest head "${LATEST_REF}"; then
+              echo "::error::${LATEST_REF} is not present in the registry after promotion."
+              exit 1
+            fi
+            echo "Confirmed: ${LATEST_REF} is published."
+          fi
