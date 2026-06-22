@@ -27,6 +27,8 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook"
 	"github.com/cloudzero/cloudzero-agent/app/domain/webhook/backfiller"
 	"github.com/cloudzero/cloudzero-agent/app/storage/streaming"
+	"github.com/cloudzero/cloudzero-agent/app/types"
+	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
 	"github.com/cloudzero/cloudzero-agent/app/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -45,7 +47,7 @@ func TestStreamingStoreEndToEnd(t *testing.T) {
 	settings := makeSettings(t, sink.server.URL)
 	clock := &utils.Clock{}
 
-	store := streaming.New(settings)
+	store := streaming.New(settings, clock)
 	wc, err := webhook.NewWebhookFactory(store, settings, clock)
 	require.NoError(t, err)
 
@@ -91,6 +93,16 @@ func TestStreamingStoreEndToEnd(t *testing.T) {
 
 	received := sink.timeseries()
 	require.NotEmpty(t, received, "collector should have received timeseries")
+
+	// Samples must carry a recent timestamp, not the zero-time sentinel.
+	const sentinel = int64(-6795364578871)
+	before := clock.GetCurrentTime().Add(-time.Hour).UnixNano() / int64(time.Millisecond)
+	for _, series := range received {
+		for _, sample := range series.Samples {
+			assert.NotEqual(t, sentinel, sample.Timestamp, "sample must not carry the zero-time sentinel")
+			assert.Greater(t, sample.Timestamp, before, "sample timestamp should be recent")
+		}
+	}
 
 	// Index received timeseries by __name__ for easier lookup.
 	type ts struct {
@@ -151,6 +163,31 @@ func TestStreamingStoreEndToEnd(t *testing.T) {
 	require.NotNil(t, podEntry, "should have pod labels for 'web-1'")
 	assert.Equal(t, "web", podEntry.labels["label_app"])
 	assert.Equal(t, "platform", podEntry.labels["label_team"])
+}
+
+// TestStoreCreateStampsTimestamps verifies Create stamps
+// RecordCreated/RecordUpdated from the injected clock.
+func TestStoreCreateStampsTimestamps(t *testing.T) {
+	clockTime := time.Date(2026, 6, 22, 12, 0, 0, 0, time.UTC)
+	clock := mocks.NewMockClock(clockTime)
+
+	settings := makeSettings(t, "http://example.invalid")
+	store := streaming.New(settings, clock)
+
+	record := &types.ResourceTags{Type: config.Pod, Name: "web-1"}
+	require.True(t, record.RecordCreated.IsZero(), "precondition: RecordCreated must be zero")
+	require.True(t, record.RecordUpdated.IsZero(), "precondition: RecordUpdated must be zero")
+
+	require.NoError(t, store.Create(context.Background(), record))
+
+	assert.Equal(t, clockTime, record.RecordCreated, "Create must stamp RecordCreated from the clock")
+	assert.Equal(t, clockTime, record.RecordUpdated, "Create must stamp RecordUpdated from the clock")
+
+	// Update delegates to Create.
+	updateTime := clockTime.Add(time.Hour)
+	clock.SetCurrentTime(updateTime)
+	require.NoError(t, store.Update(context.Background(), record))
+	assert.Equal(t, updateTime, record.RecordUpdated, "Update must restamp from the clock")
 }
 
 // collectorSink is an httptest server that captures Prometheus WriteRequests.
