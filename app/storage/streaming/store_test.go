@@ -29,7 +29,6 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/storage/streaming"
 	"github.com/cloudzero/cloudzero-agent/app/types"
 	"github.com/cloudzero/cloudzero-agent/app/types/mocks"
-	"github.com/cloudzero/cloudzero-agent/app/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +44,8 @@ func TestStreamingStoreEndToEnd(t *testing.T) {
 	defer sink.server.Close()
 
 	settings := makeSettings(t, sink.server.URL)
-	clock := &utils.Clock{}
+	clockTime := time.Date(2026, 6, 22, 12, 0, 0, 0, time.UTC)
+	clock := mocks.NewMockClock(clockTime)
 
 	store := streaming.New(settings, clock)
 	wc, err := webhook.NewWebhookFactory(store, settings, clock)
@@ -94,13 +94,12 @@ func TestStreamingStoreEndToEnd(t *testing.T) {
 	received := sink.timeseries()
 	require.NotEmpty(t, received, "collector should have received timeseries")
 
-	// Samples must carry a recent timestamp, not the zero-time sentinel.
-	const sentinel = int64(-6795364578871)
-	before := clock.GetCurrentTime().Add(-time.Hour).UnixNano() / int64(time.Millisecond)
+	// Every sample must carry the injected clock's timestamp, not the
+	// zero-time sentinel that corrupted backfilled metadata.
+	expectedTimestamp := clockTime.UnixNano() / int64(time.Millisecond)
 	for _, series := range received {
 		for _, sample := range series.Samples {
-			assert.NotEqual(t, sentinel, sample.Timestamp, "sample must not carry the zero-time sentinel")
-			assert.Greater(t, sample.Timestamp, before, "sample timestamp should be recent")
+			assert.Equal(t, expectedTimestamp, sample.Timestamp, "sample must carry the clock's timestamp")
 		}
 	}
 
