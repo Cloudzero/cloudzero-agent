@@ -26,6 +26,7 @@ const defaultBatchRecords = 500
 
 type Store struct {
 	settings      *config.Settings
+	clock         types.TimeProvider
 	mu            sync.Mutex
 	batch         []*types.ResourceTags
 	maxBatchCount int
@@ -34,10 +35,12 @@ type Store struct {
 }
 
 // New creates a streaming store that sends records directly to the
-// collector endpoint configured in settings.RemoteWrite.
-func New(settings *config.Settings) *Store {
+// collector endpoint configured in settings.RemoteWrite. The clock stamps
+// record timestamps.
+func New(settings *config.Settings, clock types.TimeProvider) *Store {
 	return &Store{
 		settings:      settings,
+		clock:         clock,
 		batch:         make([]*types.ResourceTags, 0, defaultBatchRecords),
 		maxBatchCount: defaultBatchRecords,
 		maxRetries:    settings.RemoteWrite.MaxRetries,
@@ -48,6 +51,10 @@ func New(settings *config.Settings) *Store {
 func (s *Store) Create(_ context.Context, record *types.ResourceTags) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Stamp timestamps on create; Update delegates here.
+	now := s.clock.GetCurrentTime()
+	record.RecordCreated, record.RecordUpdated = now, now
 
 	s.batch = append(s.batch, record)
 

@@ -87,7 +87,7 @@ func main() {
 
 	if backfill {
 		log.Info().Msg("Starting backfill mode")
-		streamStore := streaming.New(settings)
+		streamStore := streaming.New(settings, clock)
 		wd, err2 := webhook.NewWebhookFactory(streamStore, settings, clock)
 		if err2 != nil {
 			log.Fatal().Err(err2).Msg("failed to create webhook domain controller")
