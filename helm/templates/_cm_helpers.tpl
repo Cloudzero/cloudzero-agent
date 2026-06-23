@@ -509,12 +509,9 @@ Usage: {{ include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "sc
       target_label: node_name
 
     # Filter to only the local node
-    # NOTE: $(NODE_NAME) is a placeholder replaced by an init container with the
-    # actual node name. The prometheus-config-reloader binary performs the
-    # substitution (Thanos-style $(VAR) syntax) when it writes the processed
-    # config; Prometheus itself does not support env var substitution. Note the
-    # parentheses: Prometheus relabel back-references like ${1} use braces and
-    # are deliberately left untouched by the reloader.
+    # NOTE: $(NODE_NAME) is substituted with the node name by the reloader init
+    # container (Thanos-style $(VAR) syntax; relabel refs like ${1} use braces
+    # and are left untouched). Prometheus has no env var substitution of its own.
     - source_labels: [__meta_kubernetes_node_name]
       regex: $(NODE_NAME)
       action: keep

@@ -450,12 +450,9 @@ data:
             target_label: node_name
       
           # Filter to only the local node
-          # NOTE: $(NODE_NAME) is a placeholder replaced by an init container with the
-          # actual node name. The prometheus-config-reloader binary performs the
-          # substitution (Thanos-style $(VAR) syntax) when it writes the processed
-          # config; Prometheus itself does not support env var substitution. Note the
-          # parentheses: Prometheus relabel back-references like ${1} use braces and
-          # are deliberately left untouched by the reloader.
+          # NOTE: $(NODE_NAME) is substituted with the node name by the reloader init
+          # container (Thanos-style $(VAR) syntax; relabel refs like ${1} use braces
+          # and are left untouched). Prometheus has no env var substitution of its own.
           - source_labels: [__meta_kubernetes_node_name]
             regex: $(NODE_NAME)
             action: keep
@@ -2442,13 +2439,9 @@ spec:
       
       serviceAccountName: cz-agent-cz-server
       initContainers:
-        # Prometheus doesn't support environment variables where we need them in
-        # the prometheus.yml file, so we use the prometheus-config-reloader
-        # binary (shipped in the agent image) to substitute $(NODE_NAME) in the
-        # prometheus.yml.in file with the actual node name, writing the processed
-        # file used by the Prometheus container. --watch-interval=0 makes the
-        # reloader run the substitution once and exit, which is what an init
-        # container needs.
+        # Prometheus doesn't support env vars in prometheus.yml, so the reloader
+        # binary substitutes $(NODE_NAME) into the processed config consumed by
+        # the server. --watch-interval=0 runs the substitution once and exits.
         - name: config-subst
           image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.12"
           imagePullPolicy: "IfNotPresent"

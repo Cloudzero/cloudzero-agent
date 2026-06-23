@@ -1,9 +1,7 @@
 ARG DEPLOY_IMAGE=scratch
 
-# prometheus-config-reloader version, built from upstream source (see the
-# "reloader" stage below). This is a git tag, which Dependabot does NOT track
-# (it only watches Chart.yaml and Dockerfile FROM lines), so it must be bumped
-# by hand. See DEVELOPMENT.md ("prometheus-config-reloader") for the procedure.
+# prometheus-config-reloader version, built from source in the "reloader" stage.
+# Git tag — Dependabot can't track it, so bump by hand (see DEVELOPMENT.md).
 ARG RELOADER_VERSION=v0.91.0
 
 # Multi-stage Docker build with platform-specific cache optimization:
@@ -80,16 +78,9 @@ FROM gcr.io/distroless/static-debian12:debug@sha256:46fcf1fa44d251b0944ba4b98ef4
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
 FROM ghcr.io/cloudzero/alloy:v1.17.0 AS alloy
 
-# Stage 6: Build prometheus-config-reloader from upstream source
-#
-# We build the binary ourselves rather than copying the prebuilt upstream image
-# so that (a) we control the Go toolchain, and (b) we can bump vulnerable
-# transitive dependencies. Building the v0.91.0 tag with our toolchain clears
-# all but a handful of the High/Critical CVEs grype finds in the prebuilt image;
-# bumping x/crypto and x/net below clears the rest so the image scan passes.
-#
-# Only the resulting binary is copied into the final image; no upstream source
-# is vendored into this repository.
+# Stage 6: Build prometheus-config-reloader from upstream source. We build it
+# (not copy the prebuilt image) to control the toolchain and bump vulnerable
+# deps; only the binary is copied out, no source is vendored.
 FROM base-tools AS reloader
 ARG TARGETOS TARGETARCH
 ARG RELOADER_VERSION
@@ -98,8 +89,7 @@ WORKDIR /reloader-src
 RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
         https://github.com/prometheus-operator/prometheus-operator.git .
 
-# Carry these two deps slightly ahead of upstream's pins to clear the remaining
-# grype findings. Remove once upstream pins versions at least this new.
+# Bump vulnerable deps ahead of upstream's pins so the scan passes; drop when upstream catches up.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     go get golang.org/x/crypto@v0.52.0 golang.org/x/net@v0.55.0
 

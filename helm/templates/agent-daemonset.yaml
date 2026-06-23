@@ -55,18 +55,13 @@ spec:
       {{- include "cloudzero-agent.generatePriorityClassName" (.Values.defaults.priorityClassName | default .Values.server.priorityClassName) | nindent 6 }}
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
-        # Prometheus doesn't support environment variables where we need them in
-        # the prometheus.yml file, so we use the prometheus-config-reloader
-        # binary (shipped in the agent image) to substitute $(NODE_NAME) in the
-        # prometheus.yml.in file with the actual node name, writing the processed
-        # file used by the Prometheus container. --watch-interval=0 makes the
-        # reloader run the substitution once and exit, which is what an init
-        # container needs.
+        # Prometheus doesn't support env vars in prometheus.yml, so the reloader
+        # binary substitutes $(NODE_NAME) into the processed config consumed by
+        # the server. --watch-interval=0 runs the substitution once and exits.
         - name: config-subst
           {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
-          {{- /* Run the in-image binary by path. When overridden to an external
-                 reloader image (configmapReload.prometheus.image), the reloader is
-                 that image's entrypoint, so let it run and pass only args. */}}
+          {{- /* In-image binary runs by path; an external override image runs via
+                 its own entrypoint, so omit command when the override is set. */}}
           {{- if not .Values.configmapReload.prometheus.image.repository }}
           command:
             - /app/prometheus-config-reloader
