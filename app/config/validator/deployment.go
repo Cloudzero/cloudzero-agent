@@ -16,9 +16,9 @@ import (
 )
 
 type Deployment struct {
-	AccountID   string      `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"AWS Account ID"`
+	AccountID   string      `yaml:"account_id" env:"ACCOUNT_ID" required:"true" env-description:"CSP account ID"`
 	ClusterName string      `yaml:"cluster_name" env:"CLUSTER_NAME" required:"true" env-description:"Cluster Name"`
-	Region      string      `yaml:"region" env:"REGION" required:"true" env-description:"AWS Region"`
+	Region      string      `yaml:"region" env:"REGION" required:"true" env-description:"CSP region"`
 	scout       types.Scout `yaml:"-" env:"-" env-description:"Scout"`
 }
 
