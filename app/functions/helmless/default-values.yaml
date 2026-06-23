@@ -698,15 +698,17 @@ components:
       repository: quay.io/prometheus/prometheus
       tag:  # This will fall back on .Chart.AppVersion if not set.
 
-  # prometheusReloader contains details about where to find the Prometheus
-  # reloader image.
-  #
-  # prometheus-config-reloader will watch the Prometheus configuration for
-  # changes and restart the Prometheus pod as necessary.
+  # DEPRECATED. The prometheus-config-reloader binary is now built from upstream
+  # source and shipped inside the CloudZero Agent image (see docker/Dockerfile),
+  # so the chart no longer pulls a separate reloader image by default. This block
+  # is retained as a tombstone for forward-compatibility and is no longer wired
+  # into any container. To pin the reloader to an external image (e.g. when
+  # mirroring into a private registry), set configmapReload.prometheus.image
+  # instead, which still overrides the in-image binary.
   prometheusReloader:
     image:
-      repository: quay.io/prometheus-operator/prometheus-config-reloader
-      tag: "v0.91.0"
+      repository:
+      tag:
 
   # Settings for the aggregator component. This is the piece which accepts
   # metrics from the agent, webhook, etc., and sends them to the CloudZero API
@@ -1553,6 +1555,12 @@ configmapReload:
     # Whether to enable the Prometheus ConfigMap reloader.
     enabled: true
     # Container image configuration for the Prometheus ConfigMap reloader.
+    #
+    # By default the reloader runs the prometheus-config-reloader binary shipped
+    # in the CloudZero Agent image (built from source, see docker/Dockerfile).
+    # Set this to pull the reloader from an external image instead (e.g. when
+    # mirroring into a private registry); these values override the in-image
+    # binary for both the config-subst init container and the reload sidecar.
     image:
       repository:
       tag:
