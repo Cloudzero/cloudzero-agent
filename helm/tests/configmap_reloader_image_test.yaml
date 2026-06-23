@@ -17,22 +17,6 @@ tests:
           path: spec.template.spec.containers[0].command[0]
           value: /app/prometheus-config-reloader
 
-  # Forward-compat tombstone: setting configmapReload.prometheus.image pins the
-  # reloader to an external image, where the reloader is the entrypoint, so the
-  # in-image command must NOT be set.
-  - it: external image override drops the in-image command (deploy)
-    template: templates/agent-deploy.yaml
-    set:
-      configmapReload.prometheus.enabled: true
-      configmapReload.prometheus.image.repository: quay.io/prometheus-operator/prometheus-config-reloader
-      configmapReload.prometheus.image.tag: v0.91.0
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0
-      - notExists:
-          path: spec.template.spec.containers[0].command
-
   # The config-subst init container performs $(NODE_NAME) substitution with the
   # reloader binary in one-shot mode (--watch-interval=0) instead of a shell.
   - it: config-subst init container runs the reloader binary one-shot (daemonset)
@@ -53,18 +37,3 @@ tests:
       - contains:
           path: spec.template.spec.initContainers[0].args
           content: --config-envsubst-file=/etc/config/prometheus/configmaps/processed/prometheus.yml
-
-  # Override path also applies to the daemonset config-subst init container.
-  - it: external image override drops the in-image command on config-subst (daemonset)
-    template: templates/agent-daemonset.yaml
-    set:
-      components.agent.mode: federated
-      configmapReload.prometheus.enabled: true
-      configmapReload.prometheus.image.repository: quay.io/prometheus-operator/prometheus-config-reloader
-      configmapReload.prometheus.image.tag: v0.91.0
-    asserts:
-      - equal:
-          path: spec.template.spec.initContainers[0].image
-          value: quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0
-      - notExists:
-          path: spec.template.spec.initContainers[0].command

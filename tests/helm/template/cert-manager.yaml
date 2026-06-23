@@ -1028,10 +1028,6 @@ data:
         image:
           repository: quay.io/prometheus/prometheus
           tag: null
-      prometheusReloader:
-        image:
-          repository: null
-          tag: null
       validator:
         annotations: {}
         checks:
@@ -1095,11 +1091,6 @@ data:
     configmapReload:
       prometheus:
         enabled: true
-        image:
-          digest: null
-          pullPolicy: null
-          repository: null
-          tag: null
         resources:
           limits:
             cpu: 200m

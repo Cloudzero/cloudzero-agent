@@ -413,7 +413,7 @@ data:
       # Mode: FEDERATED (DaemonSet)
       # - Each Prometheus instance scrapes only its local node's kubelet
       # - Uses direct kubelet access at <node-ip>:10250/metrics/cadvisor
-      # - $(NODE_NAME) is replaced by init container with actual node name
+      # - the NODE_NAME placeholder is replaced by the init container with the actual node name
       #
       # CRITICAL: The node label must be added in relabel_configs (not
       # metric_relabel_configs) because __meta_kubernetes_node_name is only
@@ -450,9 +450,9 @@ data:
             target_label: node_name
       
           # Filter to only the local node
-          # NOTE: $(NODE_NAME) is substituted with the node name by the reloader init
-          # container (Thanos-style $(VAR) syntax; relabel refs like ${1} use braces
-          # and are left untouched). Prometheus has no env var substitution of its own.
+          # NOTE: the NODE_NAME placeholder below is replaced with the actual node name
+          # by the reloader init container. Relabel back-references such as ${1} use
+          # braces and are left untouched; Prometheus has no env var substitution.
           - source_labels: [__meta_kubernetes_node_name]
             regex: $(NODE_NAME)
             action: keep
@@ -1116,10 +1116,6 @@ data:
         image:
           repository: quay.io/prometheus/prometheus
           tag: null
-      prometheusReloader:
-        image:
-          repository: null
-          tag: null
       validator:
         annotations: {}
         checks:
@@ -1183,11 +1179,6 @@ data:
     configmapReload:
       prometheus:
         enabled: true
-        image:
-          digest: null
-          pullPolicy: null
-          repository: null
-          tag: null
         resources:
           limits:
             cpu: 200m

@@ -1200,17 +1200,6 @@ properties:
               Container image configuration for Prometheus.
             $ref: "#/$defs/com.cloudzero.agent.image"
 
-      prometheusReloader:
-        description: |
-          Configuration for the Prometheus reloader component.
-        additionalProperties: false
-        type: object
-        properties:
-          image:
-            description: |
-              Container image configuration for the Prometheus reloader.
-            $ref: "#/$defs/com.cloudzero.agent.image"
-
       webhookServer:
         description: |
           Configuration for the webhook server component.
@@ -1859,8 +1848,6 @@ properties:
           enabled:
             type: boolean
             default: true
-          image:
-            $ref: "#/$defs/com.cloudzero.agent.image"
           resources:
             $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
