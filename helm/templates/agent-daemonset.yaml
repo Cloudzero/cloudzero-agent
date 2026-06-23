@@ -56,15 +56,25 @@ spec:
       serviceAccountName: {{ template "cloudzero-agent.serviceAccountName" . }}
       initContainers:
         # Prometheus doesn't support environment variables where we need them in
-        # the prometheus.yml file so we use this job to replace the ${NODE_NAME}
-        # in the prometheus.yml.in file with the actual node name, then use that
-        # processed file in the container.
+        # the prometheus.yml file, so we use the prometheus-config-reloader
+        # binary (shipped in the agent image) to substitute $(NODE_NAME) in the
+        # prometheus.yml.in file with the actual node name, writing the processed
+        # file used by the Prometheus container. --watch-interval=0 makes the
+        # reloader run the substitution once and exit, which is what an init
+        # container needs.
         - name: config-subst
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- /* Run the in-image binary by path. When overridden to an external
+                 reloader image (configmapReload.prometheus.image), the reloader is
+                 that image's entrypoint, so let it run and pass only args. */}}
+          {{- if not .Values.configmapReload.prometheus.image.repository }}
           command:
-            - /bin/sh
-            - -c
-            - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
+            - /app/prometheus-config-reloader
+          {{- end }}
+          args:
+            - --config-file=/etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in
+            - --config-envsubst-file=/etc/config/prometheus/configmaps/processed/prometheus.yml
+            - --watch-interval=0
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
@@ -87,7 +97,11 @@ spec:
       containers:
         {{- if .Values.configmapReload.prometheus.enabled }}
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- if not .Values.configmapReload.prometheus.image.repository }}
+          command:
+            - /app/prometheus-config-reloader
+          {{- end }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload

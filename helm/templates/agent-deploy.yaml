@@ -118,7 +118,14 @@ spec:
         {{- if .Values.configmapReload.prometheus.enabled }}
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: {{ template "cloudzero-agent.name" . }}-{{ .Values.server.name }}-configmap-reload
-          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.prometheusReloader.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- include "cloudzero-agent.generateImage" (dict "defaults" .Values.defaults.image "image" .Values.components.agent.image "compat" .Values.configmapReload.prometheus.image) | nindent 10 }}
+          {{- /* Run the in-image binary by path. When overridden to an external
+                 reloader image (configmapReload.prometheus.image), the reloader is
+                 that image's entrypoint, so let it run and pass only args. */}}
+          {{- if not .Values.configmapReload.prometheus.image.repository }}
+          command:
+            - /app/prometheus-config-reloader
+          {{- end }}
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload

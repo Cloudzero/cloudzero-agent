@@ -1,12 +1,19 @@
 ARG DEPLOY_IMAGE=scratch
 
+# prometheus-config-reloader version, built from upstream source (see the
+# "reloader" stage below). This is a git tag, which Dependabot does NOT track
+# (it only watches Chart.yaml and Dockerfile FROM lines), so it must be bumped
+# by hand. See DEVELOPMENT.md ("prometheus-config-reloader") for the procedure.
+ARG RELOADER_VERSION=v0.91.0
+
 # Multi-stage Docker build with platform-specific cache optimization:
 # 1. base-tools: Install system packages and tools (cached per platform)
 # 2. dependencies: Download Go modules (cached per platform)
 # 3. builder: Build Go binaries (cached per platform)
 # 4. certs: Extract certificates from distroless image
 # 5. alloy: Extract Alloy binary from CloudZero Alloy image
-# 6. final: Minimal runtime image with compiled binaries
+# 6. reloader: Build prometheus-config-reloader from upstream source
+# 7. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
 FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine AS base-tools
@@ -73,7 +80,36 @@ FROM gcr.io/distroless/static-debian12:debug@sha256:46fcf1fa44d251b0944ba4b98ef4
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
 FROM ghcr.io/cloudzero/alloy:v1.17.0 AS alloy
 
-# Stage 6: Final runtime image
+# Stage 6: Build prometheus-config-reloader from upstream source
+#
+# We build the binary ourselves rather than copying the prebuilt upstream image
+# so that (a) we control the Go toolchain, and (b) we can bump vulnerable
+# transitive dependencies. Building the v0.91.0 tag with our toolchain clears
+# all but a handful of the High/Critical CVEs grype finds in the prebuilt image;
+# bumping x/crypto and x/net below clears the rest so the image scan passes.
+#
+# Only the resulting binary is copied into the final image; no upstream source
+# is vendored into this repository.
+FROM base-tools AS reloader
+ARG TARGETOS TARGETARCH
+ARG RELOADER_VERSION
+
+WORKDIR /reloader-src
+RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
+        https://github.com/prometheus-operator/prometheus-operator.git .
+
+# Carry these two deps slightly ahead of upstream's pins to clear the remaining
+# grype findings. Remove once upstream pins versions at least this new.
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
+    go get golang.org/x/crypto@v0.52.0 golang.org/x/net@v0.55.0
+
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
+    --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
+    go build -trimpath -ldflags="-s -w" \
+        -o /bin/prometheus-config-reloader ./cmd/prometheus-config-reloader
+
+# Stage 7: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
 # passing in something like this to 'docker build':
 #
@@ -119,6 +155,9 @@ COPY --from=builder /go/bin/cloudzero-certifik8s /app/cloudzero-certifik8s
 
 # Copy the Alloy binary from the alloy stage
 COPY --from=alloy /bin/cloudzero-alloy /app/cloudzero-alloy
+
+# Copy the prometheus-config-reloader binary built from upstream source
+COPY --from=reloader /bin/prometheus-config-reloader /app/prometheus-config-reloader
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

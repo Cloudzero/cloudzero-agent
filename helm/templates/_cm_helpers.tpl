@@ -411,7 +411,7 @@ TWO SCRAPING MODES:
    - Scrapes kubelet directly: <node-ip>:10250
    - Path: /metrics/cadvisor
    - Used in DaemonSet (federated) mode
-   - Requires ${NODE_NAME} substitution via init container
+   - Requires $(NODE_NAME) substitution via init container
 
 Data flow:
   kubernetes_sd    -->   relabel_configs     -->   SCRAPE
@@ -458,7 +458,7 @@ Usage: {{ include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "sc
 # Mode: FEDERATED (DaemonSet)
 # - Each Prometheus instance scrapes only its local node's kubelet
 # - Uses direct kubelet access at <node-ip>:{{ $kubeletPort }}/metrics/cadvisor
-# - ${NODE_NAME} is replaced by init container with actual node name
+# - $(NODE_NAME) is replaced by init container with actual node name
 {{- else if $directNodeAccess }}
 # Mode: DIRECT NODE ACCESS
 # - Single Prometheus scrapes all nodes directly via kubelet
@@ -509,11 +509,14 @@ Usage: {{ include "cloudzero-agent.prometheus.scrapeCAdvisor" (dict "root" . "sc
       target_label: node_name
 
     # Filter to only the local node
-    # NOTE: ${NODE_NAME} is a placeholder replaced by an init container
-    # with the actual node name using sed. This is necessary because
-    # Prometheus doesn't support environment variable substitution.
+    # NOTE: $(NODE_NAME) is a placeholder replaced by an init container with the
+    # actual node name. The prometheus-config-reloader binary performs the
+    # substitution (Thanos-style $(VAR) syntax) when it writes the processed
+    # config; Prometheus itself does not support env var substitution. Note the
+    # parentheses: Prometheus relabel back-references like ${1} use braces and
+    # are deliberately left untouched by the reloader.
     - source_labels: [__meta_kubernetes_node_name]
-      regex: ${NODE_NAME}
+      regex: $(NODE_NAME)
       action: keep
 
     # Set target address to node's internal IP on kubelet port

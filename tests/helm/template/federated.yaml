@@ -413,7 +413,7 @@ data:
       # Mode: FEDERATED (DaemonSet)
       # - Each Prometheus instance scrapes only its local node's kubelet
       # - Uses direct kubelet access at <node-ip>:10250/metrics/cadvisor
-      # - ${NODE_NAME} is replaced by init container with actual node name
+      # - $(NODE_NAME) is replaced by init container with actual node name
       #
       # CRITICAL: The node label must be added in relabel_configs (not
       # metric_relabel_configs) because __meta_kubernetes_node_name is only
@@ -450,11 +450,14 @@ data:
             target_label: node_name
       
           # Filter to only the local node
-          # NOTE: ${NODE_NAME} is a placeholder replaced by an init container
-          # with the actual node name using sed. This is necessary because
-          # Prometheus doesn't support environment variable substitution.
+          # NOTE: $(NODE_NAME) is a placeholder replaced by an init container with the
+          # actual node name. The prometheus-config-reloader binary performs the
+          # substitution (Thanos-style $(VAR) syntax) when it writes the processed
+          # config; Prometheus itself does not support env var substitution. Note the
+          # parentheses: Prometheus relabel back-references like ${1} use braces and
+          # are deliberately left untouched by the reloader.
           - source_labels: [__meta_kubernetes_node_name]
-            regex: ${NODE_NAME}
+            regex: $(NODE_NAME)
             action: keep
       
           # Set target address to node's internal IP on kubelet port
@@ -1118,8 +1121,8 @@ data:
           tag: null
       prometheusReloader:
         image:
-          repository: quay.io/prometheus-operator/prometheus-config-reloader
-          tag: v0.91.0
+          repository: null
+          tag: null
       validator:
         annotations: {}
         checks:
@@ -2440,16 +2443,21 @@ spec:
       serviceAccountName: cz-agent-cz-server
       initContainers:
         # Prometheus doesn't support environment variables where we need them in
-        # the prometheus.yml file so we use this job to replace the ${NODE_NAME}
-        # in the prometheus.yml.in file with the actual node name, then use that
-        # processed file in the container.
+        # the prometheus.yml file, so we use the prometheus-config-reloader
+        # binary (shipped in the agent image) to substitute $(NODE_NAME) in the
+        # prometheus.yml.in file with the actual node name, writing the processed
+        # file used by the Prometheus container. --watch-interval=0 makes the
+        # reloader run the substitution once and exit, which is what an init
+        # container needs.
         - name: config-subst
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.12"
           imagePullPolicy: "IfNotPresent"
           command:
-            - /bin/sh
-            - -c
-            - sed "s/\${NODE_NAME}/$NODE_NAME/g" /etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in > /etc/config/prometheus/configmaps/processed/prometheus.yml
+            - /app/prometheus-config-reloader
+          args:
+            - --config-file=/etc/config/prometheus/configmaps/unprocessed/prometheus.yml.in
+            - --config-envsubst-file=/etc/config/prometheus/configmaps/processed/prometheus.yml
+            - --watch-interval=0
           env:
             - name: NODE_NAME
               valueFrom:
@@ -2473,8 +2481,10 @@ spec:
               mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.12"
           imagePullPolicy: "IfNotPresent"
+          command:
+            - /app/prometheus-config-reloader
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
@@ -2817,8 +2827,10 @@ spec:
       containers:
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.12"
           imagePullPolicy: "IfNotPresent"
+          command:
+            - /app/prometheus-config-reloader
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
