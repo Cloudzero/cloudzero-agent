@@ -8,10 +8,14 @@ host: api.cloudzero.com
 # value will be used instead of the detected value. If you wish to use the
 # detected value, leave this property set to null.
 #
-# Note also that this must be a string value, even where the account ID may be
-# numeric (e.g., an AWS account ID). i.e., `"123456789012"` not `123456789012`.
-# If you are passing this as a parameter to the Helm CLI, you should generally
-# use --set-string (e.g., "cloudAccountId=123456789012").
+# On Oracle Cloud (OKE) the account ID cannot be auto-detected: the instance
+# metadata service exposes the tenancy OCID, not the numeric account ID that
+# CloudZero uses, so on OCI this property must be specified explicitly.
+#
+# Note also that this must be a string value, even where the account ID is
+# numeric (e.g., an AWS or Oracle Cloud account ID). i.e., `"123456789012"` not
+# `123456789012`. If you are passing this as a parameter to the Helm CLI, you
+# should generally use --set-string (e.g., "cloudAccountId=123456789012").
 cloudAccountId: ""
 
 # Name of the Kubernetes cluster.
@@ -30,9 +34,10 @@ clusterName: ""
 # Region the cluster is running in.
 #
 # This value can be automatically detected by the CloudZero Agent on AWS (EKS),
-# Google Cloud (GKE), and Azure (AKS), but if specified explicitly the specified
-# value will be used instead of the detected value. If you wish to use the
-# detected value, leave this property set to null.
+# Google Cloud (GKE), Azure (AKS), and Oracle Cloud (OKE). When a value is
+# auto-detected it takes precedence over an explicitly-provided one (a warning is
+# logged if they differ), so set this explicitly only when auto-detection is
+# unavailable. Leave it null to use the detected value.
 region: null
 
 # -- CloudZero API key. Required if existingSecretName is null.

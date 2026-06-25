@@ -307,15 +307,28 @@ required:
 properties:
   cloudAccountId:
     type: "string"
-    # Empty string or numeric string or UUID
+    # The alternations below intentionally cover every supported CSP account-ID
+    # shape; keep them in sync with the `description` block. In order:
+    #   ^$                       -> empty (use the auto-detected value)
+    #   ^[0-9]+$                 -> numeric account ID: AWS account ID, Google
+    #                               Cloud project number, AND Oracle Cloud (OCI)
+    #                               account ID (all numeric, so no OCI-specific
+    #                               branch is needed)
+    #   ^[0-9a-fA-F]{8}-...{12}$ -> UUID: Azure subscription ID
+    #   ^'...'$ (x2)             -> the numeric/UUID forms wrapped in single
+    #                               quotes, since Helm/YAML may quote values that
+    #                               look numeric
     pattern: "^$|^[0-9]+$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^'[0-9]+'$|^'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'$"
     description: |
       *WARNING*: use of this property is generally discouraged as in most cases
-      it can be detected automatically.
+      it can be detected automatically. The exception is Oracle Cloud (OCI),
+      where the numeric account ID is not exposed by the instance metadata
+      service and so must always be set explicitly.
 
       The cloud account ID. Must be either:
         - Empty string (use auto-detected value)
-        - Numeric string (AWS account ID or Google Cloud project number)
+        - Numeric string (AWS account ID, Google Cloud project number, or Oracle
+          Cloud (OCI) account ID)
         - UUID (Azure subscription ID)
         - Any of the above enclosed in balanced single quotes (e.g., '1234567890')
   clusterName:

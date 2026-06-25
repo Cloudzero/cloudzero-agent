@@ -15,6 +15,8 @@ const (
 	CloudProviderGoogle CloudProvider = "google"
 	// CloudProviderAzure represents Microsoft Azure
 	CloudProviderAzure CloudProvider = "azure"
+	// CloudProviderOCI represents Oracle Cloud Infrastructure (OCI/OKE)
+	CloudProviderOCI CloudProvider = "oracle"
 	// CloudProviderUnknown represents an undetected or unsupported cloud provider
 	CloudProviderUnknown CloudProvider = "unknown"
 	// CloudProviderMock represents a mock provider for testing

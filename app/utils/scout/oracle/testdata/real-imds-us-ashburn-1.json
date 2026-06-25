@@ -1,0 +1,42 @@
+{
+  "agentConfig": {
+    "allPluginsDisabled": false,
+    "managementDisabled": false,
+    "monitoringDisabled": false
+  },
+  "availabilityDomain": "zGze:US-ASHBURN-AD-1",
+  "canonicalRegionName": "us-ashburn-1",
+  "compartmentId": "ocid1.tenancy.oc1..aaaaaaaaexampletenancyexampletenancyexampletenancyexampl",
+  "definedTags": {
+    "Oracle-Tags": {
+      "CreatedBy": "REDACTED",
+      "CreatedOn": "REDACTED"
+    }
+  },
+  "displayName": "cz-imds-probe-DELETE",
+  "faultDomain": "FAULT-DOMAIN-1",
+  "hostname": "cz-imds-probe-delete",
+  "id": "ocid1.instance.oc1.iad.anexampleinstanceocidexampleinstanceocidexamplexx",
+  "image": "ocid1.image.oc1.iad.aaaaaaaaexampleimageocidexampleimageocidexampleimagexx",
+  "metadata": {
+    "user_data": "<elided>"
+  },
+  "ociAdName": "iad-ad-1",
+  "region": "iad",
+  "regionInfo": {
+    "realmDomainComponent": "oraclecloud.com",
+    "realmKey": "oc1",
+    "regionIdentifier": "us-ashburn-1",
+    "regionKey": "IAD"
+  },
+  "shape": "VM.Standard.E3.Flex",
+  "shapeConfig": {
+    "maxVnicAttachments": 2,
+    "memoryInGBs": 8.0,
+    "networkingBandwidthInGbps": 1.0,
+    "ocpus": 1.0
+  },
+  "state": "Running",
+  "tenantId": "ocid1.tenancy.oc1..aaaaaaaaexampletenancyexampletenancyexampletenancyexampl",
+  "timeCreated": 1782188949730
+}
