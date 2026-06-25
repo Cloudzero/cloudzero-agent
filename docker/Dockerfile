@@ -1,12 +1,17 @@
 ARG DEPLOY_IMAGE=scratch
 
+# prometheus-config-reloader version, built from source in the "reloader" stage.
+# Git tag — Dependabot can't track it, so bump by hand (see DEVELOPMENT.md).
+ARG RELOADER_VERSION=v0.91.0
+
 # Multi-stage Docker build with platform-specific cache optimization:
 # 1. base-tools: Install system packages and tools (cached per platform)
 # 2. dependencies: Download Go modules (cached per platform)
 # 3. builder: Build Go binaries (cached per platform)
 # 4. certs: Extract certificates from distroless image
 # 5. alloy: Extract Alloy binary from CloudZero Alloy image
-# 6. final: Minimal runtime image with compiled binaries
+# 6. reloader: Build prometheus-config-reloader from upstream source
+# 7. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
 FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine AS base-tools
@@ -73,7 +78,29 @@ FROM gcr.io/distroless/static-debian12:debug@sha256:46fcf1fa44d251b0944ba4b98ef4
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
 FROM ghcr.io/cloudzero/alloy:v1.17.0 AS alloy
 
-# Stage 6: Final runtime image
+# Stage 6: Build prometheus-config-reloader from upstream source. We build it
+# (not copy the prebuilt image) to control the toolchain and bump vulnerable
+# deps; only the binary is copied out, no source is vendored.
+FROM base-tools AS reloader
+ARG TARGETPLATFORM
+ARG TARGETOS TARGETARCH
+ARG RELOADER_VERSION
+
+WORKDIR /reloader-src
+RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
+        https://github.com/prometheus-operator/prometheus-operator.git .
+
+# Bump vulnerable deps ahead of upstream's pins so the scan passes; drop when upstream catches up.
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
+    go get golang.org/x/crypto@v0.52.0 golang.org/x/net@v0.55.0
+
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
+    --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
+    go build -trimpath -ldflags="-s -w" \
+        -o /bin/prometheus-config-reloader ./cmd/prometheus-config-reloader
+
+# Stage 7: Final runtime image
 # Note: For debugging, you can temporarily change the image used for building by
 # passing in something like this to 'docker build':
 #
@@ -119,6 +146,9 @@ COPY --from=builder /go/bin/cloudzero-certifik8s /app/cloudzero-certifik8s
 
 # Copy the Alloy binary from the alloy stage
 COPY --from=alloy /bin/cloudzero-alloy /app/cloudzero-alloy
+
+# Copy the prometheus-config-reloader binary built from upstream source
+COPY --from=reloader /bin/prometheus-config-reloader /app/prometheus-config-reloader
 
 # Allow the default ENTRYPOINT from busybox to be the default,
 # however run the app as the default command

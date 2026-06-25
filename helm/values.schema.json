@@ -6357,15 +6357,6 @@
           },
           "type": "object"
         },
-        "prometheusReloader": {
-          "additionalProperties": false,
-          "properties": {
-            "image": {
-              "$ref": "#/$defs/com.cloudzero.agent.image"
-            }
-          },
-          "type": "object"
-        },
         "validator": {
           "additionalProperties": false,
           "properties": {
@@ -6506,9 +6497,6 @@
             "enabled": {
               "default": true,
               "type": "boolean"
-            },
-            "image": {
-              "$ref": "#/$defs/com.cloudzero.agent.image"
             },
             "resources": {
               "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"

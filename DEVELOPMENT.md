@@ -158,6 +158,29 @@ For detailed Alloy documentation, see:
 - `helm/docs/alloy-migration-guide.md` - Migration from Prometheus
 - `helm/docs/troubleshooting-guide.md` - Alloy-specific troubleshooting
 
+### Updating prometheus-config-reloader
+
+The `prometheus-config-reloader` binary is built from upstream source during the
+image build (see the `reloader` stage in `docker/Dockerfile`) and shipped inside
+the agent image, rather than pulled as a separate external image. The chart runs
+it both as the Prometheus reload sidecar and, in federated mode, as the
+`config-subst` init container that substitutes `$(NODE_NAME)` into the Prometheus
+config (it uses Thanos-style `$(VAR)` syntax, so Prometheus relabel
+back-references like `${1}` are left untouched).
+
+The version is pinned by the `RELOADER_VERSION` build arg in `docker/Dockerfile`.
+**This is a git tag, which Dependabot does not track** (it only watches
+`Chart.yaml` and Dockerfile `FROM` lines), so it must be bumped by hand:
+
+1. Pick a new tag from
+   <https://github.com/prometheus-operator/prometheus-operator/releases>.
+2. Update `RELOADER_VERSION` in `docker/Dockerfile`.
+3. Rebuild and run the image scan (`grype`, see `.github/workflows/scan-images.yml`).
+   If new High/Critical CVEs appear in transitive dependencies, bump them in the
+   `reloader` stage's `go get` line (currently `golang.org/x/crypto` and
+   `golang.org/x/net`). These are carried slightly ahead of upstream's pins; drop
+   the override once upstream pins versions at least as new.
+
 ## Go Development Patterns
 
 ### Package Organization

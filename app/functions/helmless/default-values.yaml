@@ -703,16 +703,6 @@ components:
       repository: quay.io/prometheus/prometheus
       tag:  # This will fall back on .Chart.AppVersion if not set.
 
-  # prometheusReloader contains details about where to find the Prometheus
-  # reloader image.
-  #
-  # prometheus-config-reloader will watch the Prometheus configuration for
-  # changes and restart the Prometheus pod as necessary.
-  prometheusReloader:
-    image:
-      repository: quay.io/prometheus-operator/prometheus-config-reloader
-      tag: "v0.91.0"
-
   # Settings for the aggregator component. This is the piece which accepts
   # metrics from the agent, webhook, etc., and sends them to the CloudZero API
   # after some processing.
@@ -1557,12 +1547,6 @@ configmapReload:
   prometheus:
     # Whether to enable the Prometheus ConfigMap reloader.
     enabled: true
-    # Container image configuration for the Prometheus ConfigMap reloader.
-    image:
-      repository:
-      tag:
-      digest:
-      pullPolicy:
     # Resource requirements and limits for the Prometheus ConfigMap reloader.
     #
     # For details, see the Kubernetes documentation on resource management:

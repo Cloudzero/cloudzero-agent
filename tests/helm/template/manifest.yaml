@@ -1043,10 +1043,6 @@ data:
         image:
           repository: quay.io/prometheus/prometheus
           tag: null
-      prometheusReloader:
-        image:
-          repository: quay.io/prometheus-operator/prometheus-config-reloader
-          tag: v0.91.0
       validator:
         annotations: {}
         checks:
@@ -1110,11 +1106,6 @@ data:
     configmapReload:
       prometheus:
         enabled: true
-        image:
-          digest: null
-          pullPolicy: null
-          repository: null
-          tag: null
         resources:
           limits:
             cpu: 200m
@@ -2548,8 +2539,10 @@ spec:
       containers:
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.91.0"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.2.12"
           imagePullPolicy: "IfNotPresent"
+          command:
+            - /app/prometheus-config-reloader
           args:
             - --watched-dir=/etc/config
             - --reload-url=http://127.0.0.1:9090/-/reload
