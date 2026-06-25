@@ -82,6 +82,7 @@ FROM ghcr.io/cloudzero/alloy:v1.17.0 AS alloy
 # (not copy the prebuilt image) to control the toolchain and bump vulnerable
 # deps; only the binary is copied out, no source is vendored.
 FROM base-tools AS reloader
+ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 ARG RELOADER_VERSION
 
