@@ -80,6 +80,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # govulncheck-action runs its own internal actions/checkout@v4.1.1.
+          # actions/checkout v6+ persists credentials via a global includeIf
+          # gitconfig; the inner v4.1.1 checkout then adds its own auth header,
+          # so git sends two Authorization headers and the fetch fails with
+          # "Duplicate header: Authorization" (HTTP 400). This job never pushes,
+          # so skip credential persistence to avoid the conflict.
+          persist-credentials: false
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
