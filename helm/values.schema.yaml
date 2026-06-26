@@ -523,6 +523,18 @@ properties:
     additionalProperties: false
     type: object
     properties:
+      prometheusReloader:
+        description: |
+          Configuration for the Prometheus reloader component.
+        deprecated: true
+        additionalProperties: false
+        type: object
+        properties:
+          image:
+            description: |
+              Container image configuration for the Prometheus reloader.
+            deprecated: true
+            $ref: "#/$defs/com.cloudzero.agent.image"
       apiKey:
         description: |
           API key CSI configuration. Takes effect only when both top-level
@@ -1861,6 +1873,9 @@ properties:
           enabled:
             type: boolean
             default: true
+          image:
+            deprecated: true
+            $ref: "#/$defs/com.cloudzero.agent.image"
           resources:
             $ref: "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
 
