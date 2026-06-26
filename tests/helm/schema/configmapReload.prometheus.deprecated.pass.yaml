@@ -1,0 +1,10 @@
+# Test that the deprecated configmapReload.prometheus.image section continues to
+# work without validation errors. This ensures backward compatibility for
+# existing configurations, though it should be noted that setting these values
+# has no impact on the chart as the reloader now ships inside the agent image.
+
+configmapReload:
+  prometheus:
+    image:
+      repository: "quay.io/prometheus-operator/prometheus-config-reloader"
+      tag: "v0.87.0"
