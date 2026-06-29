@@ -18,7 +18,7 @@ For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-ch
   - `container-metrics_v1:legacy`
   - `container-metrics_v1:upload`
   - `insights:read_insights`
-- Each Kubernetes cluster must permit egress traffic from the agent to the following endpoints on port 443:
+- Each Kubernetes cluster must permit egress traffic from the `agent-server`, `aggregator`, and `confload` pods to the following endpoints on port 443:
   - CloudZero collector endpoint: `https://api.cloudzero.com`
   - AWS S3 addresses: `*.s3.amazonaws.com`
 - Each Kubernetes cluster must allow traffic from the Kubernetes API server to services in the namespace where the CloudZero agent is deployed.
