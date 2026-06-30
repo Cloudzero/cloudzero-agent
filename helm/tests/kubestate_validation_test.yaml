@@ -163,13 +163,16 @@ tests:
           path: data["alloy-config.river"]
           pattern: "clustering \\{"
 
-  # Verify resource types are limited to nodes and pods
-  - it: should watch only nodes and pods resources
+  # Verify cost-only watch list is just nodes and pods when label/annotation
+  # collection is disabled (label/annotation collection adds watched resources).
+  - it: should watch only nodes and pods resources when label collection is disabled
     template: templates/agent-cm.yaml
     set:
       components.agent.mode: clustered
       components.agent.kubeState.enabled: true
       kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+      insightsController.annotations.enabled: false
     asserts:
       - matchRegex:
           path: data["alloy-config.river"]

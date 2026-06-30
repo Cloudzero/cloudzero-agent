@@ -311,6 +311,37 @@ Pipeline flow:
 Usage: {{ include "cloudzero-agent.alloy.kubeState" . }}
 */}}
 {{- define "cloudzero-agent.alloy.kubeState" -}}
+{{- /*
+  Resolve which resources the KubeState plugin collects labels/annotations for,
+  from the insightsController toggles. The plugin emits kube_<resource>_labels
+  and kube_<resource>_annotations generically, but its informers require RBAC
+  "watch". The agent ClusterRole grants watch on pods, namespaces, and nodes, so
+  kubeState label/annotation collection is supported for those three; other
+  resource types (deployments, statefulsets, daemonsets, jobs, cronjobs) still
+  require the webhook server.
+*/ -}}
+{{- $singular := dict "pods" "pod" "namespaces" "namespace" "nodes" "node" -}}
+{{- $supported := list "pods" "namespaces" "nodes" -}}
+{{- $labelsCfg := .Values.insightsController.labels -}}
+{{- $annCfg := .Values.insightsController.annotations -}}
+{{- $labelResMap := $labelsCfg.resources | default dict -}}
+{{- $annResMap := $annCfg.resources | default dict -}}
+{{- $labelRes := list -}}
+{{- $annRes := list -}}
+{{- range $r := $supported -}}
+{{- if and $labelsCfg.enabled (index $labelResMap $r) -}}{{- $labelRes = append $labelRes $r -}}{{- end -}}
+{{- if and $annCfg.enabled (index $annResMap $r) -}}{{- $annRes = append $annRes $r -}}{{- end -}}
+{{- end -}}
+{{- /* Always watch nodes+pods for cost metrics; add others only when collecting their labels/annotations. */ -}}
+{{- $watch := list "nodes" "pods" -}}
+{{- range $r := (concat $labelRes $annRes | uniq) -}}
+{{- if not (has $r $watch) -}}{{- $watch = append $watch $r -}}{{- end -}}
+{{- end -}}
+{{- /* metric_allowlist: cost metrics plus the per-resource label/annotation metrics. */ -}}
+{{- $metrics := (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics -}}
+{{- range $r := $labelRes -}}{{- $metrics = append $metrics (printf "kube_%s_labels" (index $singular $r)) -}}{{- end -}}
+{{- range $r := $annRes -}}{{- $metrics = append $metrics (printf "kube_%s_annotations" (index $singular $r)) -}}{{- end -}}
+{{- $metrics = $metrics | uniq -}}
 // ============================================================================
 // KUBESTATE PLUGIN (KSM REPLACEMENT)
 // ============================================================================
@@ -325,17 +356,22 @@ Usage: {{ include "cloudzero-agent.alloy.kubeState" . }}
 //   - kube_node_info, kube_node_status_capacity (node cost attribution)
 //   - kube_pod_info, kube_pod_labels (pod cost attribution)
 //   - kube_pod_container_resource_* (resource requests/limits)
+//   - kube_<resource>_labels / kube_<resource>_annotations (label/annotation
+//     cost dimensions; see label_allowlist / annotation_allowlist below)
 // ============================================================================
 
 // STEP 1: KubeState plugin - watch Kubernetes API and emit metrics
 // Unlike the KSM scrape job, this directly watches the K8s API via informers
 // and pushes metrics through the pipeline without HTTP scraping.
 discovery.kubestate "cluster_metrics" {
-  // Only watch resource types that produce metrics we need for cost allocation
-  resources = ["nodes", "pods"]
+  // Watch nodes and pods for cost metrics, plus any resource types configured
+  // for label/annotation collection (insightsController.{labels,annotations}.resources).
+  resources = [{{ range $i, $r := $watch }}{{ if $i }}, {{ end }}"{{ $r }}"{{ end }}]
 
-  // Filter to only the metrics required for CloudZero cost allocation
-  metric_allowlist = [{{ range $i, $m := (include "cloudzero-agent.defaults" . | fromYaml).kubeMetrics }}{{ if $i }}, {{ end }}"{{ $m }}"{{ end }}]
+  // Filter to the metrics required for CloudZero cost allocation, plus the
+  // kube_<resource>_labels / kube_<resource>_annotations metrics for the
+  // configured resources.
+  metric_allowlist = [{{ range $i, $m := $metrics }}{{ if $i }}, {{ end }}"{{ $m }}"{{ end }}]
 
   // Periodically re-emit all metrics to prevent staleness in the remote write
   // pipeline. Without this, metrics are only emitted on K8s events, and quiet
@@ -347,6 +383,38 @@ discovery.kubestate "cluster_metrics" {
   // label names like "app.kubernetes.io/name" intact rather than mangling them
   // to "app_kubernetes_io_name".
   sanitize_label_names = false
+{{- if $labelRes }}
+
+  // Emit kube_<resource>_labels with a label_<name> dimension for every label.
+  // The plugin's allowlist supports only exact names or the "*" wildcard (not
+  // regexes), so we emit all labels here and filter them down to
+  // insightsController.labels.patterns in the prometheus.relabel
+  // "kubestate_labels" step below. Without this block the plugin emits no
+  // kube_<resource>_labels at all, so no labels reach CloudZero in the
+  // KubeState topology.
+  label_allowlist {
+{{- range $r := $labelRes }}
+    entry {
+      resource = "{{ $r }}"
+      names    = ["*"]
+    }
+{{- end }}
+  }
+{{- end }}
+{{- if $annRes }}
+
+  // Emit kube_<resource>_annotations, filtered downstream to
+  // insightsController.annotations.patterns (same wildcard-then-filter approach
+  // as labels above).
+  annotation_allowlist {
+{{- range $r := $annRes }}
+    entry {
+      resource = "{{ $r }}"
+      names    = ["*"]
+    }
+{{- end }}
+  }
+{{- end }}
 
   // Enable clustering for distributed metric generation across Alloy replicas
   clustering {
@@ -356,13 +424,17 @@ discovery.kubestate "cluster_metrics" {
   forward_to = [prometheus.relabel.kubestate_labels.receiver]
 }
 
-// STEP 2: Filter labels - keep only labels needed for cost attribution
-// This ensures consistent label sets matching the KSM scrape pipeline output
+// STEP 2: Filter labels/annotations - keep only those needed for cost attribution
+// Unlike the other pipelines (which keep every label_* via the blanket label_.*
+// term), this step restricts the plugin's wildcard-emitted label_*/annotation_*
+// dimensions to insightsController.labels.patterns /
+// insightsController.annotations.patterns. See
+// "cloudzero-agent.kubeStateLabelKeepRegex".
 prometheus.relabel "kubestate_labels" {
   forward_to = [prometheus.remote_write.cloudzero.receiver]
 
   rule {
-    regex  = "^({{ include "cloudzero-agent.requiredMetricLabels" . }})$"
+    regex  = "^({{ include "cloudzero-agent.kubeStateLabelKeepRegex" . }})$"
     action = "labelkeep"
   }
 }

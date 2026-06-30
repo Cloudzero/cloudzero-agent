@@ -495,6 +495,42 @@ Required metric labels
 {{- end -}}
 
 {{/*
+KubeState plugin label-keep regex.
+
+The KubeState plugin (discovery.kubestate) emits kube_pod_labels with a
+label_<name> dimension for every pod label, because its label_allowlist is the
+wildcard "*" (the plugin's allowlist supports only exact names or "*", not
+regexes). This helper produces the labelkeep regex that filters those dynamic
+label_* dimensions down to insightsController.labels.patterns before
+remote_write.
+
+It mirrors "cloudzero-agent.requiredMetricLabels" EXCEPT that the blanket
+"label_.*" term (keep every dynamic label) is replaced with "label_(<patterns>)"
+when label collection is enabled, and an "annotation_(<patterns>)" term is added
+when annotation collection is enabled. Each is dropped when its collection is
+disabled. Keep the required cost-allocation label set below in sync with that
+helper.
+
+Caveat: patterns are matched against the emitted Prometheus label name
+(label_<key> / annotation_<key>), where <key> is the Kubernetes key with
+sanitize_label_names disabled (camelCase folded to snake_case, other characters
+preserved). For the common case of lowercase keys (e.g. "role" -> label_role)
+the raw pattern works directly.
+*/}}
+{{- define "cloudzero-agent.kubeStateLabelKeepRegex" -}}
+{{- $requiredSpecialMetricLabels := tuple "_.*" "app.kubernetes.io/*" "k8s.*" -}}
+{{- $requiredCZMetricLabels := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
+{{- $total := concat $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
+{{- if and .Values.insightsController.labels.enabled .Values.insightsController.labels.patterns -}}
+{{- $total = append $total (printf "label_(%s)" (join "|" .Values.insightsController.labels.patterns)) -}}
+{{- end -}}
+{{- if and .Values.insightsController.annotations.enabled .Values.insightsController.annotations.patterns -}}
+{{- $total = append $total (printf "annotation_(%s)" (join "|" .Values.insightsController.annotations.patterns)) -}}
+{{- end -}}
+{{- join "|" $total -}}
+{{- end -}}
+
+{{/*
 The name of the KSM service target that will be used in the scrape config and validator
 */}}
 {{- define "cloudzero-agent.kubeStateMetrics.kubeStateMetricsSvcTargetName" -}}
