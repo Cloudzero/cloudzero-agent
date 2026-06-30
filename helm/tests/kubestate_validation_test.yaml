@@ -228,3 +228,77 @@ tests:
       - matchRegex:
           path: data["validator.yml"]
           pattern: "kube_state_metrics_service_endpoint"
+
+  # =========================================================================
+  # KubeState label/annotation pattern validation (render-time)
+  #
+  # Patterns are embedded in the Alloy labelkeep regex; validateKeepPatterns
+  # rejects anything outside [A-Za-z0-9_./*+?|-] (anchors, whitespace, quotes,
+  # backslashes, parens/brackets/braces) and any otherwise-invalid RE2, so a bad
+  # pattern fails the render instead of silently disabling the metrics pipeline
+  # or bypassing the label filter.
+  # =========================================================================
+
+  - it: should reject an anchored label pattern (^/$ never match after the label_ prefix)
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "^role"
+    asserts:
+      - failedTemplate:
+          errorPattern: "disallowed character"
+
+  - it: should reject a label pattern containing whitespace
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "foo bar"
+    asserts:
+      - failedTemplate:
+          errorPattern: "disallowed character"
+
+  - it: should reject a label pattern containing a quote or parenthesis (injection)
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "role)|(.*"
+    asserts:
+      - failedTemplate:
+          errorPattern: "disallowed character"
+
+  - it: should reject an invalid RE2 label pattern within the allowed charset
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "*foo"
+    asserts:
+      - failedTemplate: {}
+
+  - it: should reject a disallowed annotation pattern too
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.annotations.enabled: true
+      insightsController.annotations.patterns:
+        - "^team"
+    asserts:
+      - failedTemplate:
+          errorPattern: "disallowed character"

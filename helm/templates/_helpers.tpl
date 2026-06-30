@@ -484,47 +484,104 @@ Generate metric filters
 {{- end -}}
 
 {{/*
-Required metric labels
+Required cost-allocation label names — the CZ base list.
+
+Single source of truth for the non-dynamic cost-allocation label names kept by
+the metric pipelines. Both "cloudzero-agent.requiredMetricLabels" and
+"cloudzero-agent.kubeStateLabelKeepRegex" compose from this, so a new required
+label is added in exactly one place (rather than drifting between the two).
 */}}
-{{- define "cloudzero-agent.requiredMetricLabels" -}}
-{{- $requiredSpecialMetricLabels := tuple "_.*" "label_.*" "app.kubernetes.io/*" "k8s.*" -}}
-{{- $requiredCZMetricLabels := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
-{{- $total := concat $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
-{{- $result := join "|" $total -}}
-{{- $result -}}
+{{- define "cloudzero-agent.requiredMetricLabels.cz" -}}
+{{- $cz := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
+{{- join "|" $cz -}}
 {{- end -}}
 
 {{/*
-KubeState plugin label-keep regex.
+Required metric labels
+*/}}
+{{- define "cloudzero-agent.requiredMetricLabels" -}}
+{{- printf "%s|_.*|label_.*|app.kubernetes.io/*|k8s.*" (include "cloudzero-agent.requiredMetricLabels.cz" .) -}}
+{{- end -}}
 
-The KubeState plugin (discovery.kubestate) emits kube_pod_labels with a
-label_<name> dimension for every pod label, because its label_allowlist is the
-wildcard "*" (the plugin's allowlist supports only exact names or "*", not
-regexes). This helper produces the labelkeep regex that filters those dynamic
-label_* dimensions down to insightsController.labels.patterns before
-remote_write.
+{{/*
+Validate user-supplied label/annotation keep patterns (KubeState path).
 
-It mirrors "cloudzero-agent.requiredMetricLabels" EXCEPT that the blanket
-"label_.*" term (keep every dynamic label) is replaced with "label_(<patterns>)"
-when label collection is enabled, and an "annotation_(<patterns>)" term is added
+insightsController.{labels,annotations}.patterns are interpolated into the
+KubeState plugin's Alloy River labelkeep regex as label_(<patterns>) /
+annotation_(<patterns>) inside `regex = "^(...)$"`. Unvalidated input there is
+hazardous: a `"` breaks the River string literal; an unbalanced `(`/`)` escapes
+the label_(...) group so the labelkeep keeps every label (filter bypass); and an
+otherwise-malformed pattern makes Alloy reject the whole River config, silently
+disabling the ENTIRE KubeState metrics pipeline (all kube_* cost metrics, not
+just labels) on the next reload. So a pattern may contain only
+[A-Za-z0-9_./*+?|-] — alphanumerics, the key characters _ . / -, and the safe
+regex metacharacters * + ? | — enforced as a positive allowlist; anything else
+(quotes, backslashes, parentheses, brackets, braces, the ^/$ anchors, and
+whitespace/control characters) fails the render. A label/annotation keep-pattern
+does not need them — use unanchored alternation (e.g. "app|role") rather than
+grouping or anchoring.
+
+args: dict "patterns" <list> "field" "<insightsController field name>"
+*/}}
+{{- define "cloudzero-agent.validateKeepPatterns" -}}
+{{- $field := .field -}}
+{{- range $p := .patterns -}}
+{{- /* Positive allowlist: a pattern may contain only the characters a
+       label/annotation-key keep-pattern legitimately needs — alphanumerics, the
+       key characters _ . / -, and the safe regex metacharacters * + ? | (for
+       quantifiers and unanchored alternation). This rejects, in one check, every
+       hazardous input the surrounding regex/River context is vulnerable to:
+       quotes/backslashes (break the River string literal), parentheses/brackets/
+       braces (escape or unbalance the label_(...) group), anchors ^/$ (land
+       mid-regex after the label_ prefix and silently match nothing), and
+       whitespace/newlines/control characters (a newline breaks the River string,
+       causing Alloy to reject the whole config and disable the entire KubeState
+       pipeline). */ -}}
+{{- if not (mustRegexMatch "^[A-Za-z0-9_./*+?|-]+$" $p) -}}
+{{- fail (printf "insightsController.%s.patterns: pattern %q contains a disallowed character. These patterns are embedded in the KubeState plugin's Alloy labelkeep regex as label_(<pattern>); to keep the Alloy config valid and the label filter intact, a pattern may contain only [A-Za-z0-9_./*+?|-]. In particular: no anchors (^ or $ never match after the label_ prefix and would silently drop all labels), no quotes, backslashes, parentheses, brackets, braces, or whitespace/control characters. Use unanchored alternation (e.g. \"app|role\") instead of grouping or anchoring." $field $p) -}}
+{{- end -}}
+{{- /* Even within the allowlist, a pattern can be invalid RE2 (e.g. a bare
+       quantifier "*foo"). Compile it (Go regexp == RE2) so a malformed pattern
+       fails the render rather than silently making Alloy reject the whole config
+       and disabling the pipeline. */ -}}
+{{- $_ := mustRegexMatch $p "" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+KubeState plugin label/annotation keep regex.
+
+The KubeState plugin (discovery.kubestate) emits kube_<resource>_labels /
+kube_<resource>_annotations with a label_<name> / annotation_<name> dimension for
+every label/annotation, because its allowlist is the wildcard "*" (the plugin's
+allowlist supports only exact names or "*", not regexes). This helper produces the
+labelkeep regex that filters those dynamic label_* / annotation_* dimensions down
+to insightsController.{labels,annotations}.patterns before remote_write.
+
+It mirrors "cloudzero-agent.requiredMetricLabels" (sharing the CZ base list via
+"cloudzero-agent.requiredMetricLabels.cz") EXCEPT that the blanket "label_.*" term
+(keep every dynamic label) is replaced with "label_(<labels.patterns>)" when label
+collection is enabled, and an "annotation_(<annotations.patterns>)" term is added
 when annotation collection is enabled. Each is dropped when its collection is
-disabled. Keep the required cost-allocation label set below in sync with that
-helper.
+disabled.
 
-Caveat: patterns are matched against the emitted Prometheus label name
-(label_<key> / annotation_<key>), where <key> is the Kubernetes key with
-sanitize_label_names disabled (camelCase folded to snake_case, other characters
-preserved). For the common case of lowercase keys (e.g. "role" -> label_role)
-the raw pattern works directly.
+Patterns are matched against the emitted Prometheus name (label_<key> /
+annotation_<key>), where <key> is the Kubernetes key with sanitize_label_names
+disabled (camelCase folded to snake_case; dots, slashes, and hyphens preserved).
+The labelkeep regex is fully anchored (it must match the entire name), so a
+pattern matches a key exactly — e.g. "role" -> label_role. Note this differs from
+the webhook path, which matches patterns unanchored. Patterns must be valid RE2
+and are validated by "cloudzero-agent.validateKeepPatterns"; do NOT anchor with ^
+or $ (they land mid-regex after the label_/annotation_ prefix and never match).
 */}}
 {{- define "cloudzero-agent.kubeStateLabelKeepRegex" -}}
-{{- $requiredSpecialMetricLabels := tuple "_.*" "app.kubernetes.io/*" "k8s.*" -}}
-{{- $requiredCZMetricLabels := tuple "board_asset_tag" "container" "created_by_kind" "created_by_name" "image" "instance" "name" "namespace" "node" "node_kubernetes_io_instance_type" "pod" "product_name" "provider_id" "resource" "unit" "uid" -}}
-{{- $total := concat $requiredCZMetricLabels $requiredSpecialMetricLabels -}}
+{{- $total := tuple (include "cloudzero-agent.requiredMetricLabels.cz" .) "_.*" "app.kubernetes.io/*" "k8s.*" -}}
 {{- if and .Values.insightsController.labels.enabled .Values.insightsController.labels.patterns -}}
+{{- $_ := include "cloudzero-agent.validateKeepPatterns" (dict "patterns" .Values.insightsController.labels.patterns "field" "labels") -}}
 {{- $total = append $total (printf "label_(%s)" (join "|" .Values.insightsController.labels.patterns)) -}}
 {{- end -}}
 {{- if and .Values.insightsController.annotations.enabled .Values.insightsController.annotations.patterns -}}
+{{- $_ := include "cloudzero-agent.validateKeepPatterns" (dict "patterns" .Values.insightsController.annotations.patterns "field" "annotations") -}}
 {{- $total = append $total (printf "annotation_(%s)" (join "|" .Values.insightsController.annotations.patterns)) -}}
 {{- end -}}
 {{- join "|" $total -}}

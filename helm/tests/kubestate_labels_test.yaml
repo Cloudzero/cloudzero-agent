@@ -40,9 +40,11 @@ tests:
       components.agent.kubeState.enabled: true
       kubeStateMetrics.enabled: false
     asserts:
+      # order-independent: namespaces is somewhere in the watch list (element
+      # order has no semantic meaning to the plugin)
       - matchRegex:
           path: data["alloy-config.river"]
-          pattern: 'resources = \["nodes", "pods", "namespaces"\]'
+          pattern: 'resources = \[[^]]*"namespaces"'
       - matchRegex:
           path: data["alloy-config.river"]
           pattern: '"kube_namespace_labels"'
@@ -134,6 +136,56 @@ tests:
       - notMatchRegex:
           path: data["alloy-config.river"]
           pattern: 'annotation_\('
+
+  # Per-resource annotation toggling, mirroring the label per-resource test.
+  # Labels disabled here so the only allowlist entries come from annotations,
+  # making the pods-absent / namespaces-present assertions unambiguous.
+  - it: should drop the pods annotation_allowlist entry when pod annotation collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+      insightsController.annotations.enabled: true
+      insightsController.annotations.resources.pods: false
+      insightsController.annotations.resources.namespaces: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_allowlist\s*\{'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"namespaces"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"pods"'
+
+  # Designed behavior: with collection enabled but no patterns, the plugin still
+  # emits all labels (the allowlist renders), but the downstream labelkeep has no
+  # label_( clause -- so every label dimension is dropped before remote_write.
+  # This documents that "enabled but unconfigured" silently collects nothing.
+  - it: should drop all label dimensions when labels are enabled but no patterns are set
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns: []
+    asserts:
+      # the allowlist still renders (the plugin emits all pod labels)...
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_allowlist\s*\{'
+      # ...but no label_( pattern clause in the kubestate keep regex, so the
+      # labelkeep drops every label_ dim. Scope to "|label_(" -- the pipe
+      # distinguishes our pattern clause from unrelated occurrences like the
+      # cAdvisor relabel's __meta_kubernetes_node_label_(.+) and the blanket
+      # |label_.* term in other pipelines.
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: '\|label_\('
 
   # =========================================================================
   # Downstream kubestate_labels relabel: filter to configured patterns
