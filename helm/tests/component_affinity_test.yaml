@@ -1,0 +1,161 @@
+# Per-component affinity configuration for the long-running Deployments.
+#
+# Each of the server, aggregator, and webhook Deployments must honor its own
+# `<component>.affinity` value (merged with `defaults.affinity`), and a value set
+# on one component must not appear on another. This is the configurability the
+# chart is meant to provide; the aggregator previously ignored its own value, and
+# the webhook shipped a hardcoded pod anti-affinity whose selector matched no pods.
+#
+# Selector-key correctness note: pod anti-affinity must select on the label the
+# pods actually carry (`app.kubernetes.io/name: <component>`). The removed webhook
+# rule used a bare `app:` key, which matched nothing — see "no hardcoded
+# anti-affinity" below.
+#
+# Templates tested:
+# - agent-deploy.yaml      (server Deployment; renders in all modes — clustered is
+#                          set in the server tests to exercise the multi-replica config)
+# - aggregator-deploy.yaml (aggregator)
+# - webhook-deploy.yaml    (webhook server; renders when insightsController.enabled)
+suite: per-component affinity configuration
+templates:
+  - agent-deploy.yaml
+  - aggregator-deploy.yaml
+  - webhook-deploy.yaml
+tests:
+  # ==========================================================================
+  # Each component honors its own affinity value
+  # ==========================================================================
+  - it: aggregator honors its own affinity value
+    template: aggregator-deploy.yaml
+    set:
+      aggregator.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: agg-only-key
+                    operator: Exists
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: agg-only-key
+
+  - it: server honors its own affinity value
+    template: agent-deploy.yaml
+    set:
+      components.agent.mode: clustered
+      server.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: srv-only-key
+                    operator: Exists
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: srv-only-key
+
+  - it: webhook honors its own affinity value
+    template: webhook-deploy.yaml
+    set:
+      insightsController.enabled: true
+      insightsController.server.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: wh-only-key
+                    operator: Exists
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: wh-only-key
+
+  # ==========================================================================
+  # Per-component isolation: one component's value does not leak to another
+  # ==========================================================================
+  - it: aggregator does not pick up the server's affinity value
+    template: aggregator-deploy.yaml
+    set:
+      aggregator.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: agg-only-key
+                    operator: Exists
+      server.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: srv-only-key
+                    operator: Exists
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: agg-only-key
+      - notEqual:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: srv-only-key
+
+  - it: server does not pick up the aggregator's affinity value
+    template: agent-deploy.yaml
+    set:
+      components.agent.mode: clustered
+      aggregator.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: agg-only-key
+                    operator: Exists
+      server.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: srv-only-key
+                    operator: Exists
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: srv-only-key
+      - notEqual:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: agg-only-key
+
+  # ==========================================================================
+  # Composition: defaults.affinity (nodeAffinity) and a component's own
+  # podAntiAffinity are disjoint keys and both survive the merge.
+  # ==========================================================================
+  - it: defaults.affinity composes with the aggregator's own affinity
+    template: aggregator-deploy.yaml
+    set:
+      defaults.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: defaults-key
+                    operator: Exists
+      aggregator.affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: aggregator
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: defaults-key
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight
+          value: 100
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey
+          value: kubernetes.io/hostname
