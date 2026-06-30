@@ -3192,7 +3192,7 @@ spec:
           - podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app: webhook-server
+                  app.kubernetes.io/name: webhook-server
               topologyKey: kubernetes.io/hostname
             weight: 100
       
