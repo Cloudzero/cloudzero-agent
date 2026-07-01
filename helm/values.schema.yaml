@@ -175,6 +175,26 @@ $defs:
       - disabled
     default: optional
 
+  com.cloudzero.agent.EnvVarOrUnset:
+    description: |
+      A container environment variable, as in the Kubernetes core/v1 EnvVar
+      type, extended so that an explicit `value: null` acts as a tombstone: it
+      removes a variable that would otherwise be inherited from `defaults.env`.
+      A chart-emitted or load-bearing variable cannot be removed this way (a
+      higher-priority source re-sets it).
+    type: object
+    additionalProperties: false
+    required:
+      - name
+    properties:
+      name:
+        type: string
+      value:
+        type:
+          - string
+          - "null"
+      valueFrom:
+        $ref: "#/$defs/io.k8s.api.core.v1.EnvVar/properties/valueFrom"
   com.cloudzero.agent.StageChecks:
     description: |
       Per-check configuration for a validator stage.
@@ -560,6 +580,15 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          env:
+            description: |
+              Additional environment variables for the agent (Prometheus/Alloy)
+              container. Layered on top of `defaults.env` (overrides on name
+              collision). Set an entry's `value` to null to remove a variable
+              inherited from `defaults.env`.
+            type: array
+            items:
+              $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
           image:
             description: |
               Container image configuration for the agent.
@@ -783,6 +812,15 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              env:
+                description: |
+                  Additional environment variables for the configmap-reload
+                  container. Layered on top of `defaults.env` (overrides on name
+                  collision). Set an entry's `value` to null to remove a variable
+                  inherited from `defaults.env`.
+                type: array
+                items:
+                  $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
               securityContext:
                 description: |
                   Security context for the agent configmap reloader container.
@@ -898,6 +936,15 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          env:
+            description: |
+              Additional environment variables for the validator container(s).
+              Layered on top of `defaults.env` (overrides on name collision).
+              Set an entry's `value` to null to remove a variable inherited
+              from `defaults.env`.
+            type: array
+            items:
+              $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
           labels:
             description: |
               Labels to be added to validator resources.
@@ -951,6 +998,15 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              env:
+                description: |
+                  Additional environment variables for the config-loader
+                  container. Layered on top of `defaults.env` (overrides on name
+                  collision). Set an entry's `value` to null to remove a variable
+                  inherited from `defaults.env`.
+                type: array
+                items:
+                  $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
               resources:
                 description: |
                   Resource requirements and limits for the config loader job component.
@@ -997,6 +1053,15 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              env:
+                description: |
+                  Additional environment variables for the helmless container.
+                  Layered on top of `defaults.env` (overrides on name
+                  collision). Set an entry's `value` to null to remove a variable
+                  inherited from `defaults.env`.
+                type: array
+                items:
+                  $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
               resources:
                 description: |
                   Resource requirements and limits for the helmless job component.
@@ -1043,6 +1108,15 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              env:
+                description: |
+                  Additional environment variables for the init-cert container.
+                  Layered on top of `defaults.env` (overrides on name
+                  collision). Set an entry's `value` to null to remove a variable
+                  inherited from `defaults.env`.
+                type: array
+                items:
+                  $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
               resources:
                 description: |
                   Resource requirements and limits for the init cert job component.
@@ -1125,6 +1199,15 @@ properties:
             oneOf:
               - type: object
                 properties:
+                  env:
+                    description: |
+                      Additional environment variables for the aggregator
+                      collector container. Layered on top of `defaults.env`
+                      (overrides on name collision). Set an entry's `value` to
+                      null to remove a variable inherited from `defaults.env`.
+                    type: array
+                    items:
+                      $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
                   resources:
                     description: |
                       Resource requirements and limits for the collector component.
@@ -1147,6 +1230,15 @@ properties:
             oneOf:
               - type: object
                 properties:
+                  env:
+                    description: |
+                      Additional environment variables for the aggregator
+                      shipper container. Layered on top of `defaults.env`
+                      (overrides on name collision). Set an entry's `value` to
+                      null to remove a variable inherited from `defaults.env`.
+                    type: array
+                    items:
+                      $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
                   resources:
                     description: |
                       Resource requirements and limits for the shipper component.
@@ -1231,6 +1323,15 @@ properties:
         additionalProperties: false
         type: object
         properties:
+          env:
+            description: |
+              Additional environment variables for the webhook server container.
+              Layered on top of `defaults.env` (overrides on name collision).
+              Set an entry's `value` to null to remove a variable inherited
+              from `defaults.env`.
+            type: array
+            items:
+              $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
           enabled:
             description: |
               Whether to run the webhook server (admission controller for
@@ -1330,6 +1431,15 @@ properties:
             additionalProperties: false
             type: object
             properties:
+              env:
+                description: |
+                  Additional environment variables for the backfill container.
+                  Layered on top of `defaults.env` (overrides on name
+                  collision). Set an entry's `value` to null to remove a variable
+                  inherited from `defaults.env`.
+                type: array
+                items:
+                  $ref: "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
               schedule:
                 description: |
                   Schedule for the backfill CronJob. Defaults to every 3 hours. Use standard cron format.

@@ -59,6 +59,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.miscellaneous.configLoader.env
                 (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
               )
             ) | nindent 10 }}

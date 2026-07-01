@@ -60,11 +60,20 @@ order, and later sources overwrite earlier ones by `name`. The order
 used at every call site is:
 
 1. `.Values.defaults.env` (this value)
-2. `.Values.server.env` (Prometheus-only)
+2. Per-component env — `.Values.components.<component>.env` (e.g.
+   `components.agent.env`, `components.webhookServer.env`,
+   `components.aggregator.shipper.env`). The deprecated `.Values.server.env`
+   alias also feeds this tier for the agent, and `components.agent.env`
+   wins over it on collision.
 3. Validator-lifecycle env (`K8S_NAMESPACE`, `K8S_POD_NAME`, `ISTIO_*`,
    etc.)
 4. Hardcoded literals (`HOSTNAME`, `NODE_NAME`, `SERVER_PORT`,
    fieldRefs)
+
+A per-component entry with an explicit `value: null` is a **tombstone**:
+it removes a variable this component would otherwise inherit from
+`defaults.env`. It cannot remove a variable from tiers 3–4 (those are
+higher priority and re-set it).
 
 In practice you will never collide with `HTTPS_PROXY` / `HTTP_PROXY` /
 `NO_PROXY` — the chart never sets those itself — so the precedence

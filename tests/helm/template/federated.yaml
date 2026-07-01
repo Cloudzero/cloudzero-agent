@@ -995,6 +995,7 @@ data:
             requests:
               cpu: 50m
               memory: 256Mi
+        env: []
         federatedNode:
           annotations: {}
           labels: {}
@@ -1020,6 +1021,7 @@ data:
         podDisruptionBudget: null
         podLabels: {}
         reloader:
+          env: []
           resources:
             limits:
               cpu: 200m
@@ -1039,6 +1041,7 @@ data:
       aggregator:
         annotations: {}
         collector:
+          env: []
           resources:
             limits:
               cpu: 2000m
@@ -1054,6 +1057,7 @@ data:
         replicas: null
         securityContext: {}
         shipper:
+          env: []
           resources:
             limits:
               cpu: 2000m
@@ -1068,6 +1072,7 @@ data:
       miscellaneous:
         configLoader:
           annotations: {}
+          env: []
           labels: {}
           podAnnotations: {}
           podLabels: {}
@@ -1081,6 +1086,7 @@ data:
           securityContext: {}
         helmless:
           annotations: {}
+          env: []
           labels: {}
           podAnnotations: {}
           podLabels: {}
@@ -1094,6 +1100,7 @@ data:
           securityContext: {}
         initCert:
           annotations: {}
+          env: []
           labels: {}
           podAnnotations: {}
           podLabels: {}
@@ -1137,6 +1144,7 @@ data:
             api_key_valid: optional
             istio_xcluster_lb: required
           pre-stop: {}
+        env: []
         labels: {}
         resources:
           limits:
@@ -1150,6 +1158,7 @@ data:
         autoscaling: null
         backfill:
           annotations: {}
+          env: []
           labels: {}
           podAnnotations: {}
           podLabels: {}
@@ -1163,6 +1172,7 @@ data:
           schedule: 0 */12 * * *
           securityContext: {}
         enabled: auto
+        env: []
         labels: {}
         podAnnotations: {}
         podDisruptionBudget: null

@@ -83,6 +83,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.aggregator.collector.env
                 (list (dict "name" "SERVER_PORT" "value" (printf "%d" (int .Values.aggregator.collector.port))))
               )
             ) | nindent 10 }}
@@ -132,6 +133,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.aggregator.shipper.env
                 (list (dict "name" "SERVER_PORT" "value" (printf "%d" (int .Values.aggregator.shipper.port))))
               )
             ) | nindent 10 }}

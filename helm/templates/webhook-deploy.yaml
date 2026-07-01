@@ -121,6 +121,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.webhookServer.env
               )
             ) | nindent 10 }}
           ports:
