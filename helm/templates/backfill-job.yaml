@@ -158,6 +158,7 @@ spec:
               {{- include "cloudzero-agent.generateEnv" (dict
                   "env" (list
                     $.Values.defaults.env
+                    $.Values.components.webhookServer.backfill.env
                   )
                 ) | nindent 14 }}
               {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list

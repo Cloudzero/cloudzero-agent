@@ -64,6 +64,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.miscellaneous.helmless.env
               )
             ) | nindent 10 }}
           {{- include "cloudzero-agent.generateResources" .Values.components.miscellaneous.helmless.resources | nindent 10 }}

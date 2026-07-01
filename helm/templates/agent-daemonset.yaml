@@ -69,6 +69,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.agent.reloader.env
                 (list (dict "name" "NODE_NAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "spec.nodeName"))))
               )
             ) | nindent 10 }}
@@ -98,6 +99,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.agent.reloader.env
               )
             ) | nindent 10 }}
           ports:
@@ -141,6 +143,7 @@ spec:
               "env" (list
                 .Values.defaults.env
                 .Values.server.env
+                .Values.components.agent.env
                 (list (dict "name" "NODE_NAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "spec.nodeName"))))
               )
             ) | nindent 10 }}

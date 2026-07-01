@@ -1063,7 +1063,8 @@ Parameters (dict):
 - env:  List of env-entry lists to merge (required).
 
 Each list element is itself a list of env-entry dicts ({name, value} or
-{name, valueFrom}). Sources can come from:
+{name, valueFrom}, or — at the component-env tier — {name, value: null} as a
+deletion tombstone; see Merge behavior). Sources can come from:
   - an inline list of dicts built with `(list (dict "name" "..." "value" ...))`
   - the output of an env-emitting helper, parsed via `fromYamlArray`:
       (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
@@ -1073,9 +1074,17 @@ Merge behavior:
 - Later sources override earlier sources by `name` (last wins).
 - First-seen wins for ordering; overrides retain the entry's original position.
 - Nil/empty sources are skipped.
-- Entries without a `name` field are skipped (defensive only — the
-  `.Values.defaults.env` schema rejects them at render time via the
-  io.k8s.api.core.v1.EnvVar ref).
+- An entry with an explicit `value: null` (the `value` key present and nil,
+  with no `valueFrom`) is a *tombstone*: it removes any same-named entry from
+  lower-priority sources instead of setting one. Tombstones obey last-wins like
+  any entry (a later real entry undoes a tombstone, and vice-versa) and are
+  dropped before emit. Because user env sits below the chart-emitted sources
+  (see precedence), a tombstone can only drop entries at or below its own tier —
+  it cannot delete a chart-emitted helper var or a load-bearing literal.
+- Entries without a `name` field are skipped (defensive only — both the
+  `.Values.defaults.env` `io.k8s.api.core.v1.EnvVar` schema and the
+  component-env `com.cloudzero.agent.EnvVarOrUnset` schema require `name` and
+  reject nameless entries at render time).
 
 Output:
 - If at least one entry survives the merge, emits an `env:` key followed by
@@ -1085,8 +1094,10 @@ Output:
 
 Source-list precedence convention (lowest → highest):
   1. `.Values.defaults.env` — chart-wide user override; lowest priority.
-  2. Component-specific user env (e.g. `.Values.server.env`) — overrides
-     chart-wide user env on collision but loses to chart-emitted entries.
+  2. Per-component user env (`.Values.components.<component>.env`; the
+     deprecated `.Values.server.env` is folded in here for the agent) —
+     overrides chart-wide user env on collision but loses to chart-emitted
+     entries. A `value: null` at this tier is a tombstone (see Merge behavior).
   3. Chart-emitted helper output (`validatorEnv` etc.).
   4. Chart-emitted hardcoded literals (`SERVER_PORT`, `NODE_NAME`,
      `HOSTNAME`) — highest priority; these are load-bearing for the
@@ -1112,15 +1123,26 @@ Example:
       {{- if not (hasKey $byName $entry.name) -}}
         {{- $order = append $order $entry.name -}}
       {{- end -}}
-      {{- $_ := set $byName $entry.name $entry -}}
+      {{- if and (hasKey $entry "value") (kindIs "invalid" $entry.value) (not $entry.valueFrom) -}}
+        {{- /* Tombstone: an explicit `value: null` (with no valueFrom) removes
+               a variable inherited from a lower-priority source. Recorded as a
+               marker so last-wins still applies (a later real entry can undo
+               it, and vice versa); markers are dropped before emitting. */ -}}
+        {{- $_ := set $byName $entry.name (dict "__cz_tombstone__" true) -}}
+      {{- else -}}
+        {{- $_ := set $byName $entry.name $entry -}}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
-{{- if $order -}}
 {{- $result := list -}}
 {{- range $name := $order -}}
-  {{- $result = append $result (index $byName $name) -}}
+  {{- $entry := index $byName $name -}}
+  {{- if not (and (kindIs "map" $entry) $entry.__cz_tombstone__) -}}
+    {{- $result = append $result $entry -}}
+  {{- end -}}
 {{- end -}}
+{{- if $result -}}
 env:
 {{- $result | toYaml | nindent 2 -}}
 {{- end -}}

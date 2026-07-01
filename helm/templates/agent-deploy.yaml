@@ -64,6 +64,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.validator.env
                 (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
               )
             ) | nindent 10 }}
@@ -91,6 +92,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.validator.env
                 (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
               )
             ) | nindent 10 }}
@@ -128,6 +130,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.agent.reloader.env
               )
             ) | nindent 10 }}
           ports:
@@ -180,6 +183,7 @@ spec:
               "env" (list
                 .Values.defaults.env
                 .Values.server.env
+                .Values.components.agent.env
                 (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
               )
             ) | nindent 10 }}
@@ -272,6 +276,7 @@ spec:
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env
+                .Values.components.agent.env
                 (include "cloudzero-agent.validatorEnv" . | fromYamlArray)
                 (list (dict "name" "HOSTNAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))))
               )

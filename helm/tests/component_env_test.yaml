@@ -1,0 +1,288 @@
+# Tests for per-component environment variables (`components.<x>.env`).
+#
+# Each chart-managed container gains an optional component-specific env source,
+# layered on top of the chart-wide `defaults.env`. Behavior under test:
+#
+#   1. A component's env is scoped to that component's container only.
+#   2. Component env sits ABOVE defaults.env in precedence (overrides on
+#      name collision) but BELOW chart-emitted entries (validatorEnv, the
+#      hardcoded SERVER_PORT/HOSTNAME literals) — those still win.
+#   3. An entry with an explicit `value: null` is a tombstone: it removes a
+#      variable inherited from defaults.env. It cannot remove a chart-emitted
+#      / load-bearing variable (a higher-priority source re-sets it).
+#   4. A name-only entry ({name: X} with no `value` key) is NOT a tombstone —
+#      it is a normal "set to empty string" override.
+#   5. `components.agent.env` wins over the deprecated `server.env` alias.
+#   6. Every container is wired: a value set at each component path reaches
+#      the corresponding container (guards against a forgotten call site).
+suite: per-component env (components.<x>.env) cascade and null-unset
+templates:
+  - templates/aggregator-deploy.yaml
+  - templates/agent-deploy.yaml
+  - templates/webhook-deploy.yaml
+  - templates/backfill-job.yaml
+  - templates/config-loader-job.yaml
+  - templates/helmless-job.yaml
+  - templates/init-cert-job.yaml
+tests:
+  # ==========================================================================
+  # Scoping: component env reaches only its own container.
+  # ==========================================================================
+  - it: should scope components.aggregator.collector.env to the collector only
+    set:
+      components.aggregator.collector.env:
+        - name: ONLY_COLLECTOR
+          value: yes
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ONLY_COLLECTOR, value: "yes" }
+        template: templates/aggregator-deploy.yaml
+      - notContains:
+          path: spec.template.spec.containers[1].env
+          content: { name: ONLY_COLLECTOR, value: "yes" }
+        template: templates/aggregator-deploy.yaml
+
+  # ==========================================================================
+  # Precedence: component env overrides defaults.env for that component only.
+  # ==========================================================================
+  - it: should let components.aggregator.shipper.env override defaults.env on the shipper only
+    set:
+      defaults.env:
+        - name: SHARED
+          value: from-defaults
+      components.aggregator.shipper.env:
+        - name: SHARED
+          value: from-shipper
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SHARED, value: from-shipper }
+        template: templates/aggregator-deploy.yaml
+      # collector has no component override -> still sees the defaults.env value
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: SHARED, value: from-defaults }
+        template: templates/aggregator-deploy.yaml
+
+  # ==========================================================================
+  # Null-unset (tombstone): removes an inherited defaults.env variable.
+  # ==========================================================================
+  - it: should remove an inherited defaults.env var when component env sets it to null
+    set:
+      defaults.env:
+        - name: DROP_ME
+          value: from-defaults
+      components.aggregator.shipper.env:
+        - name: DROP_ME
+          value: null
+    asserts:
+      # shipper: the inherited var is gone entirely
+      - notContains:
+          path: spec.template.spec.containers[1].env
+          content: { name: DROP_ME, value: from-defaults }
+        template: templates/aggregator-deploy.yaml
+      - notContains:
+          path: spec.template.spec.containers[1].env
+          content: { name: DROP_ME }
+        template: templates/aggregator-deploy.yaml
+      # collector (no override) still inherits it
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: DROP_ME, value: from-defaults }
+        template: templates/aggregator-deploy.yaml
+
+  - it: should NOT let a component tombstone remove a chart-emitted load-bearing var
+    set:
+      components.aggregator.shipper.env:
+        - name: SERVER_PORT
+          value: null
+    asserts:
+      # SERVER_PORT is a chart literal (shipper port 8081) and outranks the
+      # component tombstone.
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SERVER_PORT, value: "8081" }
+        template: templates/aggregator-deploy.yaml
+
+  - it: should NOT let component env override a chart-emitted lifecycle var (validatorEnv, priority 3)
+    set:
+      components.agent.mode: agent
+      components.validator.env:
+        - name: K8S_POD_NAME
+          value: hijacked
+    asserts:
+      # validatorEnv emits K8S_POD_NAME via a fieldRef (priority 3, above the
+      # component-env tier) and must win over the component env attempt on the
+      # validator init container — a distinct tier + source mechanism
+      # (fromYamlArray helper output) from the SERVER_PORT literal test above.
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+      - notContains:
+          path: spec.template.spec.initContainers[1].env
+          content: { name: K8S_POD_NAME, value: hijacked }
+        template: templates/agent-deploy.yaml
+
+  - it: should NOT let a component tombstone remove a chart-emitted lifecycle var
+    set:
+      components.agent.mode: agent
+      components.validator.env:
+        - name: K8S_POD_NAME
+          value: null
+    asserts:
+      # A tombstone at the component tier cannot delete a priority-3 chart-emitted var.
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        template: templates/agent-deploy.yaml
+
+  - it: should treat a name-only component entry as set-empty, not a tombstone
+    set:
+      defaults.env:
+        - name: KEEP
+          value: from-defaults
+      components.aggregator.shipper.env:
+        - name: KEEP
+    asserts:
+      # KEEP is still present on the shipper (not deleted) ...
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: KEEP }
+        template: templates/aggregator-deploy.yaml
+      # ... but the defaults.env value was overridden away.
+      - notContains:
+          path: spec.template.spec.containers[1].env
+          content: { name: KEEP, value: from-defaults }
+        template: templates/aggregator-deploy.yaml
+
+  # ==========================================================================
+  # components.agent.env supersedes the deprecated server.env alias.
+  # ==========================================================================
+  - it: should let components.agent.env win over the deprecated server.env on collision
+    set:
+      components.agent.mode: agent
+      server.env:
+        - name: SHARED
+          value: from-server-env
+      components.agent.env:
+        - name: SHARED
+          value: from-components-agent
+    asserts:
+      # containers[1] = prometheus-server in agent mode
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SHARED, value: from-components-agent }
+        template: templates/agent-deploy.yaml
+      - notContains:
+          path: spec.template.spec.containers[1].env
+          content: { name: SHARED, value: from-server-env }
+        template: templates/agent-deploy.yaml
+
+  # ==========================================================================
+  # Wiring guard: every component path reaches its container.
+  # ==========================================================================
+  - it: should wire components.agent.reloader.env into the configmap-reload sidecar
+    set:
+      components.agent.mode: agent
+      components.agent.reloader.env:
+        - name: RELOADER_VAR
+          value: r
+    asserts:
+      # containers[0] = configmap-reload sidecar
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: RELOADER_VAR, value: r }
+        template: templates/agent-deploy.yaml
+
+  - it: should wire components.validator.env into the validator init containers
+    set:
+      components.agent.mode: agent
+      components.validator.env:
+        - name: VALIDATOR_VAR
+          value: v
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content: { name: VALIDATOR_VAR, value: v }
+        template: templates/agent-deploy.yaml
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content: { name: VALIDATOR_VAR, value: v }
+        template: templates/agent-deploy.yaml
+
+  - it: should wire components.webhookServer.env into the webhook container
+    set:
+      components.webhookServer.env:
+        - name: WEBHOOK_VAR
+          value: w
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: WEBHOOK_VAR, value: w }
+        template: templates/webhook-deploy.yaml
+
+  - it: should wire components.webhookServer.backfill.env into the backfill container
+    set:
+      components.webhookServer.backfill.env:
+        - name: BACKFILL_VAR
+          value: b
+    asserts:
+      # documentIndex 1 = one-time Job (flat spec)
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: BACKFILL_VAR, value: b }
+        template: templates/backfill-job.yaml
+        documentIndex: 1
+
+  - it: should wire components.miscellaneous.configLoader.env into the config-loader
+    set:
+      components.miscellaneous.configLoader.env:
+        - name: CONFIGLOADER_VAR
+          value: c
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: CONFIGLOADER_VAR, value: c }
+        template: templates/config-loader-job.yaml
+
+  - it: should wire components.miscellaneous.helmless.env into the helmless job
+    set:
+      components.miscellaneous.helmless.env:
+        - name: HELMLESS_VAR
+          value: h
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HELMLESS_VAR, value: h }
+        template: templates/helmless-job.yaml
+
+  - it: should wire components.miscellaneous.initCert.env into the init-cert job
+    set:
+      components.miscellaneous.initCert.env:
+        - name: INITCERT_VAR
+          value: i
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: INITCERT_VAR, value: i }
+        template: templates/init-cert-job.yaml
+
+  # ==========================================================================
+  # No-op: no component env set -> no change vs the chart default. A container
+  # with no other env source still emits no env block.
+  # ==========================================================================
+  - it: should emit no env block on the webhook when nothing is configured
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+        template: templates/webhook-deploy.yaml

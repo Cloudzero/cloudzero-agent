@@ -315,6 +315,11 @@ components:
   # The agent here refers to the CloudZero Agent, which is the component that
   # collects metrics from the cluster and sends them to the aggregator.
   agent:
+    # Additional environment variables for the agent (Prometheus/Alloy)
+    # container, merged onto defaults.env (this component wins on name
+    # collision). Set an entry's value to null to remove a variable inherited
+    # from defaults.env.
+    env: []
     # This is the image which contains most of the code that makes this chart
     # work. Since 1.1, CloudZero uses a single container image, with multiple
     # executables, to provide CloudZero functionality.
@@ -505,6 +510,10 @@ components:
 
     # The agent configmap reloader component watches for configuration changes.
     reloader:
+      # Additional environment variables for the configmap-reload container,
+      # merged onto defaults.env. Set an entry's value to null to remove a
+      # variable inherited from defaults.env.
+      env: []
       # Security context for the agent configmap reloader container.
       #
       # For details, see the Kubernetes documentation on security contexts:
@@ -525,6 +534,10 @@ components:
   # The validator component performs validation checks and notifies the platform
   # of installation status changes.
   validator:
+    # Additional environment variables for the validator container(s), merged
+    # onto defaults.env. Set an entry's value to null to remove a variable
+    # inherited from defaults.env.
+    env: []
     # Per-stage, per-check configuration for validator diagnostics.
     #
     # Each check value is one of:
@@ -582,6 +595,10 @@ components:
   miscellaneous:
     # The config loader job component loads configuration and validates settings.
     configLoader:
+      # Additional environment variables for the config-loader container,
+      # merged onto defaults.env. Set an entry's value to null to remove a
+      # variable inherited from defaults.env.
+      env: []
       # Resource requirements and limits for the config loader job component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -620,6 +637,10 @@ components:
       podLabels: {}
     # The helmless job component generates configuration without Helm.
     helmless:
+      # Additional environment variables for the helmless container, merged
+      # onto defaults.env. Set an entry's value to null to remove a variable
+      # inherited from defaults.env.
+      env: []
       # Resource requirements and limits for the helmless job component.
       #
       # For details, see the Kubernetes documentation on resource management:
@@ -658,6 +679,10 @@ components:
       podLabels: {}
     # The init cert job component initializes TLS certificates.
     initCert:
+      # Additional environment variables for the init-cert container, merged
+      # onto defaults.env. Set an entry's value to null to remove a variable
+      # inherited from defaults.env.
+      env: []
       # Annotations to add to the init cert job component.
       #
       # These annotations are merged with defaults.annotations and apply to
@@ -739,6 +764,10 @@ components:
     # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
     securityContext: {}
     collector:
+      # Additional environment variables for the aggregator collector
+      # container, merged onto defaults.env. Set an entry's value to null to
+      # remove a variable inherited from defaults.env.
+      env: []
       # Security context for the aggregator collector container.
       #
       # For details, see the Kubernetes documentation on security contexts:
@@ -753,6 +782,10 @@ components:
           cpu: "2000m"
     # Configuration for the shipper component of the aggregator.
     shipper:
+      # Additional environment variables for the aggregator shipper container,
+      # merged onto defaults.env. Set an entry's value to null to remove a
+      # variable inherited from defaults.env.
+      env: []
       # Security context for the aggregator shipper container.
       #
       # For details, see the Kubernetes documentation on security contexts:
@@ -771,6 +804,10 @@ components:
           cpu: "2000m"
   # Settings for the webhook server.
   webhookServer:
+    # Additional environment variables for the webhook server container, merged
+    # onto defaults.env (this component wins on name collision). Set an entry's
+    # value to null to remove a variable inherited from defaults.env.
+    env: []
     # Whether to run the webhook server (admission controller for resource
     # metadata). Ternary:
     #   true  - always run the webhook server
@@ -833,6 +870,10 @@ components:
         cpu: "500m"
     # The backfill job component performs initial data backfilling.
     backfill:
+      # Additional environment variables for the backfill container, merged
+      # onto defaults.env. Set an entry's value to null to remove a variable
+      # inherited from defaults.env.
+      env: []
       # Annotations to add to the backfill job component.
       #
       # These annotations are merged with defaults.annotations and

@@ -46,6 +46,22 @@
       "enum": ["required", "optional", "informative", "disabled"],
       "type": "string"
     },
+    "com.cloudzero.agent.EnvVarOrUnset": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": ["string", "null"]
+        },
+        "valueFrom": {
+          "$ref": "#/$defs/io.k8s.api.core.v1.EnvVar/properties/valueFrom"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
     "com.cloudzero.agent.PodDisruptionBudgetSpec": {
       "additionalProperties": false,
       "properties": {
@@ -6030,6 +6046,12 @@
               },
               "type": "object"
             },
+            "env": {
+              "items": {
+                "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+              },
+              "type": "array"
+            },
             "federatedNode": {
               "additionalProperties": false,
               "properties": {
@@ -6102,6 +6124,12 @@
             "reloader": {
               "additionalProperties": false,
               "properties": {
+                "env": {
+                  "items": {
+                    "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                  },
+                  "type": "array"
+                },
                 "resources": {
                   "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                 },
@@ -6144,6 +6172,12 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "env": {
+                      "items": {
+                        "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                      },
+                      "type": "array"
+                    },
                     "resources": {
                       "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                     },
@@ -6189,6 +6223,12 @@
                 {
                   "additionalProperties": false,
                   "properties": {
+                    "env": {
+                      "items": {
+                        "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                      },
+                      "type": "array"
+                    },
                     "resources": {
                       "$ref": "#/$defs/io.k8s.api.core.v1.ResourceRequirements"
                     },
@@ -6237,6 +6277,12 @@
                 "annotations": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
                 },
+                "env": {
+                  "items": {
+                    "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                  },
+                  "type": "array"
+                },
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
                 },
@@ -6261,6 +6307,12 @@
                 "annotations": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
                 },
+                "env": {
+                  "items": {
+                    "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                  },
+                  "type": "array"
+                },
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
                 },
@@ -6284,6 +6336,12 @@
               "properties": {
                 "annotations": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "env": {
+                  "items": {
+                    "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                  },
+                  "type": "array"
                 },
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
@@ -6392,6 +6450,12 @@
               },
               "type": "object"
             },
+            "env": {
+              "items": {
+                "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+              },
+              "type": "array"
+            },
             "labels": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
             },
@@ -6422,6 +6486,12 @@
               "properties": {
                 "annotations": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+                },
+                "env": {
+                  "items": {
+                    "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+                  },
+                  "type": "array"
                 },
                 "labels": {
                   "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
@@ -6459,6 +6529,12 @@
                   "type": "string"
                 }
               ]
+            },
+            "env": {
+              "items": {
+                "$ref": "#/$defs/com.cloudzero.agent.EnvVarOrUnset"
+              },
+              "type": "array"
             },
             "labels": {
               "$ref": "#/$defs/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
