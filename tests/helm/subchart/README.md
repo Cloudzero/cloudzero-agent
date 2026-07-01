@@ -188,7 +188,7 @@ cloudzero-agent:
   enabled: true
   cloudAccountId: "prod-account"
   clusterName: "prod-cluster"
-  replicas: 3  # Production scaling
+  replicas: 3 # Production scaling
 ```
 
 ### Platform Integration
