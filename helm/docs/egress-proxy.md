@@ -72,8 +72,7 @@ used at every call site is:
 
 A per-component entry with an explicit `value: null` is a **tombstone**:
 it removes a variable this component would otherwise inherit from
-`defaults.env`. It cannot remove a variable from tiers 3–4 (those are
-higher priority and re-set it).
+`defaults.env`.
 
 In practice you will never collide with `HTTPS_PROXY` / `HTTP_PROXY` /
 `NO_PROXY` — the chart never sets those itself — so the precedence
