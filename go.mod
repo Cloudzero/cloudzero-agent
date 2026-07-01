@@ -86,7 +86,7 @@ require (
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 	gorm.io/driver/sqlite v1.6.0
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 	sigs.k8s.io/gateway-api v1.5.1
 )
 
