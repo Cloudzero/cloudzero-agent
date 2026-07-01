@@ -1,0 +1,251 @@
+suite: test kubeState plugin label/annotation collection
+templates:
+  - templates/agent-cm.yaml
+tests:
+  # =========================================================================
+  # label_allowlist / annotation_allowlist wiring on discovery.kubestate
+  #
+  # The KubeState plugin emits kube_<resource>_labels / _annotations only when
+  # given an allowlist. Its allowlist supports exact names or the "*" wildcard
+  # only (not regexes), so we emit all labels/annotations and filter them to
+  # insightsController.{labels,annotations}.patterns in the downstream
+  # kubestate_labels relabel. Supported resources are those the agent
+  # ClusterRole can watch: pods, namespaces, nodes.
+  # =========================================================================
+
+  - it: should emit pods + namespaces label_allowlist entries by default
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_allowlist\s*\{'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"pods"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"namespaces"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'names\s*=\s*\["\*"\]'
+
+  - it: should add namespaces to the watch list and kube_namespace_labels to the metric_allowlist by default
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      # order-independent: namespaces is somewhere in the watch list (element
+      # order has no semantic meaning to the plugin)
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resources = \[[^]]*"namespaces"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_namespace_labels"'
+
+  - it: should not emit any label_allowlist when label collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_allowlist\s*\{'
+
+  - it: should drop the pods label_allowlist entry when pod label collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.resources.pods: false
+      insightsController.labels.resources.namespaces: true
+    asserts:
+      # namespaces entry still renders, but pods must not
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"namespaces"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"pods"'
+
+  - it: should emit a nodes label_allowlist entry and kube_node_labels when node labels are enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.resources.nodes: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"nodes"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_node_labels"'
+
+  # =========================================================================
+  # Annotations (parity with labels)
+  # =========================================================================
+
+  - it: should emit annotation_allowlist + kube_pod_annotations when annotation collection is enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.annotations.enabled: true
+      insightsController.annotations.patterns:
+        - "team"
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_allowlist\s*\{'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_pod_annotations"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_\(team\)'
+
+  - it: should not emit annotation wiring when annotation collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.annotations.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_allowlist\s*\{'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_pod_annotations"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_\('
+
+  # Per-resource annotation toggling, mirroring the label per-resource test.
+  # Labels disabled here so the only allowlist entries come from annotations,
+  # making the pods-absent / namespaces-present assertions unambiguous.
+  - it: should drop the pods annotation_allowlist entry when pod annotation collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+      insightsController.annotations.enabled: true
+      insightsController.annotations.resources.pods: false
+      insightsController.annotations.resources.namespaces: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'annotation_allowlist\s*\{'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"namespaces"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"pods"'
+
+  # Designed behavior: with collection enabled but no patterns, the plugin still
+  # emits all labels (the allowlist renders), but the downstream labelkeep has no
+  # label_( clause -- so every label dimension is dropped before remote_write.
+  # This documents that "enabled but unconfigured" silently collects nothing.
+  - it: should drop all label dimensions when labels are enabled but no patterns are set
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns: []
+    asserts:
+      # the allowlist still renders (the plugin emits all pod labels)...
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_allowlist\s*\{'
+      # ...but no label_( pattern clause in the kubestate keep regex, so the
+      # labelkeep drops every label_ dim. Scope to "|label_(" -- the pipe
+      # distinguishes our pattern clause from unrelated occurrences like the
+      # cAdvisor relabel's __meta_kubernetes_node_label_(.+) and the blanket
+      # |label_.* term in other pipelines.
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: '\|label_\('
+
+  # =========================================================================
+  # Downstream kubestate_labels relabel: filter to configured patterns
+  # =========================================================================
+
+  - it: should filter labels to insightsController.labels.patterns
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "role"
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_\(role\)'
+
+  - it: should join multiple label patterns with a pipe inside the label_ group
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "team"
+        - "role"
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_\(team\|role\)'
+
+  - it: should keep base cost-allocation labels (namespace, node) in the kubestate_labels relabel
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.patterns:
+        - "role"
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'namespace\|node'
+
+  - it: should not include a label_ pattern clause when label collection is disabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+      # Distinctive pattern that cannot collide with unrelated regexes such as
+      # __meta_kubernetes_node_label_(.+); it must not appear when disabled.
+      insightsController.labels.patterns:
+        - "zzdistinctlabel"
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_\(zzdistinctlabel\)'

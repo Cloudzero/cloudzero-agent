@@ -1,0 +1,48 @@
+suite: test aggregator/collector accepts KubeState label & annotation metrics
+templates:
+  - templates/aggregator-cm.yaml
+tests:
+  # The aggregator's collector applies its own cost-metric filter
+  # (metricFilters.cost), separate from Alloy's metric_allowlist. For KubeState
+  # label/annotation collection to reach CloudZero, the collector must accept the
+  # kube_<resource>_labels / kube_<resource>_annotations metrics and keep the
+  # annotation_ label dimension prefix.
+
+  - it: should accept kube_<resource>_labels metrics in the cost filter
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_pod_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_namespace_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_node_labels"'
+
+  - it: should accept kube_<resource>_annotations metrics in the cost filter
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_pod_annotations"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_namespace_annotations"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "kube_node_annotations"'
+
+  - it: should keep the annotation_ label dimension prefix in cost_labels
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "annotation_"'

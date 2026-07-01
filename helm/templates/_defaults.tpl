@@ -240,6 +240,11 @@ metricFilters:
         - kube_pod_container_resource_requests
         - kube_pod_labels
         - kube_pod_info
+        - kube_namespace_labels
+        - kube_node_labels
+        - kube_pod_annotations
+        - kube_namespace_annotations
+        - kube_node_annotations
       prefix:
         - "cloudzero_"
       suffix: []
@@ -268,6 +273,7 @@ metricFilters:
       prefix:
         - "_"
         - "label_"
+        - "annotation_"
         - "app.kubernetes.io/"
         - "k8s."
       suffix: []

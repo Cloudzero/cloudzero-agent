@@ -198,6 +198,8 @@ insightsController:
       - "bar$" # -- Match all labels whose key ends with "bar"
 ```
 
+> **Note:** the anchored examples above (`^foo`, `bar$`) apply to the **webhook** path. If you collect labels/annotations via the embedded KubeState plugin (`components.agent.kubeState.enabled: true`), patterns are matched differently and `^`/`$` are not allowed — see the KubeState pattern-syntax note under [Additional Notes](#labels-and-annotations) below.
+
 Labels/annotations can also be gathered from more than just pods and namespaces. An example of gathering labels from all available resources would be:
 
 ```yaml
@@ -223,6 +225,8 @@ Additional Notes:
 - To disambiguate labels/annotations between resources, a prefix representing the resource type is prepended to the label key in the [CloudZero Explorer](https://app.cloudzero.com/explorer). For example, a `foo=bar` node label would be presented as `node:foo: bar`. The exception is pod labels which do not have resource prefixes for backward compatibility with previous versions.
 - Annotations are not exported by default; see the `insightsController.annotations.enabled` setting to enable. To disambiguate annotations from labels, an `annotation` prefix is prepended to the annotation key; i.e., an `foo: bar` annotation on a namespace would be represented in the Explorer as `node:annotation:foo: bar`
 - For both labels and annotations, the `patterns` array applies across all resource types; i.e., setting `['^foo']` for `insightsController.labels.patterns` will match label keys that start with `foo` for all resource types set to `true` in `insightsController.labels.resources`.
+- **KubeState plugin (`components.agent.kubeState.enabled: true`):** When the embedded KubeState plugin is used instead of an external KSM, it collects labels **and** annotations itself, driven by the same `insightsController.{labels,annotations}` settings (`enabled`, `patterns`, and the per-resource `resources` toggles). It emits the standard `kube_<resource>_labels` / `kube_<resource>_annotations` metrics. This works whether or not the webhook server is enabled, so labels/annotations are still collected in webhook-disabled deployments. Supported resources are limited to those the agent ClusterRole can watch: **pods, namespaces, and nodes**. Labels/annotations for `deployments`, `statefulsets`, `daemonsets`, `jobs`, and `cronjobs` require the webhook server.
+  - **Pattern syntax in the KubeState path:** unlike the webhook (which matches `patterns` unanchored), the KubeState plugin embeds each pattern in a fully-anchored relabel regex as `label_(<pattern>)` / `annotation_(<pattern>)`, so a pattern matches a label/annotation **key exactly** (e.g. `role` matches the key `role`, not `myrole`). Patterns are validated at Helm-render time and may contain only the characters `[A-Za-z0-9_./*+?|-]`; anything else fails the render with a diagnostic rather than risking a misconfigured or disabled metrics pipeline. In particular: do **not** anchor with `^` or `$` (they would land mid-regex after the `label_`/`annotation_` prefix and match nothing — so the `^foo` / `bar$` examples above are for the **webhook** path only; in KubeState mode use unanchored substrings like `foo`), and use alternation `app|role` rather than grouping `(app|role)`. Within the allowed set, patterns must still be valid [RE2](https://github.com/google/re2/wiki/Syntax) (e.g. `*foo` is rejected).
 
 #### Use of ValidatingWebhookConfiguration
 
