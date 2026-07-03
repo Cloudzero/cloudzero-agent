@@ -347,7 +347,9 @@ spec:
       {{- include "cloudzero-agent.generateImagePullSecrets" (dict "root" . "image" .Values.components.prometheus.image) | nindent 6 }}
       {{- include "cloudzero-agent.generateNodeSelector" (dict "default" .Values.defaults.nodeSelector "nodeSelector" .Values.server.nodeSelector) | nindent 6 }}
       {{- include "cloudzero-agent.generateTolerations" (concat .Values.defaults.tolerations .Values.server.tolerations) | nindent 6 }}
-      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" .Values.server.affinity) | nindent 6 }}
+      {{- $podAntiAffinity := dict "podAntiAffinity" (dict "preferredDuringSchedulingIgnoredDuringExecution" (list (dict "weight" 100 "podAffinityTerm" (dict "labelSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "server")) "topologyKey" "kubernetes.io/hostname")))) }}
+      {{- $userAffinity := deepCopy (.Values.server.affinity | default (dict)) }}
+      {{- include "cloudzero-agent.generateAffinity" (dict "default" .Values.defaults.affinity "affinity" (merge $userAffinity $podAntiAffinity)) | nindent 6 }}
     {{- with .Values.server.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
