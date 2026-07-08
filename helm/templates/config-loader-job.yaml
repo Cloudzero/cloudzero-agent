@@ -9,8 +9,10 @@ metadata:
         .Values.defaults.annotations
         .Values.components.miscellaneous.configLoader.annotations
         (dict "checksum/values" (include "cloudzero-agent.configurationChecksum" .))
+        (dict "helm.sh/hook" "pre-install,pre-upgrade")
+        (dict "helm.sh/hook-delete-policy" "before-hook-creation")
       )
-    ) | nindent 2 }}
+    ) | indent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
       "name" "validator"
