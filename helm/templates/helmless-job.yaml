@@ -11,7 +11,7 @@ metadata:
         (dict "helm.sh/hook" "pre-install,pre-upgrade")
         (dict "helm.sh/hook-delete-policy" "before-hook-creation")
       )
-    ) | indent 2 }}
+    ) | nindent 2 }}
   {{- include "cloudzero-agent.generateLabels" (dict
       "root" .
       "name" "helmless"
