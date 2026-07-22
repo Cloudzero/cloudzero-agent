@@ -2,7 +2,7 @@
   "type": "module",
   "dependencies": {
     "@mermaid-js/mermaid-cli": "^11.16.0",
-    "markdownlint-cli2": "^0.23.0",
+    "markdownlint-cli2": "^0.23.1",
     "prettier": "3.9.4"
   }
 }
