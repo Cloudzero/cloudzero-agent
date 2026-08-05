@@ -6,7 +6,7 @@
 
 A Helm chart for deploying a metrics collector to send cluster metrics to the CloudZero platform.
 
-For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-charts/releases). You can also [enable release notifications](#enabling-release-notifications).
+For the latest release, see [Releases](https://github.com/Cloudzero/cloudzero-charts/releases). You can also [enable release notifications](#enabling-release-notifications). 
 
 ## Prerequisites
 
