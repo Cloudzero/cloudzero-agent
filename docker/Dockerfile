@@ -92,7 +92,7 @@ RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
 
 # Bump vulnerable deps ahead of upstream's pins so the scan passes; drop when upstream catches up.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
-    go get golang.org/x/crypto@v0.52.0 golang.org/x/net@v0.55.0
+    go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/text@v0.39.0
 
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
