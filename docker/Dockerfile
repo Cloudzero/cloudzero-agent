@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
 FROM gcr.io/distroless/static-debian12:debug@sha256:46fcf1fa44d251b0944ba4b98ef4bbd266e33034e46489dbf92f680ca4917451 AS certs
 
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
-FROM ghcr.io/cloudzero/alloy:v1.17.0 AS alloy
+FROM ghcr.io/cloudzero/alloy:v1.18.1 AS alloy
 
 # Stage 6: Build prometheus-config-reloader from upstream source. We build it
 # (not copy the prebuilt image) to control the toolchain and bump vulnerable
