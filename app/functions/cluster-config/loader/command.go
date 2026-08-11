@@ -232,6 +232,14 @@ func post(
 		return errors.New("nil clusterConfig")
 	}
 
+	// Guard the aggregator settings for nil as well: when every config fails to
+	// build (e.g. no metadata server), settingsAggregator is nil and
+	// dereferencing cfg below turns a reportable error into a SIGSEGV. See
+	// CP-45528.
+	if cfg == nil {
+		return errors.New("nil settings")
+	}
+
 	if cfg.Cloudzero.Host == "" {
 		return errors.New("missing cloudzero host")
 	}

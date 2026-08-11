@@ -86,8 +86,11 @@ spec:
             {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
             - {{ include "cloudzero-agent.insightsController.configurationMountPath" . }}/server-config.yaml
             {{- else }}
-            {{- /* Keep the flag with an empty value (do NOT omit it): the loader's
-                   NewSettings errors on a nil/missing arg, but tolerates "". See CP-43292. */}}
+            {{- /* Keep the flag with an empty value (do NOT omit it): the flag is
+                   Required on the loader, so it cannot be dropped. The loader now
+                   treats an empty --config-webhook path as "no webhook config" (a
+                   valid state) instead of fataling on the empty destination URL.
+                   See CP-43292 (empty value) and CP-45528 (loader tolerates it). */}}
             - ""
             {{- end }}
             - --config-aggregator
