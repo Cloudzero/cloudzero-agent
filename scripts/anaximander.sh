@@ -539,18 +539,86 @@ info "Gathering webhook configuration..."
     echo "==================================="
     echo ""
 
-    # Find VWCs that reference a service in the agent namespace.
-    # This catches the CloudZero webhook regardless of release name or
-    # label changes across chart versions.
-    VWC_NAMES=$(kubectl --context "${KUBECTX}" get validatingwebhookconfigurations \
-        -o jsonpath="{range .items[?(@.webhooks[0].clientConfig.service.namespace==\"${KUBENS}\")]}{.metadata.name}{\"\\n\"}{end}" 2>/dev/null || echo "")
+    # List the cluster's ValidatingWebhookConfigurations as JSON. stdout and
+    # stderr are kept in SEPARATE streams (stderr is redirected to a temp file,
+    # never merged into the JSON) and the exit status is captured, so that a
+    # permission error, a parse failure, and a genuine absence are three
+    # DISTINCT diagnoses. This matters because the collection user often lacks
+    # list access on cluster-scoped resources; the previous implementation
+    # swallowed such errors ("2>/dev/null || echo """) and reported them
+    # identically to "no webhook configured", producing a misleading "the
+    # webhook receives no traffic" conclusion on a healthy deployment. stderr
+    # must not be folded into the JSON, because a kubectl warning emitted on an
+    # otherwise-successful call (e.g. a deprecation or API Warning header) would
+    # corrupt the JSON and re-introduce the same false negative.
+    VWC_ERR_FILE=$(mktemp)
+    VWC_RC=0
+    VWC_JQ_RC=0
+    VWC_NAMES=""
+    # This script runs under "set -e", so an unguarded "VAR=$(cmd)" whose command
+    # exits non-zero would abort the entire script before its exit status could be
+    # inspected -- which would defeat the RBAC-vs-absence distinction below (a
+    # denied kubectl call would kill the whole collection instead of warning).
+    # The "|| VWC_RC=$?" form keeps each assignment in a conditional context so
+    # errexit does not fire and the real exit code is captured for branching.
+    VWC_JSON=$(kubectl --context "${KUBECTX}" get validatingwebhookconfigurations -o json 2>"${VWC_ERR_FILE}") || VWC_RC=$?
 
-    if [ -z "${VWC_NAMES}" ]; then
-        echo "No ValidatingWebhookConfigurations found referencing namespace ${KUBENS}"
+    if [ "${VWC_RC}" -eq 0 ]; then
+        # Match the CloudZero webhook by chart label first (most reliable across
+        # release names), then fall back to any VWC that points ANY of its
+        # webhook entries at a service in the agent namespace. Checking all
+        # webhooks[*] -- not just webhooks[0] -- avoids missing the config when
+        # the CloudZero entries are not first, and jq tolerates other
+        # controllers' webhook configs that lack a service clientConfig. jq's
+        # exit status is captured on its own so a parse failure (e.g. jq not
+        # installed, or unexpected output) is not mistaken for "none found".
+        VWC_NAMES=$(printf '%s' "${VWC_JSON}" | jq -r --arg ns "${KUBENS}" '
+            .items[]
+            | select(
+                (.metadata.labels["app.kubernetes.io/part-of"] == "cloudzero-agent")
+                or (any(.webhooks[]?; .clientConfig.service.namespace == $ns))
+              )
+            | .metadata.name') || VWC_JQ_RC=$?
+        if [ "${VWC_JQ_RC}" -eq 0 ]; then
+            VWC_NAMES=$(printf '%s\n' "${VWC_NAMES}" | sort -u)
+        fi
+    fi
+
+    if [ "${VWC_RC}" -ne 0 ]; then
+        echo "WARNING: Could not list ValidatingWebhookConfigurations (kubectl exit ${VWC_RC})."
         echo ""
-        echo "This means the Kubernetes API server is not configured to send"
-        echo "admission requests to the CloudZero webhook. The webhook pods"
-        echo "will run but receive no traffic."
+        echo "This is almost always a permissions limitation of the collection"
+        echo "user on cluster-scoped resources, or a transient API error. It is"
+        echo "NOT evidence that the webhook is unconfigured. If the webhook pods"
+        echo "are logging \"Pushing records to remote write endpoint\" with"
+        echo "non-zero counts, the webhook IS receiving admission traffic."
+        echo ""
+        echo "To verify manually with sufficient privileges:"
+        echo "  kubectl get validatingwebhookconfigurations -l app.kubernetes.io/part-of=cloudzero-agent"
+        echo ""
+        echo "kubectl error output:"
+        sed 's/^/  /' "${VWC_ERR_FILE}"
+    elif [ "${VWC_JQ_RC}" -ne 0 ]; then
+        echo "WARNING: Could not parse the ValidatingWebhookConfiguration list (jq exit ${VWC_JQ_RC})."
+        echo ""
+        echo "The listing itself succeeded, but its output could not be parsed --"
+        echo "most commonly because jq is not installed on the collection machine."
+        echo "This is NOT evidence that the webhook is unconfigured."
+        echo ""
+        echo "To verify manually:"
+        echo "  kubectl get validatingwebhookconfigurations -l app.kubernetes.io/part-of=cloudzero-agent"
+    elif [ -z "${VWC_NAMES}" ]; then
+        echo "No ValidatingWebhookConfigurations found referencing namespace ${KUBENS}"
+        echo "(and none labeled app.kubernetes.io/part-of=cloudzero-agent)."
+        echo ""
+        echo "The cluster listing succeeded and parsed cleanly, so this is a"
+        echo "genuine result: the Kubernetes API server is not configured to send"
+        echo "admission requests to the CloudZero webhook. The webhook pods will"
+        echo "run but receive no admission traffic."
+        echo ""
+        echo "Cross-check: if the webhook pods are still logging \"Pushing records"
+        echo "to remote write endpoint\" with non-zero counts, they ARE receiving"
+        echo "traffic and the label/service match above should be re-examined."
     else
         for VWC_NAME in ${VWC_NAMES}; do
             echo "--- ${VWC_NAME} ---"
@@ -562,8 +630,10 @@ info "Gathering webhook configuration..."
             echo ""
             echo "--- caBundle status ---"
 
+            # Take the first non-empty caBundle across all webhook entries,
+            # rather than assuming it lives on webhooks[0].
             CA_BUNDLE=$(kubectl --context "${KUBECTX}" get validatingwebhookconfiguration "${VWC_NAME}" \
-                -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null || echo "")
+                -o json 2>/dev/null | jq -r '[.webhooks[].clientConfig.caBundle // empty] | first // ""' 2>/dev/null || echo "")
 
             if [ -z "${CA_BUNDLE}" ]; then
                 echo "WARNING: caBundle is EMPTY. The API server cannot verify the"
@@ -582,6 +652,8 @@ info "Gathering webhook configuration..."
             echo ""
         done
     fi
+
+    rm -f "${VWC_ERR_FILE}"
 } > "${OUTPUT_DIR}/webhook-config.txt" 2>&1
 echo "[SUCCESS] Gather webhook configuration" >> "${COMMAND_RESULTS_FILE}"
 
