@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,6 +36,20 @@ import (
 	"github.com/cloudzero/cloudzero-agent/app/utils/k8s"
 )
 
+// hasUsableConfig reports whether configFiles contains at least one non-empty
+// path. The webhook server requires a real configuration file; an empty
+// --config argument is rejected so the server fails loudly at startup rather
+// than running with an empty destination (config.NewSettings would otherwise
+// treat "no file read" as a valid empty config — see CP-45528).
+func hasUsableConfig(configFiles []string) bool {
+	for _, f := range configFiles {
+		if strings.TrimSpace(f) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	var configFiles config.Files
 	var backfill bool
@@ -45,6 +60,17 @@ func main() {
 	flag.Parse()
 
 	clock := &utils.Clock{}
+
+	// The webhook server requires a real configuration file. Reject an empty or
+	// whitespace-only --config path up front: config.NewSettings treats "no file
+	// read" as a valid empty config for the disabled config-loader path
+	// (CP-45528), so without this guard the server would start with an empty
+	// destination and silently fail to deliver metrics instead of failing loudly
+	// here. This runs before NewSettings and, unlike the old len()==0 check,
+	// catches an explicitly empty --config "" (a non-empty slice of one "").
+	if !hasUsableConfig(configFiles) {
+		log.Fatal().Msg("No configuration files provided")
+	}
 
 	settings, err := config.NewSettings(configFiles...)
 	if err != nil {
@@ -63,9 +89,6 @@ func main() {
 		Str("platformEndpoint", settings.Destination).
 		Interface("configFiles", configFiles).
 		Msg("Starting CloudZero Webhook Server")
-	if len(configFiles) == 0 {
-		log.Fatal().Msg("No configuration files provided")
-	}
 
 	// create a logger
 	logger, err := logging.NewLogger(

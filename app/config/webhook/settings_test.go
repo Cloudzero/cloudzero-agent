@@ -80,6 +80,21 @@ destination: "https://api.cloudzero.com/v1/container-metrics"
 		assert.Equal(t, 60*time.Second, settings.RemoteWrite.SendInterval)
 	})
 
+	t.Run("no config file read skips detection and returns an empty valid config", func(t *testing.T) {
+		// Webhook disabled: config-loader passes --config-webhook "" so no file
+		// is read. This must NOT error (even where a cluster name can't be
+		// detected, e.g. EKS) and must yield an empty, well-formed config with
+		// no remote-write host. Skipping detection also makes this path
+		// deterministic — it does not touch the cloud metadata server. See
+		// CP-45528.
+		settings, err := NewSettings("")
+		require.NoError(t, err)
+		require.NotNil(t, settings)
+		assert.Empty(t, settings.Destination)
+		assert.Empty(t, settings.RemoteWrite.Host)
+		assert.Empty(t, settings.ClusterName)
+	})
+
 	t.Run("missing config file", func(t *testing.T) {
 		settings, err := NewSettings("nonexistent.yaml")
 		assert.Error(t, err)
@@ -100,6 +115,19 @@ destination: "https://api.cloudzero.com/v1/container-metrics"
 		assert.Error(t, err)
 		assert.Nil(t, settings)
 	})
+}
+
+func TestSetRemoteWriteURL(t *testing.T) {
+	// setRemoteWriteURL is only called when a webhook config file was read, in
+	// which case Destination is always populated (from the file or the
+	// env-default). It validates the URL and sets RemoteWrite.Host verbatim.
+	// The empty / disabled-webhook case — where setRemoteWriteURL is not called
+	// at all — is covered by TestNewSettings ("no config file read ..."). An
+	// empty Destination here would (intentionally) log.Fatal, so it is not
+	// exercised as a table case. See CP-45528.
+	s := &Settings{Destination: "https://api.cloudzero.com/v1/container-metrics"}
+	s.setRemoteWriteURL()
+	assert.Equal(t, "https://api.cloudzero.com/v1/container-metrics", s.RemoteWrite.Host)
 }
 
 func TestCleanString(t *testing.T) {

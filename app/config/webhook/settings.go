@@ -63,6 +63,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		return nil, errors.New("the config files slice cannot be nil")
 	}
 
+	readAny := false
 	for _, cfgFile := range configFiles {
 		if cfgFile == "" {
 			continue
@@ -76,6 +77,7 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 		if err != nil {
 			return nil, fmt.Errorf("config read %s: %w", cfgFile, err)
 		}
+		readAny = true
 	}
 
 	// clean unexpected characters from CloudAccountID
@@ -83,19 +85,39 @@ func NewSettings(configFiles ...string) (*Settings, error) {
 	cfg.CloudAccountID = cleanString(cfg.CloudAccountID)
 	cfg.Region = strings.TrimSpace(cfg.Region)
 
-	// Auto-detect cloud account ID and region if needed
-	logger := log.Logger.With().Str("component", "webhook-settings").Logger()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// When the webhook server is disabled, the config-loader passes an empty
+	// --config-webhook path, so no file is read (readAny == false) and there is
+	// no webhook to configure. Skip both cloud detection and destination
+	// validation in that case: a disabled webhook has nothing to detect and no
+	// destination, so we return a uniform, empty-but-valid config on every
+	// cloud. Gating on readAny (rather than tolerating an empty Destination
+	// everywhere) keeps the live webhook-server path strict. This addresses
+	// both CP-45528 failure modes at their source:
+	//   - Clouds where detection succeeds (e.g. GKE) used to reach
+	//     setRemoteWriteURL with an empty Destination, where url.ParseRequestURI
+	//     fatals and os.Exit(1) kills the loader Job — blocking install.
+	//   - Clouds whose metadata exposes no cluster name (EKS: AWS IMDS) used to
+	//     fail in DetectConfiguration, so the loader posted a degraded config
+	//     with the error carried in Errors.
+	if readAny {
+		logger := log.Logger.With().Str("component", "webhook-settings").Logger()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-	err := scout.DetectConfiguration(ctx, &logger, nil, &cfg.Region, &cfg.CloudAccountID, &cfg.ClusterName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to auto-detect cloud environment: %w", err)
+		if err := scout.DetectConfiguration(ctx, &logger, nil, &cfg.Region, &cfg.CloudAccountID, &cfg.ClusterName); err != nil {
+			return nil, fmt.Errorf("failed to auto-detect cloud environment: %w", err)
+		}
 	}
 
 	cfg.setCompiledFilters()
 
-	cfg.setRemoteWriteURL()
+	// Validate the destination only when a config file was read. A live webhook
+	// with an empty or malformed destination is a real misconfiguration, so
+	// setRemoteWriteURL still fatals there; a disabled webhook simply has no
+	// destination and leaves RemoteWrite.Host empty.
+	if readAny {
+		cfg.setRemoteWriteURL()
+	}
 	cfg.setPolicy()
 
 	setLoggingOptions(&cfg.Logging)
