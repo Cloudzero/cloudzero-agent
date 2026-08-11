@@ -151,11 +151,27 @@ spec:
         it typically indicates a TLS certificate mismatch after rotation.
 
         Uses czo_webhook_types_total from app/domain/webhook/webhook.go.
+
+        The expression MUST aggregate with sum(). czo_webhook_types_total is a
+        counter vector split by kind_group/kind_version/kind_resource/operation
+        (and per pod/instance by the scrape), so a bare "rate(...) == 0" is
+        evaluated per series and fires whenever ANY single series is flat --
+        e.g. a rarely-seen resource/operation (storageclass creates) or a quiet
+        replica -- even while the webhook is healthy and busy overall. sum()
+        collapses those into a single fleet-wide rate so the alert only fires
+        when NO replica sees ANY admission event of ANY type.
+
+        The "or vector(0)" is also required: the counter has no series at all
+        until the first admission event is processed, so on a webhook that has
+        received nothing since startup (the exact failure this catches) the
+        metric is absent and a bare aggregate would return an empty vector and
+        never fire. "or vector(0)" substitutes 0 in that case so the alert
+        fires on genuine silence.
         See: Monitoring the CloudZero Agent > Monitoring Webhook TLS Certificate Health
         */}}
         {{- if eq (include "cloudzero-agent.webhookServer.enabled" .) "true" }}
         - alert: CloudZeroWebhookNoEvents
-          expr: rate(czo_webhook_types_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m]) == 0
+          expr: (sum(rate(czo_webhook_types_total{job="{{ include "cloudzero-agent.serviceName" . }}"}[30m])) or vector(0)) == 0
           for: 30m
           labels:
             severity: critical
