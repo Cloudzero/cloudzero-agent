@@ -81,7 +81,7 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_golang/exp v0.0.0-20260602051030-3537b20ac86b
 	github.com/prometheus/prometheus v0.313.2
-	github.com/shirou/gopsutil/v4 v4.26.6
+	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/stretchr/testify v1.11.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
@@ -96,7 +96,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-chi/render v1.0.3 // indirect
 	github.com/go-obvious/gateway v0.1.1 // indirect
