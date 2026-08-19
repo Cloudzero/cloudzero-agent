@@ -77,7 +77,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.1
 	github.com/minio/minio-go/v7 v7.2.1
-	github.com/parquet-go/parquet-go v0.30.1
+	github.com/parquet-go/parquet-go v0.32.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_golang/exp v0.0.0-20260602051030-3537b20ac86b
 	github.com/prometheus/prometheus v0.313.2
