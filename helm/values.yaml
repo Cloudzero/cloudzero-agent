@@ -1283,11 +1283,25 @@ server:
   # --Limit the size to 8Gi to lower impact on the cluster, and to provide a reasonable backup for the WAL
   emptyDir:
     sizeLimit: 8Gi
-  # Affinity rules
+  # Affinity rules for the server pods.
+  #
+  # Defaults to a preferred (soft) anti-affinity that spreads server pods
+  # across different nodes. Override any of these fields to customize the
+  # behavior, or set podAntiAffinity to null (or affinity to null) to
+  # remove the default entirely. Note: setting affinity to {} will NOT
+  # remove it, since Helm re-merges chart defaults into empty maps.
   #
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-  affinity: {}
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: server
+            topologyKey: kubernetes.io/hostname
   # Tolerations configuration for the aggregator pods.
   #
   # See the Kubernetes documentation for details:
@@ -1508,9 +1522,24 @@ insightsController:
     tolerations: []
     # Affinity rules for the webhook server pods.
     #
+    # Defaults to a preferred (soft) anti-affinity that spreads webhook
+    # server pods across different nodes. Override any of these fields to
+    # customize the behavior, or set podAntiAffinity to null (or affinity
+    # to null) to remove the default entirely. Note: setting affinity to
+    # {} will NOT remove it, since Helm re-merges chart defaults into
+    # empty maps.
+    #
     # See the Kubernetes documentation for details:
     # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-    affinity: {}
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: webhook-server
+              topologyKey: kubernetes.io/hostname
     # Annotations to add to the webhook server Deployment.
     deploymentAnnotations: {}
     # Annotations to add to the webhook server pods.
@@ -1806,9 +1835,24 @@ aggregator:
   tolerations: []
   # Affinity rules for the aggregator pods.
   #
+  # Defaults to a preferred (soft) anti-affinity that spreads aggregator
+  # pods across different nodes. Override any of these fields to
+  # customize the behavior, or set podAntiAffinity to null (or affinity
+  # to null) to remove the default entirely. Note: setting affinity to
+  # {} will NOT remove it, since Helm re-merges chart defaults into
+  # empty maps.
+  #
   # See the Kubernetes documentation for details:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-  affinity: {}
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: aggregator
+            topologyKey: kubernetes.io/hostname
 
 # -- Deprecated. Override the name of the chart. Used in resource naming.
 nameOverride:
