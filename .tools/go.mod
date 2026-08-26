@@ -11,7 +11,7 @@ require (
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	helm.sh/helm/v3 v3.21.3
-	honnef.co/go/tools v0.7.0
+	honnef.co/go/tools v0.8.1
 	mvdan.cc/gofumpt v0.11.0
 	sigs.k8s.io/kind v0.32.0
 )
