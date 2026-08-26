@@ -41,7 +41,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -82,7 +81,7 @@ require (
 	github.com/prometheus/client_golang/exp v0.0.0-20260602051030-3537b20ac86b
 	github.com/prometheus/prometheus v0.313.2
 	github.com/shirou/gopsutil/v4 v4.26.6
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/wagoodman/go-partybus v0.0.0-20230516145632-8ccac152c651
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 	gorm.io/driver/sqlite v1.6.0
@@ -129,13 +128,13 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/twpayne/go-geom v1.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	gopkg.in/ini.v1 v1.67.2 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
