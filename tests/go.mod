@@ -12,7 +12,7 @@ require (
 	github.com/moby/moby/api v1.55.0
 	github.com/prometheus/prometheus v0.313.2
 	github.com/rs/zerolog v1.35.1
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.1
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	gopkg.in/yaml.v2 v2.4.0
