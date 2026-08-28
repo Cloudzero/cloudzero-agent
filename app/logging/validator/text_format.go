@@ -109,7 +109,7 @@ func (f *PlainTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	for k, v := range entry.Data {
 		data[k] = v
 	}
-	prefixFieldClashes(data, f.FieldMap, entry.HasCaller())
+	prefixFieldClashes(data, f.FieldMap, entry.Caller != nil)
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
@@ -164,7 +164,7 @@ func (f *PlainTextFormatter) printPlain(b *bytes.Buffer, entry *logrus.Entry, ke
 	entry.Message = strings.TrimSuffix(entry.Message, "\n")
 
 	caller := ""
-	if entry.HasCaller() {
+	if entry.Caller != nil {
 		funcVal := entry.Caller.Function + "()"
 		fileVal := entry.Caller.File + ":" + strconv.Itoa(entry.Caller.Line)
 
