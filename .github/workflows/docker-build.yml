@@ -302,6 +302,10 @@ jobs:
           image: ${{ env.REGISTRY_PROD_ADDR }}/${{ env.UNTESTED_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           fail-build: true
           severity-cutoff: high
+          # Print findings to the log. The action otherwise defaults to
+          # SARIF written to a temp file nothing here reads, so a failure
+          # says findings exist without saying what they are.
+          output-format: table
 
   k8s-version-matrix-tests:
     # These should match the permissions in the called workflow.

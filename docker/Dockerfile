@@ -2,7 +2,7 @@ ARG DEPLOY_IMAGE=scratch
 
 # prometheus-config-reloader version, built from source in the "reloader" stage.
 # Git tag — Dependabot can't track it, so bump by hand (see DEVELOPMENT.md).
-ARG RELOADER_VERSION=v0.91.0
+ARG RELOADER_VERSION=v0.93.1
 
 # Multi-stage Docker build with platform-specific cache optimization:
 # 1. base-tools: Install system packages and tools (cached per platform)
@@ -14,7 +14,7 @@ ARG RELOADER_VERSION=v0.91.0
 # 7. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
-FROM --platform=$BUILDPLATFORM golang:1.26.5-alpine AS base-tools
+FROM --platform=$BUILDPLATFORM golang:1.26.7-alpine AS base-tools
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 
@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
 FROM gcr.io/distroless/static-debian12:debug@sha256:e60a053e6dd251ece065cc35e08c28f4ed55c559eeeb9102553bb09d5c0b0ad1 AS certs
 
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
-FROM ghcr.io/cloudzero/alloy:v1.18.1 AS alloy
+FROM ghcr.io/cloudzero/alloy:v1.19.2-patch-1 AS alloy
 
 # Stage 6: Build prometheus-config-reloader from upstream source. We build it
 # (not copy the prebuilt image) to control the toolchain and bump vulnerable
@@ -90,9 +90,12 @@ WORKDIR /reloader-src
 RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
         https://github.com/prometheus-operator/prometheus-operator.git .
 
-# Bump vulnerable deps ahead of upstream's pins so the scan passes; drop when upstream catches up.
+# Upstream still ships x/crypto v0.54.0, which has GO-2026-6303, GO-2026-6354
+# and GO-2026-6355 open against it. This is an exact version and so downgrades
+# as readily as it upgrades: check what upstream resolves before touching it,
+# and delete it once upstream passes it rather than bumping it forever.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
-    go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/text@v0.39.0
+    go get golang.org/x/crypto@v0.56.0
 
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
