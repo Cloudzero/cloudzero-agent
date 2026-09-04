@@ -2,7 +2,7 @@ ARG DEPLOY_IMAGE=scratch
 
 # prometheus-config-reloader version, built from source in the "reloader" stage.
 # Git tag — Dependabot can't track it, so bump by hand (see DEVELOPMENT.md).
-ARG RELOADER_VERSION=v0.91.0
+ARG RELOADER_VERSION=v0.93.1
 
 # Multi-stage Docker build with platform-specific cache optimization:
 # 1. base-tools: Install system packages and tools (cached per platform)
@@ -90,9 +90,12 @@ WORKDIR /reloader-src
 RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
         https://github.com/prometheus-operator/prometheus-operator.git .
 
-# Bump vulnerable deps ahead of upstream's pins so the scan passes; drop when upstream catches up.
+# Upstream still ships x/crypto v0.54.0, which has GO-2026-6303, GO-2026-6354
+# and GO-2026-6355 open against it. This is an exact version and so downgrades
+# as readily as it upgrades: check what upstream resolves before touching it,
+# and delete it once upstream passes it rather than bumping it forever.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
-    go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/text@v0.39.0
+    go get golang.org/x/crypto@v0.56.0
 
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
