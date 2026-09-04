@@ -1,6 +1,6 @@
 module github.com/cloudzero/cloudzero-agent
 
-go 1.26.5
+go 1.26.7
 
 require (
 	github.com/google/go-cmp v0.7.0
