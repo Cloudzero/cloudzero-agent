@@ -99,7 +99,7 @@ var (
 				},
 				Samples:    []writev2.Sample{{Value: 1, Timestamp: 1}},
 				Exemplars:  []writev2.Exemplar{{LabelsRefs: []uint32{11, 12}, Value: 1, Timestamp: 1}},
-				Histograms: []writev2.Histogram{writev2.FromIntHistogram(1, &TestHistogram), writev2.FromFloatHistogram(2, TestHistogram.ToFloat(nil))},
+				Histograms: []writev2.Histogram{writev2.FromIntHistogram(0, 1, &TestHistogram), writev2.FromFloatHistogram(0, 2, TestHistogram.ToFloat(nil))},
 			},
 			{
 				LabelsRefs: []uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, // Same series as first.
@@ -111,7 +111,7 @@ var (
 				},
 				Samples:    []writev2.Sample{{Value: 2, Timestamp: 2}},
 				Exemplars:  []writev2.Exemplar{{LabelsRefs: []uint32{13, 14}, Value: 2, Timestamp: 2}},
-				Histograms: []writev2.Histogram{writev2.FromIntHistogram(3, &TestHistogram), writev2.FromFloatHistogram(4, TestHistogram.ToFloat(nil))},
+				Histograms: []writev2.Histogram{writev2.FromIntHistogram(0, 3, &TestHistogram), writev2.FromFloatHistogram(0, 4, TestHistogram.ToFloat(nil))},
 			},
 		},
 	}
