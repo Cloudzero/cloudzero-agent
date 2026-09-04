@@ -1,0 +1,54 @@
+{{- /*
+Headless service for Alloy cluster peer discovery.
+
+Only rendered in clustered mode, where the Alloy container runs. Alloy replicas
+find each other through --cluster.join-addresses (see agent-deploy.yaml), which
+resolves this name via DNS and expects one A record per replica.
+
+Two properties matter and are not interchangeable with the regular server
+service in agent-service.yaml:
+
+  - clusterIP: None. A normal ClusterIP service load-balances to a single
+    backend, so a replica would discover at most one arbitrary peer. Headless
+    DNS returns every pod IP, which is what forms a complete ring.
+
+  - publishNotReadyAddresses: true. A starting replica has to be discoverable
+    before it passes its readiness probe, otherwise a full restart of the
+    deployment deadlocks: no pod is in the service until it is ready, and the
+    ring cannot form from pods that cannot see each other.
+
+The port must match --server.http.listen-addr in agent-deploy.yaml; Alloy
+gossips over its HTTP listen port rather than a dedicated one.
+*/ -}}
+{{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cloudzero-agent.server.clusterServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- include "cloudzero-agent.generateLabels" (dict
+      "root" .
+      "name" "server"
+      "labels" (list
+        .Values.defaults.labels
+        .Values.commonMetaLabels
+      )
+    ) | nindent 2 }}
+  {{- include "cloudzero-agent.generateAnnotations" (dict
+      "root" .
+      "annotations" (list
+        .Values.defaults.annotations
+      )
+    ) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http-metrics
+      protocol: TCP
+  selector:
+    {{- include "cloudzero-agent.server.matchLabels" . | nindent 4 }}
+{{- end }}

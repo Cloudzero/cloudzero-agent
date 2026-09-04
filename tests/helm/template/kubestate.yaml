@@ -1903,6 +1903,33 @@ roleRef:
   kind: ClusterRole
   name: cz-agent-cz-webhook-init-cert
 ---
+# Source: cloudzero-agent/templates/agent-cluster-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cz-agent-cz-server-cluster
+  namespace: cz-agent
+  labels:
+    app.kubernetes.io/instance: cz-agent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: server
+    app.kubernetes.io/part-of: cloudzero-agent
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: cloudzero-agent-1.1.0-dev
+  
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http-metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: cz-agent
+---
 # Source: cloudzero-agent/templates/agent-service.yaml
 apiVersion: v1
 kind: Service
@@ -2165,6 +2192,9 @@ spec:
             - --server.http.listen-addr=0.0.0.0:9090
             - --storage.path=/tmp/alloy
             - --stability.level=public-preview
+            - --cluster.enabled=true
+            - --cluster.name=cz-agent-cz-server
+            - --cluster.join-addresses=cz-agent-cz-server-cluster.cz-agent.svc.cluster.local:9090
           env:
             - name: K8S_NAMESPACE
               value: cz-agent

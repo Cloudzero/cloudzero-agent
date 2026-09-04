@@ -269,10 +269,38 @@ spec:
             {{- if .Values.components.agent.kubeState.enabled }}
             - --stability.level=public-preview
             {{- end }}
-            {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "federated" }}
+            {{- /*
+            Clustering. The River config sets `clustering { enabled = true }` on
+            every pipeline, but those blocks are inert unless the process itself
+            is started clustered, so these flags are what actually make the
+            replicas shard work between them.
+
+            --cluster.join-addresses points at the headless service in
+            agent-cluster-service.yaml. Alloy gossips over its HTTP listen port
+            (the cluster service is built with ListenAddress =
+            --server.http.listen-addr), so the port here must track the
+            listen-addr above. A bare DNS name is handled by the dnsAResolver in
+            Alloy's join-address resolver chain, which returns one A record per
+            replica pod.
+
+            This is fail-safe: cluster.Ready() is unconditionally true unless
+            --cluster.wait-for-size is also set, which we deliberately do not
+            set. If peers cannot be reached, each replica falls back to a
+            single-member ring and processes everything -- degraded to duplicate
+            work, never to silence.
+            */}}
             - --cluster.enabled=true
-            - --cluster.name={{ .Values.clusterName }}
-            {{- end }}
+            {{- /*
+            The cluster name is a gossip label: a node refuses to join peers
+            whose label differs. Derive it from the server resource name rather
+            than .Values.clusterName -- that value identifies the Kubernetes
+            cluster to CloudZero for cost attribution, is optional, and defaults
+            to empty, so using it here would label most installations with
+            nothing. The server name is release-scoped and always present, which
+            is what a ring identity needs.
+            */}}
+            - --cluster.name={{ include "cloudzero-agent.server.fullname" . }}
+            - --cluster.join-addresses={{ include "cloudzero-agent.server.clusterServiceName" . }}.{{ .Release.Namespace }}.svc.cluster.local:9090
           {{- include "cloudzero-agent.generateEnv" (dict
               "env" (list
                 .Values.defaults.env

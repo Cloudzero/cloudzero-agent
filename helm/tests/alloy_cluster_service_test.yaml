@@ -1,0 +1,108 @@
+suite: test Alloy cluster peer-discovery service
+templates:
+  - templates/agent-cluster-service.yaml
+tests:
+  # The service exists only to let Alloy replicas find each other, so it is
+  # pointless outside clustered mode, where no Alloy container runs.
+  - it: should not be rendered when Alloy is not in use
+    set:
+      components.agent.mode: agent
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not be rendered in server mode
+    set:
+      components.agent.mode: server
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should be rendered in clustered mode
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cz-server-cluster
+
+  # These two fields are the entire point of the service. A ClusterIP would
+  # load-balance discovery to a single arbitrary replica, and omitting
+  # publishNotReadyAddresses deadlocks a full restart, since a pod would have to
+  # be ready before its peers could find it.
+  - it: should be headless and publish not-ready addresses
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true
+
+  # Alloy gossips over its HTTP listen port, so this must track
+  # --server.http.listen-addr in agent-deploy.yaml.
+  - it: should expose the Alloy HTTP listen port
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 9090
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 9090
+
+  # Discovery only works if the selector matches the Alloy pods; a mismatch
+  # yields an empty DNS response and silently degrades to single-member rings.
+  - it: should select the server pods
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: server
+
+  # The suffix is what makes this Service's name distinct from the regular
+  # server Service. Appending it and only then truncating to 63 would cut the
+  # suffix away for a name already at the limit, giving two Services one name:
+  # a duplicate resource on install, and on upgrade an attempt to convert an
+  # existing ClusterIP Service to a headless one, which Kubernetes rejects.
+  - it: should not collide with the server service name at the length limit
+    set:
+      components.agent.mode: clustered
+      server.fullnameOverride: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cluster
+
+  # A server name that already ends in the suffix rebuilds itself: trimming to
+  # 55 and appending "-cluster" reproduces the original exactly. Shortening
+  # further does not help, because the same reconstruction happens at other
+  # lengths -- hence the different fallback suffix.
+  - it: should not collide when the server name already ends in the suffix
+    set:
+      components.agent.mode: clustered
+      server.fullnameOverride: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cluster"
+    asserts:
+      - notEqual:
+          path: metadata.name
+          value: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cluster
+
+  # The 62-character variant, where trimming to 55 cuts the separator and the
+  # trailing dash is trimmed away, so a naive fallback that only shortens
+  # reconstructs the base a second time.
+  - it: should not collide at the length where shortening also reconstructs
+    set:
+      components.agent.mode: clustered
+      server.fullnameOverride: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cluster"
+    asserts:
+      - notEqual:
+          path: metadata.name
+          value: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cluster
