@@ -17,17 +17,49 @@ commands:
   # per-command timeout here (this suite's kuttl-test.yaml sets `spec.timeout`, which
   # kuttl ignores — the timeout field is top-level — so the 30s default applies), and
   # that would kill the install mid-wait. The explicit per-command `timeout:` overrides it.
-  - timeout: 240
+  # On failure, dump why. kuttl deletes the namespace as soon as a step fails,
+  # so anything not captured here is gone: every past failure of this suite has
+  # produced a bare "context deadline exceeded" with no indication of which
+  # container never became ready, which is why it could not be diagnosed from
+  # CI logs.
+  #
+  # The wait is 8m rather than 3m. Clustered mode starts an Alloy container that
+  # must load the freshly built image, form its gossip ring, and pass a readiness
+  # probe on a cold KIND node; at three minutes a slow start and a broken install
+  # are indistinguishable.
+  - timeout: 600
     script: |
       set -e
       ROOT="$PWD"
       while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/helm/Chart.yaml" ]; do ROOT=$(dirname "$ROOT"); done
       cd "$ROOT"
       DEV_TAG="dev-$(git rev-parse HEAD)"
+      NS=cz-alloy-clustered-test
+
+      dump_state() {
+        echo "=== clustered install did not become ready; dumping state ==="
+        kubectl -n "$NS" get pods -o wide || true
+        echo "--- container states ---"
+        kubectl -n "$NS" get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .status.containerStatuses[*]}    {.name} ready={.ready} restarts={.restartCount} {.state}{"\n"}{end}{end}' 2>/dev/null || true
+        echo ""
+        echo "--- recent events ---"
+        kubectl -n "$NS" get events --sort-by=.lastTimestamp 2>/dev/null | tail -30 || true
+        echo "--- alloy logs ---"
+        for P in $(kubectl -n "$NS" get pods -l app.kubernetes.io/name=server -o name 2>/dev/null); do
+          echo "  ---- $P"
+          kubectl -n "$NS" logs "$P" -c cloudzero-agent-alloy --tail=80 2>&1 || true
+        done
+      }
+      trap dump_state EXIT
+
       .tools/bin/helm upgrade --install cz-alloy-ct ./helm \
-        --namespace cz-alloy-clustered-test \
+        --namespace "$NS" \
         --create-namespace \
         --values clusters/kind-overrides.yaml \
+        --values tests/kuttl/webhookserver-min-footprint.yaml \
         --set components.agent.mode=clustered \
         --set components.agent.image.tag="$DEV_TAG" \
-        --wait --timeout=3m
+        --wait --timeout=8m
+
+      trap - EXIT
+      echo "clustered release installed and ready"
