@@ -47,3 +47,7 @@ jobs:
           image: ${{ env.REGISTRY }}:${{ matrix.tag }}
           fail-build: true
           severity-cutoff: high
+          # Print findings to the log. The action otherwise defaults to
+          # SARIF written to a temp file nothing here reads, so a failure
+          # says findings exist without saying what they are.
+          output-format: table
