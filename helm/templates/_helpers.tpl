@@ -1893,3 +1893,35 @@ Returns: "10800s"
 {{- $scaled := mulf $seconds $multiplier | int -}}
 {{- printf "%ds" $scaled -}}
 {{- end -}}
+
+{{/*
+Name of the headless service used for Alloy cluster peer discovery.
+
+Separate from the regular server service because peer discovery needs a
+headless service: it must resolve to the individual replica pod IPs rather than
+to a single virtual ClusterIP, so each Alloy replica can gossip with every
+other one.
+*/}}
+{{- define "cloudzero-agent.server.clusterServiceName" -}}
+{{- /* This name must never equal the regular server Service name. They are
+     different Service contracts, so colliding means a duplicate resource on
+     install, or an upgrade asking Kubernetes to convert an existing ClusterIP
+     Service into a headless one, which it rejects as an immutable field change.
+
+     Reserving room for the suffix is not enough, because appending to a
+     truncated base can rebuild the base. A name ending in "-cluster" whose
+     length puts the cut inside that suffix reconstructs itself: both a
+     63-character and a 62-character name do. Truncating further just repeats
+     the problem at another length, so shortening cannot be the answer.
+
+     When the derived name matches, fall back to a different suffix instead.
+     That is distinct by construction rather than by luck: the branch is only
+     reached when the base ends in "-cluster", and the fallback ends in
+     "-peers", so the two cannot be equal for any input. */ -}}
+{{- $base := include "cloudzero-agent.server.fullname" . -}}
+{{- $name := printf "%s-cluster" ($base | trunc 55 | trimSuffix "-") -}}
+{{- if eq $name $base -}}
+  {{- $name = printf "%s-peers" ($base | trunc 57 | trimSuffix "-") -}}
+{{- end -}}
+{{- $name -}}
+{{- end -}}

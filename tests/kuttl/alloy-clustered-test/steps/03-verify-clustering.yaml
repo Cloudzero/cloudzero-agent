@@ -1,0 +1,104 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: verify-clustering
+# Asserts that replicas actually divide work, which nothing else here can catch.
+#
+# Alloy is started without --cluster.wait-for-size on purpose, so cluster.Ready()
+# stays true even when a replica reaches no peers. That is deliberate -- a broken
+# ring degrades to every replica collecting everything rather than to collecting
+# nothing -- but it also means readiness probes, rendered-template assertions, and
+# the image scan all stay green while sharding is completely broken. The defect
+# this suite now guards against survived from the day clustering was introduced
+# precisely because no test looked at runtime behaviour.
+#
+# Two independent signals, both read from the Alloy logs:
+#
+#   peers_count > 1   the gossip ring actually formed across replicas
+#   local < total     this replica owns a strict subset of the cluster's pods
+#
+# The second is the one that matters: peers could be discovered while ownership
+# still failed to divide.
+#
+# kuttl command steps use top-level `commands:` with `script:`; TestStep has no
+# `spec` field, and scripts run with CWD = this step directory.
+commands:
+  - timeout: 700
+    script: |
+      set -e
+      NS=cz-alloy-clustered-test
+
+      # Re-sharding is driven by membership changes, so allow time for the
+      # second replica to join and for the ring to settle before reading logs.
+      for i in $(seq 1 30); do
+        PODS=$(kubectl -n "$NS" get pods -l app.kubernetes.io/name=server \
+          --field-selector=status.phase=Running -o name 2>/dev/null | wc -l | tr -d ' ')
+        [ "$PODS" -ge 2 ] && break
+        sleep 10
+      done
+      if [ "$PODS" -lt 2 ]; then
+        echo "expected at least 2 running server replicas, found $PODS" >&2
+        kubectl -n "$NS" get pods -l app.kubernetes.io/name=server >&2
+        exit 1
+      fi
+
+      # The ownership assertion below reads the discovery.kubestate re-shard
+      # line, which only exists when that component runs -- the install step
+      # therefore enables kubeState explicitly. It is also the component whose
+      # sharding actually matters: it is what emits per-pod metrics, so it is
+      # what duplicates the whole cluster when the ring fails to form.
+      #
+      # Collect logs from every replica; either may be the one that logs the
+      # membership change first.
+      #
+      # Wait for the re-shard line, not just for peer discovery. peers_count is
+      # logged when the cluster node starts, which happens before any ownership
+      # is assigned, so breaking on it alone samples the logs too early and the
+      # ownership check then finds nothing. Re-sharding is driven by a
+      # membership change and by the kubestate component's first pass, both of
+      # which land later.
+      LOGS=""
+      for i in $(seq 1 45); do
+        LOGS=""
+        for P in $(kubectl -n "$NS" get pods -l app.kubernetes.io/name=server -o name); do
+          POD_LOGS=$(kubectl -n "$NS" logs "$P" -c cloudzero-agent-alloy --tail=2000 2>/dev/null || true)
+          LOGS=$(printf '%s\n%s' "$LOGS" "$POD_LOGS")
+        done
+        if echo "$LOGS" | grep -q "peers_count=" && echo "$LOGS" | grep -qE "total=[0-9]+ local=[0-9]+"; then
+          break
+        fi
+        sleep 10
+      done
+
+      echo "$LOGS" | grep -E "peers_count=|re-sharded" | tail -20 || true
+
+      # 1. The ring formed across more than one member.
+      PEERS=$(echo "$LOGS" | grep -oE "peers_count=[0-9]+" | tail -1 | cut -d= -f2)
+      if [ -z "$PEERS" ]; then
+        echo "no peers_count line found; peer discovery never ran" >&2
+        exit 1
+      fi
+      if [ "$PEERS" -lt 2 ]; then
+        echo "peers_count=$PEERS: replicas did not form a multi-member ring" >&2
+        exit 1
+      fi
+
+      # 2. Ownership is a strict subset. A single-member ring reports local=total,
+      #    which is exactly the failure mode this step exists to catch.
+      SHARD=$(echo "$LOGS" | grep -oE "total=[0-9]+ local=[0-9]+" | tail -1)
+      if [ -z "$SHARD" ]; then
+        echo "no re-shard line found; cannot confirm ownership was divided" >&2
+        exit 1
+      fi
+      TOTAL=$(echo "$SHARD" | grep -oE "total=[0-9]+" | cut -d= -f2)
+      LOCAL=$(echo "$SHARD" | grep -oE "local=[0-9]+" | cut -d= -f2)
+      if [ "$TOTAL" -le 0 ]; then
+        echo "total=$TOTAL: nothing was discovered, so sharding cannot be judged" >&2
+        exit 1
+      fi
+      if [ "$LOCAL" -ge "$TOTAL" ]; then
+        echo "local=$LOCAL total=$TOTAL: this replica owns everything, sharding is not working" >&2
+        exit 1
+      fi
+
+      echo "clustering verified: peers_count=$PEERS, local=$LOCAL of total=$TOTAL"
