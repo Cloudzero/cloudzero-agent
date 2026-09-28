@@ -27,7 +27,7 @@ spec:
   {{- if eq (include "cloudzero-agent.Values.components.agent.mode" .) "clustered" }}
   replicas: {{ .Values.components.agent.replicas | default .Values.defaults.replicas }}
   {{- else }}
-  replicas: 1
+  replicas: {{ .Values.components.agent.replicas | default 1 }}
   {{- end }}
   {{- if .Values.server.persistentVolume.enabled }}
   strategy:
