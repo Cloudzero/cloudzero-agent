@@ -1345,28 +1345,15 @@ Example usage:
 {{- if . -}}
   {{- $resources := . -}}
   {{- $cleanResources := dict -}}
-  {{- if $resources.requests -}}
-    {{- $cleanRequests := dict -}}
-    {{- if and $resources.requests.cpu (ne $resources.requests.cpu "") -}}
-      {{- $_ := set $cleanRequests "cpu" $resources.requests.cpu -}}
+  {{- range $section := list "requests" "limits" -}}
+    {{- $clean := dict -}}
+    {{- range $name, $value := (index $resources $section | default dict) -}}
+      {{- if and $value (ne (toString $value) "") -}}
+        {{- $_ := set $clean $name $value -}}
+      {{- end -}}
     {{- end -}}
-    {{- if and $resources.requests.memory (ne $resources.requests.memory "") -}}
-      {{- $_ := set $cleanRequests "memory" $resources.requests.memory -}}
-    {{- end -}}
-    {{- if $cleanRequests -}}
-      {{- $_ := set $cleanResources "requests" $cleanRequests -}}
-    {{- end -}}
-  {{- end -}}
-  {{- if $resources.limits -}}
-    {{- $cleanLimits := dict -}}
-    {{- if and $resources.limits.cpu (ne $resources.limits.cpu "") -}}
-      {{- $_ := set $cleanLimits "cpu" $resources.limits.cpu -}}
-    {{- end -}}
-    {{- if and $resources.limits.memory (ne $resources.limits.memory "") -}}
-      {{- $_ := set $cleanLimits "memory" $resources.limits.memory -}}
-    {{- end -}}
-    {{- if $cleanLimits -}}
-      {{- $_ := set $cleanResources "limits" $cleanLimits -}}
+    {{- if $clean -}}
+      {{- $_ := set $cleanResources $section $clean -}}
     {{- end -}}
   {{- end -}}
   {{- if $cleanResources -}}

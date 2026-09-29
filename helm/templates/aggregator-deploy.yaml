@@ -115,10 +115,24 @@ spec:
             initialDelaySeconds: {{ $collectorLiveness.initialDelaySeconds }}
             periodSeconds: {{ $collectorLiveness.periodSeconds }}
             failureThreshold: {{ $collectorLiveness.failureThreshold }}
-          {{- include "cloudzero-agent.generateResources" (include "cloudzero-agent.mergeStringOverwrite" (list
+          {{- $collectorResources := include "cloudzero-agent.mergeStringOverwrite" (list
               (.Values.components.aggregator.collector.resources | default (dict))
               (.Values.aggregator.collector.resources | default (dict))
-            ) | fromYaml) | nindent 10 }}
+            ) | fromYaml -}}
+          {{- /*
+          The collector writes the metric files to the shared emptyDir, so when a
+          sizeLimit is set, reserve that much ephemeral storage for scheduling
+          unless the collector requests ephemeral storage explicitly.
+          */}}
+          {{- $emptyDir := .Values.aggregator.database.emptyDir }}
+          {{- if and $emptyDir.enabled $emptyDir.sizeLimit }}
+            {{- $requests := $collectorResources.requests | default (dict) }}
+            {{- if not (index $requests "ephemeral-storage") }}
+              {{- $_ := set $requests "ephemeral-storage" $emptyDir.sizeLimit }}
+              {{- $_ := set $collectorResources "requests" $requests }}
+            {{- end }}
+          {{- end }}
+          {{- include "cloudzero-agent.generateResources" $collectorResources | nindent 10 }}
           {{- include "cloudzero-agent.generateContainerSecurityContext" (mergeOverwrite
               (.Values.defaults.securityContext | default (dict))
               (.Values.aggregator.collector.securityContext | default (dict))

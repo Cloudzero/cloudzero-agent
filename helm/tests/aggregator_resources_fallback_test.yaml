@@ -87,3 +87,54 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.cpu
           value: "4000m"
+
+  - it: should render ephemeral-storage requests and limits
+    set:
+      components.aggregator.collector.resources:
+        requests:
+          ephemeral-storage: "1Gi"
+        limits:
+          ephemeral-storage: "2Gi"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+          value: "1Gi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.ephemeral-storage
+          value: "2Gi"
+
+  - it: should request the emptyDir sizeLimit as collector ephemeral-storage
+    set:
+      aggregator.database.emptyDir.sizeLimit: "5Gi"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+          value: "5Gi"
+      - notExists:
+          path: spec.template.spec.containers[0].resources.limits.ephemeral-storage
+      - notExists:
+          path: spec.template.spec.containers[1].resources.requests.ephemeral-storage
+
+  - it: should prefer an explicit collector ephemeral-storage request over the sizeLimit
+    set:
+      aggregator.database.emptyDir.sizeLimit: "5Gi"
+      components.aggregator.collector.resources:
+        requests:
+          ephemeral-storage: "1Gi"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+          value: "1Gi"
+
+  - it: should not request ephemeral-storage when no sizeLimit is set
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+
+  - it: should not request ephemeral-storage when the emptyDir is disabled
+    set:
+      aggregator.database.emptyDir.enabled: false
+      aggregator.database.emptyDir.sizeLimit: "5Gi"
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
