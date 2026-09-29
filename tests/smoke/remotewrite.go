@@ -24,7 +24,7 @@ func (t *testContext) StartMockRemoteWrite() *testcontainers.Container {
 		fmt.Println("Creating the mock s3 instance ...")
 
 		s3instanceRequest := testcontainers.ContainerRequest{
-			Image:    "minio/minio:latest",
+			Image:    "cgr.dev/chainguard/minio:latest",
 			Networks: []string{t.network.Name},
 			Name:     t.s3instanceName,
 			Env: map[string]string{
