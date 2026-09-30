@@ -483,7 +483,7 @@ func (r *reconciler) certificates() (cert *tls.Certificate, pool *x509.CertPool,
 				for _, ca := range roots {
 					_ = r.ll.PushFront(ca)
 					// Remove the oldest root CA if the limit is exceeded.
-					if uint(r.ll.Len()) > r.rootsLimit { //nolint:gosec // the length of the linked list will never be negative
+					if uint(r.ll.Len()) > r.rootsLimit {
 						e := r.ll.Back()
 						_ = r.ll.Remove(e)
 					}

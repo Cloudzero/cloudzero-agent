@@ -14,7 +14,7 @@ ARG RELOADER_VERSION=v0.93.1
 # 7. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
-FROM --platform=$BUILDPLATFORM golang:1.26.7-alpine AS base-tools
+FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine AS base-tools
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 
