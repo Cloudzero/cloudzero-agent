@@ -606,8 +606,8 @@ properties:
               - "server": Deploys Prometheus in server mode. This is the traditional Prometheus
                 deployment with full storage and query capabilities. Equivalent to
                 server.agentMode=false.
-              - "clustered": EXPERIMENTAL. Uses Grafana Alloy instead of Prometheus for metrics
-                collection. Alloy provides better performance and native horizontal scalability.
+              - "clustered": Uses Grafana Alloy instead of Prometheus for metrics collection.
+                Alloy provides better performance and native horizontal scalability.
 
               If null (automatic mode), the mode will be derived from legacy configuration:
               - defaults.federation.enabled=true -> "federated"
@@ -748,10 +748,11 @@ properties:
                 $ref: "#/$defs/io.k8s.api.core.v1.PodSecurityContext"
           kubeState:
             description: |
-              KubeState plugin configuration. When enabled, the CloudZero Alloy
-              KubeState plugin replaces the kube-state-metrics (KSM) subchart for
-              collecting Kubernetes state metrics. Requires clustered mode and
-              kubeStateMetrics.enabled to be false.
+              EXPERIMENTAL. KubeState plugin configuration. When enabled, the
+              CloudZero Alloy KubeState plugin replaces the kube-state-metrics
+              (KSM) subchart for collecting Kubernetes state metrics. Requires
+              clustered mode and kubeStateMetrics.enabled to be false. This
+              feature is experimental and may change in future releases.
             additionalProperties: false
             type: object
             properties:
