@@ -149,5 +149,5 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.50
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.70.1
+	github.com/prometheus/common v0.71.0
 )
