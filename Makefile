@@ -168,12 +168,14 @@ install-tools-homebrew:
 
 # golangci-lint is intentionally not installed via tools.go; see
 # https://golangci-lint.run/welcome/install/#install-from-sources for details.
-GOLANGCI_LINT_VERSION ?= v2.11.3
+GOLANGCI_LINT_VERSION ?= v2.14.0
 .PHONY: install-tools-golangci-lint
 install-tools: install-tools-golangci-lint
 install-tools-golangci-lint: install-tools-go
 	$(call LOG,INSTALL,golangci-lint $(GOLANGCI_LINT_VERSION))
-	$(Q)$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b .tools/bin $(GOLANGCI_LINT_VERSION)
+	# Install from source so we are not blocked by broken release checksums in
+	# the upstream install.sh (seen with v2.14.0). Builds with the active Go toolchain.
+	$(Q)GOBIN=$(CURDIR)/.tools/bin $(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 # Helm unittest plugin installation (pinned to v1.0.2 due to platformHooks bug in v1.0.3)
 # See: https://github.com/helm-unittest/helm-unittest/issues/790

@@ -37,7 +37,8 @@ func installExecutable(destination string) error {
 	fmt.Printf("Installing executable from %s to %s\n", os.Args[0], destination)
 
 	source := filepath.Clean(os.Args[0])
-	sourceFile, err := os.Open(source)
+	// Paths are filepath.Clean'd; destination comes from an explicit CLI flag.
+	sourceFile, err := os.Open(source) //nolint:gosec // G703: CLI install path, cleaned above
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func installExecutable(destination string) error {
 	}
 	defer destinationFile.Close()
 
-	if err = os.Chmod(destination, sourceInfo.Mode()); err != nil {
+	if err = os.Chmod(destination, sourceInfo.Mode()); err != nil { //nolint:gosec // G703: CLI install path, cleaned above
 		return err
 	}
 
