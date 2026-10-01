@@ -10,7 +10,7 @@ require (
 	github.com/yannh/kubeconform v0.8.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
-	helm.sh/helm/v3 v3.21.4
+	helm.sh/helm/v3 v3.22.0
 	honnef.co/go/tools v0.8.1
 	mvdan.cc/gofumpt v0.11.0
 	sigs.k8s.io/kind v0.33.0
@@ -110,7 +110,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/mattn/go-runewidth v0.0.21 // indirect
-	github.com/mattn/go-shellwords v1.0.13 // indirect
+	github.com/mattn/go-shellwords v1.0.14 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -139,7 +139,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rubenv/sql-migrate v1.8.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
@@ -183,12 +183,12 @@ require (
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
 	k8s.io/apimachinery v0.37.0 // indirect
 	k8s.io/apiserver v0.37.0 // indirect
-	k8s.io/cli-runtime v0.36.2 // indirect
+	k8s.io/cli-runtime v0.37.0 // indirect
 	k8s.io/client-go v0.37.0 // indirect
 	k8s.io/component-base v0.37.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/kubectl v0.36.2 // indirect
+	k8s.io/kubectl v0.37.0 // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	oras.land/oras-go/v2 v2.6.2 // indirect
 	sigs.k8s.io/controller-runtime v0.25.1 // indirect
