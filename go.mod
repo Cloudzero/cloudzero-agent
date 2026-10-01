@@ -19,7 +19,7 @@ require (
 	github.com/itchyny/gojq v0.12.19
 	github.com/jpillora/backoff v1.0.0
 	github.com/launchdarkly/go-jsonstream/v3 v3.1.3
-	github.com/mattn/go-sqlite3 v1.14.50
+	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/parquet-go/parquet-go v0.32.0
