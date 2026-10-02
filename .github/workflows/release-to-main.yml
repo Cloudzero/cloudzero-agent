@@ -7,6 +7,11 @@ on:
         description: 'Version to release (e.g., "1.2.3").'
         required: true
 
+env:
+  # Use `npm ci` so `make install-tools` never rewrites
+  # .tools/package-lock.json; a dirty lockfile blocks `git checkout main`.
+  NPM_INSTALL: ci
+
 jobs:
   release-to-main:
     runs-on: ubuntu-latest
