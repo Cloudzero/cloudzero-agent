@@ -1749,6 +1749,12 @@ aggregator:
       # Whether to enable the emptyDir volume for the aggregator.
       enabled: true
       # Size limit for the emptyDir volume. If not set, no limit is applied.
+      #
+      # When set, this is also used as the collector container's
+      # ephemeral-storage request, so the pod is only scheduled onto a node
+      # with enough allocatable ephemeral storage. Set
+      # components.aggregator.collector.resources.requests.ephemeral-storage
+      # to override it.
       sizeLimit: ""
   # Configuration for the collector component of the aggregator.
   collector:
