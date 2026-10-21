@@ -73,7 +73,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
     BUILD_TIME="${BUILD_TIME}"
 
 # Stage 4: Access current certs
-FROM gcr.io/distroless/static-debian12:debug@sha256:e60a053e6dd251ece065cc35e08c28f4ed55c559eeeb9102553bb09d5c0b0ad1 AS certs
+FROM gcr.io/distroless/static-debian13:debug@sha256:11c839f18a0d7b91b093cda53a5d4cee84f23ec450a6f6e1bf17ab12bf296333 AS certs
 
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
 FROM ghcr.io/cloudzero/alloy:v1.21.0 AS alloy
