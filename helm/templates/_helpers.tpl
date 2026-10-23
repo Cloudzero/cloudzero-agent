@@ -786,7 +786,7 @@ Map for initBackfillJob values; this allows us to preferably use initBackfillJob
 Name for a job resource
 */}}
 {{- define "cloudzero-agent.jobName" -}}
-{{- printf "%s-%s-%s" .Release .Name (include "cloudzero-agent.configurationChecksum" .) | trunc 61 -}}
+{{- printf "%s-%s" .Release .Name | trunc 63 -}}
 {{- end }}
 
 {{/*
@@ -818,7 +818,7 @@ from the checksum.
 Name for the backfill job resource
 */}}
 {{- define "cloudzero-agent.initBackfillJobName" -}}
-{{- printf "%s-backfill-%s" .Release.Name (include "cloudzero-agent.configurationChecksum" .) | trunc 52 -}}
+{{- printf "%s-backfill" .Release.Name | trunc 63 -}}
 {{- end }}
 
 {{/*
@@ -839,14 +839,14 @@ annotations:
 {{- end -}}
 
 {{/*
-Name for the certificate init job resource. Should be a new name each installation/upgrade.
+Name for the certificate init job resource.
 */}}
 {{- define "cloudzero-agent.initCertJobName" -}}
 {{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "init-cert" "Version" .Chart.Version "Values" .Values) -}}
 {{- end }}
 
 {{/*
-Name for the helmless job resource. Should be a new name each installation/upgrade.
+Name for the helmless job resource.
 */}}
 {{- define "cloudzero-agent.helmlessJobName" -}}
 {{- include "cloudzero-agent.jobName" (dict "Release" .Release.Name "Name" "helmless" "Version" .Chart.Version "Values" .Values) -}}
