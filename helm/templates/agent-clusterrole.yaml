@@ -29,6 +29,11 @@ rules:
     verbs:
       - "get"
       - "list"
+      {{- if .Values.components.agent.kubeState.enabled }}
+      # The KubeState plugin's informers watch workloads to collect their
+      # labels/annotations (insightsController.{labels,annotations}.resources).
+      - "watch"
+      {{- end }}
   - apiGroups:
       - "batch"
     resources:
@@ -37,6 +42,10 @@ rules:
     verbs:
       - "get"
       - "list"
+      {{- if .Values.components.agent.kubeState.enabled }}
+      # See the apps rule above.
+      - "watch"
+      {{- end }}
   - apiGroups:
       - ""
     resources:

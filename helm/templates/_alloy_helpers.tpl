@@ -314,14 +314,21 @@ Usage: {{ include "cloudzero-agent.alloy.kubeState" . }}
 {{- /*
   Resolve which resources the KubeState plugin collects labels/annotations for,
   from the insightsController toggles. The plugin emits kube_<resource>_labels
-  and kube_<resource>_annotations generically, but its informers require RBAC
-  "watch". The agent ClusterRole grants watch on pods, namespaces, and nodes, so
-  kubeState label/annotation collection is supported for those three; other
-  resource types (deployments, statefulsets, daemonsets, jobs, cronjobs) still
-  require the webhook server.
+  and kube_<resource>_annotations generically for every resource it watches.
+  Supported: pods, namespaces, nodes, and the apps/batch workloads in
+  "cloudzero-agent.kubeState.workloadResources" (deployments, statefulsets,
+  daemonsets, jobs, cronjobs). Its informers need RBAC "watch" on each; the
+  agent ClusterRole grants it on the workloads only when kubeState is enabled.
+  Workload series are identified by the plugin's name labels
+  ("cloudzero-agent.kubeState.workloadNameLabels": deployment, job_name, ...).
+  Both the kubestate_labels relabel below and the aggregator's cost_labels
+  filter keep them, and the aggregator's cost filter accepts the metric names
+  ("cloudzero-agent.kubeState.workloadMetricNames"); see
+  "cloudzero-agent.aggregator.configuration".
 */ -}}
-{{- $singular := dict "pods" "pod" "namespaces" "namespace" "nodes" "node" -}}
-{{- $supported := list "pods" "namespaces" "nodes" -}}
+{{- $workloads := include "cloudzero-agent.kubeState.workloadResources" . | fromYaml -}}
+{{- $singular := merge (dict "pods" "pod" "namespaces" "namespace" "nodes" "node") $workloads -}}
+{{- $supported := concat (list "pods" "namespaces" "nodes") (keys $workloads | sortAlpha) -}}
 {{- $labelsCfg := .Values.insightsController.labels -}}
 {{- $annCfg := .Values.insightsController.annotations -}}
 {{- $labelResMap := $labelsCfg.resources | default dict -}}

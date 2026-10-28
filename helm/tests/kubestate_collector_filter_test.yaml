@@ -46,3 +46,70 @@ tests:
       - matchRegex:
           path: data["config.yml"]
           pattern: 'pattern: "annotation_"'
+
+  # Workload label/annotation metrics are only emitted by the KubeState plugin,
+  # so the collector accepts them only when kubeState is enabled (leaving the
+  # default aggregator config unchanged).
+  # Assertions are scoped to one filter block: only "- pattern/match" entries may
+  # sit between the block's key and the expected entry, so a hit in another
+  # filter (e.g. observability) cannot satisfy them.
+  - it: should accept kube_<workload>_labels/annotations metrics when kubeState is enabled
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "kube_deployment_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "kube_statefulset_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "kube_daemonset_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "kube_job_labels"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "kube_cronjob_annotations"'
+
+  # The collector rebuilds each cost metric's labels from cost_labels only, so
+  # the plugin's workload name labels must be listed there too or workload
+  # series arrive without identifying their object.
+  - it: should keep workload name labels in cost_labels when kubeState is enabled
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost_labels:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "deployment"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost_labels:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "statefulset"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost_labels:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "daemonset"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost_labels:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "job_name"'
+      - matchRegex:
+          path: data["config.yml"]
+          pattern: 'cost_labels:(\s+- pattern: "[^"]*"\s+match: \w+)*\s+- pattern: "cronjob"'
+
+  - it: should not accept kube_<workload>_labels/annotations metrics when kubeState is disabled
+    template: templates/aggregator-cm.yaml
+    set:
+      components.agent.mode: clustered
+    asserts:
+      - notMatchRegex:
+          path: data["config.yml"]
+          pattern: "kube_(deployment|statefulset|daemonset|job|cronjob)_(labels|annotations)"
+      - notMatchRegex:
+          path: data["config.yml"]
+          pattern: 'pattern: "(deployment|statefulset|daemonset|job_name|cronjob)"'
