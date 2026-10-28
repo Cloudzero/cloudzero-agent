@@ -249,6 +249,7 @@ jobs:
           echo "=== Disk Usage After Cleanup ==="
           df -h / | tail -1
 
-      # smoke tests hit alfa.
+      # smoke tests hit alfa. sudo-rs (ubuntu-26.04+) ignores -E, so pass the
+      # API key through explicitly.
       - name: Run smoke tests
-        run: GO="$(which go)" sudo -E make test-smoke V=1
+        run: sudo --preserve-env=CLOUDZERO_DEV_API_KEY make test-smoke V=1 GO="$(which go)"
