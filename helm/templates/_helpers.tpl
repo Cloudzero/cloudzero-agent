@@ -565,6 +565,12 @@ collection is enabled, and an "annotation_(<annotations.patterns>)" term is adde
 when annotation collection is enabled. Each is dropped when its collection is
 disabled.
 
+It also keeps the plugin's workload name labels
+("cloudzero-agent.kubeState.workloadNameLabels"), which identify the object a
+kube_<workload>_labels / kube_<workload>_annotations series describes. They are
+kept here rather than in the shared CZ base list because only this pipeline
+emits them.
+
 Patterns are matched against the emitted Prometheus name (label_<key> /
 annotation_<key>), where <key> is the Kubernetes key with sanitize_label_names
 disabled (camelCase folded to snake_case; dots, slashes, and hyphens preserved).
@@ -575,7 +581,7 @@ and are validated by "cloudzero-agent.validateKeepPatterns"; do NOT anchor with 
 or $ (they land mid-regex after the label_/annotation_ prefix and never match).
 */}}
 {{- define "cloudzero-agent.kubeStateLabelKeepRegex" -}}
-{{- $total := tuple (include "cloudzero-agent.requiredMetricLabels.cz" .) "_.*" "app.kubernetes.io/*" "k8s.*" -}}
+{{- $total := concat (list (include "cloudzero-agent.requiredMetricLabels.cz" .)) (include "cloudzero-agent.kubeState.workloadNameLabels" . | fromYamlArray) (list "_.*" "app.kubernetes.io/*" "k8s.*") -}}
 {{- if and .Values.insightsController.labels.enabled .Values.insightsController.labels.patterns -}}
 {{- $_ := include "cloudzero-agent.validateKeepPatterns" (dict "patterns" .Values.insightsController.labels.patterns "field" "labels") -}}
 {{- $total = append $total (printf "label_(%s)" (join "|" .Values.insightsController.labels.patterns)) -}}
@@ -585,6 +591,61 @@ or $ (they land mid-regex after the label_/annotation_ prefix and never match).
 {{- $total = append $total (printf "annotation_(%s)" (join "|" .Values.insightsController.annotations.patterns)) -}}
 {{- end -}}
 {{- join "|" $total -}}
+{{- end -}}
+
+{{/*
+KubeState workload resources, as a YAML map of plural resource name (the
+insightsController.{labels,annotations}.resources key and the plugin's
+"resources" entry) to singular name (used in kube_<singular>_labels).
+
+Single source for the apps/batch workload types the KubeState plugin collects
+labels/annotations for; see "cloudzero-agent.alloy.kubeState" and
+"cloudzero-agent.kubeState.workloadMetricNames".
+
+Usage: {{ include "cloudzero-agent.kubeState.workloadResources" . | fromYaml }}
+*/}}
+{{- define "cloudzero-agent.kubeState.workloadResources" -}}
+deployments: deployment
+statefulsets: statefulset
+daemonsets: daemonset
+jobs: job
+cronjobs: cronjob
+{{- end -}}
+
+{{/*
+KubeState workload name labels, as a YAML list.
+
+The labels the KubeState plugin uses to identify the object a
+kube_<workload>_labels / kube_<workload>_annotations series describes (note
+job_name, not job, for Jobs). Both the Alloy labelkeep
+("cloudzero-agent.kubeStateLabelKeepRegex") and the aggregator's cost_labels
+filter must keep them, or workload series arrive without their object.
+
+Usage: {{ include "cloudzero-agent.kubeState.workloadNameLabels" . | fromYamlArray }}
+*/}}
+{{- define "cloudzero-agent.kubeState.workloadNameLabels" -}}
+- deployment
+- statefulset
+- daemonset
+- job_name
+- cronjob
+{{- end -}}
+
+{{/*
+KubeState workload label/annotation metric names, as a YAML list.
+
+The kube_<workload>_labels / kube_<workload>_annotations metrics the KubeState
+plugin can emit for apps/batch workloads. Used to extend the aggregator's cost
+filter when the plugin is enabled.
+
+Usage: {{ include "cloudzero-agent.kubeState.workloadMetricNames" . | fromYamlArray }}
+*/}}
+{{- define "cloudzero-agent.kubeState.workloadMetricNames" -}}
+{{- $workloads := include "cloudzero-agent.kubeState.workloadResources" . | fromYaml -}}
+{{- range $plural := keys $workloads | sortAlpha }}
+- kube_{{ index $workloads $plural }}_labels
+- kube_{{ index $workloads $plural }}_annotations
+{{- end -}}
 {{- end -}}
 
 {{/*

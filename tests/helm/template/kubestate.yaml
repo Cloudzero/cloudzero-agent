@@ -237,7 +237,7 @@ data:
       forward_to = [prometheus.remote_write.cloudzero.receiver]
     
       rule {
-        regex  = "^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|_.*|app.kubernetes.io/*|k8s.*|label_(app.kubernetes.io/component))$"
+        regex  = "^(board_asset_tag|container|created_by_kind|created_by_name|image|instance|name|namespace|node|node_kubernetes_io_instance_type|pod|product_name|provider_id|resource|unit|uid|deployment|statefulset|daemonset|job_name|cronjob|_.*|app.kubernetes.io/*|k8s.*|label_(app.kubernetes.io/component))$"
         action = "labelkeep"
       }
     }// ============================================================================
@@ -587,6 +587,26 @@ data:
           match: exact
         - pattern: "kube_node_annotations"
           match: exact
+        - pattern: "kube_cronjob_labels"
+          match: exact
+        - pattern: "kube_cronjob_annotations"
+          match: exact
+        - pattern: "kube_daemonset_labels"
+          match: exact
+        - pattern: "kube_daemonset_annotations"
+          match: exact
+        - pattern: "kube_deployment_labels"
+          match: exact
+        - pattern: "kube_deployment_annotations"
+          match: exact
+        - pattern: "kube_job_labels"
+          match: exact
+        - pattern: "kube_job_annotations"
+          match: exact
+        - pattern: "kube_statefulset_labels"
+          match: exact
+        - pattern: "kube_statefulset_annotations"
+          match: exact
         - pattern: "cloudzero_"
           match: prefix
       
@@ -626,6 +646,16 @@ data:
         - pattern: "uid"
           match: exact
         - pattern: "workload"
+          match: exact
+        - pattern: "deployment"
+          match: exact
+        - pattern: "statefulset"
+          match: exact
+        - pattern: "daemonset"
+          match: exact
+        - pattern: "job_name"
+          match: exact
+        - pattern: "cronjob"
           match: exact
         - pattern: "_"
           match: prefix
@@ -1745,6 +1775,9 @@ rules:
     verbs:
       - "get"
       - "list"
+      # The KubeState plugin's informers watch workloads to collect their
+      # labels/annotations (insightsController.{labels,annotations}.resources).
+      - "watch"
   - apiGroups:
       - "batch"
     resources:
@@ -1753,6 +1786,8 @@ rules:
     verbs:
       - "get"
       - "list"
+      # See the apps rule above.
+      - "watch"
   - apiGroups:
       - ""
     resources:

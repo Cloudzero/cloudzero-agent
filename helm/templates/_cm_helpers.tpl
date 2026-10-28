@@ -178,13 +178,27 @@ Configuration includes:
 Usage: {{ include "cloudzero-agent.aggregator.configuration" . }}
 */}}
 {{ define "cloudzero-agent.aggregator.configuration" -}}
+{{- /*
+  The KubeState plugin can also emit kube_<workload>_labels/_annotations, which
+  no other pipeline produces, so accept them only when the plugin is enabled.
+  The collector rebuilds each cost metric's labels from cost_labels, so the
+  plugin's workload name labels must be accepted too or the series lose their
+  object identity.
+*/ -}}
+{{- $costFilters := (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost -}}
+{{- $costName := $costFilters.name -}}
+{{- $costLabels := $costFilters.labels -}}
+{{- if .Values.components.agent.kubeState.enabled -}}
+{{- $_ := set $costName "exact" (concat $costName.exact (include "cloudzero-agent.kubeState.workloadMetricNames" . | fromYamlArray)) -}}
+{{- $_ := set $costLabels "exact" (concat $costLabels.exact (include "cloudzero-agent.kubeState.workloadNameLabels" . | fromYamlArray)) -}}
+{{- end -}}
 cloud_account_id: {{ include "cloudzero-agent.cleanString" .Values.cloudAccountId }}
 cluster_name: {{ include "cloudzero-agent.cleanString" .Values.clusterName }}
 region: {{ include "cloudzero-agent.cleanString" .Values.region }}
 
 metrics:
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.name) | nindent 2 }}
-  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.cost.labels) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost" "filters"                 $costName) | nindent 2 }}
+  {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "cost_labels" "filters"          $costLabels) | nindent 2 }}
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability" "filters"        (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.name) | nindent 2 }}
   {{- include "cloudzero-agent.generateMetricFilters" (dict "name" "observability_labels" "filters" (include "cloudzero-agent.defaults" . | fromYaml).metricFilters.observability.labels) | nindent 2 }}
 server:
