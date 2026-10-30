@@ -149,9 +149,52 @@ type TestHelper struct {
 }
 
 func NewTestHelper(t *testing.T) *TestHelper {
+	// The tests using this helper expect disk-backed pressure thresholds, but
+	// os.TempDir() is tmpfs on some hosts (e.g. ubuntu-26.04 runners), which
+	// switches DiskManager to its memory-backed thresholds. In that case fall
+	// back to the package directory, which lives in the checkout on real disk.
 	tempDir, err := os.MkdirTemp("", "disk_manager_test_*")
 	require.NoError(t, err)
+	if isMemoryBacked(tempDir) {
+		os.RemoveAll(tempDir)
+		tempDir, err = os.MkdirTemp(".", ".disk_manager_test_*")
+		require.NoError(t, err)
+		tempDir, err = filepath.Abs(tempDir)
+		require.NoError(t, err)
+		if isMemoryBacked(tempDir) {
+			os.RemoveAll(tempDir)
+			t.Fatalf("disk manager tests need a disk-backed directory, but both %s and %s are memory-backed", os.TempDir(), filepath.Dir(tempDir))
+		}
+	}
 
+	return newTestHelperIn(t, tempDir)
+}
+
+// newMemoryBackedTestHelper is like NewTestHelper, but its storage is on
+// tmpfs so DiskManager applies its memory-backed thresholds and cleanup
+// percentages. It skips the test on hosts with no tmpfs to use (e.g. macOS).
+func newMemoryBackedTestHelper(t *testing.T) *TestHelper {
+	for _, parent := range []string{os.TempDir(), "/dev/shm"} {
+		tempDir, err := os.MkdirTemp(parent, "disk_manager_test_*")
+		if err != nil {
+			continue
+		}
+		if isMemoryBacked(tempDir) {
+			return newTestHelperIn(t, tempDir)
+		}
+		os.RemoveAll(tempDir)
+	}
+	t.Skip("no tmpfs directory available on this host")
+	return nil
+}
+
+func isMemoryBacked(path string) bool {
+	return (&shipper.DiskManager{StoragePath: path}).IsMemoryBacked()
+}
+
+// newTestHelperIn builds a TestHelper rooted at tempDir, which it removes
+// when the test finishes.
+func newTestHelperIn(t *testing.T, tempDir string) *TestHelper {
 	// Create subdirectories
 	uploadedDir := filepath.Join(tempDir, shipper.UploadedSubDirectory)
 	require.NoError(t, os.MkdirAll(uploadedDir, 0o755))
@@ -473,8 +516,7 @@ func TestUnit_Shipper_Disk_ErrorHandling(t *testing.T) {
 // Memory vs Disk specific tests
 func TestUnit_Shipper_Disk_MemoryVsDisk(t *testing.T) {
 	t.Run("Memory-backed storage", func(t *testing.T) {
-		// Create tmpfs-backed directory for memory test
-		helper := NewTestHelper(t)
+		helper := newMemoryBackedTestHelper(t)
 
 		// Memory storage should be more aggressive in cleanup
 		dm := helper.CreateDiskManager()
@@ -495,8 +537,9 @@ func TestUnit_Shipper_Disk_MemoryVsDisk(t *testing.T) {
 		err := dm.ManageDiskUsage(ctx, cutoff)
 		require.NoError(t, err)
 
-		// Should be very aggressive in cleanup for memory
-		assert.LessOrEqual(t, helper.GetFileCount(), 10) // Should remove at least half
+		// The cutoff purge leaves the 11 files aged 0-10h; critical pressure on
+		// memory then removes 70% of those (7), leaving 4.
+		assert.Equal(t, 4, helper.GetFileCount())
 
 		// Reset to default behavior
 		helper.mockStore.Reset()
