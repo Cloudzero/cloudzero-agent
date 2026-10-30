@@ -436,11 +436,20 @@ kind-up: tests/kuttl/kubeconfig
 # so pods can use it without pulling from a registry (chart imagePullPolicy is
 # IfNotPresent). Used by CI to make the freshly-built (untested) agent image
 # available under the tag the chart installs. Set LOAD_IMAGE to the image ref.
+#
+# The image is saved for its own platform only. With Docker's containerd image
+# store (the default from Docker 29), a single-platform pull of a multi-arch
+# image keeps the whole index, so a plain `docker save` lists platforms whose
+# layers are absent and kind's `ctr import --all-platforms` fails.
 .PHONY: kind-load
 kind-load: ## Load LOAD_IMAGE into the kind cluster (uses CLUSTER_NAME)
 	$(if $(LOAD_IMAGE),,$(error LOAD_IMAGE must be set, e.g. make kind-load LOAD_IMAGE=repo/image:tag))
 	$(call LOG,KIND,load $(LOAD_IMAGE) into $(CLUSTER_NAME))
-	$(Q)$(KIND) load docker-image "$(LOAD_IMAGE)" --name $(CLUSTER_NAME)
+	$(Q)archive="$$(mktemp)" && \
+		platform="$$($(DOCKER) image inspect --format '{{.Os}}/{{.Architecture}}' "$(LOAD_IMAGE)")" && \
+		$(DOCKER) save --platform "$$platform" --output "$$archive" "$(LOAD_IMAGE)" && \
+		$(KIND) load image-archive "$$archive" --name $(CLUSTER_NAME); \
+		status=$$?; rm -f "$$archive"; exit $$status
 
 .PHONY: kind-down
 kind-down: ## Delete kind cluster and cleanup
