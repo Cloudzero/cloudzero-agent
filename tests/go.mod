@@ -3,7 +3,7 @@ module github.com/cloudzero/cloudzero-agent/tests
 go 1.27.2
 
 require (
-	github.com/andybalholm/brotli v1.2.6
+	github.com/andybalholm/brotli v1.2.7
 	github.com/cloudzero/cloudzero-agent v0.0.0-00010101000000-000000000000
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v1.0.0
