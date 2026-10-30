@@ -1,0 +1,48 @@
+suite: test agent ClusterRole grants for the KubeState plugin
+templates:
+  - templates/agent-clusterrole.yaml
+tests:
+  # The KubeState plugin's informers list AND watch every resource it collects.
+  # Workload label/annotation collection (insightsController.{labels,
+  # annotations}.resources.<workload>) therefore needs "watch" on the apps and
+  # batch workloads. rules[0] is the apps rule, rules[1] the batch rule.
+
+  - it: should grant watch on apps workloads when kubeState is enabled
+    template: templates/agent-clusterrole.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - equal:
+          path: rules[0].apiGroups
+          value: ["apps"]
+      - contains:
+          path: rules[0].verbs
+          content: watch
+
+  - it: should grant watch on batch workloads when kubeState is enabled
+    template: templates/agent-clusterrole.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - equal:
+          path: rules[1].apiGroups
+          value: ["batch"]
+      - contains:
+          path: rules[1].verbs
+          content: watch
+
+  # Guard: without kubeState nothing watches workloads, so the grant stays
+  # get/list only.
+  - it: should not grant watch on apps or batch workloads when kubeState is disabled
+    template: templates/agent-clusterrole.yaml
+    asserts:
+      - notContains:
+          path: rules[0].verbs
+          content: watch
+      - notContains:
+          path: rules[1].verbs
+          content: watch

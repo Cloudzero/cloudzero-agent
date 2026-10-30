@@ -1217,7 +1217,9 @@ server:
   fullnameOverride:
   # -- Override for the server's cluster role name. If not set, uses the server's fullname.
   clusterRoleNameOverride:
-  # -- If set, use an existing ClusterRole instead of creating one.
+  # -- If set, use an existing ClusterRole instead of creating one. With
+  # components.agent.kubeState.enabled, the role must also grant "watch" on
+  # each resource type enabled under insightsController.{labels,annotations}.resources.
   useExistingClusterRoleName:
   # -- Deprecated. Use serviceAccount.automountServiceAccountToken instead. Whether to automatically mount a ServiceAccount token in the server pods.
   automountServiceAccountToken:
