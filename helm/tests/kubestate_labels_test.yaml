@@ -9,8 +9,9 @@ tests:
   # given an allowlist. Its allowlist supports exact names or the "*" wildcard
   # only (not regexes), so we emit all labels/annotations and filter them to
   # insightsController.{labels,annotations}.patterns in the downstream
-  # kubestate_labels relabel. Supported resources are those the agent
-  # ClusterRole can watch: pods, namespaces, nodes.
+  # kubestate_labels relabel. Supported resources: pods, namespaces, nodes, and
+  # the apps/batch workloads (deployments, statefulsets, daemonsets, jobs,
+  # cronjobs).
   # =========================================================================
 
   - it: should emit pods + namespaces label_allowlist entries by default
@@ -94,6 +95,102 @@ tests:
       - matchRegex:
           path: data["alloy-config.river"]
           pattern: '"kube_node_labels"'
+
+  # =========================================================================
+  # Workload resources (deployments, statefulsets, daemonsets, jobs, cronjobs)
+  #
+  # Workload toggles must reach the plugin so workload-only labels can be
+  # collected without the webhook server.
+  # =========================================================================
+
+  - it: should watch deployments and emit kube_deployment_labels when deployment labels are enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.resources.deployments: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resources = \[[^]]*"deployments"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"deployments"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_deployment_labels"'
+
+  # batch/v1 resources pin the plural->singular metric-name mapping
+  # (jobs -> kube_job_labels, not kube_jobs_labels).
+  - it: should watch jobs and cronjobs and emit their label metrics when enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: true
+      insightsController.labels.resources.jobs: true
+      insightsController.labels.resources.cronjobs: true
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"jobs"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"cronjobs"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_job_labels"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_cronjob_labels"'
+
+  # Labels disabled so the only allowlist entries come from annotations, making
+  # the resource = "statefulsets" assertion unambiguous.
+  - it: should emit statefulset and daemonset annotation wiring when enabled
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+      insightsController.labels.enabled: false
+      insightsController.annotations.enabled: true
+      insightsController.annotations.resources.statefulsets: true
+      insightsController.annotations.resources.daemonsets: true
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'label_allowlist\s*\{'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"statefulsets"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'resource\s*=\s*"daemonsets"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_statefulset_annotations"'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_daemonset_annotations"'
+
+  # Guard: workload toggles default to false, so the default KubeState render
+  # must not watch or allowlist any workload type.
+  - it: should not watch any workload resource by default
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"(deployments|statefulsets|daemonsets|jobs|cronjobs)"'
+      - notMatchRegex:
+          path: data["alloy-config.river"]
+          pattern: '"kube_(deployment|statefulset|daemonset|job|cronjob)_(labels|annotations)"'
 
   # =========================================================================
   # Annotations (parity with labels)
@@ -233,6 +330,32 @@ tests:
       - matchRegex:
           path: data["alloy-config.river"]
           pattern: 'namespace\|node'
+
+  # The plugin identifies workload objects by these name labels (job_name, not
+  # job, for Jobs). Without them in the keep set, workload label series would
+  # reach CloudZero with no way to tell which object they describe.
+  - it: should keep workload name labels in the kubestate_labels relabel
+    template: templates/agent-cm.yaml
+    set:
+      components.agent.mode: clustered
+      components.agent.kubeState.enabled: true
+      kubeStateMetrics.enabled: false
+    asserts:
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'regex\s*=\s*"\^\([^"]*\|deployment\|'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'regex\s*=\s*"\^\([^"]*\|statefulset\|'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'regex\s*=\s*"\^\([^"]*\|daemonset\|'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'regex\s*=\s*"\^\([^"]*\|job_name\|'
+      - matchRegex:
+          path: data["alloy-config.river"]
+          pattern: 'regex\s*=\s*"\^\([^"]*\|cronjob\|'
 
   - it: should not include a label_ pattern clause when label collection is disabled
     template: templates/agent-cm.yaml
