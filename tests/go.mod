@@ -1,6 +1,6 @@
 module github.com/cloudzero/cloudzero-agent/tests
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/andybalholm/brotli v1.2.7
