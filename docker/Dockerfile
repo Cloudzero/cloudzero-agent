@@ -92,11 +92,11 @@ RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
 
 # Upstream ships x/crypto v0.55.0 and x/net v0.58.0, both older than the
 # versions that fix GO-2026-6303/6354/6355 (x/crypto) and GO-2026-6603/6610/
-# 6611/6612/6617 (x/net). These are exact versions and so downgrade as readily
-# as they upgrade: check what upstream resolves before touching them, and
-# delete each once upstream passes it rather than bumping it forever.
+# 6611/6612/6617/6860/6866 (x/net). These are exact versions and so downgrade
+# as readily as they upgrade: check what upstream resolves before touching
+# them, and delete each once upstream passes it rather than bumping it forever.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
-    go get golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0
+    go get golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.62.0
 
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \
