@@ -3,6 +3,6 @@
   "dependencies": {
     "@mermaid-js/mermaid-cli": "^12.0.0",
     "markdownlint-cli2": "^0.24.0",
-    "prettier": "3.9.10"
+    "prettier": "3.10.1"
   }
 }
