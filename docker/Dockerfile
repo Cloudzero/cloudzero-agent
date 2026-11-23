@@ -14,7 +14,7 @@ ARG RELOADER_VERSION=v0.94.1
 # 7. final: Minimal runtime image with compiled binaries
 
 # Stage 1: Base tools installation
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS base-tools
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS base-tools
 ARG TARGETPLATFORM
 ARG TARGETOS TARGETARCH
 
@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-$TARGETPLATFORM \
 FROM gcr.io/distroless/static-debian13:debug@sha256:63b4c0065ff7bd68753510400b2d5cedd5d5571d15eac4be0b6b0dd236a2d148 AS certs
 
 # Stage 5: Extract Alloy binary from CloudZero Alloy image
-FROM ghcr.io/cloudzero/alloy:v1.21.3 AS alloy
+FROM ghcr.io/cloudzero/alloy:v1.22.0 AS alloy
 
 # Stage 6: Build prometheus-config-reloader from upstream source. We build it
 # (not copy the prebuilt image) to control the toolchain and bump vulnerable
@@ -92,11 +92,11 @@ RUN git clone --depth 1 --branch "${RELOADER_VERSION}" \
 
 # Upstream ships x/crypto v0.55.0 and x/net v0.58.0, both older than the
 # versions that fix GO-2026-6303/6354/6355 (x/crypto) and GO-2026-6603/6610/
-# 6611/6612/6617 (x/net). These are exact versions and so downgrade as readily
-# as they upgrade: check what upstream resolves before touching them, and
-# delete each once upstream passes it rather than bumping it forever.
+# 6611/6612/6617/6860/6866 (x/net). These are exact versions and so downgrade
+# as readily as they upgrade: check what upstream resolves before touching
+# them, and delete each once upstream passes it rather than bumping it forever.
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
-    go get golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0
+    go get golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.62.0
 
 RUN --mount=type=cache,target=/go/pkg/mod,id=gomod-reloader-$TARGETPLATFORM \
     --mount=type=cache,target=/root/.cache/go-build,id=gobuild-reloader-$TARGETPLATFORM \

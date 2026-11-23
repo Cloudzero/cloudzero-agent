@@ -358,7 +358,7 @@ jobs:
     permissions:
       statuses: write
     needs: ["replicated-compatibility-matrix-tests"]
-    if: ${{ always() && github.event_name == 'merge_group' }}
+    if: ${{ always() && github.event_name == 'merge_group' && vars.ENABLE_REPLICATED == 'true' }}
     steps:
       - uses: spkane/commit-status-updater@a794d785537a8c22dec94d11ceb034021a8fd114
         if: ${{ needs.replicated-compatibility-matrix-tests.outputs.cluster-test-status == 'success' }}
