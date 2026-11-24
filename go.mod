@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/KimMachineGun/automemlimit v1.0.2
-	github.com/andybalholm/brotli v1.2.7
+	github.com/andybalholm/brotli v1.3.0
 	github.com/ccoveille/go-safecast v1.8.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-chi/chi/v5 v5.5.0
