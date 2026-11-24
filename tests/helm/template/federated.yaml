@@ -1023,7 +1023,7 @@ data:
           securityContext: {}
         image:
           repository: ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent
-          tag: 1.3.1
+          tag: 1.3.2
         kubeState:
           enabled: false
           reemitInterval: 5m
@@ -2462,7 +2462,7 @@ spec:
         # binary substitutes $(NODE_NAME) into the processed config consumed by
         # the server. --watch-interval=0 runs the substitution once and exits.
         - name: config-subst
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/prometheus-config-reloader
@@ -2493,7 +2493,7 @@ spec:
               mountPath: /etc/config/prometheus/configmaps/processed/
       containers:
         - name: cloudzero-agent-server-configmap-reload
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/prometheus-config-reloader
@@ -2749,7 +2749,7 @@ spec:
       serviceAccountName: cz-agent-cz-server
       initContainers:
         - name: env-validator-copy
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -2792,7 +2792,7 @@ spec:
             - name: validator-config-volume
               mountPath: /checks/config/
         - name: env-validator-run
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -2838,7 +2838,7 @@ spec:
       containers:
         # ConfigMap reloader sidecar for Prometheus/Alloy
         - name: cloudzero-agent-server-configmap-reload
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/prometheus-config-reloader
@@ -3043,7 +3043,7 @@ spec:
       
       containers:
         - name: cz-agent-cz-aggregator-collector
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: port-collector
@@ -3094,7 +3094,7 @@ spec:
             runAsUser: 65534
 
         - name: cz-agent-cz-aggregator-shipper
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: port-shipper
@@ -3228,7 +3228,7 @@ spec:
       
       containers:
         - name: webhook-server
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/cloudzero-webhook
@@ -3327,7 +3327,7 @@ spec:
             runAsUser: 65534
           containers:
             - name: init-scrape
-              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
               imagePullPolicy: "IfNotPresent"
               command:
                 - /app/cloudzero-webhook
@@ -3406,7 +3406,7 @@ spec:
         runAsUser: 65534
       containers:
         - name: run-validator
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: K8S_NAMESPACE
@@ -3437,7 +3437,7 @@ spec:
             - --chart-version
             - 1.1.0-dev
             - --agent-version
-            - "1.3.1"
+            - "1.3.2"
             - --values-file
             - /cloudzero/config/values/values.yaml
             - --config-validator
@@ -3535,7 +3535,7 @@ spec:
         runAsUser: 65534
       containers:
         - name: helmless
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command:
             - /app/cloudzero-helmless
@@ -3607,7 +3607,7 @@ spec:
         runAsUser: 65534
       containers:
         - name: init-cert
-          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+          image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
           imagePullPolicy: "IfNotPresent"
           command: ["/app/cloudzero-certifik8s"]
           workingDir: /var/tmp
@@ -3681,7 +3681,7 @@ spec:
             runAsUser: 65534
           containers:
             - name: init-scrape
-              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.1"
+              image: "ghcr.io/cloudzero/cloudzero-agent/cloudzero-agent:1.3.2"
               imagePullPolicy: "IfNotPresent"
               command:
                 - /app/cloudzero-webhook
