@@ -137,22 +137,23 @@ insightsController:
 The agent uses the cloud provider Instance Metadata Service (IMDS) to discover cluster identity where possible. This means some values only need to be set explicitly when IMDS is unavailable/blocked or when you want to override the detected values.
 
 - **clusterName**
-  - **EKS / AKS**: must be set explicitly; it cannot be discovered from IMDS.
+  - **EKS / AKS / OKE**: must be set explicitly; it cannot be discovered from IMDS.
   - **GKE**: auto-detected from IMDS; set only if you need to override.
 - **cloudAccountId / region**
   - Auto-detected via IMDS on EKS, AKS, and GKE.
+  - **OKE**: `region` is auto-detected; `cloudAccountId` must be set explicitly, because OCI's instance metadata service exposes the tenancy OCID and the chart requires the numeric OCI account ID.
   - Must be set explicitly if IMDS is blocked or unavailable.
 
 Below is a summary of these settings and how they are used:
 
 | Key                | Type   | Default               | Detection & requirements                                                                                                                             |
 | ------------------ | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, or project number in GCP. Auto-detected via IMDS when available; required if IMDS is blocked.           |
-| clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS and AKS; auto-detected on GKE; required on any provider if IMDS is blocked.                         |
+| cloudAccountId     | string | `nil`                 | Account ID in AWS, subscription ID in Azure, project number in GCP, or the numeric OCI account ID in Oracle Cloud. Auto-detected via IMDS when available, except on OKE; required if IMDS is blocked. |
+| clusterName        | string | `nil`                 | Name of the cluster (RFC 1123). Mandatory on EKS, AKS, and OKE; auto-detected on GKE; required on any provider if IMDS is blocked.                   |
 | host               | string | `"api.cloudzero.com"` | CloudZero host to send metrics to. Override only for non-production or custom environments.                                                          |
 | apiKey             | string | `nil`                 | CloudZero API key used for exporting metrics. Required unless `existingSecretName` or `components.apiKey` is configured.                             |
 | existingSecretName | string | `nil`                 | Name of the Secret that contains the CloudZero API key. Required when not providing the API key via `apiKey`.                                        |
-| region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
+| region             | string | `nil`                 | Cloud provider region (e.g., `us-east-1`, `eastus`, `ca-montreal-1`). Auto-detected via IMDS; required if IMDS is blocked or you want to override the detected value. |
 
 > It is recommended to use a `values-override.yaml` file for customizations. For details, refer to the [official Helm documentation](https://helm.sh/docs/helm/helm_install/#synopsis).
 
